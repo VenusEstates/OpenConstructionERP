@@ -5,6 +5,67 @@ All notable changes to OpenConstructionERP are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.2.0] - 2026-08-27
+
+Maps work again. Every map surface had been drawing tiles with API KEY REQUIRED
+printed across them. Nothing in our code changed to cause it, the free tile
+service we were calling started watermarking its output, and it did so while
+still answering with a normal 200 and a valid image, so nothing on our side
+noticed. The basemap now comes from us: shaded relief we serve ourselves, and
+keyless vector maps for the interactive views. There is no key to obtain, no
+quota to exceed and no account to hold.
+
+Two consequences worth knowing. Your browser may keep painting the old
+watermarked tiles for up to a week, because they were stored under a rule that
+tells the browser never to check for a newer copy, so the tile addresses changed
+to get out from under it. And the small map on a project card, along with the 3D
+globe, now shows terrain rather than streets. Street detail at that size needs a
+tile service with a key, and we would rather show you a plain honest map than a
+detailed branded one.
+
+A module can be found without knowing which tab it is on. There are 189 of them
+and, until now, no way to search. Type part of a name into the field above the
+tabs and the page goes to the module, whichever tab it lives on. It matches the
+translated name as well as the English one, so Regionalpaket finds the same
+module as Regional Pack.
+
+Regional packs are in the build. Until now the packs page said no packs were
+available on every install we published, and the reason was two faults stacked on
+top of each other. The fifteen packs we ship were never copied into the wheel, and
+the code that goes looking for them worked out where they lived by counting
+directories up from its own file, which only ever pointed at a source checkout.
+Both halves are fixed. A fresh install now finds the packs it shipped with, and
+the ones it finds are the ones we meant to send.
+
+An upgraded install no longer describes itself as degraded for good. A database
+that is stamped behind the code is a fact about the database, and it is now
+reported as one. A schema that has genuinely diverged is still reported as a
+fault, which is what that field was for. If you have been looking at degraded
+since your last upgrade and could not work out what to do about it, this is
+why, and the answer was usually nothing.
+
+The dashboard opens the cases block as two rows with a link to the rest, instead
+of filling the screen with four.
+
+The command line answers --version again. It used to print the version and then
+exit with an error code anyway, which is invisible when you type it yourself and
+breaks any script that checks it.
+
+Nova Scotia bills the rate it actually charges. Databases that already exist are
+repaired on upgrade, so amounts on those screens change. The repair covers the
+rate itself and not invoices already issued against the old one.
+
+The browser no longer calls the public geocoder directly. Requests go through the
+application, so addresses your users type are not sent from their machines to a
+third party, and the dashboard map credits OpenStreetMap as its licence requires.
+
+A catalogue kept where an install keeps it is now found there. The lookup used a
+path that only resolved when the process happened to start from the project
+directory.
+
+When a repair drops a NOT NULL on the way in, it says so rather than doing it
+quietly.
+
 ## [16.1.0] - 2026-08-27
 
 Before you upgrade, four things worth knowing.
