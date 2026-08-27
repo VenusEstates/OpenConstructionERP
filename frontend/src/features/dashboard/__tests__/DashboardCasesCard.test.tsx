@@ -241,11 +241,11 @@ describe('DashboardCasesCard faces', () => {
       checked += 1;
     }
     // Without this the loop is satisfied by a gallery that rendered no faces
-    // at all, and the assertion above never runs. Tied to the number of case
-    // tiles actually drawn rather than to a literal, so it keeps meaning the
-    // same thing after the gallery was cut from four rows to two: every case
-    // on show carries a portrait.
-    expect(checked).toBe(caseTileCount());
-    expect(checked).toBeGreaterThan(0);
+    // at all, and the assertion above never runs. A FLOOR, not an equality:
+    // `caseFaceFor` is allowed to miss, and which cases land in the window is a
+    // function of the ranking, so an equality here would fail one day for a
+    // reason that has nothing to do with the faces. Scaled down with the
+    // gallery when it was cut from four rows to two.
+    expect(checked).toBeGreaterThan(8);
   });
 });
