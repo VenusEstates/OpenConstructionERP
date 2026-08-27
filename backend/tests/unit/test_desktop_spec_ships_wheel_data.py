@@ -284,3 +284,56 @@ def test_the_locale_catalogue_lands_where_the_runtime_looks_for_it() -> None:
         f"raise FileNotFoundError during startup and the launcher will report only that the backend "
         f"did not start in time."
     )
+
+
+# ── The one path that must stay empty ────────────────────────────────────────
+
+# Destination prefix of the regional resource catalogue. It is data the runtime
+# reads from beside the app package, so it looks exactly like locales, alembic
+# and the packs, and it is the one such directory that a release artefact must
+# NOT carry.
+_CATALOGUE_PATH_FRAGMENT = "data/catalog"
+
+
+def test_no_release_artefact_ships_the_regional_catalogue() -> None:
+    """The licensing decision, pinned in the direction a release cannot undo.
+
+    Two documents state it and nothing enforced it. The header of
+    ``desktop/pyinstaller.spec`` says ``data/catalog`` stays out of the
+    installer because bundling it is a licensing decision and not a packaging
+    one, and NOTICE records the licensing basis of the largest base in the
+    catalogue as PENDING. Roughly three quarters of the bytes sit on that base.
+
+    This became worth a gate the moment the catalogue resolver was taught to
+    look beside the app package. Before that, a force-include of
+    ``data/catalog/regions`` would have shipped bytes nothing read, which is
+    inert; now it would work, so the wrong line in either packaging file would
+    quietly put the data into a wheel on PyPI, which cannot be withdrawn.
+
+    The other half of the same decision is pinned in
+    ``test_catalog_offline_lookup.test_catalog_regions_are_not_bundled_in_the_package``,
+    which covers the catalogue appearing INSIDE the app package, where the one
+    line that ships ``app/`` would carry it with no entry naming it. Between the
+    two, both ways in are watched.
+
+    Removing this test is a decision about what a release contains and should
+    read like one in review. If the licensing basis is settled and the answer is
+    that the data may ship, delete it in the same commit that records the basis
+    in NOTICE.
+    """
+    offenders: list[str] = []
+    for source, dest in _wheel_force_include().items():
+        if _CATALOGUE_PATH_FRAGMENT in Path(source).as_posix() or _CATALOGUE_PATH_FRAGMENT in Path(dest).as_posix():
+            offenders.append(f"backend/pyproject.toml force-include: {source} -> {dest}")
+    for source, dest in _spec_datas():
+        if _CATALOGUE_PATH_FRAGMENT in Path(source).as_posix() or _CATALOGUE_PATH_FRAGMENT in Path(dest).as_posix():
+            offenders.append(f"desktop/pyinstaller.spec datas: {source} -> {dest}")
+
+    assert not offenders, (
+        "a release artefact would carry the regional resource catalogue:\n  "
+        + "\n  ".join(offenders)
+        + "\nThat data is derived from national norm systems and NOTICE records the basis for the "
+        "largest base in it as PENDING. A wheel on PyPI and a signed installer cannot be taken "
+        "back, so it stays out until the basis is written down. See the header of "
+        "desktop/pyinstaller.spec and the Data Sources section of NOTICE."
+    )

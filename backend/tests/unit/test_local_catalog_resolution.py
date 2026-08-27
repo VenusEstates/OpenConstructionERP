@@ -250,3 +250,47 @@ def test_the_reader_consumes_the_resolver(tmp_path: Path, monkeypatch: pytest.Mo
 
     assert source == "local", f"expected the installed catalogue directory to answer, got {source!r}"
     assert raw == planted.read_bytes(), "the reader returned bytes from somewhere other than the planted CSV"
+
+
+def test_the_fallback_tells_the_two_situations_apart(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """ "No catalogue anywhere" and "a catalogue without this region" are not the same.
+
+    Whoever reads the log needs different things from them: the first says this
+    installation carries no catalogue by design and the download is the only
+    source, the second says the directory is there and this one region is not in
+    it. The whole justification for the shape check is that it can tell them
+    apart, so a single message covering both would make the check pointless
+    while leaving every other test in this file green.
+    """
+    import app.modules.catalog.router as catalog_router
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_a, **_kw: (_ for _ in ()).throw(OSError("no network")))
+    monkeypatch.setattr(catalog_router, "_CATALOG_CACHE_DIR", tmp_path / "empty-cache")
+
+    monkeypatch.setattr(catalog_router, "_local_catalog_dirs", lambda: ())
+    with caplog.at_level("INFO", logger=catalog_router.__name__), pytest.raises(RuntimeError):
+        catalog_router._read_region_catalog_csv("DE_BERLIN", "DE___DDC_CWICR")
+    carries_none = caplog.text
+    caplog.clear()
+
+    populated = tmp_path / "site-packages" / "data" / "catalog" / "regions"
+    _plant_catalog(populated, region="FR_PARIS")
+    monkeypatch.setattr(catalog_router, "_local_catalog_dirs", lambda: (populated.resolve(),))
+    with caplog.at_level("INFO", logger=catalog_router.__name__), pytest.raises(RuntimeError):
+        catalog_router._read_region_catalog_csv("DE_BERLIN", "DE___DDC_CWICR")
+    carries_other_regions = caplog.text
+
+    assert "carries no catalog directory" in carries_none, (
+        f"an installation reaching no catalogue directory logged {carries_none!r}, which does not "
+        f"say so. That is the case where the operator has to be told the download is the only source."
+    )
+    assert str(populated) in carries_other_regions, (
+        f"an installation whose catalogue directory simply lacks the region logged "
+        f"{carries_other_regions!r}, which does not name the directory that was searched."
+    )
+    assert "carries no catalog directory" not in carries_other_regions, (
+        "a populated catalogue directory was reported as no catalogue directory at all, so the two "
+        "situations are indistinguishable in the log and the shape check buys nothing."
+    )
