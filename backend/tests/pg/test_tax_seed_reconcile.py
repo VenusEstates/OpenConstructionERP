@@ -350,32 +350,44 @@ async def test_a_pre_v15_5_install_is_given_the_provinces_it_never_received(repa
     assert quebec.combined_rate_pct == "14.975"
 
 
-async def test_nova_scotia_keeps_its_old_rate_and_that_is_deliberate(repair_factory) -> None:
+async def test_nova_scotia_is_not_this_repairs_to_deliver(repair_factory) -> None:
     """The one shipped rate this repair may not deliver, asserted rather than assumed.
 
     The 14 % row is a rate that CHANGED, not one that was never delivered: this
     install holds the 15 % window, still open. Handing it the 14 % row without
-    closing the 15 % one would leave two rates in force at once, and closing
-    the old one is a ``superseded`` repair's job. So the gap is real and stays
-    until somebody writes that repair - and if this test ever starts failing
-    because the rate arrived, the reconciler has quietly grown a power it was
-    built not to have.
+    closing the 15 % one would leave two rates in force at once - which is not a
+    wrong number but a raised ``TaxRuleError``, so the province would stop
+    pricing altogether. Closing the old window is a ``superseded`` repair's job
+    and ``tax_window_supersede`` now does it.
+
+    That repair running in the same boot is why this one is written against the
+    delivery record rather than against the resolved rate. Nova Scotia does end
+    up at 14 % on this cohort, and this asserts that the reconciler is not how
+    it got there: if ``CA/HST_NS`` ever appears in these deliveries, the
+    reconciler has grown a power it was built not to have.
     """
     await _install(repair_factory, pre_v15_5_0(), "2026-06-01")
-    await run_data_repairs(repair_factory)
+    report = await run_data_repairs(repair_factory)
 
-    nova_scotia = await _resolved(repair_factory, "CA-NS")
-    assert nova_scotia.combined_rate_pct == "15"
+    deliveries = await _deliveries(repair_factory)
+    assert "CA/HST_NS" not in deliveries, "the reconciler delivered a rate line that was already on file"
+    assert deliveries == _EXPECTED_DELIVERY
+    assert _outcome(report, REPAIR_ID).rows_changed == 8, (
+        "the reconciler's own count moved, so it is doing something other than the eight rate lines it owns"
+    )
 
     async with repair_factory() as session:
         windows = (
             await session.execute(
-                select(TaxConfiguration.effective_from).where(
-                    TaxConfiguration.country_code == "CA", TaxConfiguration.tax_code == "HST_NS"
-                )
+                select(TaxConfiguration.rate_pct, TaxConfiguration.effective_from, TaxConfiguration.effective_to)
+                .where(TaxConfiguration.country_code == "CA", TaxConfiguration.tax_code == "HST_NS")
+                .order_by(TaxConfiguration.effective_from)
             )
-        ).scalars()
-        assert sorted(windows) == ["2010-07-01"], "a second Nova Scotia window arrived and nothing closed the first"
+        ).all()
+    assert [tuple(row) for row in windows] == [
+        ("15.0", "2010-07-01", "2025-03-31"),
+        ("14.0", "2025-04-01", None),
+    ], "the second Nova Scotia window arrived without the first being closed, or did not arrive at all"
 
 
 async def test_a_second_boot_delivers_nothing(repair_factory) -> None:
