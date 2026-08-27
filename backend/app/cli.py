@@ -17,6 +17,10 @@ explicit subcommands are still there for advanced use:
     openconstructionerp seed    [--demo] [--data-dir DIR]
     openconstructionerp version
 
+``openconstructionerp --version`` (or ``-V``) prints the same report as the
+``version`` subcommand. It is the spelling most people reach for first, and it
+used to exit 2 with an argparse error.
+
 ``openconstructionerp doctor`` runs pre-flight checks and prints OK /
 WARNING / ERROR per check so you can diagnose install problems.
 """
@@ -2318,6 +2322,26 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    # ``--version`` as a top-level flag, because that is what a reader types
+    # before they know the tool has subcommands at all, and it answered with an
+    # argparse error and exit 2 for the whole life of the CLI.
+    #
+    # Two details are load-bearing. It stores a flag instead of using
+    # ``action="version"`` so ``main`` can hand the work to :func:`cmd_version`
+    # and the two spellings print one report from one implementation. And it
+    # names its own dest: the ``upgrade`` subcommand declares a ``--version`` of
+    # its own for pinning a release, and a subparser parses into a fresh
+    # namespace whose every key is then copied onto this one, so sharing the
+    # dest would make ``upgrade --version 2.6.10`` print a version report and
+    # never upgrade anything. ``-V`` is free; ``-h`` is the only other short
+    # option this parser declares.
+    parser.add_argument(
+        "-V",
+        "--version",
+        dest="show_version",
+        action="store_true",
+        help="Show version information and exit (same report as the 'version' command)",
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     # serve
@@ -2477,6 +2501,13 @@ def main() -> None:
     """CLI entry point."""
     parser = _build_parser()
     args = parser.parse_args()
+
+    # Answered before the command is looked at, because the case that was
+    # broken is the one with no command at all: it falls through to the bare
+    # invocation branch at the bottom, which starts a server.
+    if getattr(args, "show_version", False):
+        cmd_version(args)
+        return
 
     # Embedded PostgreSQL is the default (see embedded_pg.is_requested). The
     # flag is an explicit override mapped to the same env var _setup_env reads
