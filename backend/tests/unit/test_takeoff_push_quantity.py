@@ -27,10 +27,26 @@ from types import SimpleNamespace
 # the DB here, but the module imports ``app.modules.takeoff.service``
 # which transitively loads config, so point ``DATA_DIR`` at a scratch
 # directory.
+#
+# ``DATA_DIR`` is process-wide state and this module is not the only thing
+# in the process. It is set for the duration of one import and put back
+# immediately, because nothing below reads it: these tests hand ducktypes
+# to a pure helper and never touch storage. Left set, it followed the
+# interpreter into every module collected after this one, and any test
+# asking ``resolve_data_dir()`` where the platform writes was answered
+# with this scratch directory. That is order-dependent by construction:
+# it fails or passes according to which shard a splitter drops the two
+# modules into, and it reads as a defect in whichever module asked.
+_PREVIOUS_DATA_DIR = os.environ.get("DATA_DIR")
 _TMP_DIR = Path(tempfile.mkdtemp(prefix="oe-takeoff-push-"))
 os.environ["DATA_DIR"] = str(_TMP_DIR)
 
 from app.modules.takeoff.service import _pick_takeoff_value  # noqa: E402
+
+if _PREVIOUS_DATA_DIR is None:
+    os.environ.pop("DATA_DIR", None)
+else:
+    os.environ["DATA_DIR"] = _PREVIOUS_DATA_DIR
 
 
 def _measurement(**fields: object) -> SimpleNamespace:
