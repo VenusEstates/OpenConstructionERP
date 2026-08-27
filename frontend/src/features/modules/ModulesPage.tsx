@@ -47,6 +47,12 @@ import { Card, Badge, Button, Input, InfoHint, Breadcrumb, ConfirmDialog, Dismis
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { modulesGuide } from './modulesGuide';
 import { resolveModuleDisplayName } from './moduleDisplayName';
+import {
+  ALL_CATEGORIES,
+  filterModules,
+  tallyModuleCategories,
+  type ModuleSearchContext,
+} from './moduleSearch';
 import { PartnerPackApplyDialog } from './PartnerPackApplyDialog';
 import { PartnerPackDeactivateDialog } from './PartnerPackDeactivateDialog';
 import {
@@ -287,6 +293,23 @@ const MODULE_CATEGORY_META: Record<string, { labelKey: string; defaultLabel: str
   regional: { labelKey: 'modules.cat_regional', defaultLabel: 'Regional Standards' },
 };
 
+/**
+ * The wording for a backend category.
+ *
+ * The map above covers the categories the frontend registry uses; the server
+ * ships several it has never heard of (`business`, `extension`, `controls`,
+ * `enterprise` and more). Those fall back to the raw value rather than
+ * disappearing, which is also what the module card has always printed, so the
+ * chip and the card under it read the same.
+ */
+function moduleCategoryLabel(
+  category: string,
+  t: (key: string, options: { defaultValue: string }) => string,
+): string {
+  const meta = MODULE_CATEGORY_META[category];
+  return meta ? t(meta.labelKey, { defaultValue: meta.defaultLabel }) : category;
+}
+
 /* ── Preset icon mapping ───────────────────────────────────────────────── */
 
 const PRESET_ICON_MAP: Record<string, LucideIcon> = {
@@ -318,6 +341,18 @@ export function ModulesPage() {
     onChange: setActiveTab,
     orientation: 'horizontal',
   });
+
+  // Finding a module by name. The field sits above the tab bar, not inside the
+  // System Modules panel, because the reader who cannot find a module is by
+  // definition on the wrong tab - the page opens on Company Profiles and the
+  // modules are three tabs away. Typing therefore also opens the panel that
+  // holds the answer: a search that returns nothing because the match lives
+  // elsewhere is the very failure this replaces.
+  const [moduleQuery, setModuleQuery] = useState('');
+  const handleModuleQuery = (value: string): void => {
+    setModuleQuery(value);
+    if (value.trim() && activeTab !== 'system') setActiveTab('system');
+  };
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -379,6 +414,29 @@ export function ModulesPage() {
         })}
       </DismissibleInfo>
 
+      {/* Find a module — spans the page, lands you on the tab that answers. */}
+      <div className="max-w-md animate-card-in" style={{ animationDelay: '20ms' }}>
+        <Input
+          id="modules-find"
+          type="search"
+          label={t('modules.find_module', { defaultValue: 'Find a module' })}
+          placeholder={t('modules.find_module_placeholder', {
+            defaultValue: 'Find a module by name, for example Regional Pack',
+          })}
+          value={moduleQuery}
+          onChange={(e) => handleModuleQuery(e.target.value)}
+          icon={<Search size={16} />}
+        />
+        <InfoHint
+          inline
+          className="mt-1"
+          text={t('modules.find_module_hint', {
+            defaultValue:
+              'Searches every backend module by name, id and category, in the language you are reading. Results open on the System Modules tab.',
+          })}
+        />
+      </div>
+
       {/* Tab bar */}
       <div
         className="flex gap-1 rounded-lg bg-surface-secondary p-1 animate-card-in"
@@ -422,7 +480,9 @@ export function ModulesPage() {
         {activeTab === 'profiles' && <CompanyProfilesTab />}
         {activeTab === 'partner-packs' && <PartnerPacksTab />}
         {activeTab === 'data-packages' && <DataPackagesTab />}
-        {activeTab === 'system' && <SystemModulesTab />}
+        {activeTab === 'system' && (
+          <SystemModulesTab query={moduleQuery} onClearQuery={() => setModuleQuery('')} />
+        )}
       </div>
     </div>
   );
@@ -2058,13 +2118,20 @@ function DataPackagesTab() {
 /* ── Tab 3: System Modules ───────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════════════════════ */
 
-function SystemModulesTab() {
+interface SystemModulesTabProps {
+  /** The page-level "Find a module" text. Owned above so it survives a tab switch. */
+  query: string;
+  onClearQuery: () => void;
+}
+
+function SystemModulesTab({ query, onClearQuery }: SystemModulesTabProps) {
   const { t, i18n } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
   const queryClient = useQueryClient();
   const userRole = useAuthStore((s) => s.userRole);
   const isAdmin = userRole === 'admin';
   const [togglingModule, setTogglingModule] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES);
   const { confirm, ...confirmProps } = useConfirm();
 
   const { data: systemModules, refetch, isLoading, isError: systemError } = useQuery({
@@ -2081,6 +2148,37 @@ function SystemModulesTab() {
   // confirm dialog and in the toast alike. A name translated in one of those
   // and English in the next reads as two different modules.
   const nameOf = (mod: SystemModule): string => resolveModuleDisplayName(mod, t, i18n.language);
+
+  // The same translation the card prints is what the search reads, so the word
+  // on screen is the word that works. `categoryLabel` is passed in rather than
+  // imported by the search module because the label map lives on this page.
+  const searchContext: ModuleSearchContext = useMemo(
+    () => ({
+      t,
+      language: i18n.language,
+      categoryLabel: (category: string) => moduleCategoryLabel(category, t),
+    }),
+    [t, i18n.language],
+  );
+
+  // Chips count the whole list, not the search result, so they stay put while
+  // the reader types instead of rearranging under the cursor.
+  const categoryTallies = useMemo(
+    () => tallyModuleCategories(systemModules ?? [], MODULE_CATEGORY_ORDER),
+    [systemModules],
+  );
+
+  const visibleModules = useMemo(
+    () => filterModules(systemModules ?? [], query, activeCategory, searchContext),
+    [systemModules, query, activeCategory, searchContext],
+  );
+
+  const isFiltered = query.trim().length > 0 || activeCategory !== ALL_CATEGORIES;
+
+  function clearFilters(): void {
+    setActiveCategory(ALL_CATEGORIES);
+    onClearQuery();
+  }
 
   async function handleBackendToggle(mod: SystemModule): Promise<void> {
     // Enabling/disabling a backend module is admin-only on the server
@@ -2216,6 +2314,15 @@ function SystemModulesTab() {
         <p className="text-sm text-content-secondary">
           {enabledCount}/{systemModules.length}{' '}
           {t('marketplace.modules_enabled', { defaultValue: 'modules enabled' })}
+          {isFiltered && (
+            <span className="ml-2 text-content-tertiary">
+              {t('modules.system_match_count', {
+                defaultValue: '- {{shown}} of {{total}} shown',
+                shown: visibleModules.length,
+                total: systemModules.length,
+              })}
+            </span>
+          )}
         </p>
         <InfoHint
           inline
@@ -2234,8 +2341,62 @@ function SystemModulesTab() {
         )}
       </div>
 
+      {/* Category chips. 14 regional packs are a group a reader thinks in, and
+          the list is far too long to scan without one. */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[{ category: ALL_CATEGORIES, count: systemModules.length }, ...categoryTallies].map(
+          ({ category, count }) => {
+            const isActive = activeCategory === category;
+            return (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                aria-pressed={isActive}
+                className={clsx(
+                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-fast ease-oe',
+                  isActive
+                    ? 'bg-oe-blue text-content-inverse shadow-xs'
+                    : 'bg-surface-secondary text-content-secondary hover:bg-surface-tertiary hover:text-content-primary',
+                )}
+              >
+                <span>
+                  {category === ALL_CATEGORIES
+                    ? t('marketplace.category_all', { defaultValue: 'All' })
+                    : moduleCategoryLabel(category, t)}
+                </span>
+                <span
+                  className={clsx(
+                    'ml-0.5 text-2xs font-semibold rounded-full px-1.5',
+                    isActive ? 'bg-white/20 text-content-inverse' : 'bg-surface-primary text-content-tertiary',
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          },
+        )}
+      </div>
+
+      {visibleModules.length === 0 ? (
+        <div className="py-16 text-center animate-card-in">
+          <Search size={40} className="mx-auto mb-3 text-content-tertiary" strokeWidth={1.5} />
+          <p className="text-sm font-medium text-content-secondary">
+            {t('modules.no_system_matches', { defaultValue: 'No system module matches' })}
+          </p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-content-tertiary">
+            {t('modules.no_system_matches_hint', {
+              defaultValue:
+                'Try a shorter search or pick All above. Company profiles, packs and data packages are separate lists, on the other tabs of this page.',
+            })}
+          </p>
+          <Button variant="secondary" size="sm" onClick={clearFilters} className="mt-4">
+            {t('common.clear_filters', { defaultValue: 'Clear filters' })}
+          </Button>
+        </div>
+      ) : (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {systemModules.map((mod, i) => (
+        {visibleModules.map((mod, i) => (
           <Card
             key={mod.name}
             className="animate-card-in"
@@ -2271,7 +2432,7 @@ function SystemModulesTab() {
                   {mod.category && mod.category !== 'core' && (
                     <>
                       <span className="text-border">|</span>
-                      <span>{mod.category}</span>
+                      <span>{moduleCategoryLabel(mod.category, t)}</span>
                     </>
                   )}
                 </div>
@@ -2333,6 +2494,7 @@ function SystemModulesTab() {
           </Card>
         ))}
       </div>
+      )}
 
       <ConfirmDialog {...confirmProps} />
     </div>
