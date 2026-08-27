@@ -855,6 +855,23 @@ fn blocking_fault(json: &serde_json::Value) -> Option<String> {
 /// directory". The founder-machine case that motivated the status check is
 /// still rejected, on the check that actually described it: a v6.10.0 responder
 /// is not our version. Version equality is what made the status test redundant.
+///
+/// One of those two has since been fixed at the source, and this note is here so
+/// nobody reads the paragraph above as a permanent statement about the backend.
+/// A head that trails the tree no longer degrades anything: the backend
+/// publishes ``alembic_head_matches`` as a fact and degrades on the condition
+/// that actually is a fault, a live schema that has drifted from the models,
+/// which it reports separately as ``schema_matches_models``. So the shape that
+/// made dropping the head test necessary is not one a current backend produces.
+///
+/// Neither test goes back in regardless. The launcher attaches to whatever is
+/// already listening, and that can be an older build than the launcher itself,
+/// so the old shape stays reachable for as long as any such install survives.
+/// More to the point, the reason for dropping them was never only that the
+/// backend was wrong: rejecting a healthy backend costs a second server on the
+/// running one's data directory, and that price is paid whether the field that
+/// triggered it was right or not. The fix upstream removes the occasion, not
+/// the argument.
 async fn is_our_backend_healthy(client: &reqwest::Client, port: u16) -> bool {
     let url = format!("http://127.0.0.1:{port}/api/health");
     let resp = match client
