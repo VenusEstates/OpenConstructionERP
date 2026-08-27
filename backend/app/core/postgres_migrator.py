@@ -222,6 +222,16 @@ async def postgres_auto_migrate(engine: AsyncEngine, base) -> int:
                 # let the app's Python-side default cover new writes (mirrors the
                 # defensive behaviour of the SQLite migrator).
                 not_null = " NOT NULL" if (not col.nullable and default) else ""
+                # Adding it nullable is the right call - the alternative fails
+                # outright on a populated table - but it leaves the database and
+                # the models disagreeing about this column for the life of the
+                # install, because no revision body ever runs to tighten it
+                # later. Until this flag existed that divergence was created in
+                # silence: the column went in, the heal counted it as a success,
+                # and nothing said the NOT NULL had been dropped on the way.
+                # Read after the statement lands, so a column that was never
+                # added is not reported as a divergence.
+                not_null_declined = not col.nullable and not default
 
                 sql = f'ALTER TABLE "{table.name}" ADD COLUMN IF NOT EXISTS "{col.name}" {col_type}{not_null}{default}'
 
@@ -240,6 +250,15 @@ async def postgres_auto_migrate(engine: AsyncEngine, base) -> int:
                         col.name,
                         col_type,
                     )
+                    if not_null_declined:
+                        logger.warning(
+                            "PostgreSQL migration: added %s.%s NULLABLE although the models declare it "
+                            "NOT NULL, because it has no default to backfill the rows already in the "
+                            "table. The database and the models disagree about this column until it is "
+                            "backfilled and tightened by hand; nothing on the boot path will do it.",
+                            table.name,
+                            col.name,
+                        )
                 except Exception as exc:  # noqa: BLE001
                     # A rejected DEFAULT must not cost the column. The
                     # constrained form above is an improvement on the plain
