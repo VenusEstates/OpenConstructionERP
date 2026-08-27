@@ -65,15 +65,14 @@ class BaseVariant:
             (``DDC_CWICR_<token>_Catalog.csv``); differs from ``region`` for the
             national bases whose export keeps a short country prefix.
         bundled: True on the eight national families, home card and market cards
-            alike, and on nothing else: 342 of the 372 variants. The name is a
-            claim about packaging and the value does not carry it. No release
-            artefact holds a work-item parquet. Neither the wheel's force-include
-            map nor the desktop spec ships one, ``app/data/cwicr`` is created
-            empty on purpose because a single parquet runs 25 to 60 MB, and
-            ``_find_cwicr_file`` ends at a GitHub download. The remaining search
-            paths resolve only on a machine that also has the data repository
-            checked out beside this one, which is a developer's machine and not
-            an install.
+            alike, and on nothing else. The name is a claim about packaging and
+            the value does not carry it. No release artefact holds a work-item
+            parquet. Neither the wheel's force-include map nor the desktop spec
+            ships one, ``app/data/cwicr`` is created empty on purpose because a
+            single parquet runs 25 to 60 MB, and ``_find_cwicr_file`` ends at a
+            GitHub download. The remaining search paths resolve only on a
+            machine that also has the data repository checked out beside this
+            one, which is a developer's machine and not an install.
 
             So the field is read in two ways that do not agree, and neither
             reader is wrong about its own meaning. ``github_snapshot_files``
