@@ -329,6 +329,12 @@ export function DashboardProjectsMap({ projects, className, heightClass: heightC
 
   const Map = mapLib?.default;
   const Marker = mapLib?.Marker;
+  // Attribution comes off the same dynamically-imported module as Map and
+  // Marker rather than a top-level import, because a static
+  // ``import { AttributionControl } from 'react-map-gl/maplibre'`` would
+  // pull the whole maplibre chunk eagerly into the dashboard bundle and
+  // undo the reason this file resolves the library lazily at all.
+  const Attribution = mapLib?.AttributionControl;
 
   // Map height scales with project count — a 1-2 project workspace doesn't
   // need 256px of map real estate. Saves vertical space on small portfolios.
@@ -346,7 +352,7 @@ export function DashboardProjectsMap({ projects, className, heightClass: heightC
         className,
       )}
     >
-      {Map && Marker ? (
+      {Map && Marker && Attribution ? (
         <Map
           ref={(instance: MapRef | null) => {
             mapRef.current = instance;
@@ -358,6 +364,16 @@ export function DashboardProjectsMap({ projects, className, heightClass: heightC
           dragRotate={false}
           attributionControl={false}
         >
+          {/* The built-in control is off so it can be replaced with the
+              compact one below. OpenStreetMap data is ODbL and the tiles
+              rendered from it are a Produced Work, which owes attribution,
+              so this must stay mounted for as long as the map draws OSM
+              tiles. Same string and same compact form as every other map
+              surface in the app (ProjectMap, MapLibreViewer). */}
+          <Attribution
+            compact
+            customAttribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          />
           {resolved.map((m) => (
             <Marker
               key={m.id}
