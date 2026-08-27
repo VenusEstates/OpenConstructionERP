@@ -12,6 +12,11 @@ def register_bi_dashboards_permissions() -> None:
             # KPI library - broadly readable, only admins curate
             "bi.kpi.read": Role.VIEWER,
             "bi.kpi.compute": Role.VIEWER,
+            # Registering or removing a custom KPI. Manager rather than
+            # admin: defining what a company measures is estimating work,
+            # and the whitelist - not the role - is what keeps a custom
+            # definition from reaching anything it should not.
+            "bi.kpi.write": Role.MANAGER,
             # Dashboards - viewers can read shared/role/global dashboards,
             # editors can manage their own personal dashboards
             "bi.dashboard.read": Role.VIEWER,

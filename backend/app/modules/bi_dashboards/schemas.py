@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ── Canonical enumerations ─────────────────────────────────────────────
 
@@ -85,23 +85,61 @@ class KPIDefinitionRead(BaseModel):
     aggregation: str = "last"
     category: str = "operational"
     is_system: bool = False
+    spec_json: dict[str, Any] = Field(default_factory=dict)
     project_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class KPIDefinitionCreate(BaseModel):
-    code: str = Field(..., min_length=1, max_length=64)
+    """Payload for registering a custom KPI.
+
+    Deliberately minimal, and deliberately missing two fields the read
+    model has. ``formula_ref`` is not accepted because it binds a code to
+    a Python function: letting a caller set it would let them register
+    ``my_margin`` pointing at the built-in ``cpi`` and call the result
+    their own. ``is_system`` is not accepted because the starter pack
+    tells its own rows apart by it. Both are set by the server.
+
+    ``spec`` is the whole definition of what the KPI measures. It is
+    checked against the entity / field / aggregation whitelist in
+    :mod:`app.modules.bi_dashboards.kpi_spec` at creation time, and the
+    rejection names the part of the spec that failed.
+    """
+
+    code: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_]*$")
     name: str = Field(..., min_length=1, max_length=255)
     description: str = ""
-    formula_ref: str = Field(..., min_length=1, max_length=128)
-    source_modules: list[str] = Field(default_factory=list)
     unit: str = "ratio"
     target_default: Decimal | None = None
     aggregation: str = "last"
     category: str = "operational"
-    is_system: bool = False
     project_id: UUID | None = None
+    spec: dict[str, Any] = Field(...)
+
+    @field_validator("unit")
+    @classmethod
+    def _known_unit(cls, value: str) -> str:
+        if value not in KPI_UNITS:
+            raise ValueError(f"unknown unit {value!r}. Allowed: {', '.join(KPI_UNITS)}.")
+        return value
+
+    @field_validator("aggregation")
+    @classmethod
+    def _known_aggregation(cls, value: str) -> str:
+        # This is the trend aggregation - how successive stored values of
+        # the KPI roll up over time. What the KPI measures in the first
+        # place is ``spec.aggregation``, a different vocabulary.
+        if value not in KPI_AGGREGATIONS:
+            raise ValueError(f"unknown aggregation {value!r}. Allowed: {', '.join(KPI_AGGREGATIONS)}.")
+        return value
+
+    @field_validator("category")
+    @classmethod
+    def _known_category(cls, value: str) -> str:
+        if value not in KPI_CATEGORIES:
+            raise ValueError(f"unknown category {value!r}. Allowed: {', '.join(KPI_CATEGORIES)}.")
+        return value
 
 
 class KPIComputeRequest(BaseModel):

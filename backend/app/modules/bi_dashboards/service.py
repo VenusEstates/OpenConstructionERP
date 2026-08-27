@@ -19,6 +19,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
+from app.modules.bi_dashboards import kpi_spec as _kpi_spec
 from app.modules.bi_dashboards import kpis as _kpis
 from app.modules.bi_dashboards.alert_dsl import evaluate_alert_expression
 from app.modules.bi_dashboards.models import (
@@ -44,6 +45,7 @@ from app.modules.bi_dashboards.schemas import (
     DashboardRenderResponse,
     DashboardUpdate,
     KPIComputeResponse,
+    KPIDefinitionCreate,
     KPIHistoryPoint,
     ReportDefinitionCreate,
     ReportDefinitionUpdate,
@@ -59,6 +61,50 @@ from app.modules.bi_dashboards.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+#: What a custom KPI's ``formula_ref`` says. It names no Python function
+#: on purpose - the behaviour lives in ``spec_json``, and a lookup of this
+#: string in ``KPI_FORMULAS`` is meant to miss so the spec path runs.
+_CUSTOM_FORMULA_REF = "spec"
+
+
+class CustomKPICodeInUse(Exception):
+    """The requested KPI code is already taken."""
+
+    def __init__(self, code: str, reason: str) -> None:
+        self.code = code
+        self.reason = reason
+        super().__init__(f"KPI code '{code}' is not available: {reason}.")
+
+
+class CustomKPINotFound(Exception):
+    """No KPI definition row carries the requested code."""
+
+    def __init__(self, code: str) -> None:
+        self.code = code
+        super().__init__(f"No KPI definition with code '{code}'.")
+
+
+class CustomKPIIsSystem(Exception):
+    """A built-in KPI cannot be deleted - it would come back on next boot."""
+
+    def __init__(self, code: str) -> None:
+        self.code = code
+        super().__init__(f"KPI '{code}' is a built-in definition and cannot be deleted.")
+
+
+class CustomKPIInUse(Exception):
+    """Something still points at the KPI, so deleting it would blind them."""
+
+    def __init__(self, code: str, referrers: dict[str, list[uuid.UUID]]) -> None:
+        self.code = code
+        self.referrers = referrers
+        widgets = len(referrers.get("widgets") or [])
+        alerts = len(referrers.get("alerts") or [])
+        super().__init__(
+            f"KPI '{code}' is still referenced by {widgets} widget(s) and {alerts} alert rule(s). "
+            "Repoint or remove them first.",
+        )
 
 
 def _safe_publish(name: str, data: dict[str, Any]) -> None:
@@ -199,6 +245,91 @@ class BIDashboardsService:
             category=category,
             project_id=project_id,
         )
+
+    async def create_custom_kpi(self, payload: KPIDefinitionCreate) -> Any:
+        """Register a user-defined KPI from a whitelisted spec.
+
+        The spec is validated here, not at compute time. A definition that
+        survives this call is one the evaluator can run; a definition that
+        does not survive it tells the caller which part was refused.
+
+        ``formula_ref`` and ``is_system`` are set by the server rather
+        than accepted from the payload - see
+        :class:`~app.modules.bi_dashboards.schemas.KPIDefinitionCreate`.
+
+        Args:
+            payload: The submitted definition.
+
+        Returns:
+            The persisted :class:`KPIDefinition` row.
+
+        Raises:
+            KPISpecError: The spec is outside the whitelist.
+            CustomKPICodeInUse: The code already belongs to a registered
+                Python formula or to another definition row.
+        """
+        spec = _kpi_spec.validate_spec(payload.spec)
+        code = payload.code
+        # A registered formula wins the lookup in ``kpis.compute``, so a
+        # custom definition sharing its code would be stored and never
+        # consulted. Refuse rather than accept a KPI that cannot run.
+        if code in _kpis.KPI_FORMULAS or code in _kpis.SYSTEM_KPI_META:
+            raise CustomKPICodeInUse(code, "a built-in KPI formula is registered under this code")
+        if await self.repo.get_kpi_definition_by_code(code) is not None:
+            raise CustomKPICodeInUse(code, "a KPI definition already exists under this code")
+        row = await self.repo.create_custom_kpi_definition(
+            code=code,
+            name=payload.name,
+            description=payload.description,
+            formula_ref=_CUSTOM_FORMULA_REF,
+            source_modules=_kpi_spec.source_modules_for(spec),
+            unit=payload.unit,
+            target_default=payload.target_default,
+            aggregation=payload.aggregation,
+            category=payload.category,
+            is_system=False,
+            spec_json=spec,
+            project_id=payload.project_id,
+        )
+        _safe_publish(
+            "bi.kpi.definition_created",
+            {
+                "kpi_code": code,
+                "entity": spec.get("entity"),
+                "aggregation": spec.get("aggregation"),
+                "project_id": str(payload.project_id) if payload.project_id else None,
+            },
+        )
+        return row
+
+    async def delete_custom_kpi(self, code: str) -> None:
+        """Delete a custom KPI, refusing while anything still points at it.
+
+        Widgets and alert rules hold ``kpi_code`` as a plain string, so the
+        database would let the row go and leave them reading a permanent
+        zero - a dashboard tile that looks like a measurement and is not
+        one. Validation is a first-class part of this workflow, so the
+        delete is refused and the refusal names every referrer, letting the
+        user repoint or remove them and try again.
+
+        Args:
+            code: The KPI code to delete.
+
+        Raises:
+            CustomKPINotFound: No definition row carries this code.
+            CustomKPIIsSystem: The code belongs to a built-in KPI.
+            CustomKPIInUse: Widgets or alert rules still reference it.
+        """
+        row = await self.repo.get_kpi_definition_by_code(code)
+        if row is None:
+            raise CustomKPINotFound(code)
+        if row.is_system or code in _kpis.KPI_FORMULAS:
+            raise CustomKPIIsSystem(code)
+        referrers = await self.repo.list_kpi_code_referrers(code)
+        if referrers["widgets"] or referrers["alerts"]:
+            raise CustomKPIInUse(code, referrers)
+        await self.repo.delete_kpi_definition(code)
+        _safe_publish("bi.kpi.definition_deleted", {"kpi_code": code})
 
     async def compute_kpi(
         self,

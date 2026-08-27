@@ -3830,6 +3830,62 @@ async def benchmark(
     }
 
 
+async def _compute_from_spec(
+    code: str,
+    session: AsyncSession,
+    *,
+    project_id: uuid.UUID | None = None,
+    period_start: _date | None = None,
+    period_end: _date | None = None,
+    allowed_project_ids: set[uuid.UUID] | None = None,
+) -> KPIComputation:
+    """Resolve a code with no Python formula against the custom KPI table.
+
+    Returns a zero computation when the code is genuinely unknown, when
+    its spec's source module is not installed, or when the query fails -
+    the same graceful degradation every built-in formula promises.
+    """
+    from app.modules.bi_dashboards import kpi_spec as _spec
+
+    try:
+        loaded = await _spec.load_custom_spec(session, code)
+    except Exception:
+        logger.exception("compute: custom KPI lookup failed for code=%s", code)
+        return KPIComputation()
+    if loaded is None:
+        # A widget pointing at a KPI code nothing registers renders a
+        # permanent zero. That is a misconfiguration, not a data reading,
+        # so it must be visible above DEBUG.
+        logger.warning(
+            "compute: unknown KPI code=%s - the widget will render 0 until the code is registered",
+            code,
+        )
+        return KPIComputation()
+    spec, unit = loaded
+    try:
+        result = await _spec.evaluate_spec(
+            spec,
+            session,
+            project_id=project_id,
+            period_start=period_start,
+            period_end=period_end,
+            allowed_project_ids=allowed_project_ids,
+        )
+    except ImportError:
+        # The entity's source module is not installed. Designed condition,
+        # stays unlogged - same rule the built-in formulas follow.
+        return KPIComputation(unit=unit)
+    except Exception:
+        logger.exception("compute: custom KPI %s spec evaluation failed", code)
+        return KPIComputation(unit=unit)
+    return KPIComputation(
+        value=result.value,
+        unit=unit,
+        source_record_count=result.source_record_count,
+        breakdown=result.breakdown,
+    )
+
+
 async def compute(
     code: str,
     session: AsyncSession,
@@ -3846,6 +3902,13 @@ async def compute(
     or when the formula raises - never bubble up to API callers, this
     module is purely consumer code.
 
+    A code with no Python formula falls through to
+    :func:`_compute_from_spec`, which answers it from the declarative
+    whitelisted spec on its ``KPIDefinition`` row. Registered formulas win
+    on a name clash, which is why a custom definition is refused at
+    creation if its code is already registered - otherwise the user's spec
+    would be stored and silently never consulted.
+
     ``allowed_project_ids`` is forwarded to every formula so a portfolio
     call (``project_id is None``) only aggregates over the caller's
     accessible projects (IDOR defence). ``None`` means no restriction
@@ -3854,14 +3917,20 @@ async def compute(
     """
     fn = KPI_FORMULAS.get(code)
     if fn is None:
-        # A widget pointing at a KPI code nothing registers renders a
-        # permanent zero. That is a misconfiguration, not a data reading,
-        # so it must be visible above DEBUG.
-        logger.warning(
-            "compute: unknown KPI code=%s - the widget will render 0 until the code is registered",
+        # Not a Python formula. It may still be a custom KPI whose
+        # definition row carries a declarative spec. Every surface in this
+        # module - kpi_card widgets, chart headlines, alerts, reports,
+        # drill-down, widget export - reaches its value through this one
+        # function, so resolving the spec here is what makes a custom KPI
+        # work everywhere a built-in one does.
+        return await _compute_from_spec(
             code,
+            session,
+            project_id=project_id,
+            period_start=period_start,
+            period_end=period_end,
+            allowed_project_ids=allowed_project_ids,
         )
-        return KPIComputation()
     try:
         return await fn(
             session,

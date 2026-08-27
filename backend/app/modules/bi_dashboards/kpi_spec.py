@@ -1,0 +1,881 @@
+# DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
+# Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
+"""Declarative, whitelisted KPI specs - the safe way to define a custom KPI.
+
+The 35 built-in KPIs are Python functions registered through
+``@register_kpi``. Community modules can add more the same way, but a
+person running the platform cannot: they have no place to put Python.
+This module is the answer for them, and the shape of the answer is the
+whole point.
+
+A custom KPI is **data**, never code. It names one entity, one
+aggregation, one field and a list of filters, and every one of those four
+is looked up in a table declared here. Nothing a caller writes is ever
+concatenated into SQL or evaluated: a field name is a dictionary key, and
+a miss is a rejection, not a fallback. Rejection happens when the
+definition is created, so a KPI that survives ``POST /kpis`` is a KPI that
+will compute rather than one that will quietly read zero forever.
+
+Two structures describe the same whitelist and they are deliberately
+independent:
+
+* :data:`ENTITY_CATALOG` is pure data - entity name, source module, field
+  names and their kinds. It needs no ORM import, so validating a spec
+  works whether or not the source module is installed, and the catalog can
+  be served to a UI that wants to offer the user a picker.
+* ``_bind_*`` builds the actual SQLAlchemy expressions, importing the
+  source module's models lazily so this consumer module keeps its
+  contract of degrading rather than crashing when a module is absent.
+
+:func:`check_catalog_binding_parity` asserts the two agree. A field that
+exists in one and not the other is either an unreachable promise or an
+undeclared column, and both are bugs the parity test catches.
+
+Scoping is not optional here. A spec evaluation goes through the same
+``allowed_project_ids`` narrowing as every built-in formula, so a custom
+KPI can never read across a tenant boundary that a built-in one respects.
+"""
+
+from __future__ import annotations
+
+import logging
+import uuid
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, time, timedelta
+from datetime import date as _date
+from decimal import Decimal
+from typing import Any, Callable
+
+from sqlalchemy import Integer, cast, func, literal, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.sql_numeric import numeric_value
+from app.modules.bi_dashboards.models import KPIDefinition
+
+logger = logging.getLogger(__name__)
+
+
+# ── Vocabulary ─────────────────────────────────────────────────────────
+
+#: Field kinds. The kind decides which aggregations and which filter
+#: operators a field accepts, so ``sum`` over a text column is refused by
+#: the same table that refuses an unknown column.
+KIND_NUMERIC = "numeric"
+KIND_TEXT = "text"
+KIND_UUID = "uuid"
+KIND_BOOL = "bool"
+
+#: Aggregations a custom KPI may ask for. Anything outside this tuple is
+#: rejected by name.
+AGGREGATIONS: tuple[str, ...] = (
+    "count",
+    "sum",
+    "avg",
+    "min",
+    "max",
+    "weighted_avg",
+    "top_by",
+)
+
+#: Aggregations that need a numeric ``field``. ``count`` is the one that
+#: must not carry one - counting a column and counting rows are different
+#: questions and silently answering the second is how a KPI lies.
+_FIELD_REQUIRED: frozenset[str] = frozenset({"sum", "avg", "min", "max", "weighted_avg", "top_by"})
+
+#: Filter operators. ``in`` takes a list; ``is_null`` / ``not_null`` take
+#: no value; the ordering operators are numeric-only.
+FILTER_OPERATORS: tuple[str, ...] = (
+    "eq",
+    "ne",
+    "lt",
+    "lte",
+    "gt",
+    "gte",
+    "in",
+    "is_null",
+    "not_null",
+)
+
+_ORDERING_OPERATORS: frozenset[str] = frozenset({"lt", "lte", "gt", "gte"})
+_VALUELESS_OPERATORS: frozenset[str] = frozenset({"is_null", "not_null"})
+
+#: A breakdown is a display artefact, not a data export. Capping it keeps
+#: a dashboard tile from carrying ten thousand keys because somebody
+#: grouped by description.
+MAX_BREAKDOWN_GROUPS = 200
+
+#: Longest ``in`` list a filter may carry.
+MAX_IN_VALUES = 100
+
+
+class KPISpecError(ValueError):
+    """A spec was rejected, and the exception says exactly where.
+
+    ``path`` is a dotted path into the submitted spec (``spec.field``,
+    ``spec.filters[1].op``) so a caller can highlight the offending input
+    rather than re-reading the whole document. ``allowed`` carries the
+    accepted vocabulary at that path when there is one.
+    """
+
+    def __init__(
+        self,
+        path: str,
+        message: str,
+        *,
+        value: Any = None,
+        allowed: list[str] | None = None,
+    ) -> None:
+        self.path = path
+        self.value = value
+        self.allowed = allowed
+        detail = f"{path}: {message}"
+        if allowed:
+            detail = f"{detail} Allowed: {', '.join(allowed)}."
+        super().__init__(detail)
+
+    def as_dict(self) -> dict[str, Any]:
+        """Render for an HTTP error body."""
+        return {
+            "error": "invalid_kpi_spec",
+            "path": self.path,
+            "value": None if self.value is None else str(self.value),
+            "allowed": self.allowed or [],
+            "message": str(self),
+        }
+
+
+# ── Catalog (pure data - no ORM import) ────────────────────────────────
+
+
+@dataclass(frozen=True)
+class CatalogEntity:
+    """One documented entity a custom KPI may aggregate over."""
+
+    name: str
+    source_module: str
+    description: str
+    #: field name -> kind
+    fields: dict[str, str]
+
+    def numeric_fields(self) -> list[str]:
+        return sorted(n for n, k in self.fields.items() if k == KIND_NUMERIC)
+
+    def groupable_fields(self) -> list[str]:
+        """Fields a breakdown may be keyed by.
+
+        Numeric fields are excluded on purpose: grouping by a measure
+        produces one bucket per distinct amount, which is never the
+        question anybody meant to ask.
+        """
+        return sorted(n for n, k in self.fields.items() if k != KIND_NUMERIC)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "source_module": self.source_module,
+            "description": self.description,
+            "fields": [{"name": n, "kind": k} for n, k in sorted(self.fields.items())],
+            "numeric_fields": self.numeric_fields(),
+            "groupable_fields": self.groupable_fields(),
+        }
+
+
+ENTITY_CATALOG: dict[str, CatalogEntity] = {
+    "boq_position": CatalogEntity(
+        name="boq_position",
+        source_module="oe_boq",
+        description=(
+            "One priced line of a Bill of Quantities. ``amount`` is the "
+            "derived quantity x unit_rate; ``confidence`` is the 0..1 "
+            "estimator confidence and may be unset, in which case the row "
+            "is left out of averages instead of being read as zero."
+        ),
+        fields={
+            "quantity": KIND_NUMERIC,
+            "unit_rate": KIND_NUMERIC,
+            "total": KIND_NUMERIC,
+            "amount": KIND_NUMERIC,
+            "confidence": KIND_NUMERIC,
+            "boq_id": KIND_UUID,
+            "parent_id": KIND_UUID,
+            "ordinal": KIND_TEXT,
+            "description": KIND_TEXT,
+            "unit": KIND_TEXT,
+            "source": KIND_TEXT,
+            "validation_status": KIND_TEXT,
+            "node_type": KIND_TEXT,
+        },
+    ),
+    "boq": CatalogEntity(
+        name="boq",
+        source_module="oe_boq",
+        description=(
+            "A Bill of Quantities header. Carries no measure of its own, "
+            "so only ``count`` applies - use ``boq_position`` for money."
+        ),
+        fields={
+            "name": KIND_TEXT,
+            "status": KIND_TEXT,
+            "estimate_type": KIND_TEXT,
+            "is_locked": KIND_BOOL,
+        },
+    ),
+}
+
+
+def catalog_as_dict() -> list[dict[str, Any]]:
+    """The whole whitelist, in the shape the API serves it."""
+    return [ENTITY_CATALOG[name].as_dict() for name in sorted(ENTITY_CATALOG)]
+
+
+# ── Bindings (ORM expressions, resolved lazily) ────────────────────────
+
+
+@dataclass(frozen=True)
+class BoundField:
+    """A whitelisted field, resolved to a SQL expression."""
+
+    expr: Any
+    kind: str
+    #: The raw column to test for NULL when the field is nullable. A
+    #: derived expression over NOT NULL columns leaves this unset.
+    nullable_source: Any | None = None
+
+
+@dataclass(frozen=True)
+class BoundEntity:
+    """A whitelisted entity, resolved to ORM models."""
+
+    model: Any
+    project_column: Any
+    period_column: Any
+    fields: dict[str, BoundField]
+    #: ``(target, onclause)`` pairs applied in order before any predicate.
+    joins: list[tuple[Any, Any]] = field(default_factory=list)
+
+
+def _bind_boq_position() -> BoundEntity:
+    from app.modules.boq.models import BOQ, Position
+
+    # quantity / unit_rate / total / confidence are String columns by
+    # design (see Position's own comment). ``numeric_value`` is the
+    # platform's tolerant coercion: a clean decimal converts, anything
+    # else reads as 0 rather than aborting the statement the way a bare
+    # ``::double precision`` would on one malformed legacy row.
+    return BoundEntity(
+        model=Position,
+        project_column=BOQ.project_id,
+        period_column=Position.created_at,
+        joins=[(BOQ, Position.boq_id == BOQ.id)],
+        fields={
+            "quantity": BoundField(numeric_value(Position.quantity), KIND_NUMERIC),
+            "unit_rate": BoundField(numeric_value(Position.unit_rate), KIND_NUMERIC),
+            "total": BoundField(numeric_value(Position.total), KIND_NUMERIC),
+            "amount": BoundField(
+                numeric_value(Position.quantity) * numeric_value(Position.unit_rate),
+                KIND_NUMERIC,
+            ),
+            "confidence": BoundField(
+                numeric_value(Position.confidence),
+                KIND_NUMERIC,
+                nullable_source=Position.confidence,
+            ),
+            "boq_id": BoundField(Position.boq_id, KIND_UUID),
+            "parent_id": BoundField(Position.parent_id, KIND_UUID, nullable_source=Position.parent_id),
+            "ordinal": BoundField(Position.ordinal, KIND_TEXT),
+            "description": BoundField(Position.description, KIND_TEXT),
+            "unit": BoundField(Position.unit, KIND_TEXT),
+            "source": BoundField(Position.source, KIND_TEXT),
+            "validation_status": BoundField(Position.validation_status, KIND_TEXT),
+            "node_type": BoundField(Position.node_type, KIND_TEXT, nullable_source=Position.node_type),
+        },
+    )
+
+
+def _bind_boq() -> BoundEntity:
+    from app.modules.boq.models import BOQ
+
+    return BoundEntity(
+        model=BOQ,
+        project_column=BOQ.project_id,
+        period_column=BOQ.created_at,
+        joins=[],
+        fields={
+            "name": BoundField(BOQ.name, KIND_TEXT),
+            "status": BoundField(BOQ.status, KIND_TEXT),
+            "estimate_type": BoundField(BOQ.estimate_type, KIND_TEXT, nullable_source=BOQ.estimate_type),
+            "is_locked": BoundField(BOQ.is_locked, KIND_BOOL),
+        },
+    )
+
+
+_BINDERS: dict[str, Callable[[], BoundEntity]] = {
+    "boq_position": _bind_boq_position,
+    "boq": _bind_boq,
+}
+
+
+def bind_entity(name: str) -> BoundEntity:
+    """Resolve one catalog entity to ORM expressions.
+
+    Raises:
+        ImportError: The source module is not installed. Callers in the
+            compute path turn this into a zero reading, the same way every
+            built-in formula does.
+    """
+    return _BINDERS[name]()
+
+
+def check_catalog_binding_parity() -> dict[str, dict[str, list[str]]]:
+    """Compare the declared catalog against what the binders actually build.
+
+    Returns a per-entity report of the differences, empty when the two
+    agree. Kept as a function rather than an assertion so the caller
+    decides whether a mismatch is a test failure or a log line.
+    """
+    report: dict[str, dict[str, list[str]]] = {}
+    for name, entry in ENTITY_CATALOG.items():
+        try:
+            bound = bind_entity(name)
+        except ImportError:  # pragma: no cover - source module absent
+            report[name] = {"unbindable": [entry.source_module]}
+            continue
+        declared = set(entry.fields)
+        built = set(bound.fields)
+        wrong_kind = sorted(n for n in declared & built if entry.fields[n] != bound.fields[n].kind)
+        diff = {
+            "declared_only": sorted(declared - built),
+            "bound_only": sorted(built - declared),
+            "kind_mismatch": wrong_kind,
+        }
+        if any(diff.values()):
+            report[name] = diff
+    return report
+
+
+# ── Validation ─────────────────────────────────────────────────────────
+
+
+def _require_str(spec: dict[str, Any], key: str, path: str) -> str:
+    value = spec.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise KPISpecError(path, f"expected a non-empty string, got {value!r}.", value=value)
+    return value.strip()
+
+
+def _lookup_field(entry: CatalogEntity, name: Any, path: str) -> str:
+    if not isinstance(name, str) or name not in entry.fields:
+        raise KPISpecError(
+            path,
+            f"unknown field {name!r} on entity '{entry.name}'.",
+            value=name,
+            allowed=sorted(entry.fields),
+        )
+    return name
+
+
+def _require_numeric(entry: CatalogEntity, name: str, path: str) -> None:
+    if entry.fields[name] != KIND_NUMERIC:
+        raise KPISpecError(
+            path,
+            f"field '{name}' is {entry.fields[name]}, and this aggregation needs a numeric field.",
+            value=name,
+            allowed=entry.numeric_fields(),
+        )
+
+
+def _validate_filter(entry: CatalogEntity, raw: Any, path: str) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise KPISpecError(path, f"expected an object with field/op/value, got {type(raw).__name__}.", value=raw)
+    name = _lookup_field(entry, raw.get("field"), f"{path}.field")
+    op = raw.get("op")
+    if op not in FILTER_OPERATORS:
+        raise KPISpecError(
+            f"{path}.op",
+            f"unknown operator {op!r}.",
+            value=op,
+            allowed=list(FILTER_OPERATORS),
+        )
+    kind = entry.fields[name]
+    if op in _ORDERING_OPERATORS and kind != KIND_NUMERIC:
+        raise KPISpecError(
+            f"{path}.op",
+            f"operator '{op}' needs a numeric field, and '{name}' is {kind}.",
+            value=op,
+            allowed=["eq", "ne", "in", "is_null", "not_null"],
+        )
+    value = raw.get("value")
+    if op in _VALUELESS_OPERATORS:
+        if value is not None:
+            raise KPISpecError(f"{path}.value", f"operator '{op}' takes no value.", value=value)
+        return {"field": name, "op": op, "value": None}
+    if op == "in":
+        if not isinstance(value, list) or not value:
+            raise KPISpecError(f"{path}.value", "operator 'in' needs a non-empty list.", value=value)
+        if len(value) > MAX_IN_VALUES:
+            raise KPISpecError(
+                f"{path}.value",
+                f"operator 'in' accepts at most {MAX_IN_VALUES} values, got {len(value)}.",
+                value=len(value),
+            )
+        if any(isinstance(v, (dict, list)) for v in value):
+            raise KPISpecError(f"{path}.value", "operator 'in' accepts scalars only.", value=value)
+        return {"field": name, "op": op, "value": list(value)}
+    if value is None:
+        raise KPISpecError(f"{path}.value", f"operator '{op}' needs a value.", value=None)
+    if isinstance(value, (dict, list)):
+        raise KPISpecError(f"{path}.value", "expected a scalar value.", value=value)
+    if kind == KIND_NUMERIC and not isinstance(value, (int, float, Decimal)) and not _looks_numeric(value):
+        raise KPISpecError(
+            f"{path}.value",
+            f"field '{name}' is numeric, so its filter value must be a number.",
+            value=value,
+        )
+    return {"field": name, "op": op, "value": value}
+
+
+def _looks_numeric(value: Any) -> bool:
+    try:
+        Decimal(str(value))
+    except Exception:
+        return False
+    return True
+
+
+def validate_spec(raw: Any) -> dict[str, Any]:
+    """Validate a submitted spec and return its normalised form.
+
+    Every rejection is a :class:`KPISpecError` naming the path into the
+    spec that failed, so the caller learns which part was refused instead
+    of being told the document is bad.
+
+    Args:
+        raw: The ``spec`` object as submitted.
+
+    Returns:
+        The normalised spec - same shape, unknown keys dropped, strings
+        stripped. This is what gets persisted, so what computes later is
+        what validation looked at.
+
+    Raises:
+        KPISpecError: The spec names an entity, field, aggregation or
+            operator outside the whitelist, or breaks one of the
+            per-aggregation rules.
+    """
+    if not isinstance(raw, dict):
+        raise KPISpecError("spec", f"expected an object, got {type(raw).__name__}.", value=raw)
+
+    entity_name = _require_str(raw, "entity", "spec.entity")
+    entry = ENTITY_CATALOG.get(entity_name)
+    if entry is None:
+        raise KPISpecError(
+            "spec.entity",
+            f"unknown entity {entity_name!r}.",
+            value=entity_name,
+            allowed=sorted(ENTITY_CATALOG),
+        )
+
+    aggregation = _require_str(raw, "aggregation", "spec.aggregation")
+    if aggregation not in AGGREGATIONS:
+        raise KPISpecError(
+            "spec.aggregation",
+            f"unknown aggregation {aggregation!r}.",
+            value=aggregation,
+            allowed=list(AGGREGATIONS),
+        )
+
+    normalised: dict[str, Any] = {"entity": entity_name, "aggregation": aggregation}
+
+    field_name = raw.get("field")
+    if aggregation in _FIELD_REQUIRED:
+        if field_name is None:
+            raise KPISpecError(
+                "spec.field",
+                f"aggregation '{aggregation}' needs a numeric field.",
+                allowed=entry.numeric_fields(),
+            )
+        field_name = _lookup_field(entry, field_name, "spec.field")
+        _require_numeric(entry, field_name, "spec.field")
+        normalised["field"] = field_name
+    elif field_name is not None:
+        raise KPISpecError(
+            "spec.field",
+            "aggregation 'count' counts rows and must not name a field.",
+            value=field_name,
+        )
+
+    weight = raw.get("weight_field")
+    if aggregation == "weighted_avg":
+        if weight is None:
+            raise KPISpecError(
+                "spec.weight_field",
+                "aggregation 'weighted_avg' needs a numeric weight field.",
+                allowed=entry.numeric_fields(),
+            )
+        weight = _lookup_field(entry, weight, "spec.weight_field")
+        _require_numeric(entry, weight, "spec.weight_field")
+        normalised["weight_field"] = weight
+    elif weight is not None:
+        raise KPISpecError(
+            "spec.weight_field",
+            f"aggregation '{aggregation}' takes no weight field.",
+            value=weight,
+        )
+
+    label = raw.get("label_field")
+    if label is not None:
+        if aggregation != "top_by":
+            raise KPISpecError(
+                "spec.label_field",
+                f"aggregation '{aggregation}' takes no label field.",
+                value=label,
+            )
+        label = _lookup_field(entry, label, "spec.label_field")
+        if entry.fields[label] == KIND_NUMERIC:
+            raise KPISpecError(
+                "spec.label_field",
+                f"field '{label}' is numeric, and a label must be something a reader can name a row by.",
+                value=label,
+                allowed=entry.groupable_fields(),
+            )
+        normalised["label_field"] = label
+
+    group_by = raw.get("group_by")
+    if group_by is not None:
+        group_by = _lookup_field(entry, group_by, "spec.group_by")
+        if entry.fields[group_by] == KIND_NUMERIC:
+            raise KPISpecError(
+                "spec.group_by",
+                f"field '{group_by}' is numeric, and a breakdown keyed by a measure is one bucket per amount.",
+                value=group_by,
+                allowed=entry.groupable_fields(),
+            )
+        normalised["group_by"] = group_by
+
+    raw_filters = raw.get("filters") or []
+    if not isinstance(raw_filters, list):
+        raise KPISpecError("spec.filters", f"expected a list, got {type(raw_filters).__name__}.", value=raw_filters)
+    normalised["filters"] = [
+        _validate_filter(entry, item, f"spec.filters[{idx}]") for idx, item in enumerate(raw_filters)
+    ]
+    return normalised
+
+
+def source_modules_for(spec: dict[str, Any]) -> list[str]:
+    """The modules a validated spec reads from, derived rather than declared."""
+    entry = ENTITY_CATALOG.get(str(spec.get("entity", "")))
+    return [entry.source_module] if entry else []
+
+
+# ── Evaluation ─────────────────────────────────────────────────────────
+
+
+@dataclass
+class SpecResult:
+    """What an evaluated spec produces.
+
+    Deliberately not ``KPIComputation``: this module must not import the
+    152 KB formula registry, and the registry converts on the way out.
+    """
+
+    value: Decimal = Decimal("0")
+    source_record_count: int = 0
+    breakdown: dict[str, Any] = field(default_factory=dict)
+
+
+def _apply_filters(stmt: Any, bound: BoundEntity, filters: list[dict[str, Any]]) -> Any:
+    for item in filters:
+        bf = bound.fields[item["field"]]
+        op = item["op"]
+        value = item["value"]
+        if op == "is_null":
+            stmt = stmt.where((bf.nullable_source if bf.nullable_source is not None else bf.expr).is_(None))
+            continue
+        if op == "not_null":
+            stmt = stmt.where((bf.nullable_source if bf.nullable_source is not None else bf.expr).is_not(None))
+            continue
+        # A comparison against NULL is NULL in SQL, so the row drops out -
+        # except that ``numeric_value`` reads a NULL text column as 0 on
+        # PostgreSQL, which would make "confidence below 0.5" quietly
+        # collect every position nobody has scored yet. Restore the
+        # ordinary semantics: an unset value is not a low value. Asking
+        # for the unscored rows is what ``is_null`` is for.
+        if bf.nullable_source is not None:
+            stmt = stmt.where(bf.nullable_source.is_not(None))
+        if op == "in":
+            stmt = stmt.where(bf.expr.in_(value))
+            continue
+        rhs: Any = float(Decimal(str(value))) if bf.kind == KIND_NUMERIC else value
+        if op == "eq":
+            stmt = stmt.where(bf.expr == rhs)
+        elif op == "ne":
+            stmt = stmt.where(bf.expr != rhs)
+        elif op == "lt":
+            stmt = stmt.where(bf.expr < rhs)
+        elif op == "lte":
+            stmt = stmt.where(bf.expr <= rhs)
+        elif op == "gt":
+            stmt = stmt.where(bf.expr > rhs)
+        elif op == "gte":
+            stmt = stmt.where(bf.expr >= rhs)
+    return stmt
+
+
+def _base_predicates(
+    stmt: Any,
+    bound: BoundEntity,
+    spec: dict[str, Any],
+    *,
+    project_id: uuid.UUID | None,
+    period_start: _date | None,
+    period_end: _date | None,
+    allowed_project_ids: set[uuid.UUID] | None,
+) -> Any:
+    from app.modules.bi_dashboards.kpis import _scope_portfolio
+
+    for target, onclause in bound.joins:
+        stmt = stmt.join(target, onclause)
+    if project_id is not None:
+        stmt = stmt.where(bound.project_column == project_id)
+    # Same portfolio narrowing every built-in formula gets. A custom KPI
+    # is not allowed to be the one read that ignores it.
+    stmt = _scope_portfolio(stmt, bound.project_column, project_id, allowed_project_ids)
+    if period_start is not None:
+        stmt = stmt.where(bound.period_column >= datetime.combine(period_start, time.min, tzinfo=UTC))
+    if period_end is not None:
+        stmt = stmt.where(bound.period_column < datetime.combine(period_end + timedelta(days=1), time.min, tzinfo=UTC))
+    stmt = _apply_filters(stmt, bound, spec.get("filters") or [])
+    # A row whose measure is unset is not a zero-valued row. Leaving it in
+    # would read an estimator's "not scored yet" as "scored zero", which is
+    # the quiet wrong answer this whole module is built to avoid.
+    value_field = spec.get("field")
+    weight_field = spec.get("weight_field")
+    for name in (value_field, weight_field):
+        if name is None:
+            continue
+        src = bound.fields[name].nullable_source
+        if src is not None:
+            stmt = stmt.where(src.is_not(None))
+    return stmt
+
+
+def _measures(bound: BoundEntity, spec: dict[str, Any]) -> list[Any]:
+    """The aggregate columns for one aggregation, in evaluation order."""
+    aggregation = spec["aggregation"]
+    if aggregation == "count":
+        return [func.count()]
+    expr = bound.fields[spec["field"]].expr
+    if aggregation == "sum":
+        return [func.sum(expr)]
+    if aggregation == "avg":
+        return [func.avg(expr)]
+    if aggregation == "min":
+        return [func.min(expr)]
+    if aggregation == "max":
+        return [func.max(expr)]
+    if aggregation == "weighted_avg":
+        weight = bound.fields[spec["weight_field"]].expr
+        return [func.sum(expr * weight), func.sum(weight)]
+    # top_by is handled by its own window query
+    return [func.max(expr)]
+
+
+def _fold(aggregation: str, values: list[Any]) -> Decimal:
+    from app.modules.bi_dashboards.kpis import _safe_div, _to_decimal
+
+    if aggregation == "weighted_avg":
+        return _safe_div(_to_decimal(values[0]), _to_decimal(values[1]))
+    return _to_decimal(values[0])
+
+
+def _group_key(value: Any) -> str:
+    if value is None:
+        return "(unset)"
+    return str(value)
+
+
+async def _evaluate_top_by(
+    session: AsyncSession,
+    bound: BoundEntity,
+    spec: dict[str, Any],
+    *,
+    project_id: uuid.UUID | None,
+    period_start: _date | None,
+    period_end: _date | None,
+    allowed_project_ids: set[uuid.UUID] | None,
+) -> SpecResult:
+    """The single highest row, optionally one per group.
+
+    A window is used rather than ``DISTINCT ON`` so the query stays
+    ordinary SQL, and rather than "order and truncate" so the answer is
+    exact instead of correct only while the table is small.
+    """
+    from app.modules.bi_dashboards.kpis import _to_decimal
+
+    value_expr = bound.fields[spec["field"]].expr
+    group_name = spec.get("group_by")
+    group_expr = bound.fields[group_name].expr if group_name else literal(1)
+    label_name = spec.get("label_field")
+    label_expr = bound.fields[label_name].expr if label_name else group_expr
+
+    inner = select(
+        group_expr.label("grp"),
+        label_expr.label("lbl"),
+        value_expr.label("val"),
+        func.row_number().over(partition_by=group_expr, order_by=value_expr.desc()).label("rn"),
+    ).select_from(bound.model)
+    inner = _base_predicates(
+        inner,
+        bound,
+        spec,
+        project_id=project_id,
+        period_start=period_start,
+        period_end=period_end,
+        allowed_project_ids=allowed_project_ids,
+    )
+    sub = inner.subquery()
+    outer = (
+        select(sub.c.grp, sub.c.lbl, sub.c.val)
+        .where(sub.c.rn == 1)
+        .order_by(sub.c.val.desc())
+        .limit(MAX_BREAKDOWN_GROUPS)
+    )
+    rows = (await session.execute(outer)).all()
+    if not rows:
+        return SpecResult()
+    breakdown: dict[str, Any] = {}
+    if group_name:
+        for grp, lbl, val in rows:
+            breakdown[_group_key(grp)] = {"label": _group_key(lbl), "value": str(_to_decimal(val))}
+    else:
+        breakdown["top"] = {"label": _group_key(rows[0][1]), "value": str(_to_decimal(rows[0][2]))}
+    return SpecResult(
+        value=_to_decimal(rows[0][2]),
+        source_record_count=len(rows),
+        breakdown=breakdown,
+    )
+
+
+async def evaluate_spec(
+    spec: dict[str, Any],
+    session: AsyncSession,
+    *,
+    project_id: uuid.UUID | None = None,
+    period_start: _date | None = None,
+    period_end: _date | None = None,
+    allowed_project_ids: set[uuid.UUID] | None = None,
+) -> SpecResult:
+    """Run a validated spec.
+
+    The spec is trusted here because :func:`validate_spec` ran before it
+    was stored - every name below is a dictionary key into the binding,
+    so an entry that got past validation cannot address anything the
+    whitelist does not hold.
+
+    Args:
+        spec: A normalised spec as returned by :func:`validate_spec`.
+        session: Database session.
+        project_id: Restrict to one project, already access-checked by
+            the caller.
+        period_start: Include rows created on or after this date.
+        period_end: Include rows created on or before this date.
+        allowed_project_ids: The caller's accessible projects, applied in
+            portfolio mode exactly as the built-in formulas apply it.
+
+    Returns:
+        The aggregate, the number of rows behind it, and the per-group
+        breakdown when the spec asked for one.
+    """
+    bound = bind_entity(spec["entity"])
+    aggregation = spec["aggregation"]
+    if aggregation == "top_by":
+        return await _evaluate_top_by(
+            session,
+            bound,
+            spec,
+            project_id=project_id,
+            period_start=period_start,
+            period_end=period_end,
+            allowed_project_ids=allowed_project_ids,
+        )
+
+    measures = _measures(bound, spec)
+    headline = select(*measures, func.count().label("n")).select_from(bound.model)
+    headline = _base_predicates(
+        headline,
+        bound,
+        spec,
+        project_id=project_id,
+        period_start=period_start,
+        period_end=period_end,
+        allowed_project_ids=allowed_project_ids,
+    )
+    row = (await session.execute(headline)).one()
+    values = list(row)
+    record_count = int(values.pop())
+    result = SpecResult(
+        value=_fold(aggregation, values),
+        source_record_count=record_count,
+    )
+
+    group_name = spec.get("group_by")
+    if group_name:
+        group_expr = bound.fields[group_name].expr
+        grouped = select(group_expr.label("grp"), *measures).select_from(bound.model)
+        grouped = _base_predicates(
+            grouped,
+            bound,
+            spec,
+            project_id=project_id,
+            period_start=period_start,
+            period_end=period_end,
+            allowed_project_ids=allowed_project_ids,
+        )
+        # ``count`` has no measure to rank by, so groups come back by key.
+        order = cast(measures[0], Integer).desc() if aggregation == "count" else measures[0].desc()
+        grouped = grouped.group_by(group_expr).order_by(order).limit(MAX_BREAKDOWN_GROUPS)
+        for grow in (await session.execute(grouped)).all():
+            parts = list(grow)
+            key = _group_key(parts.pop(0))
+            result.breakdown[key] = str(_fold(aggregation, parts))
+    return result
+
+
+# ── Definition lookup ──────────────────────────────────────────────────
+
+
+async def load_custom_spec(session: AsyncSession, code: str) -> tuple[dict[str, Any], str] | None:
+    """Fetch the stored spec for a custom KPI code.
+
+    Returns ``(spec, unit)`` or ``None`` when the code has no definition
+    row or its row carries no spec (every system KPI is the latter).
+    """
+    stmt = select(KPIDefinition.spec_json, KPIDefinition.unit).where(KPIDefinition.code == code)
+    row = (await session.execute(stmt)).first()
+    if row is None:
+        return None
+    spec, unit = row
+    if not isinstance(spec, dict) or not spec:
+        return None
+    return spec, unit or "ratio"
+
+
+__all__ = [
+    "AGGREGATIONS",
+    "ENTITY_CATALOG",
+    "FILTER_OPERATORS",
+    "MAX_BREAKDOWN_GROUPS",
+    "MAX_IN_VALUES",
+    "BoundEntity",
+    "BoundField",
+    "CatalogEntity",
+    "KPISpecError",
+    "SpecResult",
+    "bind_entity",
+    "catalog_as_dict",
+    "check_catalog_binding_parity",
+    "evaluate_spec",
+    "load_custom_spec",
+    "source_modules_for",
+    "validate_spec",
+]

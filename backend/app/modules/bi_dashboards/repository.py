@@ -126,6 +126,46 @@ class BIDashboardsRepository:
         await self.session.flush()
         return existing
 
+    async def create_custom_kpi_definition(self, **values: Any) -> KPIDefinition:
+        """Insert one user-defined KPI definition.
+
+        Distinct from :meth:`upsert_kpi_definition` on purpose. That one is
+        the starter pack's tool and overwrites by code, which is right for
+        rows the platform owns and would be data loss for rows a user
+        wrote. This one only ever inserts; a duplicate code is the caller's
+        problem to detect and report.
+        """
+        kd = KPIDefinition(**values)
+        self.session.add(kd)
+        await self.session.flush()
+        return kd
+
+    async def delete_kpi_definition(self, code: str) -> bool:
+        """Delete one KPI definition by code. Returns whether a row went."""
+        existing = await self.get_kpi_definition_by_code(code)
+        if existing is None:
+            return False
+        await self.session.delete(existing)
+        await self.session.flush()
+        return True
+
+    async def list_kpi_code_referrers(self, code: str) -> dict[str, list[uuid.UUID]]:
+        """Everything that would be left pointing at nothing by a delete.
+
+        ``kpi_code`` is a plain string on both widgets and alert rules -
+        this module holds no foreign key to its own KPI table because a
+        code may equally be served by a Python formula that has no row.
+        So the referential answer has to be assembled here rather than
+        delegated to the database.
+        """
+        widgets = (
+            (await self.session.execute(select(DashboardWidget.id).where(DashboardWidget.kpi_code == code)))
+            .scalars()
+            .all()
+        )
+        alerts = (await self.session.execute(select(AlertRule.id).where(AlertRule.kpi_code == code))).scalars().all()
+        return {"widgets": list(widgets), "alerts": list(alerts)}
+
     # ── Dashboard ──────────────────────────────────────────────────
 
     async def get_dashboard(self, dashboard_id: uuid.UUID) -> Dashboard | None:

@@ -52,6 +52,7 @@ from app.dependencies import (
     accessible_project_ids,
     verify_project_access,
 )
+from app.modules.bi_dashboards import kpi_spec
 from app.modules.bi_dashboards.models import (
     AlertRule,
     Dashboard,
@@ -72,6 +73,7 @@ from app.modules.bi_dashboards.schemas import (
     DrillDownResponse,
     KPIComputeRequest,
     KPIComputeResponse,
+    KPIDefinitionCreate,
     KPIDefinitionRead,
     KPIHistoryResponse,
     ReportDefinitionCreate,
@@ -87,7 +89,13 @@ from app.modules.bi_dashboards.schemas import (
     WidgetRead,
     WidgetUpdate,
 )
-from app.modules.bi_dashboards.service import BIDashboardsService
+from app.modules.bi_dashboards.service import (
+    BIDashboardsService,
+    CustomKPICodeInUse,
+    CustomKPIInUse,
+    CustomKPIIsSystem,
+    CustomKPINotFound,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["bi_dashboards"])
@@ -324,6 +332,119 @@ async def list_kpis(
     await _verify_optional_project(project_id, user_id, session)
     rows = await service.list_kpi_definitions(category=category, project_id=project_id)
     return [KPIDefinitionRead.model_validate(r) for r in rows]
+
+
+@router.get(
+    "/kpis/spec-catalog",
+    dependencies=[Depends(RequirePermission("bi.kpi.read"))],
+)
+async def kpi_spec_catalog() -> dict[str, Any]:
+    """The vocabulary a custom KPI spec may be written in.
+
+    A whitelist nobody can read is a guessing game, so it is served: the
+    documented entities, the fields each one exposes and their kinds, the
+    aggregations and the filter operators. Everything ``POST /kpis``
+    accepts appears here, and nothing else does.
+    """
+    return {
+        "entities": kpi_spec.catalog_as_dict(),
+        "aggregations": list(kpi_spec.AGGREGATIONS),
+        "filter_operators": list(kpi_spec.FILTER_OPERATORS),
+        "max_breakdown_groups": kpi_spec.MAX_BREAKDOWN_GROUPS,
+    }
+
+
+@router.post(
+    "/kpis",
+    response_model=KPIDefinitionRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RequirePermission("bi.kpi.write"))],
+)
+async def create_kpi(
+    payload: KPIDefinitionCreate,
+    user_id: CurrentUserId,
+    session: SessionDep,
+    service: BIDashboardsService = Depends(_service),
+) -> KPIDefinitionRead:
+    """Register a custom KPI from a whitelisted spec.
+
+    The spec is checked now, not at compute time, so a definition that is
+    accepted here is one that will produce a number rather than one that
+    will read zero forever. A rejection carries the path into the spec
+    that failed (``spec.field``, ``spec.filters[0].op``) together with the
+    vocabulary that path accepts.
+
+    Args:
+        payload: The definition, including its ``spec``. A ``project_id``
+            pins the KPI to one project; omitting it leaves it
+            company-wide.
+        user_id: The authenticated caller.
+        session: Database session, used for the project access check.
+        service: Module service.
+
+    Returns:
+        The created KPI definition.
+    """
+    await _verify_optional_project(payload.project_id, user_id, session)
+    try:
+        row = await service.create_custom_kpi(payload)
+    except kpi_spec.KPISpecError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.as_dict(),
+        ) from exc
+    except CustomKPICodeInUse as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error": "kpi_code_in_use", "code": exc.code, "message": str(exc)},
+        ) from exc
+    return KPIDefinitionRead.model_validate(row)
+
+
+@router.delete(
+    "/kpis/{code}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RequirePermission("bi.kpi.write"))],
+)
+async def delete_kpi(
+    code: str,
+    session: SessionDep,
+    service: BIDashboardsService = Depends(_service),
+) -> None:
+    """Delete a custom KPI definition.
+
+    Refused with 409 while any widget or alert rule still names the code.
+    Nothing in the schema stops the row from going - ``kpi_code`` is a
+    plain string, because a code may equally be served by a built-in
+    formula that has no row at all - so the referential answer is given
+    here, and it names the widgets and the alerts so the user can act on
+    them instead of hunting for what broke.
+
+    Args:
+        code: The KPI code to delete.
+        session: Database session.
+        service: Module service.
+    """
+    try:
+        await service.delete_custom_kpi(code)
+    except CustomKPINotFound as exc:
+        raise _not_found("KPI definition not found") from exc
+    except CustomKPIIsSystem as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error": "kpi_is_system", "code": code, "message": str(exc)},
+        ) from exc
+    except CustomKPIInUse as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "kpi_in_use",
+                "code": code,
+                "message": str(exc),
+                "widget_ids": [str(w) for w in exc.referrers.get("widgets", [])],
+                "alert_rule_ids": [str(a) for a in exc.referrers.get("alerts", [])],
+            },
+        ) from exc
 
 
 @router.post(

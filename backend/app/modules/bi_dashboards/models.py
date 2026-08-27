@@ -38,8 +38,16 @@ class KPIDefinition(Base):
 
     The ``formula_ref`` column is the lookup key into the in-process
     :data:`app.modules.bi_dashboards.kpis.KPI_FORMULAS` registry. System
-    KPIs are seeded on startup; users may register custom KPIs by adding
-    a row here and a Python function via the ``@register_kpi`` decorator.
+    KPIs are seeded on startup; a community module may register more the
+    same way, from its own ``on_startup`` hook.
+
+    A person running the platform has no place to put Python, so for them
+    ``spec_json`` holds a declarative, whitelisted aggregation instead -
+    see :mod:`app.modules.bi_dashboards.kpi_spec`. The two are exclusive
+    by construction: a system row leaves ``spec_json`` empty, a custom row
+    carries a spec and a ``formula_ref`` of ``spec``, and ``is_system``
+    tells them apart for the starter pack, which only ever upserts the
+    codes it owns and so never touches a custom row.
     """
 
     __tablename__ = "oe_bi_dashboards_kpi_definition"
@@ -92,6 +100,16 @@ class KPIDefinition(Base):
         nullable=False,
         default=False,
         server_default="0",
+    )
+    # The declarative spec behind a custom KPI - empty for every system
+    # KPI, whose behaviour lives in Python. Validated against the entity /
+    # field / aggregation whitelist before it is written, so what is
+    # stored here is already known to be computable.
+    spec_json: Mapped[dict] = mapped_column(  # type: ignore[type-arg]
+        JSON,
+        nullable=False,
+        default=dict,
+        server_default="{}",
     )
     # No ORM FK to oe_projects_project - read-only consumer. NULL means the
     # definition is company-wide and every project view lists it; a value
