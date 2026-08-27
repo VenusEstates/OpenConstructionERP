@@ -64,7 +64,32 @@ field for field on everything that carries a value:
 * the same ``is_default`` flag as the shipped window;
 * and a ``subdivision_code`` that is either the shipped one or empty.
 
-The last is the one worth explaining. Requiring the shipped value outright
+Two of them are worth explaining, one because it narrows the repair further
+than it looks and one because it deliberately does not.
+
+``is_default`` is the narrow one. Requiring the flag to match is the tightest
+contract the shape check accepts and keeps the repair from moving a flag it has
+no business moving. The cost is that it declines the shape a *national
+standard* rate change arrives in, which is the commonest kind there is.
+
+Romania is the proof, and it is on disk rather than hypothetical: the closed
+19 % window ships ``is_default`` false and its 21 % successor ships it true,
+because the flag names the country's current standard rate and moves with it.
+An install seeded before that change holds the 19 % row still open and still
+flagged, so the predicate compares true against false and declines. That is why
+Romania has a repair of its own rather than a line in the table this one
+derives, and it is the honest reason ``REPAIRED_ELSEWHERE`` is subtracted: not
+merely that Romania is already handled, but that this mechanism could not
+handle it. Nova Scotia is within reach only because a subdivision row is never
+the country default, so both of its windows ship the flag false and nothing has
+to move.
+
+The consequence for whoever reads this next: when the seed file grows another
+national standard rate change, the pinned population test will fail and bring
+you here, and what you will need is a decision about moving the flag, not a
+repair that already works. Do not assume the next rate change is covered.
+
+``subdivision_code`` is the wide one. Requiring the shipped value outright
 would break on the cohort this repair serves: a database seeded before v15.7.0
 has no subdivision on any row until
 :mod:`~app.modules.i18n_foundation.tax_subdivision_repair` fills it in, so the
