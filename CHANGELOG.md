@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [16.1.0] - 2026-08-27
 
+Before you upgrade, four things worth knowing.
+
+On Windows, upgrading a desktop install from v15.8.0 or earlier, take the default.
+The upgrade page offers to uninstall the previous version first and its explanatory
+text still recommends doing so, but that text is wrong for these versions and it
+lives in the bundler's own translated strings where the fix cannot reach it. Every
+release from v11.7.1 to v15.8.0 shipped an uninstaller whose process-stop step waits
+with no time limit, and an upgrade runs the uninstaller already on disk rather than
+the one inside the new installer, so choosing to uninstall first can hang on closing
+the application with nothing to do but the task manager. The default is now do not
+uninstall, which avoids it. If you do get stuck, cancel the installer, close the
+application and any leftover server process, uninstall from Settings, then install
+16.1.0.
+
+If you pinned a version on Docker before 16.1.0, check what you are actually
+running. The pin used to be exported into the installing shell only, so the commands
+we told you to type next started whatever we had released most recently rather than
+the version you asked for, and you may already be on a newer image than you chose.
+Set OE_IMAGE_TAG in your .env to stay on a specific version. Installs from 16.1.0
+onward write that pin for you.
+
+Two numbers change on screens you already read, both corrections. Canadian tax
+answers go up on databases seeded before v15.5.0. Change intelligence headline
+figures go down on any project where variations were converted.
+
+Python 3.11 and earlier cannot install this release. The floor is 3.12.
+
 This is a minor rather than a patch because the boot path now writes to customer data, the health endpoint gained a field and a state it did not have, and a tax rate that resolved to zero starts resolving to five percent. None of those is a feature. The number moved because a patch promises nothing at the boundary changed, and here that promise would have been false three times over.
 
 Every route we published for installing this product with Docker was broken as written, including the headline one. The one-line installers download the compose file and start it without ever writing the file that holds the two secrets it refuses to start without, and Docker is the first branch they auto-detect, so a user with Docker who ran the command from the top of our documentation got an interpolation error and nothing else. The compose quickstart had the same hole on a fresh clone, where only the example file ships, and the instructions said to clone and run with nothing in between. That requirement landed in April, so this is four months old rather than a regression. Both installers write the file now, generating the secrets with something each platform actually has rather than assuming a Unix toolchain on Windows, and they never overwrite one that exists, because replacing a password locks somebody out of data PostgreSQL already wrote with it. A version pin is written there too, since it used to be exported into the installing shell only, so the commands we told the user to type next silently started whatever we had released most recently instead of the version they asked for.
