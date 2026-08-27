@@ -43,6 +43,7 @@ import { useCasesStore } from '@/features/cases/useCasesStore';
 import { completedCount } from '@/features/cases/progress';
 import { tintFor } from '@/features/cases/categories';
 import { dealCaseFaces } from '@/features/cases/caseFaces';
+import { CaseFacePhoto } from '@/features/cases/CaseFacePhoto';
 
 import { HEX_PORTRAIT_ASPECT, HEX_PORTRAIT_CLIP } from '@/shared/lib/honeycomb';
 import { fmtList } from '@/shared/lib/formatters';
@@ -386,12 +387,8 @@ export function DashboardCasesCard() {
                         className="block bg-white/90 p-[2px] shadow-sm shadow-slate-900/20"
                         style={{ aspectRatio: HEX_PORTRAIT_ASPECT, clipPath: HEX_PORTRAIT_CLIP }}
                       >
-                        <img
-                          src={face}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          draggable={false}
+                        <CaseFacePhoto
+                          face={face}
                           className="h-full w-full object-cover object-[50%_18%]"
                           style={{ clipPath: HEX_PORTRAIT_CLIP }}
                         />

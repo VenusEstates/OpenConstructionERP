@@ -115,7 +115,7 @@ describe('caseFaceFor', () => {
   it('is deterministic - same inputs, same face', () => {
     for (const role of roles) {
       for (let i = 0; i < 5; i++) {
-        expect(caseFaceFor('some-case', [role], i)).toBe(caseFaceFor('some-case', [role], i));
+        expect(caseFaceFor('some-case', [role], i)).toEqual(caseFaceFor('some-case', [role], i));
       }
     }
   });
@@ -125,25 +125,25 @@ describe('caseFaceFor', () => {
       const cast = ROLE_CAST[role];
       if (cast.length < 2) continue;
       for (let i = 0; i < cast.length * 2; i++) {
-        const a = caseFaceFor('case-a', [role], i);
-        const b = caseFaceFor('case-b', [role], i + 1);
+        const a = caseFaceFor('case-a', [role], i)?.src;
+        const b = caseFaceFor('case-b', [role], i + 1)?.src;
         expect(a, `role ${role}, indices ${i}/${i + 1}`).not.toBe(b);
       }
     }
   });
 
   it('lets the first castable company type win, like the site keys on the first data-companies token', () => {
-    expect(caseFaceFor('some-case', ['cost-consultant', 'general-contractor'], 0)).toBe(
+    expect(caseFaceFor('some-case', ['cost-consultant', 'general-contractor'], 0)?.src).toBe(
       `${PEOPLE_ASSETS_BASE}/prf-estimator.webp`,
     );
-    expect(caseFaceFor('some-case', [NOT_A_COMPANY_TYPE, 'designer'], 0)).toBe(
+    expect(caseFaceFor('some-case', [NOT_A_COMPANY_TYPE, 'designer'], 0)?.src).toBe(
       `${PEOPLE_ASSETS_BASE}/prf-architecture-engineering.webp`,
     );
   });
 
   it('lets a bespoke pbk photo win over the pooled company cast', () => {
     for (const [slug, photo] of Object.entries(BESPOKE_CASE_PHOTOS)) {
-      expect(caseFaceFor(slug, ['general-contractor'], 3)).toBe(photo);
+      expect(caseFaceFor(slug, ['general-contractor'], 3)).toEqual({ src: photo, pooled: photo });
     }
   });
 
@@ -153,14 +153,119 @@ describe('caseFaceFor', () => {
   });
 });
 
+/**
+ * The country axis. What can be proved here is which FILE the code asks for;
+ * whether that file exists is decided by the browser at load time and is
+ * proved in caseFacePhoto.test.tsx, because there is no build-time list of
+ * country art and there must not be one.
+ */
+describe('caseFaceFor - country variants', () => {
+  it('asks for the country portrait when the case names a market', () => {
+    const face = caseFaceFor('some-case', ['cost-consultant'], 0, 'DE');
+    expect(face?.src).toBe(`${PEOPLE_ASSETS_BASE}/prf-de-estimator.webp`);
+  });
+
+  it('lowercases the market, because the asset folder is lowercase and Linux is not forgiving', () => {
+    const upper = caseFaceFor('some-case', ['cost-consultant'], 0, 'CN');
+    const lower = caseFaceFor('some-case', ['cost-consultant'], 0, 'cn');
+    expect(upper?.src).toBe(`${PEOPLE_ASSETS_BASE}/prf-cn-estimator.webp`);
+    expect(lower?.src).toBe(upper?.src);
+  });
+
+  it('keeps the pooled portrait beside the country one, so a market with no art has somewhere to land', () => {
+    // The fallback for a market nobody has shot yet is not "some other
+    // market's photo" and not "nothing" - it is the picture this case wore
+    // before the country axis existed.
+    const face = caseFaceFor('some-case', ['cost-consultant'], 0, 'ZZ');
+    expect(face?.pooled).toBe(`${PEOPLE_ASSETS_BASE}/prf-estimator.webp`);
+    expect(caseFaceFor('some-case', ['cost-consultant'], 0)?.pooled).toBe(face?.pooled);
+  });
+
+  it('leaves a universal case exactly where it was', () => {
+    const before = `${PEOPLE_ASSETS_BASE}/prf-estimator.webp`;
+    expect(caseFaceFor('some-case', ['cost-consultant'], 0)).toEqual({
+      src: before,
+      pooled: before,
+    });
+  });
+
+  it('does not let the country overrule the company type', () => {
+    // Country is a SECOND axis, not a replacement for the first. One market
+    // asking two company types for a portrait must still get two different
+    // people, or the German cases all end up wearing one face.
+    const consultant = caseFaceFor('a', ['cost-consultant'], 0, 'DE')?.src;
+    const designer = caseFaceFor('b', ['designer'], 0, 'DE')?.src;
+    expect(consultant).toBe(`${PEOPLE_ASSETS_BASE}/prf-de-estimator.webp`);
+    expect(designer).toBe(`${PEOPLE_ASSETS_BASE}/prf-de-architecture-engineering.webp`);
+    expect(consultant).not.toBe(designer);
+  });
+
+  it('keeps the round-robin, so one market does not collapse onto one face', () => {
+    // The thing a per-country cast would have destroyed. Thirteen German
+    // general-contractor cases have to reach eight different Germans.
+    const cast = ROLE_CAST['general-contractor'];
+    const asked = new Set(
+      cast.map((_, i) => caseFaceFor(`case-${i}`, ['general-contractor'], i, 'DE')?.src),
+    );
+    expect(asked.size).toBe(cast.length);
+  });
+
+  it('leaves a bespoke photo country-blind, since a bespoke photo is already for one case', () => {
+    const photo = BESPOKE_CASE_PHOTOS['takeoff-quantities-from-a-pdf-plan']!;
+    // The one shipped case that is both bespoke and market-specific.
+    expect(caseFaceFor('takeoff-quantities-from-a-pdf-plan', ['designer'], 0, 'DE')).toEqual({
+      src: photo,
+      pooled: photo,
+    });
+  });
+
+  it('ignores a region that is not an ISO 3166-1 alpha-2 code rather than minting a nonsense name', () => {
+    const pooled = `${PEOPLE_ASSETS_BASE}/prf-estimator.webp`;
+    for (const bad of ['', 'DEU', 'd', 'de-DE', '42']) {
+      expect(caseFaceFor('some-case', ['cost-consultant'], 0, bad)?.src, bad).toBe(pooled);
+    }
+  });
+
+  it('names a country file the pooled stem can be read straight out of', () => {
+    // The convention is an INSERTION, not a rename: prf-<country>- then the
+    // stem, unchanged. That is what lets the manifest be generated and what
+    // keeps a stem whose own first segment is short from being ambiguous.
+    for (const companyType of Object.keys(ROLE_CAST) as CaseRole[]) {
+      const cast = ROLE_CAST[companyType];
+      for (let i = 0; i < cast.length; i++) {
+        const face = caseFaceFor('no-bespoke-case', [companyType], i, 'GB')!;
+        const stem = face.pooled.slice(`${PEOPLE_ASSETS_BASE}/prf-`.length);
+        expect(face.src).toBe(`${PEOPLE_ASSETS_BASE}/prf-gb-${stem}`);
+      }
+    }
+  });
+});
+
 describe('dealCaseFaces', () => {
+  it('carries the case region through to the file it asks for', () => {
+    const faces = dealCaseFaces([
+      { id: 'universal', companyTypes: ['designer'] },
+      { id: 'german', companyTypes: ['designer'], region: 'DE' },
+    ]);
+    // Two cases, same company type, consecutive positions in the cast: the
+    // country decorates whichever stem the round-robin reached, so the market
+    // never re-casts the case.
+    const cast = ROLE_CAST['designer'];
+    expect(faces.get('universal')?.src).toBe(`${PEOPLE_ASSETS_BASE}/${cast[0]}.webp`);
+    expect(faces.get('german')?.src).toBe(
+      `${PEOPLE_ASSETS_BASE}/${cast[1]!.replace('prf-', 'prf-de-')}.webp`,
+    );
+    expect(faces.get('german')?.pooled).toBe(`${PEOPLE_ASSETS_BASE}/${cast[1]}.webp`);
+  });
+
+
   it('deals each role round its cast by position, like the site', () => {
     const cast = ROLE_CAST['general-contractor'];
     const faces = dealCaseFaces(
       cast.map((_, i) => ({ id: `case-${i}`, companyTypes: ['general-contractor'] })),
     );
     cast.forEach((stem, i) => {
-      expect(faces.get(`case-${i}`)).toBe(`${PEOPLE_ASSETS_BASE}/${stem}.webp`);
+      expect(faces.get(`case-${i}`)?.src).toBe(`${PEOPLE_ASSETS_BASE}/${stem}.webp`);
     });
   });
 
@@ -170,8 +275,8 @@ describe('dealCaseFaces', () => {
       { id: 'answer-an-rfi', companyTypes: ['general-contractor'] },
       { id: 'plain-case', companyTypes: ['general-contractor'] },
     ]);
-    expect(faces.get('answer-an-rfi')).toBe(BESPOKE_CASE_PHOTOS['answer-an-rfi']);
-    expect(faces.get('plain-case')).toBe(`${PEOPLE_ASSETS_BASE}/${cast[1]}.webp`);
+    expect(faces.get('answer-an-rfi')?.src).toBe(BESPOKE_CASE_PHOTOS['answer-an-rfi']);
+    expect(faces.get('plain-case')?.src).toBe(`${PEOPLE_ASSETS_BASE}/${cast[1]}.webp`);
   });
 
   it('counts each role on its own, so one role does not move another along', () => {
@@ -180,9 +285,9 @@ describe('dealCaseFaces', () => {
       { id: 'b', companyTypes: ['designer'] },
       { id: 'c', companyTypes: ['designer'] },
     ]);
-    expect(faces.get('a')).toBe(`${PEOPLE_ASSETS_BASE}/${ROLE_CAST['general-contractor'][0]}.webp`);
-    expect(faces.get('b')).toBe(`${PEOPLE_ASSETS_BASE}/${ROLE_CAST['designer'][0]}.webp`);
-    expect(faces.get('c')).toBe(`${PEOPLE_ASSETS_BASE}/${ROLE_CAST['designer'][1]}.webp`);
+    expect(faces.get('a')?.src).toBe(`${PEOPLE_ASSETS_BASE}/${ROLE_CAST['general-contractor'][0]}.webp`);
+    expect(faces.get('b')?.src).toBe(`${PEOPLE_ASSETS_BASE}/${ROLE_CAST['designer'][0]}.webp`);
+    expect(faces.get('c')?.src).toBe(`${PEOPLE_ASSETS_BASE}/${ROLE_CAST['designer'][1]}.webp`);
   });
 
   it('leaves out a case whose company types have no cast rather than guessing', () => {
@@ -199,7 +304,7 @@ describe('closed set - every path the module can ever return exists on disk', ()
     for (const companyType of Object.keys(ROLE_CAST) as CaseRole[]) {
       const cast = ROLE_CAST[companyType];
       for (let i = 0; i < cast.length; i++) {
-        expectOnDisk(caseFaceFor('no-bespoke-case', [companyType], i));
+        expectOnDisk(caseFaceFor('no-bespoke-case', [companyType], i)?.pooled ?? null);
       }
     }
   });
@@ -227,6 +332,43 @@ describe('closed set - every path the module can ever return exists on disk', ()
     const faces = dealCaseFaces(PLAYBOOKS);
     const missing = PLAYBOOKS.filter((pb) => !faces.has(pb.id)).map((pb) => pb.id);
     expect(missing, 'cases with no castable company type').toEqual([]);
-    for (const path of faces.values()) expectOnDisk(path);
+    // `pooled` is the closed half of the pair and the one this suite guards:
+    // whatever a market has or has not been shot for, every case still has a
+    // real file to land on. `src` is deliberately open (see below).
+    for (const face of faces.values()) expectOnDisk(face.pooled);
+  });
+
+  // The counterpart to the check above, and the reason it asserts on `pooled`
+  // rather than on `src`. The country portraits are bought and dropped into
+  // public/assets/people over time, so `src` names files that do not exist
+  // yet and MUST be allowed to: a closed set here would be a list of known
+  // filenames, which is exactly what point 2 of this feature forbids and what
+  // `COMPANY_ART_IDS` in CompanyArt.tsx demonstrates the cost of. What is
+  // asserted instead is that the open half is well FORMED - it differs from
+  // the pooled path by exactly a lowercase country code and nothing else - so
+  // the founder can shop from `docs/strategy/case_portrait_manifest.md` and be
+  // certain the names match.
+  it('asks for a well-formed country file for every case that names a market', () => {
+    const faces = dealCaseFaces(PLAYBOOKS);
+    let regioned = 0;
+    for (const pb of PLAYBOOKS) {
+      const face = faces.get(pb.id)!;
+      if (!pb.region || face.pooled.includes('/pbk-')) {
+        expect(face.src, `${pb.id} has no market, so it asks for the pooled photo`).toBe(
+          face.pooled,
+        );
+        continue;
+      }
+      regioned += 1;
+      const stem = face.pooled.slice(`${PEOPLE_ASSETS_BASE}/prf-`.length);
+      expect(face.src).toBe(`${PEOPLE_ASSETS_BASE}/prf-${pb.region.toLowerCase()}-${stem}`);
+      // Lowercase, always. The pooled folder is entirely lowercase and a Linux
+      // server is not as forgiving about it as the developer's filesystem.
+      expect(face.src).toBe(face.src.toLowerCase());
+    }
+    // A floor, so this cannot be satisfied by a catalogue that lost its
+    // market-specific cases: sixty-two of them carried a region when the
+    // country axis was added.
+    expect(regioned, 'cases carrying a region').toBeGreaterThan(50);
   });
 });

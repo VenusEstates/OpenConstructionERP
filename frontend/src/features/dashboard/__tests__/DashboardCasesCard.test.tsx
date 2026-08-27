@@ -237,7 +237,13 @@ describe('DashboardCasesCard faces', () => {
       if (!img || !title) continue;
       const pb = byTitle.get(title);
       if (!pb) continue;
-      expect(img.getAttribute('src')).toBe(expected.get(pb.id));
+      // `?.src` is the file the tile ASKS for - the country portrait for a
+      // case that names a market, the pooled one otherwise. That is the right
+      // half of the pair to compare here: this test is about a case wearing
+      // the same person everywhere, and the country variant is part of who
+      // that person is. The pooled fallback is only reached when a request
+      // fails, which jsdom never makes.
+      expect(img.getAttribute('src')).toBe(expected.get(pb.id)?.src);
       checked += 1;
     }
     // Without this the loop is satisfied by a gallery that rendered no faces

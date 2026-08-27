@@ -93,7 +93,8 @@ import { Hive } from "./ModuleHive";
 
 import { HEX_PORTRAIT_ASPECT, HEX_PORTRAIT_CLIP } from "@/shared/lib/honeycomb";
 import { CompanyArt } from "./CompanyArt";
-import { dealCaseFaces } from "./caseFaces";
+import { dealCaseFaces, type CaseFace } from "./caseFaces";
+import { CaseFacePhoto } from "./CaseFacePhoto";
 import {
   STAGE_META,
   STAGE_BY_ID,
@@ -1583,8 +1584,10 @@ interface CaseCardProps {
   roles: ProfessionalRole[];
   /** Photograph of the person this case is written for, dealt by `dealCaseFaces`
    *  over the whole catalogue, or null for a case whose company types have no
-   *  cast - those cards keep the illustration alone. */
-  face: string | null;
+   *  cast - those cards keep the illustration alone. Carries its own pooled
+   *  fallback, so a market whose portrait has not been bought yet falls back
+   *  on this card alone. */
+  face: CaseFace | null;
   /** Furthest step reached across any run of this case. */
   done: number;
   /** The project the pin picker is scoped to ('' = none, hides the pin). */
@@ -1752,14 +1755,10 @@ function CaseCard({
                   className="bg-white/90 p-[3px] shadow-md shadow-slate-900/15"
                   style={{ aspectRatio: HEX_PORTRAIT_ASPECT, clipPath: HEX_PORTRAIT_CLIP }}
                 >
-                  <img
-                    src={face}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
+                  <CaseFacePhoto
+                    face={face}
                     width={340}
                     height={480}
-                    draggable={false}
                     className="h-full w-full object-cover object-[50%_18%]"
                     style={{ clipPath: HEX_PORTRAIT_CLIP }}
                   />

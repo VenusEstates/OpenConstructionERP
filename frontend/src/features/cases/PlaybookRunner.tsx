@@ -68,7 +68,8 @@ import {
 import { nextCasesFor, relatedCasesFor, moreCasesFor } from "./relatedness";
 import { PLAYBOOKS } from "./playbooks";
 import { useAuthoredCases } from "./useCustomCases";
-import { dealCaseFaces } from "./caseFaces";
+import { dealCaseFaces, type CaseFace } from "./caseFaces";
+import { CaseFacePhoto } from "./CaseFacePhoto";
 import { CaseArt } from "./CaseArt";
 import { regionDisplayName } from "./regions";
 import { CaseConstellation } from "./CaseConstellation";
@@ -477,7 +478,7 @@ function FaceBandArt({
   face,
 }: {
   playbook: Playbook;
-  face: string | null;
+  face: CaseFace | null;
 }): ReactElement {
   const tint = tintFor(playbook.category);
   const Icon = iconFor(playbook.icon);
@@ -492,14 +493,10 @@ function FaceBandArt({
   if (!face) return art;
   return (
     <>
-      <img
-        src={face}
-        alt=""
-        loading="lazy"
-        decoding="async"
+      <CaseFacePhoto
+        face={face}
         width={340}
         height={480}
-        draggable={false}
         className={clsx(
           "absolute inset-y-0 start-0 w-[38%] object-cover object-[50%_22%]",
           // Opaque through most of its width, then out, so the diagram beside
@@ -525,7 +522,7 @@ function FaceColumnArt({
   face,
 }: {
   playbook: Playbook;
-  face: string | null;
+  face: CaseFace | null;
 }): ReactElement {
   const tint = tintFor(playbook.category);
   const Icon = iconFor(playbook.icon);
@@ -541,14 +538,10 @@ function FaceColumnArt({
   return (
     <>
       <div className="absolute inset-x-0 bottom-0 h-[52%]">{art}</div>
-      <img
-        src={face}
-        alt=""
-        loading="lazy"
-        decoding="async"
+      <CaseFacePhoto
+        face={face}
         width={340}
         height={480}
-        draggable={false}
         className={clsx(
           // Opaque through most of its height, then out, so the diagram
           // below starts before the picture has finished - the vertical
@@ -575,7 +568,7 @@ function CaseHeroMedia({
   face,
 }: {
   playbook: Playbook;
-  face: string | null;
+  face: CaseFace | null;
 }): ReactElement {
   const { ref, near } = useNearViewport<HTMLDivElement>("400px");
   return (
@@ -606,7 +599,7 @@ function MoreCaseTile({
   onOpen,
 }: {
   playbook: Playbook;
-  face: string | null;
+  face: CaseFace | null;
   /** Active UI language, for the localized market name. */
   language: string;
   onOpen: () => void;

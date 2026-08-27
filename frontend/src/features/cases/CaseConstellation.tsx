@@ -47,6 +47,8 @@ import type { ComponentType } from 'react';
 import { getRouteIcon } from '@/app/layout/routeIcons';
 import { HEX_CELL_CLIP, hiveRing } from '@/shared/lib/honeycomb';
 import { accentFor, tintFor } from './categories';
+import { CaseFacePhoto } from './CaseFacePhoto';
+import type { CaseFace } from './caseFaces';
 import { modulesForPlaybook } from './playbookModules';
 import type { Playbook } from './types';
 
@@ -63,7 +65,7 @@ const HUB_SCALE = 1.04;
 export interface CaseConstellationProps {
   playbook: Playbook;
   /** The specialist portrait this case already wears in the catalogue. */
-  face: string | null;
+  face: CaseFace | null;
   /** Jump to the first step that opens this module. */
   onSelect?: (route: string) => void;
   /** Cell width in pixels. The hero uses a large cell; smaller callers can ask
@@ -172,13 +174,8 @@ export function CaseConstellation({
             style={{ clipPath: HEX_CELL_CLIP }}
           >
             {face ? (
-              <img
-                src={face}
-                alt=""
-                aria-hidden="true"
-                loading="lazy"
-                decoding="async"
-                draggable={false}
+              <CaseFacePhoto
+                face={face}
                 className="h-full w-full object-cover object-[50%_24%] contrast-[1.06] saturate-[1.04]"
               />
             ) : (

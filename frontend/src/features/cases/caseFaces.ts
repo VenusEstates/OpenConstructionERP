@@ -25,6 +25,34 @@
 //   cmp-*.webp  340x480 company scenes (the site, not a person)
 //   cmt-*.webp  128x128 square crops of those scenes, for small tiles
 //   pbk-*.webp  200x300 bespoke photos for ten flagship cases
+//
+// COUNTRY VARIANTS. A case authored for one market (`Playbook.region`, an
+// uppercase ISO 3166-1 alpha-2 code) prefers a portrait shot for that market:
+//
+//   prf-<country>-*.webp  340x480, e.g. prf-de-commercial-manager.webp
+//
+// The country code is lowercased, because every filename in that folder is
+// lowercase and a Linux server does not forgive what Windows does.
+//
+// The variant decorates the stem the pooled casting ALREADY chose - company
+// type first, then the positional round-robin - rather than replacing the
+// choice. That is what keeps the anti-repeat guarantee: the thirteen German
+// general-contractor cases still wear eight different people, each of them
+// German, instead of collapsing onto one national face per company type.
+//
+// Which country files exist is NOT knowable here, and deliberately so. This
+// module mints `prf-<country>-<stem>.webp` for every regioned case and the
+// browser decides: the file loads, or it 404s and `CaseFacePhoto` swaps in the
+// pooled portrait on the error event. Dropping a webp into
+// public/assets/people therefore changes what the page shows with no code
+// edit, no rebuilt list of known filenames and no redeploy of this file. A
+// hardcoded set of "countries we have art for" is the trap `COMPANY_ART_IDS`
+// in CompanyArt.tsx is still sitting in, an empty set gating a path that does
+// not exist on disk at all.
+//
+// Bespoke `pbk-*` photos stay country-blind. They are shot for one named case,
+// and a case belongs to one market at most, so the country is already in the
+// picture; a `pbk-de-*` would be the same photograph under a longer name.
 
 import type { CompanyType } from './types';
 
@@ -127,6 +155,58 @@ function mod(n: number, m: number): number {
   return ((n % m) + m) % m;
 }
 
+/** The prefix a pooled portrait path starts with. Country variants are minted
+ *  by inserting the country code straight after it, so the stem is never
+ *  parsed and a stem beginning with two letters can never be mistaken for a
+ *  country code. */
+const POOLED_PORTRAIT_PREFIX = `${PEOPLE_ASSETS_BASE}/prf-`;
+
+/**
+ * The country-specific portrait for a pooled one, or the pooled one unchanged.
+ *
+ * `prf-commercial-manager.webp` + `DE` -> `prf-de-commercial-manager.webp`.
+ * Returns the input untouched for a case with no region, for a region that is
+ * not an ISO 3166-1 alpha-2 code, and for a bespoke `pbk-*` photo - the three
+ * cases where there is nothing national to prefer.
+ *
+ * Whether the returned file EXISTS is not decided here and cannot be: see the
+ * module header. The caller pairs it with the pooled path so a 404 has
+ * somewhere to land.
+ *
+ * @param pooled A path returned by the pooled casting.
+ * @param region `Playbook.region`, e.g. "DE". Case-insensitive; the filename
+ *   is always lowercase.
+ */
+function countryPortraitFor(pooled: string, region?: string): string {
+  if (!region) return pooled;
+  const code = region.trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(code)) return pooled;
+  if (!pooled.startsWith(POOLED_PORTRAIT_PREFIX)) return pooled;
+  return `${POOLED_PORTRAIT_PREFIX}${code}-${pooled.slice(POOLED_PORTRAIT_PREFIX.length)}`;
+}
+
+/**
+ * The photograph for one case: what to request, and what to show when the
+ * request fails.
+ *
+ * Two fields rather than one string because the two have different
+ * guarantees. `pooled` is closed - it always names a file that is on disk,
+ * and `caseFaces.test.ts` proves it for every case in the catalogue. `src` is
+ * open by design, since the country files are bought and dropped in over time
+ * and no build-time list of them may exist. Recovering one from the other by
+ * parsing was the alternative and is worse: it would bake "a country code is
+ * two lowercase letters" into a second place, and leave the closed-set test
+ * asserting on a string it had to take apart first.
+ */
+export interface CaseFace {
+  /** The portrait to request: the country variant when the case names a
+   *  market and the pooled portrait otherwise. May 404. */
+  src: string;
+  /** The pooled portrait. Always on disk; what `src` falls back to at load
+   *  time (see `CaseFacePhoto`). Equal to `src` when there is no variant. */
+  pooled: string;
+}
+
 /**
  * The photo for a case, matching the marketing site's `deal()` exactly.
  *
@@ -141,24 +221,37 @@ function mod(n: number, m: number): number {
  * it the latter used to typecheck and then return a portrait for the one id
  * the two vocabularies share. It is now a compile error instead.
  *
+ * `region` is the LAST word, not the first: it decorates the stem the two
+ * lines above already settled on. Country is a different axis from company
+ * type and must not overrule it, so a market with art for some company types
+ * and none for others falls back one pairing at a time rather than all or
+ * nothing - each case carries its own `pooled` and each tile fails over on its
+ * own. There is no country parameter on the entry point that returns a bare
+ * string, because there is no such entry point any more: a surface that called
+ * one would show a country-blind face and nothing would say so.
+ *
  * @param caseId Case slug (e.g. `tender-from-boq`).
  * @param companyTypes The case's company types, primary first.
  * @param indexInRole Zero-based position of this case among the cases filed
  *   under its primary company type, in display order.
- * @returns A public path under `/assets/people/`, or null when no company type
- *   in `companyTypes` has a cast.
+ * @param region The case's market (`Playbook.region`, ISO 3166-1 alpha-2), or
+ *   undefined for a universal case.
+ * @returns The requested path and its pooled fallback, or null when no company
+ *   type in `companyTypes` has a cast.
  */
 export function caseFaceFor(
   caseId: string,
   companyTypes: readonly CompanyType[],
   indexInRole: number,
-): string | null {
+  region?: string,
+): CaseFace | null {
   const bespoke = BESPOKE_CASE_PHOTOS[caseId];
-  if (bespoke) return bespoke;
+  if (bespoke) return { src: bespoke, pooled: bespoke };
   for (const companyType of companyTypes) {
     const cast = ROLE_CAST[companyType];
     if (cast && cast.length > 0) {
-      return `${PEOPLE_ASSETS_BASE}/${cast[mod(indexInRole, cast.length)]}.webp`;
+      const pooled = `${PEOPLE_ASSETS_BASE}/${cast[mod(indexInRole, cast.length)]}.webp`;
+      return { src: countryPortraitFor(pooled, region), pooled };
     }
   }
   return null;
@@ -218,6 +311,12 @@ export interface CaseFaceInput {
    *  Typed to the company vocabulary, not `string[]`, so `Playbook.roles`
    *  cannot be passed here by a caller who reads the two as interchangeable. */
   companyTypes: readonly CompanyType[];
+  /** The market the case is authored for (`Playbook.region`, ISO 3166-1
+   *  alpha-2 in upper case), or undefined for a universal case. Optional so a
+   *  `Playbook` still satisfies this structurally with nothing to wire: all
+   *  three callers already hand whole playbooks over, which is why the country
+   *  axis arrives on every surface at once. */
+  region?: string;
 }
 
 /**
@@ -238,12 +337,20 @@ export interface CaseFaceInput {
  * on the same case: the site deals over its own gallery order, and the two
  * catalogues are neither the same length nor in the same order.
  *
+ * The round-robin counter is kept per COMPANY TYPE and not per country. A
+ * German and a Chinese case filed under the same company type therefore land
+ * on different stems, so the two markets are not asked for the same portrait
+ * twice over, and - the reason it matters more - a market whose art is only
+ * half bought does not put every one of its cases on the one stem that
+ * happens to exist.
+ *
  * @param cases The full case catalogue, in display order.
- * @returns Case slug -> public path, holding only the cases that have a face.
+ * @returns Case slug -> requested path plus pooled fallback, holding only the
+ *   cases that have a face.
  */
-export function dealCaseFaces(cases: readonly CaseFaceInput[]): Map<string, string> {
+export function dealCaseFaces(cases: readonly CaseFaceInput[]): Map<string, CaseFace> {
   const dealt = new Map<string, number>();
-  const faces = new Map<string, string>();
+  const faces = new Map<string, CaseFace>();
   for (const c of cases) {
     // The company type that gets the counter is the one `caseFaceFor` will
     // cast from, so the position it counts is a position in that type's cast.
@@ -251,7 +358,7 @@ export function dealCaseFaces(cases: readonly CaseFaceInput[]): Map<string, stri
     if (!companyType) continue;
     const index = dealt.get(companyType) ?? 0;
     dealt.set(companyType, index + 1);
-    const face = caseFaceFor(c.id, [companyType], index);
+    const face = caseFaceFor(c.id, [companyType], index, c.region);
     if (face) faces.set(c.id, face);
   }
   return faces;
