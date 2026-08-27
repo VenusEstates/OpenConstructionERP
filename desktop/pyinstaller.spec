@@ -252,6 +252,46 @@ datas.append((str(BACKEND / "app"), "app"))
 # rather than produce another bundle that cannot start.
 datas.append((str(BACKEND / "locales"), "locales"))
 
+# The community packs. Same shape as the catalogue above and missing for the
+# same reason: app/core/partner_pack/discovery.py looks for a ``packs``
+# directory sitting NEXT TO the app package, which in a frozen bundle is
+# ``sys._MEIPASS/packs``, so shipping backend/app does not carry them and no
+# desktop build had ever contained one. The wheel force-includes the same
+# fifteen paths at the same destinations (backend/pyproject.toml), and
+# backend/tests/unit/test_desktop_spec_ships_wheel_data.py checks the two
+# lists against each other.
+#
+# The list is written out here rather than derived from the wheel map on
+# purpose. Reading the map would make that comparison agree with itself, and
+# the point of the gate is that two independently maintained lists have to be
+# brought into line by hand when a pack is added.
+#
+# Which packs, and why not all nineteen, is a licensing decision recorded next
+# to the wheel map: the deprecated pack and the three carrying a third party's
+# name are held back from community artefacts.
+_COMMUNITY_PACKS = (
+    "aus",
+    "brazil-sinapi",
+    "china-gbt50500",
+    "india-cpwd",
+    "mexico-mx",
+    "modular-prefab",
+    "nzs",
+    "renewables-epc",
+    "retail-grocery-dach",
+    "saudi-vision2030",
+    "south-africa",
+    "uk-jct",
+    "us-california",
+    "us-costdata",
+    "us-texas",
+)
+for _pack_slug in _COMMUNITY_PACKS:
+    # Unconditional, like the catalogue: these are tracked in git, so an
+    # absent one means the build is wrong and PyInstaller should say so rather
+    # than produce another bundle that lists no packs.
+    datas.append((str(ROOT / "packs" / _pack_slug / "src"), f"packs/{_pack_slug}/src"))
+
 # Ship pyproject.toml next to the bundled app package. _detect_version()
 # reads the version from the source tree first and only falls back to the
 # installed-wheel metadata if it cannot find a pyproject. In a frozen build

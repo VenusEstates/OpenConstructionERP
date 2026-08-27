@@ -133,6 +133,27 @@ jobs:
           locales = [f for f in files if f.startswith('locales/') and f.endswith('.json')]
           assert len(locales) >= 20, f'wheel {whl} carries only {len(locales)} locale files'
 
+          # The community packs, which for the whole life of the project reached
+          # no user at all: the tree was never packaged, and discovery resolved
+          # its location by counting parent directories, which lands inside the
+          # virtualenv's Lib after an install. Every pip and desktop user was
+          # told there were no packs available. Config that reads correctly can
+          # still build an archive without them, so ask the archive.
+          # backend/tests/unit/test_community_packs_ship.py decides WHICH packs
+          # belong here; this only insists that what was decided arrived.
+          manifests = [f for f in files if f.startswith('packs/') and f.endswith('/manifest.py')]
+          pack_slugs = sorted({f.split('/')[1] for f in files if f.startswith('packs/')})
+          assert len(pack_slugs) >= 15, (
+              f'wheel {whl} carries {len(pack_slugs)} community packs, and the tree ships at least '
+              f'15. A wheel short of them installs to a UI that reports no packs available: '
+              f'{pack_slugs}'
+          )
+          without_manifest = [s for s in pack_slugs if not any(m.startswith(f'packs/{s}/') for m in manifests)]
+          assert not without_manifest, (
+              f'wheel {whl} carries pack directories with no manifest.py, which discovery cannot '
+              f'load and which therefore ship as dead bytes: {without_manifest}'
+          )
+
           # captions.json names twelve photographs and the package walk was
           # dropping every one of them: .gitignore globs *.jpg for dev
           # screenshots, and hatchling reads that file but does not honour the
@@ -155,7 +176,7 @@ jobs:
 
           print(
               f'wheel OK: {whl} - {len(files)} files, index.html plus all {len(local)} assets it asks for, '
-              f'{len(revisions)} migrations, {len(locales)} locales'
+              f'{len(revisions)} migrations, {len(locales)} locales, {len(pack_slugs)} packs'
           )
           PY
 

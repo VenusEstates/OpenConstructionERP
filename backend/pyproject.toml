@@ -466,6 +466,50 @@ artifacts = ["app/scripts/flagship_assets/site_photos/*.jpg"]
 # force-included is added to the archive twice, and hatchling aborts the
 # build with "a second file is being added to the wheel archive at the same
 # path". seed_demo_assets.py reads them from the installed package location.
+#
+# The community packs. app/core/partner_pack/discovery.py scans a ``packs``
+# directory sitting NEXT TO the installed ``app`` package, the same shape as
+# ``locales`` and ``alembic`` above, so the walk over ``app`` does not carry
+# them and without these lines a wheel ships none. It shipped none for its
+# whole life: the repo tree was never packaged, and discovery resolved its
+# location by counting five parent directories, which reaches the repo root in
+# a checkout and the virtualenv's ``Lib`` after an install. Every pip and
+# desktop user saw "no packs available", always.
+#
+# Each pack is named on its own line rather than force-including the tree, and
+# that is the licensing control, not verbosity. A pack whose README licence
+# section reserves its name and colours under a partnership agreement, and a
+# pack deprecated in favour of its successors, must not go out in the
+# community wheel; listing the tree would ship whichever pack lands in it
+# next, which is the wrong direction to fail in. Held back deliberately:
+# ``aus-nzs`` (carries DEPRECATED.txt, superseded by ``aus`` and ``nzs``),
+# ``batimatech-ca`` and ``bimhessen-de`` (partnership agreement stated in
+# their licence sections), and ``doker-formwork`` (licence section is plain
+# AGPL, but the pack carries a named third party's logo, partner name and
+# URL, and a PyPI release cannot be taken back).
+#
+# ``src`` only, not the pack root: the runtime reads the manifest, the locale
+# JSON and the assets under ``src/openconstructionerp_*``, and never the pack
+# README or its pyproject. It also keeps the build-tool caches that collect at
+# a pack root out of the archive, which matters because force-include bypasses
+# the VCS walker and would otherwise ship gitignored bytes.
+# backend/tests/unit/test_community_packs_ship.py checks this map against the
+# licence signals in the tree, in both directions.
+"../packs/aus/src" = "packs/aus/src"
+"../packs/brazil-sinapi/src" = "packs/brazil-sinapi/src"
+"../packs/china-gbt50500/src" = "packs/china-gbt50500/src"
+"../packs/india-cpwd/src" = "packs/india-cpwd/src"
+"../packs/mexico-mx/src" = "packs/mexico-mx/src"
+"../packs/modular-prefab/src" = "packs/modular-prefab/src"
+"../packs/nzs/src" = "packs/nzs/src"
+"../packs/renewables-epc/src" = "packs/renewables-epc/src"
+"../packs/retail-grocery-dach/src" = "packs/retail-grocery-dach/src"
+"../packs/saudi-vision2030/src" = "packs/saudi-vision2030/src"
+"../packs/south-africa/src" = "packs/south-africa/src"
+"../packs/uk-jct/src" = "packs/uk-jct/src"
+"../packs/us-california/src" = "packs/us-california/src"
+"../packs/us-costdata/src" = "packs/us-costdata/src"
+"../packs/us-texas/src" = "packs/us-texas/src"
 
 # Editable installs (uv pip install -e ./backend, pip install -e .) do NOT
 # need the bundled frontend — Vite's dev server serves the UI on :5173

@@ -12,9 +12,11 @@ The value must point at a module-level attribute that is either:
   * a ``PartnerPackManifest`` instance, OR
   * a ``dict`` the loader coerces into one.
 
-In addition to pip-installed packs, ``discover_packs()`` also scans the
-monorepo ``packs/`` directory so that source-checkout packs are listable on
-the /modules page WITHOUT being pip-installed. Filesystem-discovered packs are
+In addition to pip-installed packs, ``discover_packs()`` also scans a
+``packs/`` directory so that packs are listable on the /modules page WITHOUT
+being pip-installed: the monorepo tree in a source checkout, and the community
+packs shipped beside the ``app`` package after an install. Both are found by
+``_packs_dir()``. Filesystem-discovered packs are
 listable but are NEVER auto-activated - only an explicit ``OE_PARTNER_PACK``
 env var activates a pack (see ``get_active_pack``).
 
@@ -75,10 +77,18 @@ def _iter_entry_points() -> list[EntryPoint]:
     return list(by_name.values())
 
 
-# Repo root is five levels up from this file:
-#   backend/app/core/partner_pack/discovery.py -> repo root
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-_PACKS_DIR = _REPO_ROOT / "packs"
+# Directory name of the pack tree. It is the same name in every layout: a
+# source checkout keeps it at the repo root, and an install force-includes the
+# shippable packs next to the ``app`` package, the way ``locales`` and
+# ``alembic`` are already shipped (see backend/pyproject.toml).
+_PACKS_DIRNAME = "packs"
+
+# What makes a directory a pack tree rather than a directory that happens to be
+# called "packs": it holds at least one pack package with the ``manifest.py``
+# the loader imports. Checked before a candidate is accepted, because the
+# defect this replaces was not a missing directory, it was a resolved path that
+# meant nothing.
+_PACK_MANIFEST_GLOB = "*/src/openconstructionerp_*/manifest.py"
 
 # Name of the declarative manifest a dropped (data-dir) pack must contain.
 # Unlike repo/source-checkout packs (which ship a Python ``manifest.py`` that
@@ -90,6 +100,70 @@ DATA_DIR_MANIFEST_FILENAME = "manifest.json"
 # dropped here is a folder (or an extracted folder) whose root contains
 # ``manifest.json``; a dropped ``.zip`` is safely extracted in place first.
 PACKS_SUBDIR = "packs"
+
+
+def _package_dir_of(module_file: Path, module_name: str) -> Path | None:
+    """Return the directory of the top-level package ``module_name`` lives in.
+
+    The depth is read off the module's own dotted name rather than written down
+    as a number. ``app.core.partner_pack.discovery`` is four components, so the
+    ``app`` directory is two parents above this file, and the import system
+    supplies that arithmetic wherever the package happens to sit.
+
+    This is the whole point of the function. The previous code counted five
+    fixed levels to reach a repo root, which is only ever true in a source
+    checkout: in a pip install the same expression walks out of
+    ``site-packages/app`` and lands on the virtualenv's ``Lib`` directory.
+    """
+    parts = module_name.split(".")
+    if len(parts) < 2:
+        return None
+    try:
+        return module_file.resolve().parents[len(parts) - 2]
+    except IndexError:
+        return None
+
+
+def _is_packs_tree(candidate: Path) -> bool:
+    """True when ``candidate`` actually holds packs, not just the right name."""
+    return candidate.is_dir() and any(candidate.glob(_PACK_MANIFEST_GLOB))
+
+
+def _packs_dir_for(module_file: Path, module_name: str) -> Path | None:
+    """Locate the pack tree for a discovery module living at ``module_file``.
+
+    Two layouts put the tree in two places relative to the ``app`` package, and
+    both have to work:
+
+    * Installed (pip wheel, and the frozen desktop bundle, where ``app`` is
+      unpacked beside its data): the packs are force-included next to ``app``,
+      so the tree is ``<install root>/packs`` - the same convention that puts
+      ``locales`` and ``alembic`` beside the package.
+    * Source checkout: ``app`` lives under ``backend/``, and the tree is at the
+      repo root, one directory further up.
+
+    Candidates are tried in that order and each is checked for shape, so a
+    directory that merely shares the name is never mistaken for the tree.
+    Returns ``None`` when this installation carries no packs at all.
+    """
+    package_dir = _package_dir_of(module_file, module_name)
+    if package_dir is None:
+        return None
+    install_root = package_dir.parent
+    for candidate in (install_root / _PACKS_DIRNAME, install_root.parent / _PACKS_DIRNAME):
+        if _is_packs_tree(candidate):
+            return candidate
+    return None
+
+
+def _packs_dir() -> Path | None:
+    """Return this installation's pack tree, or ``None`` if it carries none.
+
+    Resolved per call rather than once at import: a pack tree can appear after
+    the module is imported (an upgrade that adds one, a test that builds one),
+    and a value frozen at import time would answer for the wrong disk.
+    """
+    return _packs_dir_for(Path(__file__), __name__)
 
 
 def _coerce_manifest(value: object) -> PartnerPackManifest:
@@ -165,17 +239,18 @@ def _load_manifest_from_file(manifest_path: Path) -> PartnerPackManifest | None:
 
 
 def _discover_filesystem_packs() -> list[PartnerPackManifest]:
-    """Scan the repo ``packs/`` dir for source-checkout packs.
+    """Scan the ``packs/`` tree - the repo's in a checkout, the shipped one after install.
 
     Looks for ``packs/<slug>/src/openconstructionerp_*/manifest.py``. Packs
     whose package dir contains a ``DEPRECATED.txt`` (anywhere under the pack)
-    are skipped. Returns ``[]`` if the ``packs/`` dir does not exist.
+    are skipped. Returns ``[]`` if this installation carries no pack tree.
     """
-    if not _PACKS_DIR.is_dir():
+    packs_dir = _packs_dir()
+    if packs_dir is None:
         return []
 
     manifests: list[PartnerPackManifest] = []
-    for pack_dir in sorted(_PACKS_DIR.iterdir()):
+    for pack_dir in sorted(packs_dir.iterdir()):
         if not pack_dir.is_dir():
             continue
         # Skip deprecated packs (a DEPRECATED.txt anywhere inside the pack).
@@ -553,8 +628,9 @@ def _entrypoint_module_for_slug(slug: str) -> str | None:
 
 
 def _fs_package_dir_for_slug(slug: str) -> Path | None:
-    """Locate the on-disk package dir for a source-checkout pack by slug."""
-    if not _PACKS_DIR.is_dir():
+    """Locate the on-disk package dir for a filesystem pack by slug."""
+    packs_dir = _packs_dir()
+    if packs_dir is None:
         return None
 
     def _pkg_dirs(pack_dir: Path) -> list[Path]:
@@ -566,13 +642,13 @@ def _fs_package_dir_for_slug(slug: str) -> Path | None:
         ]
 
     # Fast path: the pack directory name matches the slug (repo convention).
-    direct = _PACKS_DIR / slug
+    direct = packs_dir / slug
     for pkg_dir in _pkg_dirs(direct):
         if (pkg_dir / "manifest.py").is_file():
             return pkg_dir
 
     # Fallback: scan every pack and match the loaded manifest slug.
-    for pack_dir in sorted(_PACKS_DIR.iterdir()):
+    for pack_dir in sorted(packs_dir.iterdir()):
         if not pack_dir.is_dir() or pack_dir == direct:
             continue
         for pkg_dir in _pkg_dirs(pack_dir):
