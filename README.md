@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="docs/screenshots/banner-cast.png" alt="OpenConstructionERP - an estimator, a site supervisor, a safety manager and a buyer, and the open-source construction ERP they work in" width="900" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/banner-cast-dark.png">
+  <img src="docs/screenshots/banner-cast-light.png" alt="OpenConstructionERP - a honeycomb of the eight company types and fifteen professional roles the platform is built around" width="900" />
+</picture>
 
 # OpenConstructionERP
 
