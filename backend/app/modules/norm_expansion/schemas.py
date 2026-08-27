@@ -12,9 +12,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 # Upper bound for any single coefficient / quantity. 1e9 is far beyond any real
 # productivity coefficient or takeoff quantity yet keeps every product finite.
@@ -92,6 +93,10 @@ class NormUpdate(BaseModel):
 
     Material coefficients are managed through the dedicated material
     sub-resource endpoints, not through this body.
+
+    Every field is typed ``| None`` to mark "not supplied", never to accept a
+    null: each column behind this schema is NOT NULL with a default, so a null
+    has nothing to mean. See :meth:`_reject_explicit_null`.
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -104,6 +109,31 @@ class NormUpdate(BaseModel):
     machine_hours_per_unit: Decimal | None = Field(default=None, ge=0, le=_NUM_MAX)
     notes: str | None = Field(default=None, max_length=2000)
     is_active: bool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_explicit_null(cls, data: Any) -> Any:
+        """Refuse a field the client explicitly set to ``null``.
+
+        ``None`` is this schema's "field omitted" sentinel, and
+        ``model_dump(exclude_unset=True)`` cannot tell an omitted field from one
+        sent as ``null`` - both surface as ``None``, so an explicit null used to
+        reach ``setattr`` and fail the flush with an IntegrityError against the
+        column's NOT NULL constraint (issue #442). ``work_key`` was the worst of
+        them: its ``min_length`` constraint does not apply to ``None``, so a null
+        sailed through validation untouched.
+
+        Refusing at the schema keeps the guard on the whole model, so a field
+        added here later is covered without anyone remembering to. Omit a field
+        to leave it unchanged; send ``0`` or ``""`` to clear one.
+        """
+        if isinstance(data, dict):
+            nulled = sorted(str(key) for key, value in data.items() if value is None)
+            if nulled:
+                raise ValueError(
+                    f"null is not a valid value for {', '.join(nulled)} - omit a field to leave it unchanged"
+                )
+        return data
 
 
 class NormResponse(BaseModel):

@@ -137,8 +137,17 @@ class NormExpansionService:
             notes=data.notes,
             is_active=data.is_active,
         )
-        for index, mat in enumerate(data.materials):
-            norm.materials.append(_build_material(mat, fallback_order=index))
+        # Assign the collection, never append into it. Appending from inside a
+        # loop leaves the collection *untouched* for a body that carries no
+        # materials, and an untouched collection on a row that the flush has
+        # just made persistent is UNLOADED, not empty. The router then reads it
+        # from synchronous ``NormResponse.model_validate``, the ``selectin``
+        # loader tries to emit its SELECT outside the async greenlet, and the
+        # request dies with MissingGreenlet -> 500 -> rollback (issue #442).
+        # Assigning marks the collection loaded even when it is empty, and the
+        # norm is still transient at this point so the assignment itself never
+        # touches the database.
+        norm.materials = [_build_material(mat, fallback_order=index) for index, mat in enumerate(data.materials)]
         self.session.add(norm)
         await self.session.flush()
         return norm
