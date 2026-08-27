@@ -36,6 +36,97 @@ from app.core.pdf_fonts import (
 logger = logging.getLogger(__name__)
 
 
+# Words that are names rather than words, and look wrong in sentence case.
+# A report is read by estimators and finance people who write AC and EAC, so
+# "Ac by currency" reads as a typo where "AC by currency" reads as the column
+# they asked for.
+_HEADER_ACRONYMS: frozenset[str] = frozenset(
+    {
+        "ac",
+        "bac",
+        "boq",
+        "co2",
+        "copq",
+        "cpi",
+        "csv",
+        "cv",
+        "din",
+        "dso",
+        "eac",
+        "etc",
+        "ev",
+        "fx",
+        "gaeb",
+        "hse",
+        "id",
+        "ids",
+        "kpi",
+        "nrm",
+        "pdf",
+        "po",
+        "pv",
+        "qa",
+        "qc",
+        "rfi",
+        "rfq",
+        "roi",
+        "spi",
+        "sv",
+        "tcpi",
+        "trir",
+        "url",
+        "vac",
+        "vat",
+        "wbs",
+    },
+)
+
+#: Row keys that are structural rather than data. ``run_report`` flattens a
+#: KPI's breakdown into ``breakdown__<key>`` columns; the prefix is a join
+#: marker, not part of the reader's question.
+_BREAKDOWN_PREFIX = "breakdown__"
+
+
+def humanize_column(name: str) -> str:
+    """Turn a row key into a column heading a person can read.
+
+    The row keys are an API shape - ``breakdown__ac_by_currency``,
+    ``source_record_count`` - and printing them into a document is showing
+    the reader the plumbing. They are also unreadable in a narrow column
+    for a mechanical reason: a run with no spaces in it has nowhere to
+    wrap, so ``breakdown__ac_by_currency`` gets chopped mid-word into
+    six-character fragments, while ``Breakdown: AC by currency`` breaks
+    between words.
+
+    Only the heading changes. The row keys themselves are the JSON the
+    report API returns and are left exactly as they are.
+
+    Args:
+        name: The row key.
+
+    Returns:
+        The heading to print.
+    """
+    label = name
+    prefix = ""
+    if label.startswith(_BREAKDOWN_PREFIX):
+        prefix = "Breakdown: "
+        label = label[len(_BREAKDOWN_PREFIX) :]
+    label = label.lstrip("_")
+    if not label:
+        return name
+    words = [w for w in label.replace("_", " ").split(" ") if w]
+    rendered: list[str] = []
+    for index, word in enumerate(words):
+        if word.lower() in _HEADER_ACRONYMS:
+            rendered.append(word.upper())
+        elif index == 0:
+            rendered.append(word[:1].upper() + word[1:])
+        else:
+            rendered.append(word)
+    return prefix + " ".join(rendered)
+
+
 def _safe_filename(stem: str, ext: str) -> str:
     """Make a filesystem-safe report filename."""
     keep = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_."
@@ -162,7 +253,11 @@ def build_pdf_report(
         for k in row:
             if k not in columns:
                 columns.append(k)
-    table_data: list[list[str]] = [list(columns)]
+    # The heading is the reader's, the key stays the API's. Humanised before
+    # the widths are computed, because the widths are computed from this
+    # very table and a heading that wraps at word boundaries needs a
+    # different amount of room than one that has to be chopped mid-word.
+    table_data: list[list[str]] = [[humanize_column(col) for col in columns]]
     for row in rows:
         table_data.append(
             [_format_cell(row.get(col)) for col in columns],
@@ -265,11 +360,46 @@ def build_xlsx_report(
     return path, os.path.getsize(path)
 
 
-def _format_cell(v: Any) -> str:
+def _format_cell(v: Any, _depth: int = 0) -> str:
+    """Render one value for a table cell.
+
+    A KPI breakdown is a dict, and several carry a list. Passed to ``str``
+    those print as Python source - ``{'EUR': Decimal('100000.00')}`` - which
+    is not a number, not a currency, and not something a reader can parse
+    even by squinting. The Decimal wrappers are the giveaway that this was
+    never meant to be read: nothing consumes that shape, in any of the three
+    output formats.
+
+    So a mapping becomes ``EUR: 100,000; USD: 23,456.79`` and a sequence
+    becomes ``GBP, CHF``, with each value formatted the same way a
+    top-level value would be. Recursion is capped at one nested level and
+    falls back to ``str`` below it, because a cell that needs two levels of
+    nesting is a table design problem rather than a formatting one.
+
+    Args:
+        v: The value to render.
+        _depth: Internal recursion guard.
+
+    Returns:
+        The text to print in the cell.
+    """
     if v is None:
         return ""
+    if isinstance(v, bool):
+        # Before the Decimal branch: bool is an int, and "1.0000" for True
+        # would be worse than the word.
+        return str(v)
     if isinstance(v, Decimal):
         return f"{v:,.4f}".rstrip("0").rstrip(".") or "0"
+    if _depth < 1:
+        if isinstance(v, dict):
+            return "; ".join(f"{k}: {_format_cell(value, _depth + 1)}" for k, value in v.items())
+        if isinstance(v, (list, tuple)):
+            return ", ".join(_format_cell(item, _depth + 1) for item in v)
+        if isinstance(v, (set, frozenset)):
+            # Sorted, so the same data does not print in two different
+            # orders in two runs of the same report.
+            return ", ".join(sorted(_format_cell(item, _depth + 1) for item in v))
     return str(v)
 
 
@@ -400,4 +530,5 @@ __all__ = [
     "build_xlsx_report",
     "export_widget_csv",
     "export_widget_svg",
+    "humanize_column",
 ]
