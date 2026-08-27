@@ -86,6 +86,26 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_version_sync.py
 
+      # desktop/src-tauri/windows/installer.nsi is a fork of the stock Tauri
+      # NSIS template, and the single line it changes is what keeps an upgrade
+      # from hanging forever. Upstream starts "Uninstall before installing"
+      # selected, which ExecWaits the uninstaller already on the machine, and
+      # every uninstaller from v11.7.1 to v15.8.0 calls nsExec with no timeout,
+      # so a PowerShell that never returns stops the upgrade dead. The fork
+      # pre-selects "Do not uninstall" on the upgrade branch instead.
+      #
+      # The script was written months ago and nothing ever ran it. A fork
+      # nobody compares against upstream stops being a fork and becomes a copy
+      # that drifts, and the drift that matters here is silent: bumping the
+      # Tauri CLI regenerates the template with different Handlebars
+      # expressions, our block survives textually, and the installer builds
+      # green while the page it patches has moved. This fetches the template at
+      # the CLI version pinned in desktop-release.yml, reconstructs the file
+      # from it, and fails when the two stop agreeing.
+      - name: Check the installer template against the Tauri version it forks
+        if: ${{ !cancelled() }}
+        run: python scripts/check_nsis_template_drift.py
+
       # The commit has to be able to import itself. A router was once committed
       # clean while the function it imported stayed in a working tree, so a fresh
       # clone could not start the application at all, and every local run passed
