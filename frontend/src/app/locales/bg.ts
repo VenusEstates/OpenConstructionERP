@@ -27665,7 +27665,7 @@ const resource = {
   "geo.basemap.paper": "Хартия",
   "geo.basemap.minimal_hint": "Светла, обезцветена карта - по-малко натоварена, лесна за четене.",
   "geo.basemap.minimal": "Минимален",
-  "geo.basemap.streets_hint": "Пълноцветна карта на улиците (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Пълноцветна карта на улиците (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Улици",
     "geo.engine.globe3d": "3D Глобус",
     "geo.engine.globe3d_hint": "Имерсивен 3D глобус с терен и 3D модели.",

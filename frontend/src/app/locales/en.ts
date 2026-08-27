@@ -25530,7 +25530,7 @@ const resource = {
   "geo.basemap.paper": "Paper",
   "geo.basemap.minimal_hint": "Light, desaturated map - less clutter, easy to read.",
   "geo.basemap.minimal": "Minimal",
-  "geo.basemap.streets_hint": "Full-colour street map (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Full-colour street map (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Streets",
     "geo_hub.licenses_title": "Open-data stack: click to view licenses",
     "geo_hub.licenses_pill": "Open Data",

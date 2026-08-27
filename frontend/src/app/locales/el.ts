@@ -26889,7 +26889,7 @@ const resource = {
     "geo.basemap.paper": "Χαρτί",
     "geo.basemap.minimal_hint": "Ανοιχτόχρωμος, αποκορεσμένος χάρτης - λιγότερος συνωστισμός, εύκολος στην ανάγνωση.",
     "geo.basemap.minimal": "Μινιμαλιστικός",
-    "geo.basemap.streets_hint": "Έγχρωμος οδικός χάρτης (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "Έγχρωμος οδικός χάρτης (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "Δρόμοι",
     "geo.engine.globe3d": "Τρισδιάστατη Σφαίρα",
     "geo.engine.globe3d_hint": "Καθηλωτική τρισδιάστατη σφαίρα με ανάγλυφο εδάφους και τρισδιάστατα μοντέλα.",

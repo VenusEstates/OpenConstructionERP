@@ -27102,7 +27102,7 @@ const resource = {
   "geo.basemap.paper": "Цаас",
   "geo.basemap.minimal_hint": "Хөнгөн, өнгө багассан газрын зураг - бөглөрөл бага, унших хялбар.",
   "geo.basemap.minimal": "Хялбаршуулсан",
-  "geo.basemap.streets_hint": "Бүрэн өнгөт гудамжны газрын зураг (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Бүрэн өнгөт гудамжны газрын зураг (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Гудамжнууд",
     "geo.engine.globe3d": "3D дэлхий",
     "geo.engine.globe3d_hint": "Өнгөрүүлэгч 3D дэлхий газар рельефын болон 3D загвартай.",

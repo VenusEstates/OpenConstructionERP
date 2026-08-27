@@ -27595,7 +27595,7 @@ const resource = {
   "geo.basemap.paper": "Papir",
   "geo.basemap.minimal_hint": "Svijetla, obezbojena karta - manje zatrpana, lako čitljiva.",
   "geo.basemap.minimal": "Minimalna",
-  "geo.basemap.streets_hint": "Potpuno obojena karta ulica (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Potpuno obojena karta ulica (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Ulice",
     "geo.engine.globe3d": "3D globus",
     "geo.engine.globe3d_hint": "Zaronska 3D globus s terenom i 3D modelima.",

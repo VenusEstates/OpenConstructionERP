@@ -26853,7 +26853,7 @@ const resource = {
     "geo.basemap.paper": "Қағаз",
     "geo.basemap.minimal_hint": "Ашық, аз қаныққан карта - шу азырақ, оқуға оңай.",
     "geo.basemap.minimal": "Минималды",
-    "geo.basemap.streets_hint": "Түрлі-түсті көше картасы (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "Түрлі-түсті көше картасы (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "Көшелер",
     "geo.engine.globe3d": "3D Жаһан",
     "geo.engine.globe3d_hint": "Рельеф пен 3D модельдері бар иммерсивті 3D жаһан.",

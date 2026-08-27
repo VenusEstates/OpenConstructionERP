@@ -27548,7 +27548,7 @@ const resource = {
   "geo.basemap.paper": "Papier",
   "geo.basemap.minimal_hint": "Lichte, ontverzadigde kaart - minder rommelig, gemakkelijk leesbaar.",
   "geo.basemap.minimal": "Minimaal",
-  "geo.basemap.streets_hint": "Volledig gekleurde stratenkaart (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Volledig gekleurde stratenkaart (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Straten",
     "geo.engine.globe3d": "3D-wereld",
     "geo.engine.globe3d_hint": "Onderdompelende 3D-wereld met terrein en 3D-modellen.",

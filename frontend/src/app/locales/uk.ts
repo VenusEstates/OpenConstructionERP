@@ -28157,7 +28157,7 @@ const resource = {
     "geo.basemap.paper": "Папір",
     "geo.basemap.minimal_hint": "Світла, приглушена карта - менше деталей, легко читати.",
     "geo.basemap.minimal": "Мінімальна",
-    "geo.basemap.streets_hint": "Повнокольорова карта вулиць (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "Повнокольорова карта вулиць (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "Вулиці",
     "geo.engine.globe3d": "3D-глобус",
     "geo.engine.globe3d_hint": "Занурювальний 3D-глобус з рельєфом та 3D-моделями.",

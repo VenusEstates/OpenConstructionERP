@@ -27570,7 +27570,7 @@ const resource = {
     "geo.basemap.paper": "Paber",
     "geo.basemap.minimal_hint": "Hele, tuhmivärviline kaart - vähem sagimist, kergem lugeda.",
     "geo.basemap.minimal": "Minimaalne",
-    "geo.basemap.streets_hint": "Täisvärviline tänavakaart (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "Täisvärviline tänavakaart (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "Tänavad",
     "geo.engine.globe3d": "3D gloobus",
     "geo.engine.globe3d_hint": "Kaasahaarav 3D gloobus koos reljeefi ja 3D-mudelitega.",

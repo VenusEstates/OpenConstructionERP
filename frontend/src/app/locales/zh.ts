@@ -27519,7 +27519,7 @@ const resource = {
   "geo.basemap.paper": "纸张",
   "geo.basemap.minimal_hint": "明亮、低饱和度的地图——更简洁、更易读。",
   "geo.basemap.minimal": "极简",
-  "geo.basemap.streets_hint": "全彩街道地图（OpenStreetMap / CARTO）。",
+  "geo.basemap.streets_hint": "全彩街道地图（OpenStreetMap / OpenFreeMap）。",
   "geo.basemap.streets": "街道",
     "geo.engine.globe3d": "3D 地球",
     "geo.engine.globe3d_hint": "带有地形和 3D 模型的沉浸式 3D 地球。",

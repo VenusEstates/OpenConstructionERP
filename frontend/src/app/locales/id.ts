@@ -27524,7 +27524,7 @@ const resource = {
   "geo.basemap.paper": "Kertas",
   "geo.basemap.minimal_hint": "Peta terang dan desaturasi - lebih sedikit gangguan visual, mudah dibaca.",
   "geo.basemap.minimal": "Minimal",
-  "geo.basemap.streets_hint": "Peta jalan berwarna penuh (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Peta jalan berwarna penuh (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Jalan",
     "geo.engine.globe3d": "3D Dunia",
     "geo.engine.globe3d_hint": "3D Dunia mendalam dengan medan dan model 3D.",

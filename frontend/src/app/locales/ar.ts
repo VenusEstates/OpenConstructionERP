@@ -27803,7 +27803,7 @@ const resource = {
   "geo.basemap.paper": "ورقي",
   "geo.basemap.minimal_hint": "خريطة فاتحة منخفضة التشبع - أقل ازدحامًا وأسهل قراءة.",
   "geo.basemap.minimal": "بسيط",
-  "geo.basemap.streets_hint": "خريطة شوارع ملونة بالكامل (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "خريطة شوارع ملونة بالكامل (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "شوارع",
     "geo.engine.globe3d": "الكرة الأرضية ثلاثية الأبعاد",
     "geo.engine.globe3d_hint": "كرة أرضية ثلاثية الأبعاد غامرة مع التضاريس والنماذج ثلاثية الأبعاد.",

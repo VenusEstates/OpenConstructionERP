@@ -26877,7 +26877,7 @@ const resource = {
     "geo.basemap.paper": "נייר",
     "geo.basemap.minimal_hint": "מפה בהירה ומעומעמת - פחות עומס, קלה לקריאה.",
     "geo.basemap.minimal": "מינימלי",
-    "geo.basemap.streets_hint": "מפת רחובות בצבע מלא (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "מפת רחובות בצבע מלא (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "רחובות",
     "geo.engine.globe3d": "כדור תלת-ממד",
     "geo.engine.globe3d_hint": "כדור תלת-ממד סוחף עם טופוגרפיה ומודלים תלת-ממדיים.",

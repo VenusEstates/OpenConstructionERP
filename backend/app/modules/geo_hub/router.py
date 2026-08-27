@@ -11,9 +11,14 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import json
+import re
+import time
 import uuid
 from collections import OrderedDict
+from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
@@ -77,34 +82,135 @@ def _svc(session: SessionDep) -> GeoHubService:
     return GeoHubService(session)
 
 
-# ── Basemap tile proxy (public) ─────────────────────────────────────────────
-# Browsers cannot reliably reach public tile CDNs directly: ad and privacy
-# blockers routinely block ``basemaps.cartocdn.com`` and the OpenStreetMap
-# tile servers, and OSM's usage policy forbids app or bulk use of its raw
-# tiles (it returns an "Access blocked" tile). Either way the 3D globe and the
-# project-card thumbnails go blank. We proxy the basemap through our own
-# origin: the browser only ever talks to same-origin ``/api`` (which blockers
-# do not touch), and the server fetches each tile once, with a proper
-# User-Agent, and caches it. This removes the external runtime dependency and
-# keeps the maps working in any browser. It is intentionally the one public
-# route in this module: ``<img>`` and the Cesium/MapLibre tile loaders cannot
-# attach an auth header, and basemap tiles are public imagery.
-_TILE_UPSTREAM = "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-# Bounded LRU of ``(bytes, etag)`` keyed by ``z/x/y``. 4096 256px PNGs is a
-# few MB resident - small enough to keep in-process, big enough to cover a
-# project view plus several pan/zoom steps so repeat loads never re-fetch.
-_TILE_CACHE: OrderedDict[str, tuple[bytes, str]] = OrderedDict()
-_TILE_CACHE_MAX = 4096
+# ── Basemap (public) ────────────────────────────────────────────────────────
+#
+# WHY THE BROWSER NEVER TALKS TO THE TILE HOST. Ad and privacy blockers
+# routinely block public tile CDNs by hostname, which leaves the 3D globe and
+# the project-card thumbnails blank. We proxy every basemap byte through our
+# own origin: the browser only ever fetches same-origin ``/api`` (which
+# blockers do not touch) and the server fetches once, with a proper
+# User-Agent, and caches. These are intentionally the only public routes in
+# this module: ``<img>`` tags and the Cesium / MapLibre loaders cannot attach
+# an auth header, and basemap tiles are public imagery.
+#
+# WHY OPENFREEMAP, AND WHY THIS COMMENT NAMES THE ALTERNATIVES. The upstream
+# used to be CARTO's keyless "Voyager" raster. It is keyless no longer: as of
+# 2026-08 it answers 200, ``image/png``, ~26 KB of a perfectly decodable image
+# of the correct geography with "API KEY REQUIRED" printed diagonally across
+# it. Every field of that HTTP response is correct, so a status check, a
+# byte-length check and an image-decode check are all green - the refusal
+# lives only in the pixels. That is the failure this module is now built
+# against, and ``tests/unit/test_basemap_upstream_policy.py`` holds the
+# allowlist of upstreams we consider keyless and policy-compatible, with the
+# reason for each written down.
+#
+#   * ``tile.openstreetmap.org`` is NOT an option however well it works
+#     today: the OSMF Tile Usage Policy forbids proxying and systematic or
+#     app use, and they enforce by User-Agent. It would work now and get us
+#     banned as installs grow.
+#   * OpenFreeMap is keyless, quota-free, ODbL, and self-hostable, which is
+#     the property that matters most: an operator who outgrows the public
+#     endpoint points OE_BASEMAP_UPSTREAM at their own copy.
+_BASEMAP_UPSTREAM = "https://tiles.openfreemap.org"
+# TileJSON that names the CURRENT planet build. The tile path carries a
+# version segment (``/planet/20260823_080002_pt/{z}/{x}/{y}.pbf``) that
+# rotates as OpenFreeMap re-imports the planet, so it is resolved at runtime
+# and never written into this file. Hardcoding it would reproduce the exact
+# defect class above: a stale segment answers 200 with an EMPTY body, and an
+# empty body is not distinguishable from "nothing here" by status alone.
+_PLANET_TILEJSON = f"{_BASEMAP_UPSTREAM}/planet"
+_NATURAL_EARTH_UPSTREAM = f"{_BASEMAP_UPSTREAM}/natural_earth/ne2sr/{{z}}/{{x}}/{{y}}.png"
+_GLYPH_UPSTREAM = f"{_BASEMAP_UPSTREAM}/fonts/{{fontstack}}/{{range}}.pbf"
+_SPRITE_UPSTREAM = f"{_BASEMAP_UPSTREAM}/sprites/ofm_f384/{{filename}}"
+# The vector source stops here. MapLibre overzooms past it client-side by
+# blowing up the z14 ancestor, so deep zooms stay populated.
+_MAX_SOURCE_ZOOM = 14
+_NATURAL_EARTH_MAX_ZOOM = 6
+
 _TILE_HEADERS = {
     "User-Agent": "OpenConstructionERP/1.0 (+https://openconstructionerp.com)",
-    "Accept": "image/png,image/*;q=0.8,*/*;q=0.5",
-    "Referer": "https://openconstructionerp.com/",
+    "Accept": "*/*",
+}
+
+# Vendored MapLibre styles. Names are an allowlist, not a filesystem lookup.
+_STYLE_DIR = Path(__file__).resolve().parent / "data" / "basemap_styles"
+_STYLE_NAMES = frozenset({"liberty", "positron"})
+# The glyph range shape from the MapLibre style spec, e.g. ``0-255``.
+_GLYPH_RANGE_RE = re.compile(r"\d{1,5}-\d{1,5}")
+# The four names MapLibre derives from one ``sprite`` base.
+_SPRITE_FILES = {
+    "ofm.json": "application/json",
+    "ofm.png": "image/png",
+    "ofm@2x.json": "application/json",
+    "ofm@2x.png": "image/png",
 }
 # A basemap tile for a fixed z/x/y is effectively immutable for a week, so we
 # let the browser AND any shared cache hold onto it. ``immutable`` stops the
 # revalidation round-trip entirely on supporting browsers; the ETag covers the
 # rest via conditional GETs (304, empty body).
+#
+# THE COST OF THAT PROMISE, learned the hard way. ``immutable`` cannot be
+# revalidated, by construction: a browser that cached a tile from the old
+# CARTO upstream keeps painting it for the full week no matter what the
+# server now returns, because it never asks again. Changing the bytes behind
+# a URL is therefore NOT enough to retire a bad tile - the URL itself has to
+# change. That is why the raster route below lives at ``/basemap/`` and the
+# old ``/tiles/`` path is kept only as an alias for external XYZ clients.
 _TILE_CACHE_CONTROL = "public, max-age=604800, stale-while-revalidate=86400, immutable"
+# Styles and glyphs change with a release, not with a tile, so they get a
+# shorter window and no ``immutable``.
+_ASSET_CACHE_CONTROL = "public, max-age=86400"
+
+
+class _ByteBoundedCache:
+    """LRU keyed by string, evicting on total BYTES rather than entry count.
+
+    The previous cache counted entries: 4096 of them, annotated "a few MB
+    resident". At the ~26 KB a real 256px basemap tile weighs that was 106 MB,
+    off by more than an order of magnitude, and it would have been worse for
+    the glyph ranges and sprite sheets now sharing this mechanism. Bounding
+    the thing we actually care about removes the guess.
+    """
+
+    def __init__(self, max_bytes: int) -> None:
+        self._max_bytes = max_bytes
+        self._total = 0
+        self._entries: OrderedDict[str, tuple[bytes, str]] = OrderedDict()
+
+    def get(self, key: str) -> tuple[bytes, str] | None:
+        hit = self._entries.get(key)
+        if hit is not None:
+            self._entries.move_to_end(key)
+        return hit
+
+    def put(self, key: str, data: bytes, etag: str) -> None:
+        previous = self._entries.pop(key, None)
+        if previous is not None:
+            self._total -= len(previous[0])
+        self._entries[key] = (data, etag)
+        self._total += len(data)
+        while self._total > self._max_bytes and self._entries:
+            _evicted_key, (evicted, _etag) = self._entries.popitem(last=False)
+            self._total -= len(evicted)
+
+    def clear(self) -> None:
+        self._entries.clear()
+        self._total = 0
+
+    @property
+    def nbytes(self) -> int:
+        return self._total
+
+    def __len__(self) -> int:
+        return len(self._entries)
+
+
+# Rendered raster tiles. Each is ~15-45 KB of PNG-8, so 48 MB holds well over
+# a thousand: a project view plus many pan/zoom steps, per process.
+_TILE_CACHE = _ByteBoundedCache(48 * 1024 * 1024)
+# Glyph ranges, sprite sheets and Natural Earth relief, proxied verbatim.
+# A single glyph range is ~75 KB and a style needs a handful of them.
+_ASSET_CACHE = _ByteBoundedCache(32 * 1024 * 1024)
 # 1x1 transparent PNG returned on any upstream failure so the map shows a
 # clean gap rather than a broken-image icon. NOT cached client-side (a later
 # request must be able to retry the upstream), so it carries no-store.
@@ -162,90 +268,383 @@ async def close_tile_client() -> None:
         await client.aclose()
 
 
-def _tile_response(data: bytes, etag: str) -> Response:
-    """Build a cacheable 200 image response with validators."""
+def _etag_for(data: bytes) -> str:
+    """Strong validator derived from the bytes, so identical content 304s."""
+    return f'"{hashlib.sha1(data).hexdigest()}"'  # noqa: S324 - cache validator, not security
+
+
+def _cached_response(
+    data: bytes,
+    etag: str,
+    media_type: str,
+    request: Request,
+    cache_control: str = _TILE_CACHE_CONTROL,
+) -> Response:
+    """Build a cacheable 200 (or a bodiless 304) with validators."""
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"Cache-Control": cache_control, "ETag": etag})
     return Response(
         content=data,
-        media_type="image/png",
+        media_type=media_type,
         headers={
-            "Cache-Control": _TILE_CACHE_CONTROL,
+            "Cache-Control": cache_control,
             "ETag": etag,
             "Content-Length": str(len(data)),
         },
     )
 
 
+async def _fetch_upstream(url: str) -> bytes | None:
+    """GET ``url`` and return its body, or ``None`` for anything unusable.
+
+    An empty body counts as unusable on purpose. Measured against the live
+    upstream: a real but featureless tile (mid-ocean) still carries 58 bytes,
+    while a zero-length body is what a request beyond the source's max zoom
+    or a malformed path returns. So "200 with nothing in it" is never a
+    legitimate answer here, and treating it as one is how a blank map ships.
+    """
+    try:
+        client = await _get_tile_client()
+        res = await client.get(url)
+    except (httpx.HTTPError, OSError):
+        return None
+    if res.status_code != 200 or not res.content:
+        return None
+    return res.content
+
+
+# ── Planet version resolution ───────────────────────────────────────────────
+#
+# Resolved from the upstream TileJSON and refreshed on a TTL. This is the one
+# piece of state that must never be a literal in the source: OpenFreeMap
+# rotates the planet build (the segment is a timestamp), and a stale one
+# degrades to empty bodies with a 200 status - invisible to every check that
+# does not look at the payload.
+_PLANET_TTL_SECONDS = 6 * 60 * 60
+_planet_template: str | None = None
+_planet_resolved_at: float = 0.0
+_planet_lock = asyncio.Lock()
+
+
+async def _planet_tile_template(*, force: bool = False) -> str | None:
+    """Return the current ``{z}/{x}/{y}`` vector tile template, or ``None``.
+
+    Args:
+        force: Ignore the cached value and re-read the TileJSON. Used when a
+            fetch built from the cached template comes back unusable, so a
+            rotation mid-session heals on the next request instead of serving
+            blank tiles until the process restarts.
+    """
+    global _planet_template, _planet_resolved_at
+
+    now = time.monotonic()
+    cached = _planet_template
+    if not force and cached is not None and (now - _planet_resolved_at) < _PLANET_TTL_SECONDS:
+        return cached
+
+    async with _planet_lock:
+        # Another coroutine may have refreshed while we waited for the lock.
+        if (
+            not force
+            and _planet_template is not None
+            and (time.monotonic() - _planet_resolved_at) < _PLANET_TTL_SECONDS
+        ):
+            return _planet_template
+        body = await _fetch_upstream(_PLANET_TILEJSON)
+        if body is None:
+            # Keep serving the previous template if we have one: a blip on
+            # the metadata endpoint should not blank a map that was working.
+            return _planet_template
+        try:
+            tilejson = json.loads(body)
+            template = str(tilejson["tiles"][0])
+        except (ValueError, KeyError, IndexError, TypeError):
+            return _planet_template
+        if not template.startswith(_BASEMAP_UPSTREAM):
+            # The TileJSON is upstream-controlled input. Refuse a template
+            # that would send our fetches somewhere else entirely.
+            return _planet_template
+        _planet_template = template
+        _planet_resolved_at = time.monotonic()
+        return template
+
+
+def reset_basemap_state() -> None:
+    """Drop cached tiles and the resolved planet version. For tests."""
+    global _planet_template, _planet_resolved_at
+    _planet_template = None
+    _planet_resolved_at = 0.0
+    _TILE_CACHE.clear()
+    _ASSET_CACHE.clear()
+
+
+async def _fetch_vector_tile(z: int, x: int, y: int) -> bytes | None:
+    """Fetch one upstream vector tile, re-resolving the planet version once.
+
+    The retry is deliberately keyed on the fetch failing rather than on the
+    body being empty: an over-zoomed request legitimately returns an empty
+    body, and re-resolving on that would hammer the TileJSON endpoint from
+    every deep zoom. Callers clamp to ``_MAX_SOURCE_ZOOM`` before getting
+    here, so a failure at this point really does suggest a stale template.
+    """
+    template = await _planet_tile_template()
+    if template is None:
+        return None
+    body = await _fetch_upstream(template.format(z=z, x=x, y=y))
+    if body is not None:
+        return body
+    refreshed = await _planet_tile_template(force=True)
+    if refreshed is None or refreshed == template:
+        return None
+    return await _fetch_upstream(refreshed.format(z=z, x=x, y=y))
+
+
+def _blank_tile() -> Response:
+    """Transparent, non-cacheable tile so a failure reads as a clean gap."""
+    return Response(content=_BLANK_TILE, media_type="image/png", headers=_BLANK_TILE_HEADERS)
+
+
+def _valid_xyz(z: int, x: int, y: int, *, max_zoom: int = 22) -> bool:
+    """Reject anything outside the web-mercator grid for this zoom."""
+    if not (0 <= z <= max_zoom):
+        return False
+    bound = (1 << z) - 1
+    return 0 <= x <= bound and 0 <= y <= bound
+
+
+async def _relief_tile(z: int, x: int, y: int, request: Request) -> Response:
+    """Serve one shaded-relief raster tile, proxied without rendering."""
+    if not _valid_xyz(z, x, y, max_zoom=_NATURAL_EARTH_MAX_ZOOM):
+        return _blank_tile()
+    key = f"ne/{z}/{x}/{y}"
+    hit = _TILE_CACHE.get(key)
+    if hit is not None:
+        return _cached_response(hit[0], hit[1], "image/png", request)
+    data = await _fetch_upstream(_NATURAL_EARTH_UPSTREAM.format(z=z, x=x, y=y))
+    if data is None:
+        return _blank_tile()
+    etag = _etag_for(data)
+    _TILE_CACHE.put(key, data, etag)
+    return _cached_response(data, etag, "image/png", request)
+
+
 @router.get(
-    "/tiles/{z}/{x}/{y}.png",
-    summary="XYZ basemap tile (paste this into QGIS as an XYZ layer)",
+    "/basemap/{z}/{x}/{y}.png",
+    summary="XYZ raster basemap tile (paste this into QGIS as an XYZ layer)",
     response_class=Response,
     responses={200: {"content": {"image/png": {}}, "description": "One 256px basemap tile."}},
 )
+@router.get("/tiles/{z}/{x}/{y}.png", include_in_schema=False)
 async def proxy_basemap_tile(z: int, x: int, y: int, request: Request) -> Response:
-    """Proxy one XYZ basemap raster tile through our own origin.
+    """Serve one XYZ raster basemap tile: Natural Earth shaded relief.
 
     To add this basemap in QGIS: Browser panel, right-click **XYZ Tiles**,
     **New Connection**, and paste this URL template::
 
-        https://<your-host>/api/v1/geo-hub/tiles/{z}/{x}/{y}.png
+        https://<your-host>/api/v1/geo-hub/basemap/{z}/{x}/{y}.png
 
-    Leave the QGIS authentication field empty - this one route is public on
-    purpose (see the section comment: ``<img>`` tags and the Cesium /
-    MapLibre tile loaders cannot attach an auth header, and basemap tiles
-    are public imagery anyway). Set Max Zoom Level to 22.
+    Leave the QGIS authentication field empty - this route is public on
+    purpose (see the section comment: ``<img>`` tags and the Cesium tile
+    loader cannot attach an auth header, and basemap tiles are public
+    imagery anyway). Set Max Zoom Level to 6, which is all this source has.
 
-    This is a **basemap**, not your data: it serves general-purpose street
-    cartography so your project layers have something to sit on. Your own
-    projects, overlays and viewpoints come from the OGC API - Features
-    service at ``/api/v1/geo-hub/ogc``, which does require authentication
-    and does apply per-project permissions.
+    This is a **basemap**, not your data: it gives your project layers
+    something to sit on. Your own projects, overlays and viewpoints come
+    from the OGC API - Features service at ``/api/v1/geo-hub/ogc``, which
+    does require authentication and does apply per-project permissions.
 
-    Public by design (see the section comment). Coordinates are clamped to
-    the valid web-mercator range so this can only ever fetch real basemap
-    tiles and never act as an open proxy for arbitrary URLs. Results come
-    from a bounded in-process LRU cache backed by a shared, pooled httpx
-    client; a miss fetches the upstream tile once. Every hit carries a
-    strong ``ETag`` + long ``Cache-Control`` so the browser short-circuits
-    repeat loads (and conditional ``If-None-Match`` GETs get a 304 with no
-    body). Any failure returns a transparent, non-cacheable tile so the map
+    WHY RELIEF AND NOT STREETS. Every raster street basemap that was
+    keyless has stopped being keyless, which is the defect this route was
+    rewritten to fix. Nobody currently ships one that also permits
+    proxying, and depending on one that might quietly start demanding a key
+    is exactly how the previous upstream failed: it kept answering 200 with
+    a valid PNG and printed "API KEY REQUIRED" across the picture, so no
+    status or decode check noticed. Shaded relief is public domain, needs
+    no key, and cannot be withdrawn from under us. The interactive maps are
+    unaffected - they read vector tiles and render streets client-side. The
+    two surfaces that cannot consume vector data, the ``<img>`` card
+    thumbnail and the Cesium globe, show relief instead of streets. That is
+    a real and deliberate downgrade in detail, taken over serving a
+    watermarked tile.
+
+    Any failure returns a transparent, non-cacheable tile so the map
     degrades to a clean gap instead of a broken image and can retry later.
     """
-    if not (0 <= z <= 22):
-        return Response(content=_BLANK_TILE, media_type="image/png", headers=_BLANK_TILE_HEADERS)
-    bound = (1 << z) - 1
-    if not (0 <= x <= bound and 0 <= y <= bound):
-        return Response(content=_BLANK_TILE, media_type="image/png", headers=_BLANK_TILE_HEADERS)
+    return await _relief_tile(z, x, y, request)
 
-    key = f"{z}/{x}/{y}"
+
+@router.get(
+    "/vector-tiles/{z}/{x}/{y}.pbf",
+    summary="XYZ vector basemap tile (OpenMapTiles schema)",
+    response_class=Response,
+    responses={200: {"content": {"application/vnd.mapbox-vector-tile": {}}}},
+)
+async def proxy_vector_tile(z: int, x: int, y: int, request: Request) -> Response:
+    """Proxy one OpenMapTiles vector tile through our own origin.
+
+    This is what the interactive MapLibre maps read. Same reasoning as the
+    raster route: same-origin so blockers cannot reach it, coordinates
+    clamped so it can never be pointed at an arbitrary URL, and the planet
+    version resolved at runtime rather than baked in.
+
+    A request past the source's max zoom returns 204 rather than an empty
+    200. MapLibre overzooms client-side from the deepest tile it has, so
+    telling it plainly that there is nothing here is better than handing it
+    a zero-length body it has to guess about.
+    """
+    if not _valid_xyz(z, x, y):
+        return Response(status_code=204)
+    if z > _MAX_SOURCE_ZOOM:
+        return Response(status_code=204)
+
+    key = f"v/{z}/{x}/{y}"
     hit = _TILE_CACHE.get(key)
     if hit is not None:
-        data, etag = hit
-        _TILE_CACHE.move_to_end(key)
-        if request.headers.get("if-none-match") == etag:
-            return Response(
-                status_code=304,
-                headers={"Cache-Control": _TILE_CACHE_CONTROL, "ETag": etag},
-            )
-        return _tile_response(data, etag)
+        return _cached_response(hit[0], hit[1], "application/vnd.mapbox-vector-tile", request)
 
-    try:
-        client = await _get_tile_client()
-        res = await client.get(_TILE_UPSTREAM.format(z=z, x=x, y=y))
-    except (httpx.HTTPError, OSError):
-        return Response(content=_BLANK_TILE, media_type="image/png", headers=_BLANK_TILE_HEADERS)
+    body = await _fetch_vector_tile(z, x, y)
+    if body is None:
+        return Response(status_code=204)
+    etag = _etag_for(body)
+    _TILE_CACHE.put(key, body, etag)
+    return _cached_response(body, etag, "application/vnd.mapbox-vector-tile", request)
 
-    if res.status_code != 200 or not res.content:
-        return Response(content=_BLANK_TILE, media_type="image/png", headers=_BLANK_TILE_HEADERS)
 
-    data = res.content
-    # Strong validator derived from the bytes so a re-fetch of identical
-    # content keeps the same ETag (and the browser's conditional GET 304s).
-    etag = f'"{hashlib.sha1(data).hexdigest()}"'  # noqa: S324 - cache validator, not security
-    _TILE_CACHE[key] = (data, etag)
-    _TILE_CACHE.move_to_end(key)
-    while len(_TILE_CACHE) > _TILE_CACHE_MAX:
-        _TILE_CACHE.popitem(last=False)
-    return _tile_response(data, etag)
+async def _proxy_asset(key: str, url: str, media_type: str, request: Request) -> Response:
+    """Cache-and-serve one immutable upstream asset (glyphs, sprite, relief)."""
+    hit = _ASSET_CACHE.get(key)
+    if hit is not None:
+        return _cached_response(hit[0], hit[1], media_type, request, _ASSET_CACHE_CONTROL)
+    body = await _fetch_upstream(url)
+    if body is None:
+        return Response(status_code=404)
+    etag = _etag_for(body)
+    _ASSET_CACHE.put(key, body, etag)
+    return _cached_response(body, etag, media_type, request, _ASSET_CACHE_CONTROL)
+
+
+@router.get(
+    "/fonts/{fontstack}/{glyph_range}.pbf",
+    summary="Glyph range for the vector basemap labels",
+    response_class=Response,
+)
+async def proxy_glyphs(fontstack: str, glyph_range: str, request: Request) -> Response:
+    """Proxy one MapLibre glyph range (a PBF of rendered label glyphs).
+
+    Without this the vendored style's ``glyphs`` URL would have to point at
+    the tile host and the browser would talk to it directly, which is the
+    whole thing we are avoiding. ``glyph_range`` is validated against the
+    spec's ``start-end`` shape so this cannot be walked into an arbitrary
+    upstream path.
+    """
+    if not _GLYPH_RANGE_RE.fullmatch(glyph_range):
+        return Response(status_code=404)
+    if len(fontstack) > 200 or "/" in fontstack or ".." in fontstack:
+        return Response(status_code=404)
+    return await _proxy_asset(
+        f"glyph/{fontstack}/{glyph_range}",
+        _GLYPH_UPSTREAM.format(fontstack=quote(fontstack, safe=""), range=glyph_range),
+        "application/x-protobuf",
+        request,
+    )
+
+
+@router.get(
+    "/sprite/{filename}",
+    summary="Sprite sheet for the vector basemap icons",
+    response_class=Response,
+)
+async def proxy_sprite(filename: str, request: Request) -> Response:
+    """Proxy the style's sprite sheet and its index.
+
+    MapLibre derives four names from one ``sprite`` base - ``ofm.json``,
+    ``ofm.png`` and the ``@2x`` pair - so all four are allowlisted by exact
+    name rather than by pattern.
+    """
+    media_type = _SPRITE_FILES.get(filename)
+    if media_type is None:
+        return Response(status_code=404)
+    return await _proxy_asset(
+        f"sprite/{filename}",
+        _SPRITE_UPSTREAM.format(filename=filename),
+        media_type,
+        request,
+    )
+
+
+@router.get(
+    "/natural-earth/{z}/{x}/{y}.png",
+    summary="Natural Earth shaded relief under the low zooms",
+    response_class=Response,
+)
+async def proxy_natural_earth(z: int, x: int, y: int, request: Request) -> Response:
+    """Proxy the style's low-zoom relief raster (public-domain Natural Earth).
+
+    Same bytes as ``/basemap/``; kept as a separate path because the
+    vendored styles name it as their relief source and an XYZ client
+    pointed at ``/basemap/`` should not have to know that.
+    """
+    return await _relief_tile(z, x, y, request)
+
+
+def _request_origin(request: Request) -> str:
+    """Scheme and host the caller actually used, honouring a reverse proxy.
+
+    Behind TLS termination the app itself speaks plain HTTP, so
+    ``request.url.scheme`` says "http" while the browser is on "https". A
+    style that hands an https page a set of http URLs is blocked as mixed
+    content and the map goes blank, so the forwarded headers win where the
+    deployment sets them.
+    """
+    forwarded = request.headers.get("x-forwarded-proto", "")
+    scheme = forwarded.split(",")[0].strip() or request.url.scheme
+    host = request.headers.get("x-forwarded-host", "").split(",")[0].strip()
+    return f"{scheme}://{host or request.headers.get('host') or request.url.netloc}"
+
+
+def absolutise_style(text: str, origin: str) -> bytes:
+    """Point every root-relative URL in a style at ``origin``.
+
+    WHY THIS EXISTS AT ALL. Root-relative URLs look same-origin and are, for
+    anything the main thread fetches: the low-zoom relief raster loaded
+    perfectly with them. MapLibre loads vector tiles, glyphs and sprites in a
+    Web Worker instead, and a worker has no document base, so the relative
+    form dies there with "Failed to parse URL from
+    /api/v1/geo-hub/vector-tiles/12/2046/1362.pbf". Nothing about that is
+    visible from the server: the style is served 200, no tile is ever
+    requested, no request fails because none is made, and the map paints its
+    background colour and stops. It was found by screenshotting a real
+    browser and seeing a white rectangle.
+
+    Rewriting here rather than in the committed file keeps the file free of
+    any hostname, so it stays correct on localhost, on a LAN address and
+    behind a domain without a rebuild.
+    """
+    return text.replace('"/api/v1/geo-hub/', f'"{origin}/api/v1/geo-hub/').encode("utf-8")
+
+
+@router.get(
+    "/basemap-style/{name}.json",
+    summary="MapLibre style for the vector basemap, same-origin throughout",
+    response_class=Response,
+)
+async def basemap_style(name: str, request: Request) -> Response:
+    """Serve a vendored MapLibre style whose every URL points back at us.
+
+    The style is committed rather than fetched-and-rewritten at boot. A
+    style JSON names the URLs the browser will go on to fetch - the vector
+    source, a second raster source for low-zoom relief, the glyph template
+    and the sprite base - and if any one of them keeps its upstream host the
+    browser talks to that host directly while the map still renders, so the
+    regression is invisible. Vendoring puts all of them in the diff.
+    Refresh with ``backend/scripts/vendor_basemap_styles.py``.
+    """
+    path = _STYLE_DIR / f"{name}.json"
+    # Allowlisted by name; ``name`` never reaches the filesystem otherwise.
+    if name not in _STYLE_NAMES or not path.is_file():
+        return Response(status_code=404)
+    body = absolutise_style(path.read_text(encoding="utf-8"), _request_origin(request))
+    return _cached_response(body, _etag_for(body), "application/json", request, _ASSET_CACHE_CONTROL)
 
 
 # ── Anchors ──────────────────────────────────────────────────────────────

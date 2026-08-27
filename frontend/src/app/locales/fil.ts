@@ -26853,7 +26853,7 @@ const resource = {
     "geo.basemap.paper": "Papel",
     "geo.basemap.minimal_hint": "Magaan, desaturated na mapa - kaunting ingay, madaling basahin.",
     "geo.basemap.minimal": "Pinakasimple",
-    "geo.basemap.streets_hint": "Full-colour na mapa ng kalye (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "Full-colour na mapa ng kalye (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "Mga Kalye",
     "geo.engine.globe3d": "3D Globo",
     "geo.engine.globe3d_hint": "Immersive na 3D globo na may terrain at 3D na mga model.",

@@ -27492,7 +27492,7 @@ const resource = {
   "geo.basemap.paper": "Papel",
   "geo.basemap.minimal_hint": "Mapa claro e dessaturado - menos poluído, fácil de ler.",
   "geo.basemap.minimal": "Minimalista",
-  "geo.basemap.streets_hint": "Mapa de ruas a cores (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Mapa de ruas a cores (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Ruas",
     "geo.engine.globe3d": "Globo 3D",
     "geo.engine.globe3d_hint": "Globo 3D envolvente com terreno e modelos 3D.",

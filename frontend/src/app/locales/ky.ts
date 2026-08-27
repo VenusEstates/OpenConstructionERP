@@ -24549,7 +24549,7 @@ const resource = {
   "geo.basemap.paper": "Кагаз",
   "geo.basemap.minimal_hint": "Ачык, азайтылган түстүү карта - тыгыздыгы аз, окуу оңой.",
   "geo.basemap.minimal": "Минималдуу",
-  "geo.basemap.streets_hint": "Толук түстүү көчө картасы (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Толук түстүү көчө картасы (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Көчөлөр",
     "geo_hub.licenses_title": "Ачык маалымат стеки: лицензияларды көрүү үчүн басыңыз",
     "geo_hub.licenses_pill": "Ачык маалыматтар",

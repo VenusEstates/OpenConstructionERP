@@ -16,9 +16,10 @@
  *                        address overlay. Lives on the project detail page.
  *
  * Engine: the detail variant uses MapLibre GL JS (open-source, no Leaflet
- * branding) with CARTO "Voyager" raster tiles served through our backend
- * proxy (see ./basemap). The card variant paints a single proxy tile as a
- * flat <img> with no renderer at all. Routing every tile through our own
+ * branding) with OpenFreeMap vector tiles served through our backend (see
+ * ./basemap). The card variant cannot run a renderer, so it paints a single
+ * raster tile as a flat <img>; the backend draws that PNG from the same
+ * vector tile the detail map streams. Routing every tile through our own
  * origin keeps maps working even when a browser blocks public tile CDNs.
  *
  * The geocoding pipeline:
@@ -45,12 +46,18 @@ import clsx from 'clsx';
 
 import { geocodeSuggest } from '@/features/geo-hub/api';
 
-import { PROXY_TILE_BASE, RASTER_BASEMAP_STYLE } from './basemap';
+import {
+  PROXY_TILE_BASE,
+  RELIEF_MAX_ZOOM,
+  TILE_ATTRIBUTION_HTML,
+  VECTOR_BASEMAP_STYLE_URL,
+} from './basemap';
 
-// All map tiles are served by our backend proxy as a raster basemap; see
-// ./basemap for the shared MapLibre style and the rationale (browser tile-
-// CDN blocking). Keeping the basemap raster also sidesteps the vector POI
-// expression warnings the old OpenFreeMap "liberty" style logged per card.
+// Every map byte comes from our own backend; see ./basemap for the style,
+// the credit string and the rationale (browser tile-CDN blocking, and the
+// CARTO upstream that started watermarking without changing its status
+// code). The card variant stays raster because an <img> cannot render
+// vector tiles, not because vector was rejected.
 
 export interface LatLng {
   lat: number;
@@ -103,7 +110,10 @@ function isFiniteNumber(v: unknown): v is number {
 // The interactive MapLibre map only mounts on the detail page. Tiles come
 // from our same-origin proxy (see ./basemap), so the card renders even when
 // a browser blocks public tile CDNs.
-const STATIC_TILE_ZOOM = 11;
+// The relief basemap stops at z6. Requesting z11 would return a blank
+// tile, so the thumbnail asks for the deepest zoom that actually exists
+// and shows a regional relief patch containing the site.
+const STATIC_TILE_ZOOM = RELIEF_MAX_ZOOM;
 
 /** Web-Mercator lon → fractional tile X at the given zoom. */
 function lngToTileX(lng: number, z: number): number {
@@ -350,7 +360,7 @@ export function ProjectMap({
           latitude: resolved.lat,
           zoom,
         }}
-        mapStyle={RASTER_BASEMAP_STYLE}
+        mapStyle={VECTOR_BASEMAP_STYLE_URL}
         style={{ width: '100%', height: '100%' }}
         dragRotate={false}
         attributionControl={false}
@@ -358,7 +368,7 @@ export function ProjectMap({
         <NavigationControl position="top-right" showCompass={false} />
         <AttributionControl
           compact
-          customAttribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          customAttribution={TILE_ATTRIBUTION_HTML}
         />
 
         <Marker

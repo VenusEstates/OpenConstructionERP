@@ -13,14 +13,30 @@
 // four, and no gate compared them.
 //
 // WHAT THIS ASSERTS, AND WHY IN THIS FORM.
-//   1. Every named surface carries the OSM copyright URL. That literal is the
-//      one invariant that holds across all four, including CesiumViewer, whose
-//      credit is a hand-rolled HTML overlay rather than a react-map-gl control.
+//   1. Every named surface carries the OSM credit, either as the literal
+//      copyright URL or by naming the shared constant that holds it. Rule 5
+//      is what makes the indirection safe.
 //   2. A surface that turns the built-in control OFF must mount one back. This
 //      is the exact shape of the original defect.
 //   3. Where a control is mounted, the credit must live on its
 //      `customAttribution` prop, not merely somewhere in the file. Without this
 //      an attribution moved into a dead comment would still pass rule 1.
+//   4. No surface credits a provider whose tiles we no longer serve. This is
+//      the second half of the CARTO defect: the tiles were replaced, and a
+//      stale credit naming the old provider is a licence statement that is
+//      simply false. Greps for the host, so a renamed constant cannot hide it.
+//   5. The shared constants say what they must. The vector credit names OSM
+//      AND the tile provider, because ODbL asks for the data credit and
+//      courtesy asks for the host. The relief credit must NOT name OSM: those
+//      tiles carry no OSM data at all, and crediting a source that is not in
+//      the picture is its own kind of false statement.
+//
+// WHY THE INDIRECTION. The credit used to be pasted literally into three
+// components. That is what rules 1 and 3 were originally written against, and
+// it is exactly the shape that lets a migration update two of three and leave
+// the third crediting the wrong provider with every gate still green. The
+// string now lives in one module and the components import it, so this gate
+// follows the import instead of the literal.
 //
 // Rule 2 deliberately matches `<Attribution` with an optional suffix rather
 // than the literal `<AttributionControl`. DashboardProjectsMap resolves the
@@ -44,7 +60,10 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(__dirname, '..');
 
-/** Every component that renders OpenStreetMap-derived tiles. */
+/** The single module that owns every attribution string. */
+const CREDIT_MODULE = 'shared/ui/ProjectMap/basemap.ts';
+
+/** Every component that renders a basemap. */
 const MAP_SURFACES = [
   'shared/ui/ProjectMap/ProjectMap.tsx',
   'features/dashboard/components/DashboardProjectsMap.tsx',
@@ -52,8 +71,22 @@ const MAP_SURFACES = [
   'features/geo-hub/CesiumViewer.tsx',
 ] as const;
 
-/** The credit link itself. Present in all four, in three different shapes. */
+/** The credit link itself. */
 const OSM_CREDIT = 'openstreetmap.org/copyright';
+
+/** The shared constants a surface may name instead of inlining the link. */
+const VECTOR_CREDIT_CONST = 'TILE_ATTRIBUTION_HTML';
+const RELIEF_CREDIT_CONST = 'RELIEF_ATTRIBUTION';
+
+/**
+ * Providers we do not serve tiles from any more. Matched on the host, not on
+ * a friendly name, because a host is what a licence statement points at and
+ * it survives renaming.
+ */
+const RETIRED_PROVIDERS = ['cartocdn.com', 'carto.com'];
+
+/** Read the credit module once; several assertions below interrogate it. */
+const creditModule = readFileSync(resolve(SRC, CREDIT_MODULE), 'utf-8');
 
 /** Turning the library's own control off. */
 const DISABLES_BUILTIN = 'attributionControl={false}';
@@ -81,10 +114,12 @@ describe('every map surface credits OpenStreetMap', () => {
   });
 
   it.each(sources)('$rel shows the OpenStreetMap credit', ({ rel, text }) => {
+    const credits = text.includes(OSM_CREDIT) || text.includes(VECTOR_CREDIT_CONST);
     expect(
-      text.includes(OSM_CREDIT),
-      `${rel} renders OSM-derived tiles but carries no ${OSM_CREDIT} link. ` +
-        'OSM tiles are a Produced Work under ODbL and owe attribution.',
+      credits,
+      `${rel} renders a basemap but neither carries the ${OSM_CREDIT} link nor ` +
+        `imports ${VECTOR_CREDIT_CONST}. Tiles rendered from OSM data are a ` +
+        'Produced Work under ODbL and owe attribution.',
     ).toBe(true);
   });
 
@@ -104,9 +139,53 @@ describe('every map surface credits OpenStreetMap', () => {
     if (attributionProps.length === 0) return;
     for (const line of attributionProps) {
       expect(
-        line.includes(OSM_CREDIT),
+        line.includes(OSM_CREDIT) || line.includes(VECTOR_CREDIT_CONST),
         `${rel} passes a customAttribution that does not credit OpenStreetMap: ${line.trim()}`,
       ).toBe(true);
     }
+  });
+
+  it.each(sources)('$rel does not credit a provider we dropped', ({ rel, text }) => {
+    for (const host of RETIRED_PROVIDERS) {
+      const offending = text
+        .split('\n')
+        .filter((line) => line.includes(host))
+        .filter((line) => !line.trimStart().startsWith('//') && !line.trimStart().startsWith('*'));
+      expect(
+        offending,
+        `${rel} still names ${host} outside a comment. We no longer serve its ` +
+          'tiles, so any credit pointing there describes a picture nobody sees.',
+      ).toEqual([]);
+    }
+  });
+
+  // Slices to the end of the STATEMENT, not to the first semicolon: the
+  // value is HTML and `&copy;` carries one, so a naive slice reads back
+  // the four characters `&copy` and every assertion below it goes green
+  // against a string that is not the credit.
+  it('the vector credit names both the data and the tile provider', () => {
+    const start = creditModule.indexOf(`export const ${VECTOR_CREDIT_CONST}`);
+    expect(start, `${CREDIT_MODULE} does not export ${VECTOR_CREDIT_CONST}`).toBeGreaterThan(-1);
+    const value = creditModule.slice(start, creditModule.indexOf(';\n', start));
+    expect(value, 'the vector credit must link the OSM copyright page').toContain(OSM_CREDIT);
+    expect(
+      /openfreemap|openmaptiles/i.test(value),
+      'the vector credit must also name whoever serves the tiles, not just OSM',
+    ).toBe(true);
+    for (const host of RETIRED_PROVIDERS) {
+      expect(value, `the vector credit still names ${host}`).not.toContain(host);
+    }
+  });
+
+  it('the relief credit does not claim OpenStreetMap data', () => {
+    const start = creditModule.indexOf(`export const ${RELIEF_CREDIT_CONST}`);
+    expect(start, `${CREDIT_MODULE} does not export ${RELIEF_CREDIT_CONST}`).toBeGreaterThan(-1);
+    const value = creditModule.slice(start, creditModule.indexOf(';\n', start));
+    expect(
+      /openstreetmap/i.test(value),
+      'the relief tiles carry no OSM data. Crediting OSM there is a false ' +
+        'licence statement, the same defect as a stale credit, mirrored.',
+    ).toBe(false);
+    expect(value.toLowerCase()).toContain('natural earth');
   });
 });

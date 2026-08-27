@@ -27652,7 +27652,7 @@ const resource = {
   "geo.basemap.paper": "Papier",
   "geo.basemap.minimal_hint": "Jasna, zdesaturowana mapa - mniej zagracona, łatwa do odczytania.",
   "geo.basemap.minimal": "Minimalna",
-  "geo.basemap.streets_hint": "Pełnokolorowa mapa ulic (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Pełnokolorowa mapa ulic (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Ulice",
     "geo.engine.globe3d": "Globus 3D",
     "geo.engine.globe3d_hint": "Immersywny globus 3D z terenem i modelami 3D.",

@@ -1190,7 +1190,7 @@ const resource = {
     "copilot.empty_title": "Select a bid schedule to begin",
     "copilot.empty_desc": "The copilot runs against one estimate at a time. Choose a project and bid schedule above to start the guided flow.",
     "copilot.step.scope.desc": "Check the bid schedule for missing trades and work packages.",
-    "geo.basemap.streets_hint": "Full-color street map (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "Full-color street map (OpenStreetMap / OpenFreeMap).",
     "hse_advanced.flow_5_desc": "A KPI strip plus an OSHA 300 log you can export for retainage.",
     "hse_advanced.no_permits_desc": "Issue a Permit to Work to authorize hot work, confined-space entry, work-at-height and other high-risk tasks. Each permit tracks scope, hazards, controls and signatures.",
     "inbound_email.flow_step2": "The message is normalized into a record: subject, sender, recipients, the threading ids that place it in a conversation, the text body and the attachment names and sizes.",

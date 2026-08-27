@@ -27527,7 +27527,7 @@ const resource = {
   "geo.basemap.paper": "Papper",
   "geo.basemap.minimal_hint": "Ljus, avmättad karta - mindre rörig, lätt att läsa.",
   "geo.basemap.minimal": "Minimal",
-  "geo.basemap.streets_hint": "Fullfärgad gatukarta (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Fullfärgad gatukarta (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Gator",
     "geo.engine.globe3d": "3D-klot",
     "geo.engine.globe3d_hint": "Omgivande 3D-klot med terräng och 3D-modeller.",

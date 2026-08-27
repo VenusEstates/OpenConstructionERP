@@ -27396,7 +27396,7 @@ const resource = {
   "geo.basemap.paper": "Papir",
   "geo.basemap.minimal_hint": "Lyst, avmettet kart - mindre rot, lett å lese.",
   "geo.basemap.minimal": "Minimal",
-  "geo.basemap.streets_hint": "Fullfarget gatekart (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Fullfarget gatekart (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Gater",
     "geo.engine.globe3d": "3D jordklode",
     "geo.engine.globe3d_hint": "Oppslukende 3D jordklode med terreng og 3D-modeller.",

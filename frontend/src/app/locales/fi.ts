@@ -27557,7 +27557,7 @@ const resource = {
   "geo.basemap.paper": "Paperi",
   "geo.basemap.minimal_hint": "Vaalea, haalistettu kartta - vähemmän sotkua, helppolukuinen.",
   "geo.basemap.minimal": "Minimalistinen",
-  "geo.basemap.streets_hint": "Täysvärinen katukartta (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Täysvärinen katukartta (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Kadut",
     "geo.engine.globe3d": "3D-pallo",
     "geo.engine.globe3d_hint": "Upoutuva 3D-pallo maastolla ja 3D-malleilla.",

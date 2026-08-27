@@ -26853,7 +26853,7 @@ const resource = {
     "geo.basemap.paper": "কাগজ",
     "geo.basemap.minimal_hint": "হালকা, কম-স্যাচুরেটেড মানচিত্র - কম বিশৃঙ্খলা, পড়া সহজ।",
     "geo.basemap.minimal": "মিনিমাল",
-    "geo.basemap.streets_hint": "পূর্ণ-রঙের রাস্তার মানচিত্র (OpenStreetMap / CARTO)।",
+    "geo.basemap.streets_hint": "পূর্ণ-রঙের রাস্তার মানচিত্র (OpenStreetMap / OpenFreeMap)।",
     "geo.basemap.streets": "রাস্তা",
     "geo.engine.globe3d": "3D গ্লোব",
     "geo.engine.globe3d_hint": "টেরেইন ও 3D মডেলসহ ইমার্সিভ 3D গ্লোব।",

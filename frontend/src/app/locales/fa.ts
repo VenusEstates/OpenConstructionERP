@@ -26853,7 +26853,7 @@ const resource = {
     "geo.basemap.paper": "کاغذ",
     "geo.basemap.minimal_hint": "نقشه روشن و کم‌رنگ - شلوغی کمتر، خواندن آسان.",
     "geo.basemap.minimal": "مینیمال",
-    "geo.basemap.streets_hint": "نقشه خیابانی تمام‌رنگ (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "نقشه خیابانی تمام‌رنگ (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "خیابان‌ها",
     "geo.engine.globe3d": "کره سه‌بعدی",
     "geo.engine.globe3d_hint": "کره سه‌بعدی همه‌جانبه با توپوگرافی و مدل‌های سه‌بعدی.",

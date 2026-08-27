@@ -28290,7 +28290,7 @@ const resource = {
   "geo.basemap.paper": "Papier",
   "geo.basemap.minimal_hint": "Helle, entsättigte Karte - weniger überladen, leicht lesbar.",
   "geo.basemap.minimal": "Minimal",
-  "geo.basemap.streets_hint": "Vollfarbige Straßenkarte (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Vollfarbige Straßenkarte (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Straßen",
     "geo.engine.globe3d": "3D-Globus",
     "geo.engine.globe3d_hint": "Immersiver 3D-Globus mit Gelände und 3D-Modellen.",

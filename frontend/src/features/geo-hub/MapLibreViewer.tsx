@@ -52,6 +52,8 @@ import type {
   GeoSearchPin,
 } from './CesiumViewer';
 import type { AnchoredProject, GeoPinBundle, GeoRasterOverlay } from './types';
+import { TILE_ATTRIBUTION_HTML } from '@/shared/ui/ProjectMap/basemap';
+
 import {
   BASEMAP_BACKDROP,
   basemapMeta,
@@ -258,7 +260,7 @@ export function MapLibreViewer({
         {!meta.offline && (
           <AttributionControl
             compact
-            customAttribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            customAttribution={TILE_ATTRIBUTION_HTML}
           />
         )}
 

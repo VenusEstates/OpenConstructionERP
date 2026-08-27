@@ -27256,7 +27256,7 @@ const resource = {
   "geo.basemap.paper": "पेपर",
   "geo.basemap.minimal_hint": "हल्का, कम-संतृप्त मानचित्र - कम गड़बड़, पढ़ने में आसान।",
   "geo.basemap.minimal": "न्यूनतम",
-  "geo.basemap.streets_hint": "पूर्ण-रंग सड़क मानचित्र (OpenStreetMap / CARTO)।",
+  "geo.basemap.streets_hint": "पूर्ण-रंग सड़क मानचित्र (OpenStreetMap / OpenFreeMap)।",
   "geo.basemap.streets": "सड़कें",
     "geo.engine.globe3d": "3D ग्लोब",
     "geo.engine.globe3d_hint": "भूभाग और 3D मॉडल के साथ विसर्जक 3D ग्लोब।",

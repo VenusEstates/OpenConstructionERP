@@ -27582,7 +27582,7 @@ const resource = {
   "geo.basemap.paper": "Hârtie",
   "geo.basemap.minimal_hint": "Hartă deschisă, desaturată - mai puțin aglomerată, ușor de citit.",
   "geo.basemap.minimal": "Minimalist",
-  "geo.basemap.streets_hint": "Hartă stradală color (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Hartă stradală color (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Străzi",
     "geo.engine.globe3d": "Glob 3D",
     "geo.engine.globe3d_hint": "Glob 3D imersiv cu teren și modele 3D.",

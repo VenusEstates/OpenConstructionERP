@@ -27569,7 +27569,7 @@ const resource = {
   "geo.basemap.paper": "Papir",
   "geo.basemap.minimal_hint": "Lyst, afmættet kort - mindre rod, let at læse.",
   "geo.basemap.minimal": "Minimal",
-  "geo.basemap.streets_hint": "Fuldfarvet gadekort (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Fuldfarvet gadekort (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Gader",
     "geo.engine.globe3d": "3D-kugle",
     "geo.engine.globe3d_hint": "Immersiv 3D-kugle med terræn og 3D-modeller.",

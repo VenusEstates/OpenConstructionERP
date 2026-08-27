@@ -27687,7 +27687,7 @@ const resource = {
   "geo.basemap.paper": "Carta",
   "geo.basemap.minimal_hint": "Mappa chiara e desaturata - meno affollata, facile da leggere.",
   "geo.basemap.minimal": "Minimale",
-  "geo.basemap.streets_hint": "Mappa stradale a colori (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Mappa stradale a colori (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Vie",
     "geo.engine.globe3d": "Globo 3D",
     "geo.engine.globe3d_hint": "Globo 3D immersivo con terreno e modelli 3D.",

@@ -31,6 +31,8 @@ import {
   pinTooltipLabel,
   type PinCluster,
 } from './projectPinUtils';
+import { PROXY_TILE_URL, RELIEF_ATTRIBUTION, RELIEF_MAX_ZOOM } from '@/shared/ui/ProjectMap/basemap';
+
 import { geoAuthHeaders, tilesetArtifactUrl } from './api';
 import type { AnchoredProject, GeoPinBundle, MapConfig } from './types';
 import type { TilesetOverlayState } from './hooks/useTilesetOverlayState';
@@ -701,14 +703,16 @@ export function CesiumViewer({
         // token via the Terrain admin page; we surface it through
         // the map-config bundle for them.
         //
-        // Base imagery: keyless CARTO Voyager raster (rendered from OSM
-        // data) via UrlTemplateImageryProvider. Cesium >= 1.107 falls back
-        // to Ion-backed Bing Maps when ``imageryProvider`` is unset, which
-        // silently 401s without an ion token. The raw OpenStreetMap tile
-        // servers are not an option either: their usage policy forbids app
-        // and bulk use and returns an "Access blocked" tile. CARTO is
-        // keyless and already used by the 2D maps, so /geo-hub matches them
-        // out of the box with no vendor lock-in.
+        // Base imagery: public-domain Natural Earth shaded relief, proxied
+        // by our own backend, via UrlTemplateImageryProvider. Not streets:
+        // every keyless raster street basemap has stopped being keyless,
+        // and the globe cannot read vector tiles.
+        // Cesium >= 1.107 falls back to Ion-backed Bing Maps when
+        // ``imageryProvider`` is unset, which silently 401s without an ion
+        // token. The raw OpenStreetMap tile servers are not an option
+        // either: their usage policy forbids app and bulk use. Cesium's
+        // imagery providers take raster XYZ only, which is why this one
+        // surface cannot read the vector tiles the 2D maps use directly.
         //
         // ``homeButton`` and ``navigationHelpButton`` are disabled here
         // because we don't ship Cesium's ``widgets.css`` in the bundle,
@@ -735,17 +739,21 @@ export function CesiumViewer({
         const initialSceneMode = _sceneModeEnum(cesium, sceneModeRef.current);
         const v = new cesium.Viewer(container, {
           terrainProvider: new cesium.EllipsoidTerrainProvider(),
-          // Tiles are fetched through our own same-origin backend proxy, not
-          // straight from a public CDN. A direct CARTO/OSM URL is routinely
-          // blocked by browser ad/privacy blockers (shows up as a blank blue
-          // globe), and the raw OSM servers refuse app use outright. The proxy
-          // pulls CARTO server-side with a proper User-Agent and caches, so the
-          // map renders in any browser.
+          // Tiles come from our own same-origin backend, not a public CDN.
+          // A direct tile-host URL is routinely blocked by browser ad and
+          // privacy blockers (shows up as a blank blue globe), and the raw
+          // OSM servers refuse app use outright. Above the vector source's
+          // Shaded relief, not streets: no keyless raster street basemap
+          // survives, and the globe cannot read the vector tiles the 2D
+          // maps use. Terrain under the pins beats a watermarked tile.
           baseLayer: new cesium.ImageryLayer(
             new cesium.UrlTemplateImageryProvider({
-              url: '/api/v1/geo-hub/tiles/{z}/{x}/{y}.png',
-              credit: '© OpenStreetMap contributors © CARTO',
-              maximumLevel: 20,
+              url: PROXY_TILE_URL,
+              credit: RELIEF_ATTRIBUTION,
+              // The relief source has nothing deeper. Asking past it
+              // returns a blank tile, so let Cesium stretch the last
+              // real level instead of tiling holes over the site.
+              maximumLevel: RELIEF_MAX_ZOOM,
             }),
           ),
           baseLayerPicker: false,
@@ -2120,14 +2128,25 @@ export function CesiumViewer({
             </li>
             <li>
               <a
-                href="https://carto.com/basemaps/"
+                href="https://openfreemap.org/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sky-300 hover:text-sky-200"
               >
-                CARTO Basemaps
+                OpenFreeMap
               </a>{' '}
-              <span className="text-slate-400">CC BY 3.0 · keyless base imagery tiles</span>
+              <span className="text-slate-400">ODbL · keyless tile hosting</span>
+            </li>
+            <li>
+              <a
+                href="https://www.naturalearthdata.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-300 hover:text-sky-200"
+              >
+                Natural Earth
+              </a>{' '}
+              <span className="text-slate-400">public domain · shaded relief base imagery</span>
             </li>
             <li>
               <a

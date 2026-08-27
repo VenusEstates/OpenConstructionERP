@@ -27644,7 +27644,7 @@ const resource = {
   "geo.basemap.paper": "Papír",
   "geo.basemap.minimal_hint": "Světlá, odbarvená mapa - méně přeplněná, snadno čitelná.",
   "geo.basemap.minimal": "Minimalistická",
-  "geo.basemap.streets_hint": "Plnobarevná mapa ulic (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Plnobarevná mapa ulic (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Ulice",
     "geo.engine.globe3d": "3D glóbus",
     "geo.engine.globe3d_hint": "Pohlcující 3D glóbus s terénem a 3D modely.",

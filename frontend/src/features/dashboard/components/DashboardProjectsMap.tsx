@@ -8,7 +8,10 @@ import clsx from 'clsx';
 import type { MapRef, MarkerProps } from 'react-map-gl/maplibre';
 import { buildGeocodeQuery } from '@/shared/ui/ProjectMap/geocode';
 import { geocodeSuggest } from '@/features/geo-hub/api';
-import { RASTER_BASEMAP_STYLE } from '@/shared/ui/ProjectMap/basemap';
+import {
+  TILE_ATTRIBUTION_HTML,
+  VECTOR_BASEMAP_STYLE_URL,
+} from '@/shared/ui/ProjectMap/basemap';
 // maplibre-gl ships its canvas / control styles separately. The static
 // import lets Vite hoist the CSS into the dashboard chunk so markers
 // have correct positioning the moment the JS module resolves —
@@ -358,7 +361,7 @@ export function DashboardProjectsMap({ projects, className, heightClass: heightC
             mapRef.current = instance;
           }}
           initialViewState={initialView}
-          mapStyle={RASTER_BASEMAP_STYLE}
+          mapStyle={VECTOR_BASEMAP_STYLE_URL}
           style={{ width: '100%', height: '100%' }}
           interactive
           dragRotate={false}
@@ -368,11 +371,11 @@ export function DashboardProjectsMap({ projects, className, heightClass: heightC
               compact one below. OpenStreetMap data is ODbL and the tiles
               rendered from it are a Produced Work, which owes attribution,
               so this must stay mounted for as long as the map draws OSM
-              tiles. Same string and same compact form as every other map
-              surface in the app (ProjectMap, MapLibreViewer). */}
+              tiles. The credit is imported, not retyped, so it cannot drift
+              from the other surfaces (ProjectMap, MapLibreViewer). */}
           <Attribution
             compact
-            customAttribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            customAttribution={TILE_ATTRIBUTION_HTML}
           />
           {resolved.map((m) => (
             <Marker

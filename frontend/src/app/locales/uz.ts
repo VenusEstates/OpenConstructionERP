@@ -28127,7 +28127,7 @@ const resource = {
     "geo.basemap.paper": "Qogʻoz",
     "geo.basemap.minimal_hint": "Yengil, xira rangli xarita - kamroq notinchlik, oʻqish oson.",
     "geo.basemap.minimal": "Minimal",
-    "geo.basemap.streets_hint": "Toʻliq rangli koʻcha xaritasi (OpenStreetMap / CARTO).",
+    "geo.basemap.streets_hint": "Toʻliq rangli koʻcha xaritasi (OpenStreetMap / OpenFreeMap).",
     "geo.basemap.streets": "Koʻchalar",
     "geo.engine.globe3d": "3D Globus",
     "geo.engine.globe3d_hint": "Relyef va 3D modellar bilan siquvchi 3D globus.",

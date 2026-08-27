@@ -27535,7 +27535,7 @@ const resource = {
   "geo.basemap.paper": "Giấy",
   "geo.basemap.minimal_hint": "Bản đồ sáng, giảm độ bão hòa màu - ít rối mắt, dễ đọc.",
   "geo.basemap.minimal": "Tối giản",
-  "geo.basemap.streets_hint": "Bản đồ đường phố đầy đủ màu sắc (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Bản đồ đường phố đầy đủ màu sắc (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Đường phố",
     "geo.engine.globe3d": "Quả địa cầu 3D",
     "geo.engine.globe3d_hint": "Quả địa cầu 3D toàn cảnh với địa hình và mô hình 3D.",

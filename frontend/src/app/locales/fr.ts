@@ -27643,7 +27643,7 @@ const resource = {
   "geo.basemap.paper": "Papier",
   "geo.basemap.minimal_hint": "Carte claire et désaturée - moins chargée, facile à lire.",
   "geo.basemap.minimal": "Minimaliste",
-  "geo.basemap.streets_hint": "Carte des rues en couleurs (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Carte des rues en couleurs (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Rues",
     "geo.engine.globe3d": "Globe 3D",
     "geo.engine.globe3d_hint": "Globe 3D immersif avec terrain et modèles 3D.",

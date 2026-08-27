@@ -3,40 +3,102 @@
  * Shared basemap configuration.
  *
  * Every map in the app - the Cesium globe, the MapLibre 2D maps, and the
- * static card thumbnails - pulls its raster tiles from our own backend proxy
- * at ``/api/v1/geo-hub/tiles/{z}/{x}/{y}.png`` instead of straight from a
- * public CDN. Browser ad and privacy blockers routinely block the public
- * tile hosts (``basemaps.cartocdn.com``, the OpenStreetMap servers), which
- * leaves maps showing a blank blue square. A same-origin ``/api`` request is
- * never blocked, so the proxy fetches the CARTO "Voyager" basemap server-side
- * with a proper User-Agent and an in-process cache. One tile source for the
- * whole app, no external runtime dependency, works in any browser.
+ * static card thumbnails - reaches its basemap through our own backend at
+ * ``/api/v1/geo-hub/``, never through a public tile host. Browser ad and
+ * privacy blockers routinely block tile hosts by name, which leaves maps
+ * showing a blank square. A same-origin ``/api`` request is never blocked.
+ *
+ * WHY THE UPSTREAM CHANGED. The tiles used to come from CARTO's keyless
+ * "Voyager" raster. It stopped being keyless without a release, a notice or
+ * a single failing check: it still answers 200 with a valid PNG of the
+ * correct geography, now with "API KEY REQUIRED" printed across it. The
+ * refusal was in the pixels, so every status, byte-length and decode check
+ * stayed green and the founder found it by looking at the screen.
+ *
+ * The replacement is OpenFreeMap: keyless, quota-free, ODbL, and - the part
+ * that actually matters - self-hostable, so an operator who outgrows the
+ * public endpoint points the backend at their own copy. Raw OpenStreetMap
+ * tiles remain off the table whatever they return: the OSMF Tile Usage
+ * Policy forbids proxying and app use, and they enforce by User-Agent.
+ *
+ * TWO SHAPES. Interactive maps read vector tiles through the vendored style
+ * below and draw the streets themselves, in the browser, on the GPU. That
+ * covers every map a user pans and zooms.
+ *
+ * Two surfaces cannot consume vector data at all: the ``<img>`` card
+ * thumbnail, which is a plain image tag, and the Cesium globe's imagery
+ * provider, which wants raster XYZ. Those read shaded relief - Natural
+ * Earth, public domain, proxied straight through. The visible consequence
+ * is that a project card and the 3D globe show terrain rather than streets.
+ * That is a deliberate downgrade in detail, taken because every keyless
+ * raster street basemap has stopped being keyless, and a coarse honest tile
+ * beats a detailed one with "API KEY REQUIRED" printed across it.
  */
-import type { StyleSpecification } from 'maplibre-gl';
-
-/** XYZ template served by the backend tile proxy (same origin). */
-export const PROXY_TILE_URL = '/api/v1/geo-hub/tiles/{z}/{x}/{y}.png';
-
-/** Base path (without ``/{z}/{x}/{y}.png``) for static single-tile thumbnails. */
-export const PROXY_TILE_BASE = '/api/v1/geo-hub/tiles';
-
-export const TILE_ATTRIBUTION = '© OpenStreetMap contributors © CARTO';
 
 /**
- * Minimal MapLibre raster style backed by the proxy. No glyphs or sprites
- * are needed: every label and marker in our maps is a React overlay, not a
- * style symbol layer, so a single raster source + raster layer is enough.
+ * XYZ template for the raster relief basemap the backend proxies.
+ *
+ * Note the path: this deliberately is NOT the old ``/tiles/`` one. Those
+ * responses were sent with ``Cache-Control: immutable`` for a week, and an
+ * immutable entry is never revalidated - a browser holding a watermarked
+ * CARTO tile would keep painting it no matter what the server now returns.
+ * A new path is the only way to retire it. The backend still answers the
+ * old path for external XYZ clients such as QGIS.
  */
-export const RASTER_BASEMAP_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    'oe-basemap': {
-      type: 'raster',
-      tiles: [PROXY_TILE_URL],
-      tileSize: 256,
-      maxzoom: 20,
-      attribution: TILE_ATTRIBUTION,
-    },
-  },
-  layers: [{ id: 'oe-basemap', type: 'raster', source: 'oe-basemap' }],
-};
+export const PROXY_TILE_URL = '/api/v1/geo-hub/basemap/{z}/{x}/{y}.png';
+
+/** Base path (without ``/{z}/{x}/{y}.png``) for static single-tile thumbnails. */
+export const PROXY_TILE_BASE = '/api/v1/geo-hub/basemap';
+
+/**
+ * Deepest zoom the relief source has. Asking past it returns a blank tile,
+ * so raster consumers must clamp: Cesium via ``maximumLevel``, the card
+ * thumbnail by requesting this zoom directly.
+ */
+export const RELIEF_MAX_ZOOM = 6;
+
+/**
+ * MapLibre style served by the backend from a vendored copy whose every
+ * URL - vector source, low-zoom relief raster, glyphs and sprite - points
+ * back at our own origin. Fetching the upstream style and rewriting it at
+ * runtime would leave any field we forgot pointing at the tile host, and
+ * the map would still render, so the leak would be invisible.
+ */
+export function basemapStyleUrl(name: 'liberty' | 'positron'): string {
+  return `/api/v1/geo-hub/basemap-style/${name}.json`;
+}
+
+/** Full-colour street cartography. The default for every interactive map. */
+export const VECTOR_BASEMAP_STYLE_URL = basemapStyleUrl('liberty');
+
+/**
+ * Plain-text credit for the raster relief tiles, for consumers that render
+ * their own attribution chrome (the Cesium globe passes this straight to
+ * ``UrlTemplateImageryProvider``).
+ *
+ * Natural Earth is public domain and asks for no attribution at all, so this
+ * is a courtesy credit, not a licence obligation. It deliberately does NOT
+ * name OpenStreetMap: these tiles carry no OSM data, and crediting a source
+ * that is not in the picture is its own kind of wrong.
+ */
+export const RELIEF_ATTRIBUTION = 'Natural Earth · public domain';
+
+/**
+ * The same credit as linked HTML, for MapLibre's ``AttributionControl``.
+ *
+ * Exported as ONE constant on purpose. This string used to be pasted
+ * literally into three components; a migration that updated two of them
+ * would have left the third crediting the wrong provider, and nothing in
+ * the build would have said so. Import it, never retype it.
+ *
+ * OpenStreetMap is credited because the data is ODbL and a rendered map is
+ * a Produced Work, which owes attribution. OpenMapTiles and OpenFreeMap are
+ * credited as the tile schema and the tile provider.
+ *
+ * This is the credit for the VECTOR surfaces. The raster relief surfaces
+ * carry ``RELIEF_ATTRIBUTION`` instead, because they show different data.
+ */
+export const TILE_ATTRIBUTION_HTML =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
+  '&copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> ' +
+  '&copy; <a href="https://openfreemap.org/">OpenFreeMap</a>';

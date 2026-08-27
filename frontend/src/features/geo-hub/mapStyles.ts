@@ -11,10 +11,12 @@
  *
  * Every style here is fully open-source and self-hostable:
  *
- *   * ``streets`` / ``minimal`` pull raster tiles from our OWN same-origin
- *     backend proxy (see ``shared/ui/ProjectMap/basemap``), which fetches
- *     the OpenStreetMap-derived CARTO basemap server-side. No external CDN
- *     at runtime, no API key, works behind ad/privacy blockers.
+ *   * ``streets`` / ``minimal`` are vector styles served by our OWN
+ *     same-origin backend (see ``shared/ui/ProjectMap/basemap``), which
+ *     vendors them with every URL - tiles, glyphs, sprite - pointed back at
+ *     itself and fetches the OpenStreetMap-derived OpenFreeMap vector tiles
+ *     server-side. No external CDN at runtime, no API key, works behind
+ *     ad/privacy blockers.
  *   * ``paper`` / ``blueprint`` use NO tiles at all - just a flat drawn
  *     background. They render fully offline (air-gapped / no internet) and
  *     give the clean "drawing on paper" canvas for placing projects and
@@ -25,7 +27,7 @@
  */
 import type { StyleSpecification } from 'maplibre-gl';
 
-import { PROXY_TILE_URL, TILE_ATTRIBUTION } from '@/shared/ui/ProjectMap/basemap';
+import { basemapStyleUrl } from '@/shared/ui/ProjectMap/basemap';
 
 /** Identifier for each selectable basemap. */
 export type BasemapId = 'streets' | 'minimal' | 'paper' | 'blueprint';
@@ -61,7 +63,7 @@ export const BASEMAPS = [
     labelKey: 'geo.basemap.streets',
     labelDefault: 'Streets',
     descKey: 'geo.basemap.streets_hint',
-    descDefault: 'Full-colour street map (OpenStreetMap / CARTO).',
+    descDefault: 'Full-colour street map (OpenStreetMap / OpenFreeMap).',
     offline: false,
     dark: false,
   },
@@ -118,47 +120,16 @@ export function readBasemap(): BasemapId {
 // ── Style builders ───────────────────────────────────────────────────────
 
 /**
- * Raster basemap from the same-origin proxy. ``minimal`` desaturates and
- * fades the tiles over a light background so the map reads as a clean,
- * low-clutter "minimal" surface; ``streets`` paints them at full colour.
+ * Vector basemap served by the same-origin backend. ``streets`` is the
+ * full-colour cartography; ``minimal`` is a light, desaturated one.
+ *
+ * These used to be one raster source with MapLibre ``raster-saturation``
+ * paint faking the "minimal" look. Vector gives each its own real
+ * cartography instead of a filter over the other, and the labels come from
+ * the style's glyphs rather than being burnt into the tile.
  */
-function rasterStyle(variant: 'streets' | 'minimal'): StyleSpecification {
-  const minimal = variant === 'minimal';
-  return {
-    version: 8,
-    sources: {
-      'oe-basemap': {
-        type: 'raster',
-        tiles: [PROXY_TILE_URL],
-        tileSize: 256,
-        maxzoom: 20,
-        attribution: TILE_ATTRIBUTION,
-      },
-    },
-    layers: [
-      // Background shows through before tiles load (and through the faded
-      // ``minimal`` tiles), so it sets the overall tone of the map.
-      {
-        id: 'oe-bg',
-        type: 'background',
-        paint: { 'background-color': minimal ? '#f8fafc' : '#e8eef3' },
-      },
-      {
-        id: 'oe-basemap',
-        type: 'raster',
-        source: 'oe-basemap',
-        paint: minimal
-          ? {
-              // Grayscale + reduced contrast, and let the light background
-              // show through for a faded, paper-like minimal look.
-              'raster-saturation': -1,
-              'raster-contrast': -0.05,
-              'raster-opacity': 0.55,
-            }
-          : {},
-      },
-    ],
-  };
+function vectorStyle(variant: 'streets' | 'minimal'): string {
+  return basemapStyleUrl(variant === 'minimal' ? 'positron' : 'liberty');
 }
 
 /**
@@ -193,17 +164,20 @@ export const BASEMAP_BACKDROP: Record<BasemapId, string> = {
 /**
  * Build the MapLibre style for a basemap id. Cheap + pure, so callers can
  * call it inline in render and memoise on ``id`` alone.
+ *
+ * The tile-backed ids resolve to a style URL and the tile-free ones to an
+ * inline style object; MapLibre's ``mapStyle`` accepts either.
  */
-export function buildBasemapStyle(id: BasemapId): StyleSpecification {
+export function buildBasemapStyle(id: BasemapId): StyleSpecification | string {
   switch (id) {
     case 'minimal':
-      return rasterStyle('minimal');
+      return vectorStyle('minimal');
     case 'paper':
       return flatStyle(BASEMAP_BACKDROP.paper);
     case 'blueprint':
       return flatStyle(BASEMAP_BACKDROP.blueprint);
     case 'streets':
     default:
-      return rasterStyle('streets');
+      return vectorStyle('streets');
   }
 }

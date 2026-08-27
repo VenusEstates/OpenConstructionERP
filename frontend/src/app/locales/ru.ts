@@ -27747,7 +27747,7 @@ const resource = {
   "geo.basemap.paper": "Бумага",
   "geo.basemap.minimal_hint": "Светлая, приглушённая карта - меньше визуального шума, легко читается.",
   "geo.basemap.minimal": "Минимальная",
-  "geo.basemap.streets_hint": "Полноцветная карта улиц (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Полноцветная карта улиц (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Улицы",
     "geo.engine.globe3d": "3D Земной шар",
     "geo.engine.globe3d_hint": "Увлекательный 3D земной шар с местностью и 3D-моделями.",

@@ -27590,7 +27590,7 @@ const resource = {
   "geo.basemap.paper": "Kağıt",
   "geo.basemap.minimal_hint": "Açık, doygunluğu azaltılmış harita - daha az karmaşık, okuması kolay.",
   "geo.basemap.minimal": "Minimal",
-  "geo.basemap.streets_hint": "Tam renkli sokak haritası (OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "Tam renkli sokak haritası (OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "Sokaklar",
     "geo.engine.globe3d": "3D Küre",
     "geo.engine.globe3d_hint": "Arazi ve 3D modeller ile sürükleyici 3D küre.",

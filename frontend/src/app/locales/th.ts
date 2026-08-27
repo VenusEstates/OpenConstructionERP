@@ -27522,7 +27522,7 @@ const resource = {
   "geo.basemap.paper": "กระดาษ",
   "geo.basemap.minimal_hint": "แผนที่สว่างและลดความอิ่มตัวของสี - รกน้อยลง อ่านง่าย",
   "geo.basemap.minimal": "มินิมอล",
-  "geo.basemap.streets_hint": "แผนที่ถนนแบบเต็มสี (OpenStreetMap / CARTO)",
+  "geo.basemap.streets_hint": "แผนที่ถนนแบบเต็มสี (OpenStreetMap / OpenFreeMap)",
   "geo.basemap.streets": "ถนน",
     "geo.engine.globe3d": "โลก 3D",
     "geo.engine.globe3d_hint": "โลก 3D ที่ดื่มด่ำพร้อมภูมิประเทศและแบบจำลอง 3D",

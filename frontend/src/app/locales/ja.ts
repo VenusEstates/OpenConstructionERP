@@ -27519,7 +27519,7 @@ const resource = {
   "geo.basemap.paper": "ペーパー",
   "geo.basemap.minimal_hint": "明るく彩度を抑えた地図 - 情報量が少なく読みやすい。",
   "geo.basemap.minimal": "ミニマル",
-  "geo.basemap.streets_hint": "フルカラーの街路地図（OpenStreetMap / CARTO）。",
+  "geo.basemap.streets_hint": "フルカラーの街路地図（OpenStreetMap / OpenFreeMap）。",
   "geo.basemap.streets": "街路",
     "geo.engine.globe3d": "3Dグローブ",
     "geo.engine.globe3d_hint": "地形と3Dモデルを備えた没入型3Dグローブ。",

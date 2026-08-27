@@ -27527,7 +27527,7 @@ const resource = {
   "geo.basemap.paper": "종이",
   "geo.basemap.minimal_hint": "밝고 채도를 낮춘 지도 - 덜 복잡하고 읽기 쉬움.",
   "geo.basemap.minimal": "미니멀",
-  "geo.basemap.streets_hint": "풀 컬러 도로 지도(OpenStreetMap / CARTO).",
+  "geo.basemap.streets_hint": "풀 컬러 도로 지도(OpenStreetMap / OpenFreeMap).",
   "geo.basemap.streets": "도로",
     "geo.engine.globe3d": "3D 지구",
     "geo.engine.globe3d_hint": "지형과 3D 모델이 있는 몰입형 3D 지구입니다.",

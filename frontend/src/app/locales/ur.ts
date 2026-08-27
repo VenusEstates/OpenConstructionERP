@@ -26853,7 +26853,7 @@ const resource = {
     "geo.basemap.paper": "کاغذ",
     "geo.basemap.minimal_hint": "ہلکا، کم رنگ والا نقشہ - کم گنجلک، پڑھنے میں آسان۔",
     "geo.basemap.minimal": "کم از کم",
-    "geo.basemap.streets_hint": "مکمل رنگین سٹریٹ نقشہ (OpenStreetMap / CARTO)۔",
+    "geo.basemap.streets_hint": "مکمل رنگین سٹریٹ نقشہ (OpenStreetMap / OpenFreeMap)۔",
     "geo.basemap.streets": "سٹریٹس",
     "geo.engine.globe3d": "3D گلوب",
     "geo.engine.globe3d_hint": "خطہ اور 3D ماڈلز کے ساتھ ایک عمیق 3D globe۔",
