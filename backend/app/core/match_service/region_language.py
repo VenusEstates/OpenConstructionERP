@@ -32,7 +32,8 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
+
+from app.core.match_service.data_paths import match_data_file
 
 logger = logging.getLogger(__name__)
 
@@ -194,9 +195,9 @@ def _load_region_language_yaml_overlay() -> None:
     YAML wins on conflicts so a tenant override sticks. Safe to call
     multiple times - re-invocations re-merge from disk.
     """
-    yaml_path = Path(__file__).resolve().parents[4] / "data" / "match" / "region_language.yaml"
-    if not yaml_path.is_file():
-        logger.debug("region_language YAML overlay not found at %s - using hardcoded only", yaml_path)
+    yaml_path = match_data_file("region_language.yaml")
+    if yaml_path is None:
+        logger.debug("region_language: YAML overlay is not shipped with this install - using hardcoded only")
         return
 
     try:

@@ -252,6 +252,29 @@ datas.append((str(BACKEND / "app"), "app"))
 # rather than produce another bundle that cannot start.
 datas.append((str(BACKEND / "locales"), "locales"))
 
+# The match service tuning data. Same shape as the catalogue above:
+# app/core/match_service/data_paths.py looks for a ``data/match`` directory
+# beside the app package, which in a frozen bundle is
+# ``sys._MEIPASS/data/match``, so shipping backend/app does not carry it.
+# Four files, about 12 KB, holding encoder score bands, per language fuzzy
+# cutoffs and two region overlays.
+#
+# This one never broke a build and never will, which is the reason it went
+# unnoticed: every reader falls back to hardcoded constants when the
+# directory is absent, so no desktop bundle has ever failed over it and none
+# has ever used the shipped tuning either. The wheel force-includes the same
+# directory at the same destination (backend/pyproject.toml) and
+# backend/tests/unit/test_desktop_spec_ships_wheel_data.py checks the pair.
+#
+# Not to be confused with the NOTE at the top of this file: that one is
+# about ``data/catalog``, which stays out of the installer on a licensing
+# basis NOTICE records as pending. These four files were authored in this
+# repository and carry the project's own copyright header.
+#
+# Unconditional, like the catalogue and the packs: tracked in git, so an
+# absent directory means the build is wrong and PyInstaller should say so.
+datas.append((str(ROOT / "data" / "match"), "data/match"))
+
 # The community packs. Same shape as the catalogue above and missing for the
 # same reason: app/core/partner_pack/discovery.py looks for a ``packs``
 # directory sitting NEXT TO the app package, which in a frozen bundle is

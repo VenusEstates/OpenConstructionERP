@@ -15,10 +15,10 @@ should bias ties, not override clear semantic mismatches.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
 from app.core.match_service.config import BOOST_WEIGHTS
+from app.core.match_service.data_paths import match_data_file
 from app.core.match_service.envelope import ElementEnvelope, MatchCandidate
 
 _log = logging.getLogger(__name__)
@@ -230,14 +230,12 @@ def _load_region_groups_from_yaml() -> dict[str, tuple[str, ...]]:
         _log.warning("pyyaml unavailable - region_groups.yaml extension disabled, matcher uses hardcoded baseline only")
         return {}
 
-    # backend/app/core/match_service/boosts/region.py → repo root via 5x ``parents``.
-    repo_root = Path(__file__).resolve().parents[5]
-    yaml_path = repo_root / "data" / "match" / "region_groups.yaml"
-    if not yaml_path.is_file():
-        _log.debug(
-            "region_groups.yaml not found at %s - using hardcoded baseline",
-            yaml_path,
-        )
+    # This module sits one directory deeper than the other two readers, so it
+    # carried a different count and looked just as correct. Neither count is
+    # here now: data_paths.py derives the depth from the dotted module name.
+    yaml_path = match_data_file("region_groups.yaml")
+    if yaml_path is None:
+        _log.debug("region_groups.yaml is not shipped with this install - using hardcoded baseline")
         return {}
 
     try:

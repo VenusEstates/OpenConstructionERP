@@ -458,6 +458,28 @@ artifacts = ["app/scripts/flagship_assets/site_photos/*.jpg"]
 # path sits inside the ``app`` package walk, so neither is added twice.
 "alembic.ini" = "alembic.ini"
 "alembic" = "alembic"
+# The match service tuning data. app/core/match_service/data_paths.py looks
+# for a ``data/match`` directory beside the installed ``app`` package, the
+# same shape as ``locales`` and ``alembic`` above, so the walk over ``app``
+# does not carry it. Four files, about 12 KB: encoder score bands, per
+# language fuzzy cutoffs and two region overlays that operators can edit
+# without a code deploy.
+#
+# Shipping none of it produced no error for the whole life of the feature,
+# because every reader falls back to hardcoded constants when the directory
+# is missing. Nothing above debug level said so, so a pip or desktop install
+# simply matched on the baseline and looked like it was working. The readers
+# also resolved the directory by counting parent directories, which reached
+# the virtualenv's ``Lib``, so this line alone would not have helped and
+# that fix ships with it.
+#
+# Unlike ``data/catalog``, which stays out of every release artefact, these
+# bytes carry no licensing question: all four files were authored in this
+# repository, carry the project's own copyright header, and NOTICE lists no
+# basis for them because no third party is involved.
+# backend/tests/unit/test_desktop_spec_ships_wheel_data.py requires the
+# matching entry in desktop/pyinstaller.spec.
+"../data/match" = "data/match"
 # NOTE: the baked flagship/demo assets live at app/scripts/flagship_assets,
 # which is already inside the ``app`` package above, so the package walk
 # ships those tracked bytes (flagship.json, the .dae.gz geometry, the

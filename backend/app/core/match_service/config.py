@@ -28,8 +28,9 @@ import logging
 import os
 from dataclasses import asdict, dataclass
 from functools import lru_cache
-from pathlib import Path
 from typing import Any
+
+from app.core.match_service.data_paths import match_data_file
 
 logger = logging.getLogger(__name__)
 
@@ -190,11 +191,13 @@ RERANK_BGE_USE_FP16: bool = os.environ.get("MATCH_RERANK_BGE_FP16", "0") in ("1"
 # existing module-level constants so the import path keeps working in
 # minimal/dev installs that don't ship the data tree.
 
-# Repo layout: ``<root>/backend/app/core/match_service/config.py`` → 5 up
-# = repo root. Then ``data/match/...``.
-_PROFILE_DIR: Path = Path(__file__).resolve().parents[4] / "data" / "match"
-_ENCODER_PROFILE_PATH: Path = _PROFILE_DIR / "encoder_profiles.json"
-_LEX_PROFILE_PATH: Path = _PROFILE_DIR / "lex_thresholds.json"
+# Where ``data/match`` is, is answered by data_paths.py rather than by
+# counting parent directories from here. The count that used to be on this
+# line reached the repo root in a checkout and the virtualenv's ``Lib``
+# after an install, so a packaged install always took the fallback below
+# and never said so. Names only here; the path is resolved per read.
+_ENCODER_PROFILE_NAME = "encoder_profiles.json"
+_LEX_PROFILE_NAME = "lex_thresholds.json"
 
 
 @lru_cache(maxsize=1)
@@ -204,8 +207,11 @@ def _load_encoder_profiles_raw() -> dict[str, Any]:
     Returns an empty dict on any I/O or parse error so callers can fall
     back to the canonical constants without raising.
     """
+    path = match_data_file(_ENCODER_PROFILE_NAME)
+    if path is None:
+        return {}
     try:
-        with _ENCODER_PROFILE_PATH.open("r", encoding="utf-8") as fh:
+        with path.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
         if not isinstance(data, dict):
             logger.debug("MATCH config: encoder_profiles.json root is not an object - ignoring")
@@ -221,8 +227,11 @@ def _load_encoder_profiles_raw() -> dict[str, Any]:
 @lru_cache(maxsize=1)
 def _load_lex_profiles_raw() -> dict[str, Any]:
     """Read ``lex_thresholds.json`` once, cache for process lifetime."""
+    path = match_data_file(_LEX_PROFILE_NAME)
+    if path is None:
+        return {}
     try:
-        with _LEX_PROFILE_PATH.open("r", encoding="utf-8") as fh:
+        with path.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
         if not isinstance(data, dict):
             logger.debug("MATCH config: lex_thresholds.json root is not an object - ignoring")
