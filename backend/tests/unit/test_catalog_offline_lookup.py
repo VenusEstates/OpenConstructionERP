@@ -52,16 +52,19 @@ def test_catalog_resolves_from_local_cache(monkeypatch: pytest.MonkeyPatch, tmp_
 
 def test_catalog_total_miss_raises_actionable_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(catalog_router, "_CATALOG_CACHE_DIR", tmp_path / "cache")
-    # The resolver also checks the local source checkout (data/catalog/regions),
-    # which really does carry DDC_CWICR_FR_PARIS_Catalog.csv, so point that lookup
-    # at an empty dir to make FR_PARIS a genuine total miss again.
-    monkeypatch.setattr(catalog_router, "_LOCAL_CATALOG_DIRS", (tmp_path / "no-local",))
+    # The resolver also checks every catalogue directory this layout reaches, and
+    # the source checkout really does carry DDC_CWICR_FR_PARIS_Catalog.csv, so
+    # make it reach none to turn FR_PARIS back into a genuine total miss.
+    monkeypatch.setattr(catalog_router, "_local_catalog_dirs", lambda: ())
     with pytest.raises(RuntimeError) as exc_info:
         catalog_router._read_region_catalog_csv("FR_PARIS", "FR___DDC_CWICR")
     message = str(exc_info.value)
     assert "FR_PARIS" in message
     assert "raw.githubusercontent.com" in message
     assert "DDC_CWICR_FR_PARIS_Catalog.csv" in message
+    # The miss has to say where it looked, otherwise an air-gapped operator is
+    # told only that a download they cannot make failed.
+    assert "none on this installation" in message
 
 
 # ── costs: _find_cwicr_file resolver ───────────────────────────────────────

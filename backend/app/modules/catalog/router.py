@@ -128,8 +128,10 @@ def _normalise_band(base: float, lo: float, hi: float) -> tuple[float, float, fl
 # catalog download path, the cost-item parquet path and the /base-catalog API
 # stay in lockstep. The 30 global-CWICR markets resolve to a nested
 # ``CIS-Russia-GESN-FER-TER/<XX>___DDC_CWICR`` folder; each national base to its
-# own folder root. National catalog CSVs still ship in ``data/catalog/regions``
-# and resolve from the local checkout first, so the folder is a GitHub fallback.
+# own folder root. The national catalog CSVs live in the repository's
+# ``data/catalog/regions`` and resolve from there first in a source checkout;
+# no released artefact carries them, so for an install the folder below is the
+# only source. See the note above ``_LOCAL_CATALOG_SUBPATH``.
 REGION_MAP: dict[str, str] = {v.region: v.catalog_folder for v in base_registry.iter_variants()}
 
 _GITHUB_BASE = "https://raw.githubusercontent.com/datadrivenconstruction/OpenConstructionEstimate-DDC-CWICR/main"
@@ -138,11 +140,116 @@ _GITHUB_BASE = "https://raw.githubusercontent.com/datadrivenconstruction/OpenCon
 # CWICR parquet cache in app.modules.costs.router so one folder holds all
 # downloaded reference data, and a region imported once stays available offline.
 _CATALOG_CACHE_DIR = Path.home() / ".openestimator" / "cache" / "catalog"
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-_LOCAL_CATALOG_DIRS = (
-    _REPO_ROOT / "data" / "catalog" / "regions",
-    Path.cwd() / "data" / "catalog" / "regions",
-)
+
+# ── Locally generated catalogue CSVs ─────────────────────────────────────
+# The bytes themselves are deliberately NOT shipped. desktop/pyinstaller.spec
+# records that decision at the top of the file and NOTICE carries the reason:
+# the catalogue is derived from national norm systems, and for the largest base
+# in it the licensing basis is still recorded as PENDING. A wheel or a signed
+# installer cannot be taken back, so the data stays out of both until that basis
+# is written down. What follows is therefore about WHERE the runtime looks, not
+# about what it carries: a source checkout, a container image or a distributor
+# that populates the directory is found, and an installation that carries none
+# says so instead of pointing at a path that has never existed.
+
+# Path of the catalogue directory, relative to an install root or a repo root.
+# The same three components in every layout.
+_LOCAL_CATALOG_SUBPATH = ("data", "catalog", "regions")
+
+# What makes a directory the catalogue directory rather than a directory that
+# merely sits at the right path: it holds at least one catalogue CSV. The check
+# is not there to prevent a wrong read - lookups are by exact file name, so an
+# unrelated directory would simply miss - it is there so the resolver can tell
+# "this installation carries no catalogue at all" apart from "the catalogue is
+# here and this region is not in it". Those are two different situations for
+# whoever is reading the log, and the old code could report neither.
+_LOCAL_CATALOG_GLOB = "DDC_CWICR_*_Catalog.csv"
+
+
+def _package_dir_of(module_file: Path, module_name: str) -> Path | None:
+    """Return the directory of the top-level package ``module_name`` lives in.
+
+    The depth is read off the module's own dotted name rather than written down
+    as a number. ``app.modules.catalog.router`` is four components, so the
+    ``app`` directory is two parents above this file, and the import system
+    supplies that arithmetic wherever the package happens to sit.
+
+    This replaces a fixed count of five parent directories, which is only ever
+    right in a source checkout: in a pip or desktop install the same expression
+    walks out of ``site-packages/app`` and lands on the virtualenv's ``Lib``,
+    where no ``data`` directory has ever existed. Measured on this machine, the
+    old expression resolved to ``.venv-run/Lib/data/catalog/regions``.
+    """
+    parts = module_name.split(".")
+    if len(parts) < 2:
+        return None
+    try:
+        return module_file.resolve().parents[len(parts) - 2]
+    except IndexError:
+        return None
+
+
+def _is_local_catalog_dir(candidate: Path) -> bool:
+    """True when ``candidate`` actually holds catalogue CSVs, not just the path."""
+    try:
+        return candidate.is_dir() and any(candidate.glob(_LOCAL_CATALOG_GLOB))
+    except OSError:
+        return False
+
+
+def _local_catalog_dirs_for(module_file: Path, module_name: str, cwd: Path | None) -> tuple[Path, ...]:
+    """Locate every catalogue directory reachable from ``module_file``.
+
+    Three layouts put the directory in three places and all of them have to
+    work:
+
+    * Installed (pip wheel, and the frozen desktop bundle where ``app`` is
+      unpacked beside its data): the directory would sit next to ``app``, the
+      convention that already places ``locales`` and ``alembic`` there. Nothing
+      populates it today, but a container image or a distributor can, and
+      before this it was not even looked at.
+    * Source checkout: ``app`` lives under ``backend/``, so the repo's own
+      ``data/catalog/regions`` is one directory further up.
+    * Working directory: the drop folder an operator can fill next to wherever
+      the server was started.
+
+    Every candidate that passes the shape check is returned, in that order, so
+    a region missing from one is still found in another. Returns an empty tuple
+    when this installation reaches no catalogue directory at all.
+    """
+    candidates: list[Path] = []
+    package_dir = _package_dir_of(module_file, module_name)
+    if package_dir is not None:
+        install_root = package_dir.parent
+        candidates.append(install_root.joinpath(*_LOCAL_CATALOG_SUBPATH))
+        candidates.append(install_root.parent.joinpath(*_LOCAL_CATALOG_SUBPATH))
+    if cwd is not None:
+        candidates.append(cwd.joinpath(*_LOCAL_CATALOG_SUBPATH))
+
+    found: list[Path] = []
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved not in found and _is_local_catalog_dir(resolved):
+            found.append(resolved)
+    return tuple(found)
+
+
+def _local_catalog_dirs() -> tuple[Path, ...]:
+    """Return this installation's catalogue directories, best first.
+
+    Resolved per call rather than frozen at import. The working-directory
+    candidate makes that a correctness requirement rather than a preference:
+    the old tuple captured ``Path.cwd()`` at import time, so a process that
+    changed directory afterwards - and the CLI does - kept answering for the
+    directory it no longer ran in.
+    """
+    try:
+        cwd = Path.cwd()
+    except OSError:
+        cwd = None
+    return _local_catalog_dirs_for(Path(__file__), __name__, cwd)
+
+
 _LOCAL_CATALOG_FILE_ALIASES: dict[str, tuple[str, ...]] = {
     # The authentic China resource CSV was regenerated under the legacy
     # language-prefixed catalogue filename. Resolve the product id without
@@ -166,13 +273,17 @@ def _read_region_catalog_csv(region: str, folder: str) -> tuple[bytes, str]:
 
     Lookup order:
       1. Local cache dir (a previous successful download).
-      2. Repository checkout (`data/catalog/regions`) for locally generated
-         catalogues that have not been published upstream yet.
+      2. Every catalogue directory this layout reaches, for locally generated
+         catalogues that have not been published upstream yet. In a source
+         checkout that is the repository's own ``data/catalog/regions``; in an
+         install it is whatever the host has populated, which by default is
+         nothing (``_local_catalog_dirs``).
       3. GitHub download (cached on success for the next offline run).
 
     Runs in a worker thread (blocking I/O). Returns ``(raw_bytes, source)``
-    where ``source`` is ``cache`` / ``github``. Raises ``RuntimeError`` with
-    an actionable message when both fail.
+    where ``source`` is ``cache`` / ``local`` / ``github``. Raises
+    ``RuntimeError`` with an actionable message when all three fail, naming the
+    directories that were searched.
     """
     # The national bases export their catalog CSV under a short country token
     # (e.g. TR_NATIONAL -> DDC_CWICR_TR_Catalog.csv) that differs from the
@@ -196,9 +307,10 @@ def _read_region_catalog_csv(region: str, folder: str) -> tuple[bytes, str]:
         except OSError:
             logger.warning("Unreadable cached catalog CSV at %s, ignoring", cached)
 
-    # 2. Local generated catalogues in a source checkout. This keeps new
-    # authentic bases usable before they are mirrored to the public DDC repo.
-    for local_dir in _LOCAL_CATALOG_DIRS:
+    # 2. Locally generated catalogues, wherever this layout keeps them. Resolved
+    # per call, never frozen at import - see ``_local_catalog_dirs``.
+    local_dirs = _local_catalog_dirs()
+    for local_dir in local_dirs:
         for candidate_csv_name in candidate_csv_names:
             local_csv = local_dir / candidate_csv_name
             try:
@@ -206,6 +318,28 @@ def _read_region_catalog_csv(region: str, folder: str) -> tuple[bytes, str]:
                     return local_csv.read_bytes(), "local"
             except OSError:
                 logger.warning("Unreadable local catalog CSV at %s, ignoring", local_csv)
+
+    # Say which of the two situations this is before reaching for the network,
+    # because they need different things from whoever reads the log. An install
+    # carries no catalogue directory by design (the data is not shipped, see the
+    # note above), so an air-gapped host has to be told that the download it is
+    # about to attempt is the only remaining source.
+    if local_dirs:
+        logger.info(
+            "No local catalog CSV for '%s' in %s; falling back to the download.",
+            region,
+            ", ".join(str(d) for d in local_dirs),
+        )
+    else:
+        logger.info(
+            "This installation carries no catalog directory (looked for %s beside the app package, "
+            "one level above it, and under the working directory), so '%s' can only come from the "
+            "download. An offline host should place %s in %s.",
+            "/".join(_LOCAL_CATALOG_SUBPATH),
+            region,
+            csv_name,
+            _CATALOG_CACHE_DIR,
+        )
 
     # 3. GitHub download (cached on success for the next offline run).
     # Belt-and-braces: `folder` and `region` come from the static REGION_MAP
@@ -247,9 +381,11 @@ def _read_region_catalog_csv(region: str, folder: str) -> tuple[bytes, str]:
             logger.warning("Could not cache catalog CSV at %s", _CATALOG_CACHE_DIR / csv_name)
         return raw_bytes, "github"
 
+    searched = ", ".join(str(d) for d in local_dirs) if local_dirs else "none on this installation"
     raise RuntimeError(
         f"Could not load the '{region}' resource catalog: it is not in the local "
-        f"cache and the GitHub download failed "
+        f"cache, no bundled catalog directory carries it (searched: {searched}) and the GitHub "
+        f"download failed "
         f"({last_error.__class__.__name__}: {last_error}). URL: {last_url}. Check that this server "
         f"can reach raw.githubusercontent.com, or place the CSV at {_CATALOG_CACHE_DIR / csv_name} "
         f"and retry."
