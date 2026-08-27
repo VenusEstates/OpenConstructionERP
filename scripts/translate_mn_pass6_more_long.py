@@ -3,8 +3,21 @@
 from __future__ import annotations
 
 import re
+import sys
 import unicodedata
 from pathlib import Path
+
+# What this script prints when it cannot match an entry is the entry itself,
+# and those are locale strings. Standard output does not always speak UTF-8:
+# redirected to a pipe on Windows it takes the ANSI code page, and printing a
+# dash or a Mongolian letter there raises UnicodeEncodeError. The script then
+# dies while REPORTING its findings, after having correctly decided to change
+# nothing, and the traceback names an encoder rather than anything about
+# translation. Reading the files was already pinned to UTF-8 below; writing
+# the report is pinned here, replacing what the stream cannot carry instead of
+# raising, because a report is not worth failing a run over.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parents[1]
 EN_PATH = ROOT / "frontend" / "src" / "app" / "locales" / "en.ts"
