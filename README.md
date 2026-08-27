@@ -653,7 +653,11 @@ Get productive in under 10 minutes:
 Download the installer for your operating system, run it, and OpenConstructionERP opens as a native desktop app. No Python, no pip, no Docker, and no database to set up. Everything runs locally on your machine.
 
 - **[Download for your platform](https://openconstructionerp.com/download)** picks the right file for your OS automatically.
-- Or grab one straight from the **[latest release](https://github.com/datadrivenconstruction/OpenConstructionERP/releases/latest)**: Windows `.exe` installer, macOS `.dmg`, or Linux `.deb` / `.AppImage`.
+- Or grab one straight from the **[latest release](https://github.com/datadrivenconstruction/OpenConstructionERP/releases/latest)**: Windows `.exe` installer, macOS `.dmg` (Apple Silicon), or Linux `.deb` / `.AppImage`.
+
+**Your operating system will warn you before it runs the installer, and that is expected.** There is no code signing certificate for this project yet, so the desktop builds are unsigned. On Windows, SmartScreen says "Windows protected your PC"; choose More info, then Run anyway. On macOS, Gatekeeper says the developer cannot be verified; open the app from the Finder context menu and choose Open, or clear it with `xattr -dr com.apple.quarantine` on the installed app. Linux packages are unaffected. If you would rather verify the download than trust the warning, every release carries `SHA256SUMS` together with a Sigstore signature and certificate, so you can check the bytes you received against what the build produced.
+
+There is no Intel macOS build at the moment. On an Intel Mac, use the pip or Docker route below.
 
 The first launch takes about a minute while it sets up your local database, then every launch after that is fast. Open source under AGPL-3.0.
 
