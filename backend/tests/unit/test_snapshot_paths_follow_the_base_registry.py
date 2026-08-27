@@ -19,8 +19,17 @@ def test_every_downloadable_base_has_a_snapshot_and_no_other_one_does() -> None:
     files = base_registry.github_snapshot_files()
     expected = {v.region for v in _global_variants()}
     assert set(files) == expected
-    bundled = {v.region for v in base_registry.iter_variants() if v.bundled}
-    assert not (set(files) & bundled), "a bundled base would point at a file that was never published"
+    # Anchored on _NATIONAL_FAMILIES rather than on ``bundled``. The two lines
+    # above and the map itself all read ``bundled``, so an edit that changes what
+    # that field says moves every side of the comparison together and this test
+    # stays green through exactly the regression its message describes. That was
+    # measured, not assumed: setting the eight national families to
+    # ``bundled=False`` puts eight never-published snapshot paths into the map
+    # and all three assertions here still pass. The national families are a
+    # separate structure, so they hold still while the field moves.
+    national = {v.region for family in base_registry._NATIONAL_FAMILIES for v in family.variants}
+    assert len(national) == 8, f"the eight national bases became {len(national)}, so this guard needs rereading"
+    assert not (set(files) & national), "a national base would point at a snapshot that was never published"
 
 
 def test_a_snapshot_sits_in_the_same_folder_as_its_own_work_items() -> None:
