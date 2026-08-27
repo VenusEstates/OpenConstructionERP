@@ -15,10 +15,15 @@ noticed. The basemap now comes from us: shaded relief we serve ourselves, and
 keyless vector maps for the interactive views. There is no key to obtain, no
 quota to exceed and no account to hold.
 
-Two consequences worth knowing. Your browser may keep painting the old
-watermarked tiles for up to a week, because they were stored under a rule that
-tells the browser never to check for a newer copy, so the tile addresses changed
-to get out from under it. And the small map on a project card, along with the 3D
+Two consequences worth knowing. The old watermarked tiles are still sitting in
+your browser cache, stored under a rule that tells the browser never to check for
+a newer copy, so we changed the tile addresses instead. The new addresses cannot
+collide with the old ones and the stale copies are never asked for again, which
+means there is nothing to wait out and nothing to clear by hand. The one place
+the old map can still appear is the first screen you open right after upgrading,
+because the application installs its update in the background and the page in
+front of you was loaded before that finished. Reload once and it is gone. The
+second consequence is that the small map on a project card, along with the 3D
 globe, now shows terrain rather than streets. Street detail at that size needs a
 tile service with a key, and we would rather show you a plain honest map than a
 detailed branded one.
