@@ -259,3 +259,41 @@ def test_vendored_styles_are_same_origin_throughout(style_path: Path) -> None:
         assert urls, f"source {name!r} in {style_path.name} declares no URL"
         for url in urls:
             assert url.startswith("/api/"), f"source {name!r} points at {url}"
+
+
+def test_serving_a_style_rewrites_every_url_to_the_calling_origin() -> None:
+    """The vendored file is host independent. The served response must not be.
+
+    MapLibre fetches vector tiles, glyphs and sprites from a Web Worker, and a
+    worker has no document base, so a root relative URL cannot resolve there.
+    The relief raster loaded anyway because images are fetched on the main
+    thread. Every response was 200, no request failed because none was made,
+    and the map was a white rectangle.
+
+    The same-origin assertion above passes on that broken state, because the
+    file on disk was always correct. What was wrong was serving it unmodified.
+    So this asserts on the rewrite itself, which is a pure function of the text
+    and the origin and needs no server.
+    """
+    from app.modules.geo_hub.router import absolutise_style
+
+    origin = "https://erp.example.org"
+    for style_path in _style_files():
+        served = absolutise_style(style_path.read_text(encoding="utf-8"), origin).decode("utf-8")
+        assert '"/api/' not in served, (
+            f"{style_path.name} still carries a root relative URL after rewriting. "
+            "A Web Worker cannot resolve it and the map renders blank while "
+            "every HTTP response stays green."
+        )
+
+        style = json.loads(served)
+        urls = [str(style.get("glyphs", "")), str(style.get("sprite", ""))]
+        for source in (style.get("sources") or {}).values():
+            urls.extend(source.get("tiles") or [])
+            if "url" in source:
+                urls.append(source["url"])
+        assert len(urls) >= 4, f"{style_path.name} yielded {len(urls)} URLs, too few to prove anything"
+        for url in urls:
+            assert url.startswith(f"{origin}/api/"), (
+                f"{style_path.name} serves {url!r}, which is neither absolute nor ours"
+            )
