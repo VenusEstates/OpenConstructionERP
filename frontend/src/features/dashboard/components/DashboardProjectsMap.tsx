@@ -7,6 +7,7 @@ import { Map as MapIcon, MapPin } from 'lucide-react';
 import clsx from 'clsx';
 import type { MapRef, MarkerProps } from 'react-map-gl/maplibre';
 import { buildGeocodeQuery } from '@/shared/ui/ProjectMap/geocode';
+import { geocodeSuggest } from '@/features/geo-hub/api';
 import { RASTER_BASEMAP_STYLE } from '@/shared/ui/ProjectMap/basemap';
 // maplibre-gl ships its canvas / control styles separately. The static
 // import lets Vite hoist the CSS into the dashboard chunk so markers
@@ -93,17 +94,20 @@ function writeCache(q: string, lat: number, lng: number) {
 async function geocodeOne(query: string, signal: AbortSignal): Promise<{ lat: number; lng: number } | null> {
   const cached = readCache(query);
   if (cached) return cached;
-  const url =
-    'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' +
-    encodeURIComponent(query);
+  // Goes to GET /api/v1/geo-hub/geocode/suggest, never to a public
+  // geocoder from the browser. A browser cannot set a User-Agent, so a
+  // direct call is unidentifiable and unthrottled and it fans out over
+  // every user's IP, which the Nominatim usage policy forbids. The
+  // backend tries Photon first, falls back to Nominatim behind a
+  // process-global 1 req/s gate, and sends a contact User-Agent.
+  // ``geocodeSuggest`` throws on a non-2xx and rejects on abort; the
+  // catch below turns both into the same null a miss already produced.
   try {
-    const res = await fetch(url, { signal, headers: { Accept: 'application/json' } });
-    if (!res.ok) return null;
-    const rows = (await res.json()) as Array<{ lat: string; lon: string }>;
-    const first = rows[0];
+    const res = await geocodeSuggest(query, { limit: 1, signal });
+    const first = res.suggestions[0];
     if (!first) return null;
-    const lat = parseFloat(first.lat);
-    const lng = parseFloat(first.lon);
+    const lat = Number(first.lat);
+    const lng = Number(first.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     writeCache(query, lat, lng);
     return { lat, lng };
@@ -236,7 +240,10 @@ export function DashboardProjectsMap({ projects, className, heightClass: heightC
     }
     setResolved(out);
 
-    // Rate-limit Nominatim to ~1 req/sec to stay polite.
+    // Pace the lookups at ~1 req/sec. The backend already enforces the
+    // rate limit for the Nominatim fallback, but pacing here keeps a
+    // portfolio of thirty projects from queueing thirty requests behind
+    // that one-at-a-time gate the moment the dashboard mounts.
     (async () => {
       for (const p of projects) {
         if (controller.signal.aborted) return;

@@ -23,10 +23,18 @@
  *
  * The geocoding pipeline:
  *   1. Accept lat/lng directly (fastest path — stored in project metadata).
- *   2. Otherwise concat (address, city, country), look up via the free
- *      OpenStreetMap Nominatim endpoint, and cache the result in
+ *   2. Otherwise concat (address, city, country), look the string up
+ *      through our own backend geocoder, and cache the result in
  *      localStorage under `oe.geocode.<query>` so repeat renders don't
  *      hit the API.
+ *
+ * Geocoding never leaves the browser for a public geocoder directly. A
+ * browser cannot set a User-Agent, so a direct call is unidentifiable and
+ * unthrottled and it fans out over every user's IP, which the Nominatim
+ * usage policy forbids. The backend geocoder tries Photon first, falls
+ * back to Nominatim behind a process-global 1 req/s gate, sends a contact
+ * User-Agent, and lets an operator point at their own mirror via
+ * OE_GEOCODER_BASE_URL.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +42,8 @@ import { MapPin, Loader2 } from 'lucide-react';
 import Map, { Marker, Popup, NavigationControl, AttributionControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import clsx from 'clsx';
+
+import { geocodeSuggest } from '@/features/geo-hub/api';
 
 import { PROXY_TILE_BASE, RASTER_BASEMAP_STYLE } from './basemap';
 
@@ -144,20 +154,17 @@ async function geocode(query: string, signal?: AbortSignal): Promise<LatLng | nu
   const cached = readCache(query);
   if (cached) return cached;
 
-  const url =
-    'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' +
-    encodeURIComponent(query);
+  // Goes to GET /api/v1/geo-hub/geocode/suggest, never to a public
+  // geocoder from the browser. ``geocodeSuggest`` throws ApiError on a
+  // non-2xx and rejects on abort; the catch below turns both into the
+  // same null a miss already produced, so the caller's loading and error
+  // states are unchanged.
   try {
-    const res = await fetch(url, {
-      signal,
-      headers: { 'Accept': 'application/json' },
-    });
-    if (!res.ok) return null;
-    const rows = (await res.json()) as Array<{ lat: string; lon: string }>;
-    const first = rows[0];
+    const res = await geocodeSuggest(query, { limit: 1, signal });
+    const first = res.suggestions[0];
     if (!first) return null;
-    const lat = parseFloat(first.lat);
-    const lng = parseFloat(first.lon);
+    const lat = Number(first.lat);
+    const lng = Number(first.lon);
     if (!isFiniteNumber(lat) || !isFiniteNumber(lng)) return null;
     const coords: LatLng = { lat, lng };
     writeCache(query, coords);
@@ -226,7 +233,7 @@ export function ProjectMap({
       });
     return () => controller.abort();
     // onResolved intentionally omitted — parents often pass an inline
-    // callback; re-running the fetch on every render would hammer Nominatim.
+    // callback; re-running the fetch on every render would hammer the geocoder.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasExplicitCoords, lat, lng, query]);
 
