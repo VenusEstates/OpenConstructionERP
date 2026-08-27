@@ -1284,6 +1284,17 @@ def create_app() -> FastAPI:
     app.state.schema_heal_failed = None
     app.state.schema_heal_error = None
 
+    # ── Does the schema still match the models ───────────────────────────
+    # The field above says whether the heal RAISED. This one says whether the
+    # database and the models agree once it has finished, which is a different
+    # question with a different answer: the heal completes successfully and
+    # still leaves a NOT NULL it could not carry, because adding one to a
+    # populated table fails and adding the column nullable does not. Three
+    # states again - True they agree, False they do not, None never asked,
+    # which is where a deployment whose database is not PostgreSQL stays.
+    app.state.schema_matches_models = None
+    app.state.schema_divergent_columns = ()
+
     # ── Boot-time data-repair verdict ────────────────────────────────────
     # Same three states, for the same reason, about the other half of an
     # upgrade. The heal above moves the SCHEMA; it rewrites no rows, so a
@@ -1760,6 +1771,13 @@ def create_app() -> FastAPI:
         ``app.state.schema_heal_error``. Should it ever be wanted over HTTP it
         belongs behind ``RequireRole("admin")``, beside
         ``/api/system/upgrade/status``, and not here.
+
+        The same rule governs the two signals added since: which data repairs
+        failed is on ``app.state.data_repairs_failed_ids``, and which columns
+        the schema has diverged on is on
+        ``app.state.schema_divergent_columns``. Both are lists of internal
+        names, both would map the deployment for an anonymous caller, and both
+        stay in the log for the same reason the failing statement does.
         """
         import os as _os
         from pathlib import Path as _Path
@@ -1796,10 +1814,23 @@ def create_app() -> FastAPI:
         # nearby, broken script tree, etc.) - visible but non-fatal.
         #
         # Three answers, and they are three: ``true`` at head, ``false``
-        # behind it, ``null`` when this deployment cannot tell. Only a
-        # determinable ``false`` degrades the status. See
+        # behind it, ``null`` when this deployment cannot tell. See
         # :func:`alembic_head_state` for why an unstamped database is not a
         # mismatch and must never be reported as one.
+        #
+        # It is published as a fact and does NOT degrade the status, which is a
+        # deliberate change and not an oversight. The product never runs
+        # ``alembic upgrade``; the schema moves through ``create_all`` and the
+        # boot heal, so the stamp falls behind on a normal, correct upgrade the
+        # moment a release adds any revision at all. Degrading on that lit the
+        # field permanently for every upgraded install, and an aggregate with a
+        # permanently active cause has stopped being a signal: it has already
+        # been observed to hide a total frontend outage, because ``status`` was
+        # pinned to degraded by a stale stamp and could not change when
+        # ``frontend_dist_present`` went false. The stamp being behind is a
+        # fact worth publishing and is not by itself a degradation. Whether the
+        # schema is behind is the question that is, and
+        # ``schema_matches_models`` below answers that one directly.
         try:
             from alembic.runtime.migration import MigrationContext as _MigCtx
             from sqlalchemy import text as _text  # noqa: F401
@@ -1814,10 +1845,7 @@ def create_app() -> FastAPI:
                     _actual = await _conn.run_sync(
                         lambda sync_conn: _MigCtx.configure(sync_conn).get_current_revision()
                     )
-                _matches = alembic_head_state(_expected, _actual)
-                result["alembic_head_matches"] = _matches
-                if _matches is False:
-                    result["status"] = "degraded"
+                result["alembic_head_matches"] = alembic_head_state(_expected, _actual)
             else:
                 result["alembic_head_matches"] = None
         except Exception as _exc:  # noqa: BLE001
@@ -1844,6 +1872,29 @@ def create_app() -> FastAPI:
         _heal_failed = getattr(app.state, "schema_heal_failed", None)
         result["schema_heal_failed"] = _heal_failed
         if _heal_failed is True:
+            result["status"] = "degraded"
+
+        # And whether it was enough. The field above says the heal did not
+        # raise; this one says whether the database and the models actually
+        # agree afterwards, which is a different question. The heal enforces a
+        # NOT NULL only when a default exists to backfill the rows already in
+        # the table, so on a populated table it completes successfully and
+        # leaves the column accepting NULL, for good: no revision body ever
+        # runs to tighten it. Until this key existed that install answered
+        # healthy with ``schema_heal_failed: false`` while a constraint the
+        # models rely on was simply absent.
+        #
+        # Three answers, and the polarity of ``alembic_head_matches`` rather
+        # than of the two ``_failed`` fields: ``true`` they agree, ``false``
+        # they do not, ``null`` never asked, which over HTTP means a deployment
+        # whose database is not PostgreSQL or a check that could not run. Only
+        # a determinable ``false`` degrades. Which columns diverge is not
+        # published, for the same reason the heal's cause is not - see this
+        # endpoint's docstring - and is on ``app.state.schema_divergent_columns``
+        # and in the boot log.
+        _schema_matches = getattr(app.state, "schema_matches_models", None)
+        result["schema_matches_models"] = _schema_matches
+        if _schema_matches is False:
             result["status"] = "degraded"
 
         # Did the boot-time data repairs run? The field above is about the
@@ -3246,6 +3297,38 @@ def create_app() -> FastAPI:
                     _heal_error,
                     exc_info=True,
                 )
+
+            # Now ask whether it worked, which the flag above does not answer.
+            # A heal that raised nothing still leaves the models and the
+            # database disagreeing wherever it had to drop a NOT NULL to get a
+            # column in at all. Asked as a standing question about the schema
+            # rather than read off this boot's log, because the heal announces
+            # that decision on the boot it makes it and is silent on every boot
+            # afterwards - so an install that took the divergence on an earlier
+            # release would otherwise report nothing about it forever. One
+            # catalog query: 0.19s against 626 tables, 2% of the heal it
+            # follows, measured on the embedded server.
+            try:
+                from app.core.postgres_migrator import not_null_divergences
+
+                _divergent = await not_null_divergences(engine, Base)
+                app.state.schema_divergent_columns = _divergent
+                app.state.schema_matches_models = not _divergent
+                if _divergent:
+                    logger.warning(
+                        "Schema divergence: %d column(s) the models declare NOT NULL accept NULL in this "
+                        "database, beginning with %s. Nothing on the boot path will tighten them; each needs "
+                        "a backfill and an ALTER. /api/health reports schema_matches_models=false, and the "
+                        "names are here rather than there because that endpoint is unauthenticated.",
+                        len(_divergent),
+                        ", ".join(_divergent[:5]),
+                    )
+            except Exception as exc:  # noqa: BLE001
+                # A diagnostic must never be able to stop a boot. Leaving the
+                # field None says "could not tell", which is honest and does
+                # not degrade; claiming agreement here would be the one answer
+                # that is worse than no answer.
+                logger.warning("Schema divergence check could not run: %s", exc)
 
             # The heal above adds oe_progress_entry.seq to a pre-v3258 table as
             # ADD COLUMN ... DEFAULT nextval(...), and PostgreSQL numbers the

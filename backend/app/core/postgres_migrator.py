@@ -375,6 +375,69 @@ async def postgres_auto_migrate(engine: AsyncEngine, base) -> int:
     return sequences_added + columns_added + indexes_added + constraints_added + nulls_relaxed
 
 
+async def not_null_divergences(engine: AsyncEngine, base) -> tuple[str, ...]:
+    """Columns the models declare NOT NULL that the live database accepts NULL in.
+
+    This asks the standing question - does the schema match the models *now* -
+    rather than the question the heal's own log answers, which is what this boot
+    happened to do. The two are not interchangeable. A column added nullable
+    three releases ago is exactly as divergent as one added nullable a minute
+    ago, and only the standing form sees it: the heal announces the decision on
+    the boot that makes it and is silent on every boot afterwards, so on any
+    install that upgraded before today the log says nothing at all.
+
+    Nullability is the whole of what this reports, and that is a deliberate
+    floor rather than the finished job. It is crisply answerable: a column is
+    NOT NULL or it is not, and the two sides of the comparison cannot disagree
+    for reasons of rendering. Type divergence is the other half of what the heal
+    declines, and comparing a model type against a reflected one produces
+    disagreements that are about spelling rather than about the schema, so it
+    would need its own work and its own evidence before it could be trusted to
+    degrade a health signal.
+
+    Read-only. It issues no DDL and no DML on any code path, which is what makes
+    it safe to run on every boot and against a production database.
+
+    Args:
+        engine: The async SQLAlchemy engine (must be PostgreSQL).
+        base: The declarative ``Base`` whose metadata holds every model.
+
+    Returns:
+        ``table.column`` for each divergence, sorted, so the value is stable
+        across boots and two runs can be compared directly.
+    """
+    found: list[str] = []
+
+    async with engine.connect() as conn:
+        # One catalog query rather than an inspector call per table. Asking the
+        # inspector table by table is the obvious way to write this and it cost
+        # 5.0s against 626 tables, measured, which is far too much to spend on
+        # every boot for a diagnostic. The same answer in a single round trip
+        # comes back in hundredths of a second, and it is the same answer:
+        # nullability is one column of one catalog view.
+        rows = await conn.execute(
+            text(
+                "SELECT table_name, column_name, is_nullable FROM information_schema.columns "
+                "WHERE table_schema = current_schema()"
+            )
+        )
+        live: dict[tuple[str, str], bool] = {
+            (table_name, column_name): is_nullable == "YES" for table_name, column_name, is_nullable in rows
+        }
+
+    live_tables = {table_name for table_name, _ in live}
+    for table in base.metadata.sorted_tables:
+        if table.name not in live_tables:
+            continue  # Not built yet; create_all makes it correctly.
+        for col in table.columns:
+            if col.nullable or col.primary_key:
+                continue  # The models allow NULL, or PostgreSQL forbids it anyway.
+            if live.get((table.name, col.name)) is True:
+                found.append(f"{table.name}.{col.name}")
+
+    return tuple(sorted(found))
+
+
 async def _relax_not_null(conn, table, col: Column, *, db_nullable: bool, live_pk_cols: set) -> int:
     """Drop a NOT NULL the database still holds and the models no longer declare.
 
