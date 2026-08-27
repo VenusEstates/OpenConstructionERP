@@ -66,7 +66,12 @@ type SpanStep = (typeof SPAN_STEPS)[number];
 
 interface GalleryShape {
   /** Case tiles to preview. The "all cases" tile is drawn on top of this, so
-   *  each count is one short of a whole number of rows. */
+   *  each count is one short of a whole number of rows - measured at the WIDEST
+   *  column count in `columns`, which is the width the card is really designed
+   *  at. It was never true at every breakpoint and is not claimed to be: at
+   *  span 4 and 3, `sm:grid-cols-3` leaves a short last row either way. Span 6
+   *  is the exception that holds at all four column counts, because its total
+   *  of twelve divides by 2, 3, 4 and 6 alike. */
   count: number;
   /** Complete literal Tailwind column classes. NEVER built by concatenation:
    *  the JIT only keeps classes it can see whole, which is the same rule the
@@ -80,31 +85,39 @@ interface GalleryShape {
 
 /**
  * How the gallery is drawn at each width. Full width is the default and is
- * meant to read as a real part of the dashboard: twenty-three cases plus the
- * way into the rest, six across on a wide screen, tiles big enough that the
- * drawing on each one is a picture rather than a smudge.
+ * meant to read as a real part of the dashboard: eleven cases plus the way into
+ * the rest, six across on a wide screen, which is TWO rows, with tiles big
+ * enough that the drawing on each one is a picture rather than a smudge.
+ *
+ * Two rows is the rule at every width, not a number chosen for the full-width
+ * card alone. Each count is two rows at the widest column count in its own
+ * `columns` string, minus the one cell the "all cases" tile takes. That is what
+ * keeps the ladder monotonic: narrowing the card has to show FEWER cases, and a
+ * count fixed only at span 6 would have left a card that grew when you shrank
+ * it. Spans 4 and 3 land on the same number because they share a `columns`
+ * string; only the portrait size and the type scale differ between them.
  */
 const GALLERY_BY_SPAN: Record<SpanStep, GalleryShape> = {
   6: {
-    count: 23,
+    count: 11,
     columns: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6',
     faceClass: 'w-[26%] max-w-[3.5rem]',
     titleClass: 'text-sm',
   },
   4: {
-    count: 15,
+    count: 7,
     columns: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
     faceClass: 'w-[26%] max-w-[3.25rem]',
     titleClass: 'text-sm',
   },
   3: {
-    count: 11,
+    count: 7,
     columns: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
     faceClass: 'w-[30%] max-w-[2.75rem]',
     titleClass: 'text-xs',
   },
   2: {
-    count: 8,
+    count: 5,
     columns: 'grid-cols-2 sm:grid-cols-3',
     faceClass: 'w-[30%] max-w-[2.75rem]',
     titleClass: 'text-xs',

@@ -12,6 +12,13 @@
  * identical on screen and be invisible to Customize, which is where a user who
  * hid the card goes looking for it. So these assert the store, not the click.
  *
+ * WHY THE COUNTS ARE TESTED. The block is two rows: eleven cases and the tile
+ * that opens the rest of the library, six across on a wide screen. Two rows is
+ * a joint property of the count and the column class, and neither half is
+ * visible from the other, so both are asserted together. The ladder across the
+ * four widths is asserted as well, because the failure a count fixed at full
+ * width alone would ship is a card that GROWS when you press "smaller".
+ *
  * WHY THE FACES ARE TESTED. `dealCaseFaces` documents that it must be dealt
  * over the WHOLE catalogue: the person a case wears is a property of where the
  * case sits among all cases, so a narrowed or windowed list must not re-cast
@@ -76,14 +83,32 @@ vi.mock('@/shared/lib/api', async () => {
 
 const WIDGET_ID = 'cases_learn';
 
+/** The gallery grid element. */
+function grid(): Element {
+  const card = screen.getByTestId('dashboard-cases-card');
+  const found = card.querySelector('div.grid');
+  if (!found) throw new Error('gallery grid not found');
+  return found;
+}
+
 /** The tiles in the gallery: the case tiles plus the one that opens the rest
  *  of the library. Counted off the grid itself rather than off `getAllByRole`,
  *  which would also collect the header's own buttons. */
 function tileCount(): number {
-  const card = screen.getByTestId('dashboard-cases-card');
-  const grid = card.querySelector('div.grid');
-  if (!grid) throw new Error('gallery grid not found');
-  return grid.children.length;
+  return grid().children.length;
+}
+
+/** Only the tiles that are a case, told apart from the "all cases" tile by the
+ *  one thing that cannot be faked: the tile's title is the title of a playbook
+ *  in the catalogue. `tileCount()` alone would keep passing if the last tile
+ *  quietly became a twelfth case, and the count the founder asked for is a
+ *  count of CASES. */
+function caseTileCount(): number {
+  const titles = new Set(PLAYBOOKS.map((pb) => pb.titleDefault));
+  return Array.from(grid().children).filter((tile) => {
+    const title = tile.getAttribute('title');
+    return title !== null && titles.has(title);
+  }).length;
 }
 
 function renderCard() {
@@ -101,9 +126,17 @@ beforeEach(() => {
 });
 
 describe('DashboardCasesCard size', () => {
-  it('opens as a gallery of 23 cases plus the way into the rest', () => {
+  it('opens as two rows: 11 cases plus the way into the rest', () => {
     renderCard();
-    expect(tileCount()).toBe(24);
+
+    // Eleven cases and the "all cases" tile is twelve cells, and twelve cells
+    // six across is two rows. Both halves are asserted here on purpose: two
+    // rows is a JOINT property of the count and the column class, so a test
+    // that pinned only the count would stay green if someone dropped the `xl:`
+    // column and turned the block back into three rows on a wide screen.
+    expect(caseTileCount()).toBe(11);
+    expect(tileCount()).toBe(12);
+    expect(grid().className).toContain('xl:grid-cols-6');
   });
 
   it('draws fewer, and fewer across, at a width the user saved earlier', () => {
@@ -112,13 +145,30 @@ describe('DashboardCasesCard size', () => {
     useDashboardLayoutStore.setState({ spans: { [WIDGET_ID]: 2 } });
     renderCard();
 
-    expect(tileCount()).toBe(9);
-    const grid = screen.getByTestId('dashboard-cases-card').querySelector('div.grid');
+    expect(tileCount()).toBe(6);
     // The column count has to come off the same number as the tile count: the
     // grid's breakpoints are viewport-wide, so a third-width card asking for
     // six columns would draw six microscopic tiles on a wide screen.
-    expect(grid?.className).toContain('sm:grid-cols-3');
-    expect(grid?.className).not.toContain('xl:grid-cols-6');
+    expect(grid().className).toContain('sm:grid-cols-3');
+    expect(grid().className).not.toContain('xl:grid-cols-6');
+  });
+
+  it('never shows more cases in a narrower card than in a wider one', () => {
+    // The failure this guards is the one a count fixed at full width alone
+    // would have shipped: press "smaller" and the block GROWS. Read off the
+    // rendered card at each of the four widths the grid can draw.
+    const seen: number[] = [];
+    for (const span of [2, 3, 4, 6]) {
+      useDashboardLayoutStore.setState({ spans: { [WIDGET_ID]: span } });
+      const view = renderCard();
+      seen.push(caseTileCount());
+      view.unmount();
+    }
+    // The whole ladder, so every width is pinned here and not only in the
+    // constant it is read from, and the same list sorted, so the property the
+    // test is named for survives a deliberate change to the numbers.
+    expect(seen).toEqual([5, 7, 7, 11]);
+    expect(seen).toEqual([...seen].sort((a, b) => a - b));
   });
 });
 
@@ -129,7 +179,7 @@ describe('DashboardCasesCard way out', () => {
 
     // The value Customize shows and persists - not a private flag of this card.
     expect(useDashboardLayoutStore.getState().spans[WIDGET_ID]).toBe(4);
-    expect(tileCount()).toBe(16);
+    expect(tileCount()).toBe(8);
   });
 
   it('grows back the same way', () => {
@@ -179,11 +229,9 @@ describe('DashboardCasesCard faces', () => {
 
     const expected = dealCaseFaces(PLAYBOOKS);
     const byTitle = new Map(PLAYBOOKS.map((p) => [p.titleDefault, p]));
-    const grid = screen.getByTestId('dashboard-cases-card').querySelector('div.grid');
-    if (!grid) throw new Error('gallery grid not found');
 
     let checked = 0;
-    for (const tile of Array.from(grid.children)) {
+    for (const tile of Array.from(grid().children)) {
       const img = tile.querySelector('img');
       const title = tile.getAttribute('title');
       if (!img || !title) continue;
@@ -193,7 +241,11 @@ describe('DashboardCasesCard faces', () => {
       checked += 1;
     }
     // Without this the loop is satisfied by a gallery that rendered no faces
-    // at all, and the assertion above never runs.
-    expect(checked).toBeGreaterThan(15);
+    // at all, and the assertion above never runs. Tied to the number of case
+    // tiles actually drawn rather than to a literal, so it keeps meaning the
+    // same thing after the gallery was cut from four rows to two: every case
+    // on show carries a portrait.
+    expect(checked).toBe(caseTileCount());
+    expect(checked).toBeGreaterThan(0);
   });
 });
