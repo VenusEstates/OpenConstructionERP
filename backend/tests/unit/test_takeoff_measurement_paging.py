@@ -23,10 +23,20 @@ from typing import Any
 
 import pytest
 
+_PREVIOUS_DATA_DIR = os.environ.get("DATA_DIR")
 _TMP_DIR = Path(tempfile.mkdtemp(prefix="oe-takeoff-paging-"))
 os.environ["DATA_DIR"] = str(_TMP_DIR)
 
 from app.modules.takeoff.repository import MeasurementRepository  # noqa: E402
+
+# Put it back. DATA_DIR is process wide and only the import above reads it, so
+# left set it answers every later module that asks resolve_data_dir() where the
+# platform writes, and the failure surfaces in whichever unrelated test asks.
+if _PREVIOUS_DATA_DIR is None:
+    os.environ.pop("DATA_DIR", None)
+else:
+    os.environ["DATA_DIR"] = _PREVIOUS_DATA_DIR
+
 
 pytestmark = pytest.mark.unit
 

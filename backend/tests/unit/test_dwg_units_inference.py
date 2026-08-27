@@ -35,6 +35,7 @@ from decimal import Decimal
 from pathlib import Path
 
 # ── Per-module temp data dir (MUST run BEFORE app imports) ────────────────
+_PREVIOUS_DATA_DIR = os.environ.get("DATA_DIR")
 _TMP_DIR = Path(tempfile.mkdtemp(prefix="oe-dwg-units-"))
 os.environ["DATA_DIR"] = str(_TMP_DIR)
 
@@ -58,6 +59,15 @@ from app.modules.dwg_takeoff.service import (  # noqa: E402
     _extents_from_raw_entities,
     _get_entities_dir,
 )
+
+# Put it back. DATA_DIR is process wide and only the import above reads it, so
+# left set it answers every later module that asks resolve_data_dir() where the
+# platform writes, and the failure surfaces in whichever unrelated test asks.
+if _PREVIOUS_DATA_DIR is None:
+    os.environ.pop("DATA_DIR", None)
+else:
+    os.environ["DATA_DIR"] = _PREVIOUS_DATA_DIR
+
 from tests._pg import transactional_session  # noqa: E402
 
 pytestmark = pytest.mark.asyncio

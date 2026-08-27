@@ -39,6 +39,7 @@ import pytest
 
 # ``app.modules.takeoff.service`` loads config on import; point DATA_DIR at a
 # scratch directory the same way the sibling takeoff unit tests do.
+_PREVIOUS_DATA_DIR = os.environ.get("DATA_DIR")
 _TMP_DIR = Path(tempfile.mkdtemp(prefix="oe-takeoff-compare-"))
 os.environ["DATA_DIR"] = str(_TMP_DIR)
 
@@ -48,6 +49,15 @@ from app.modules.takeoff.service import (  # noqa: E402
     TakeoffService,
     _build_pdf_revision_narrative,
 )
+
+# Put it back. DATA_DIR is process wide and only the import above reads it, so
+# left set it answers every later module that asks resolve_data_dir() where the
+# platform writes, and the failure surfaces in whichever unrelated test asks.
+if _PREVIOUS_DATA_DIR is None:
+    os.environ.pop("DATA_DIR", None)
+else:
+    os.environ["DATA_DIR"] = _PREVIOUS_DATA_DIR
+
 
 pytestmark = pytest.mark.unit
 
