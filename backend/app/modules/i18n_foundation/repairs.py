@@ -5,9 +5,9 @@
 Imported by :func:`app.core.data_repairs.discover_data_repairs`, which is what
 makes the registrations below take effect.
 
-All four repairs here touch ``oe_i18n_tax_config``, and between them they use
+All five repairs here touch ``oe_i18n_tax_config``, and between them they use
 every nature the registry has. That is the useful thing about having them side
-by side: the tax rate one may not rewrite a value, the two that describe a
+by side: the two tax rate ones may not rewrite a value, the two that describe a
 rate's scope must, and the reconciler may not write to an existing row at all.
 
 The last two are also the same defect seen from its two ends.
@@ -28,6 +28,15 @@ seeder fills the table only while it is empty and the shipped file has grown
 eleven rates since. Eight of them are Canadian provinces, so an install seeded
 before v15.5.0 answers ``subdivision_unknown`` for most of Canada no matter how
 completely the three above do their work.
+
+``tax_window_supersede`` is the last third of that same early return, and the
+one the reconciler is forbidden to cover. A rate line an old install already
+holds cannot be handed a second window by an additive repair, because the two
+would then be in force at once; the line has to be carried forward, which means
+closing what is open as the replacement goes in. Nova Scotia is why it exists
+and Romania is the shape it copies, the difference between them being that this
+one derives its population from the shipped file rather than naming a country,
+so the next rate change is caught by a failing test rather than by nobody.
 """
 
 from __future__ import annotations
@@ -74,6 +83,13 @@ async def _run_tax_seed_reconcile(session: AsyncSession) -> int:
     from app.modules.i18n_foundation.tax_seed_reconcile import reconcile_shipped_tax_rows
 
     return await reconcile_shipped_tax_rows(session)
+
+
+async def _run_tax_window_supersede(session: AsyncSession) -> int:
+    """Close a shipped tax window this install still holds open and add its replacement."""
+    from app.modules.i18n_foundation.tax_window_supersede import repair_superseded_tax_windows
+
+    return await repair_superseded_tax_windows(session)
 
 
 #: Nature ``superseded``: 19 % was the correct Romanian standard rate until
@@ -176,6 +192,47 @@ TAX_SEED_RECONCILE = register_data_repair(
         never_delivered=NeverDelivered(
             table=TAX_CONFIG_TABLE,
             identified_by=("country_code", "tax_code"),
+        ),
+    )
+)
+
+#: Nature ``superseded`` again, and the second entry to declare it. Everything
+#: the Romanian note above says about close-and-add applies here word for word:
+#: Nova Scotia's 15 % rate was right until 31 March 2025 and wrong from the
+#: first of April, so a document priced in March has to go on resolving at 15 %
+#: and the old row is closed rather than rewritten.
+#:
+#: What is different is the population. That one names a country; this one
+#: derives its rate lines from ``tax_configurations.json`` - every line the file
+#: ships more than one window of - because nothing in the tree fails when a
+#: window is added to an existing line, so a rate change lands on new installs
+#: and skips every old one with no test on the way. The set is pinned in
+#: ``tests/unit/test_tax_window_supersede_population.py`` so deriving it is not
+#: the same as letting it grow unread.
+#:
+#: ``also_updates`` is deliberately empty, unlike Romania's. Instead of
+#: permitting ``is_default`` to move, the repair requires it to already match
+#: the shipped window and declines the line otherwise, which is the tightest
+#: contract ``verify_supersede_shape`` will accept. An allowance nothing
+#: exercises is a hole in the contract that no test can be built against, and
+#: the two shipped Nova Scotia windows are both unflagged, so there is nothing
+#: to exercise it with.
+#:
+#: Registered last on purpose. It writes to rows the two scope repairs above
+#: correct, and while its predicate does not require them to have run - an
+#: unlabelled row is accepted, a differently labelled one is not - running after
+#: them means it meets those rows in the shape the shipped file describes.
+TAX_WINDOW_SUPERSEDE = register_data_repair(
+    DataRepair(
+        repair_id="tax_window_supersede",
+        revision="",
+        summary="Close a shipped tax window this database still holds open and add its replacement",
+        run=_run_tax_window_supersede,
+        nature="superseded",
+        superseded=SupersededBy(
+            effective_from="2025-04-01",
+            table=TAX_CONFIG_TABLE,
+            closes_column="effective_to",
         ),
     )
 )

@@ -92,13 +92,17 @@ the old window as it opens the new one. Doing that here would be exactly the
 retroactive rewrite the registry's natures exist to keep apart, so it is
 refused rather than approximated.
 
-One shipped rate is on the wrong side of that line today and it is worth naming
+One shipped rate is on that side of the line today and it is worth naming
 rather than leaving as an artefact. Nova Scotia cut its harmonised rate from
 15 % to 14 % on 2025-04-01, and the file carries both windows. An install
-seeded before v15.5.0 already holds the 15 % row, so the line reads as present,
-the 14 % row is not delivered, and Nova Scotia keeps resolving at 15 %. Closing
-that needs a ``superseded`` repair of its own, shaped like
-:mod:`app.modules.i18n_foundation.romania_vat`.
+seeded before v15.5.0 already holds the 15 % row, so the line reads as present
+and the 14 % row is not delivered here. That is not a gap any more:
+:mod:`app.modules.i18n_foundation.tax_window_supersede` closes the open window
+and inserts the rate that replaced it, which is the ``superseded`` shape this
+module is forbidden to take. Its population is derived from the same seed file,
+so the division between the two is a property of the data rather than a list
+either of them keeps: a rate line absent from a database belongs here, and a
+rate line present at a superseded rate belongs there.
 
 What was deliberately not generalised
 -------------------------------------
