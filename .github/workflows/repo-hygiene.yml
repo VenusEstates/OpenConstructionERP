@@ -78,7 +78,10 @@ jobs:
       # after a push and to the wrong person. Two commits this morning edited
       # the root copy alone and that lane stayed red until the copy was
       # restored. Proven able to fail: with the root copy edited and the backend
-      # copy not, it exits 1 and prints the drifted line.
+      # copy not, it exits 1 and prints the drifted line. It also compares the
+      # git index, which is what a `git commit --only -- <paths>` actually
+      # carries: two files can agree on disk while only one of them is staged.
+      # In a checkout the index matches HEAD, so here that half simply agrees.
       - name: Check NOTICE and backend/NOTICE have not drifted
         if: ${{ !cancelled() }}
         run: python scripts/check_notice_mirror.py

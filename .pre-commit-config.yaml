@@ -97,6 +97,14 @@ repos:
       # It compares the way the gating test does, normalising CRLF first, so a
       # Windows checkout is not reported as drift the test would pass. Run it
       # with --fix to copy the root file over the backend one.
+      #
+      # It compares the index as well as the disk, and here that is the half
+      # that matters. We commit with `git commit --only -- <paths>`, which takes
+      # the working tree state of the paths it is given and leaves the rest at
+      # HEAD. So the two files can be identical on disk while the commit carries
+      # only one of them, and a disk-only check passes it. --fix makes that more
+      # likely, not less, by tidying the disk and leaving the staging alone, so
+      # a disk-only gate would bless the state its own repair produced.
       - id: notice-mirror-check
         name: Check NOTICE and backend/NOTICE have not drifted
         entry: python scripts/check_notice_mirror.py
