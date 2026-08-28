@@ -5,7 +5,10 @@ Contact: info@datadrivenconstruction.io
 This product is licensed under the GNU Affero General Public License v3.0
 or later (AGPL-3.0-or-later). See the LICENSE file for the full license text.
 
-For commercial licensing without AGPL obligations, contact
+A commercial licence is available that lifts the AGPL obligations on
+OpenConstructionERP itself. It cannot lift them on code we do not own, and
+one dependency present in every install, PyMuPDF, is separately AGPL: see
+"AGPL Cascade" below and section 4a of COMMERCIAL-LICENSE.md. Contact
 info@datadrivenconstruction.io.
 
 ------------------------------------------------------------------------

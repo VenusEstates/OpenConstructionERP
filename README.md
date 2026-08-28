@@ -1005,9 +1005,17 @@ You can freely use, modify, and distribute this software. If you modify
 and deploy it as a service, AGPL §13 requires you to make the
 corresponding source code available under the same licence.
 
-For **commercial licensing** without AGPL obligations, see
+For **commercial licensing**, which lifts the AGPL obligations on
+OpenConstructionERP itself so you can deploy it closed-source, see
 [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) or contact
 [info@datadrivenconstruction.io](mailto:info@datadrivenconstruction.io).
+
+Read section 4a of that file before you deploy. Our commercial licence
+covers our own code and cannot cover anyone else's, and one dependency
+we ship in every install, PyMuPDF, is separately under the AGPL. A
+closed-source deployment has to deal with that component on its own
+terms. Section 4a names the features that use it and sets out the three
+options.
 
 ## Privacy and terms
 

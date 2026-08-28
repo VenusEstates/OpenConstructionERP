@@ -112,8 +112,20 @@ ACCEPTED: dict[str, str] = {
         "artefact a user installs. The frozen desktop app does ship its bootloader, "
         "which is the case the exception was written for."
     ),
-    "chardet": "LGPL-2.1-or-later. Tooling path only, never imported by shipped application code.",
+    "pyinstaller-hooks-contrib": (
+        "Declares no License field and two classifiers, Apache Software License and "
+        "GNU General Public License v2, so this gate reads it as GPL. Measured from "
+        "2026.7. It is a dependency of pyinstaller and shares its position exactly: "
+        "[dev] only, present in CI and on developer machines, in no artefact a user "
+        "installs. Contributed hook data, not linked into anything."
+    ),
 }
+# chardet was on this list as LGPL-2.1. It is not: 7.6.0 declares
+# License-Expression: 0BSD, measured rather than assumed, so the entry said we
+# tolerated something that was never copyleft. Removed. Nothing else needs to be
+# added for the [dev,server] closure: altgraph, macholib, pefile, mypy,
+# pre-commit and lxml are MIT or BSD, celery is BSD-3-Clause and boto3 is
+# Apache-2.0, all read from their own metadata.
 
 # Packages that must be present for a run to count. Without this a green result
 # from an environment where nothing is installed looks identical to a clean one.
