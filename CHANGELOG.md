@@ -49,6 +49,15 @@ fault, which is what that field was for. If you have been looking at degraded
 since your last upgrade and could not work out what to do about it, this is
 why, and the answer was usually nothing.
 
+A report exported as CSV now carries readable column headings, and if you have a
+script reading that export this is the line to read. Where a column used to be
+titled with the raw internal key, kpi_code, it is now titled KPI code. The
+reasoning is that a CSV is a document for a person and the machine readable copy
+of the same run is the rows field of the API response, which is untouched and
+still carries the raw keys. Nothing warned about this and it should have, which
+is why it is here rather than buried: a script written against the old headings
+needs its column names updating once.
+
 The dashboard opens the cases block as two rows with a link to the rest, instead
 of filling the screen with four.
 
