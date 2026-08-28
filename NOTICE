@@ -356,13 +356,16 @@ all liability for decisions made on the basis of AI-generated output.
 Bundled Font Software
 ------------------------------------------------------------------------
 
-The font binaries below are committed into this repository and ship
-inside the Python wheel and the desktop installer. They are files rather
-than packages, so no dependency scanner enumerates them and they appear
-in no generated inventory of dependencies. They are listed here because
-this notice presents itself as complete. In every case the licence text
-named below also travels inside the built artefact alongside the fonts
-it governs, which is what these licences require.
+The font binaries below are committed into this repository. Most of them
+ship inside the Python wheel and the desktop installer; the one under
+scripts/ is there so that the build scripts render the same picture on
+anyone's machine and reaches no artefact, but publishing the repository
+publishes the binary, so the obligation is the same. They are files
+rather than packages, so no dependency scanner enumerates them and they
+appear in no generated inventory of dependencies. They are listed here
+because this notice presents itself as complete. Wherever a font does
+travel inside a built artefact, the licence text named below travels
+beside it, which is what these licences require.
 
 DejaVu Sans, DejaVu Sans Bold
     backend/app/core/fonts/DejaVuSans.ttf
@@ -391,6 +394,18 @@ Instrument Serif
     and redistribution with any software provided that each copy
     contains the copyright notice and the licence, and allows these to
     be included as stand-alone text files.
+
+Inter
+    scripts/assets/fonts/Inter-Variable-Latin.ttf
+    Licence text: scripts/assets/fonts/Inter-OFL.txt
+
+    Copyright (c) 2016 The Inter Project Authors. Licensed under the SIL
+    Open Font License, Version 1.1, on the terms above. The file here is
+    a subset of an upstream release, cut down to the Latin ranges the
+    build scripts set, with the variable weight axis left intact. The
+    licence permits modification and requires that derivatives stay
+    under it and not use the reserved name; this subset is not
+    distributed under the Inter name as a typeface.
 
 Plus Jakarta Sans
     frontend/public/assets/vendor/fonts/webfonts/plus-jakarta-sans-*.woff2

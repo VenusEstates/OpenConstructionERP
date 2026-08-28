@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="docs/screenshots/banner.png" alt="OpenConstructionERP - a honeycomb of the eight company types and fifteen professional roles the platform is built around, over a second honeycomb of its 192 backend modules shaded by how many of the others each one is wired to" width="900" />
-
 # OpenConstructionERP
 
 ### A leading open-source workspace for construction project management
+
+<img src="docs/screenshots/banner.png" alt="The 192 backend modules of OpenConstructionERP drawn as one honeycomb, one cell per module, coloured by the category its own manifest declares and shaded by how many of the other modules it is wired to" width="900" />
 
 Professional BOQ, CAD and BIM takeoff, 4D scheduling, 5D cost model, and tendering - all in one self-hosted platform.
 
@@ -45,7 +45,7 @@ Professional BOQ, CAD and BIM takeoff, 4D scheduling, 5D cost model, and tenderi
 <td align="center" width="16.66%"><b>29</b><br/><sub>languages</sub></td>
 <td align="center" width="16.66%"><b>47</b><br/><sub>countries</sub></td>
 <td align="center" width="16.66%"><b>6</b><br/><sub>CAD&nbsp;formats</sub></td>
-<td align="center" width="16.66%"><b>180</b><br/><sub>modules</sub></td>
+<td align="center" width="16.66%"><b>192</b><br/><sub>modules</sub></td>
 <td align="center" width="16.66%"><b>28</b><br/><sub>sections</sub></td>
 </tr>
 </table>

@@ -87,9 +87,17 @@ FONT_SUFFIXES = {".ttf", ".otf", ".ttc", ".woff", ".woff2"}
 # ``public`` marks a root whose licence files must sit under a directory Vite
 # copies verbatim; ``wheel`` marks one whose licence files must survive the
 # wheel exclude patterns. A new asset root is one line here.
+# The third root carries fonts that no artefact ships: they are committed so the
+# build scripts render the same picture on anyone's machine. The obligation is
+# still real, because publishing the repository publishes the binary, but the
+# "does it survive the wheel exclude" and "is it under public/" assertions have
+# nothing to bite on, so the channel is named and those two branches skip it.
+# Without this root the guard is blind to a whole directory of fonts, which is
+# the exact blind spot its own docstring is about.
 ASSET_ROOTS = (
     ("backend/app", "wheel"),
     ("frontend/public", "public"),
+    ("scripts/assets", "repo"),
 )
 
 # A licence file, by name. Deliberately broad: the point is to find the text
@@ -144,9 +152,7 @@ def survives_wheel_exclude(relative_to_backend: str, patterns: list[str]) -> str
         # ``**/_*.txt`` has to match a bare basename too: fnmatch treats the
         # path as a flat string, so a file directly under the package root
         # would otherwise slip past a pattern written with a leading ``**/``.
-        if pattern.startswith("**/") and fnmatch.fnmatchcase(
-            Path(relative_to_backend).name, pattern[3:]
-        ):
+        if pattern.startswith("**/") and fnmatch.fnmatchcase(Path(relative_to_backend).name, pattern[3:]):
             return pattern
     return None
 
@@ -194,11 +200,7 @@ def find_licence(font: Path) -> Path | None:
             nested = parent / holder
             if nested.is_dir():
                 pool.extend(p for p in sorted(nested.iterdir()) if p.is_file())
-        found = [
-            p
-            for p in pool
-            if LICENCE_NAMES.match(p.name) and p.suffix.lower() not in FONT_SUFFIXES
-        ]
+        found = [p for p in pool if LICENCE_NAMES.match(p.name) and p.suffix.lower() not in FONT_SUFFIXES]
         if found:
             return _closest(font, found)
         if parent == ROOT:
@@ -330,9 +332,7 @@ def check() -> int:
         return 1
 
     total = sum(len(f) for f in groups.values())
-    print(
-        f"OK: {total} bundled font file(s) under {len(groups)} licence(s), all attributed."
-    )
+    print(f"OK: {total} bundled font file(s) under {len(groups)} licence(s), all attributed.")
     return 0
 
 
