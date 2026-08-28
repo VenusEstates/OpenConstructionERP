@@ -7,9 +7,9 @@ describing.
 
 Two files do the work, both under `data/templates/`:
 
-- `example_us_construction.csv` — 30 resources: nine labour categories, twelve materials, seven
+- `example_us_construction.csv` carries 30 resources: nine labour categories, twelve materials, seven
   equipment lines and two subcontractor lines, with a US dollar unit price each.
-- `cost_database_with_assemblies.json` — six work items, each with a recipe referencing those
+- `cost_database_with_assemblies.json` carries six work items, each with a recipe referencing those
   resources by code.
 
 They are a matched pair. Every resource code the six recipes reference exists in the CSV, so the
@@ -108,6 +108,12 @@ curl -X POST "http://localhost:8000/api/v1/costs/resource-prices/US_CUSTOM/repri
 You want `items_partially_priced: 0` and `missing_resource_count: 0` before committing. Then drop
 `dry_run` and run it again.
 
+Expect `items_unpriced: 30`, and do not let it alarm you. Repricing walks every cost item in the
+region, and the thirty rows you loaded in step 1 are resources with no components of their own.
+An item with no components is counted as unpriced and left exactly as it was. On a real base the
+resource list would usually not share a region with the work items, but here it does, and this is
+what that looks like.
+
 ## What you should see
 
 Computed from the two template files:
@@ -116,10 +122,10 @@ Computed from the two template files:
 |---|---:|---:|---:|---:|---:|
 | `WI-FOOT-STRIP-2X1` | 38.50 | **39.37** | 20.03 | 16.21 | 3.13 |
 | `WI-WALL-CIP-8` | 18.75 | **21.91** | 14.48 | 5.15 | 2.28 |
-| `WI-WALL-CMU-8` | 14.20 | **17.80** | 14.32 | 3.48 | — |
-| `WI-FRAM-WALL-2X4` | 7.85 | **13.04** | 6.90 | 6.14 | — |
-| `WI-DRYW-58-PNT` | 5.95 | **6.29** | 3.44 | 2.85 | — |
-| `WI-ROOF-ASPH-PITCH` | 485.00 | **442.10** | 17.10 | — | — |
+| `WI-WALL-CMU-8` | 14.20 | **17.80** | 14.32 | 3.48 |   |
+| `WI-FRAM-WALL-2X4` | 7.85 | **13.04** | 6.90 | 6.14 |   |
+| `WI-DRYW-58-PNT` | 5.95 | **6.29** | 3.44 | 2.85 |   |
+| `WI-ROOF-ASPH-PITCH` | 485.00 | **442.10** | 17.10 |   |   |
 
 Take the first row apart, because it is the whole mechanism in one line. A linear foot of strip
 footing consumes 0.18 hours of carpenter at 68.50 and 0.22 hours of labourer at 35.00, which is
