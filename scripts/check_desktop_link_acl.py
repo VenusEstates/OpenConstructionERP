@@ -17,16 +17,21 @@ was that every outbound link in the product - the docs, the repository, the
 marketing site, contact mail - did nothing at all when clicked. No error, no
 browser, nothing, because the frontend swallowed the rejection.
 
-Two things have to stay true for that to stay fixed, and this gate checks both.
+Three things have to stay true for that to stay fixed, and this gate checks all
+three.
 
-The link opener has to be reachable from the window that invokes it
+Everything the application page invokes has to be reachable from it
 -------------------------------------------------------------------
 A capability with a ``remote`` block has to exist, its URL patterns have to
 actually cover the address the launcher navigates to, and the permissions it
-names have to resolve to the link-opening command. Checking that the file
+names have to resolve to every command the page calls. Checking that the file
 merely contains the string ``http://127.0.0.1:*`` would pass a file where
 somebody renamed the permission and severed the grant, so the check resolves
 the permission set for real and matches the pattern against sample addresses.
+
+Each command is checked on its own, because a grant that covers one says
+nothing about the rest and the failure looks identical from the outside: a
+control that is on screen, is enabled, and does nothing when pressed.
 
 Nothing else may go dead the same way
 -------------------------------------
@@ -36,6 +41,16 @@ unrestricted. So every command in ``generate_handler!`` now needs a grant from
 some capability or it is dead on both origins with nothing on screen to say so.
 Adding a command and forgetting its permission is a silent regression of
 exactly the shape this file exists to close, so it fails here instead.
+
+The capability files have to be the whole answer
+------------------------------------------------
+Tauri's ``dynamic-acl`` feature is in its own default feature list, so
+``Manager::add_capability`` is compiled into this build without us asking for
+it. A capability granted that way lasts for the life of the process and is
+recorded in no file, so ``capabilities/`` would go on describing a narrower
+application than the one that runs. What makes that worth a check rather than a
+note is that the reassuring version of it - we do not call it - is exactly the
+kind of statement that gets written down once and quietly stops being true.
 
 The pattern matcher below is a deliberately narrow subset of the URLPattern
 standard that Tauri actually uses, so it self-tests before every scan against
@@ -57,10 +72,36 @@ TAURI = ROOT / "desktop" / "src-tauri"
 PERMISSIONS_DIR = TAURI / "permissions"
 CAPABILITIES_DIR = TAURI / "capabilities"
 LAUNCHER = TAURI / "src" / "main.rs"
+SOURCE_DIR = TAURI / "src"
 
-# The command the outbound links in the user interface go through. The frontend
-# reaches it from `openExternalUrl` in frontend/src/shared/lib/desktop.ts.
-LINK_COMMAND = "open_external_url"
+# Tauri's `dynamic-acl` feature lets a running application hand itself a new
+# capability through `Manager::add_capability`, and it is in tauri's OWN default
+# feature list, so it is compiled in whether or not we asked for it. A grant
+# made that way exists only for the life of the process and appears in no file
+# under capabilities/, which is where a reviewer looks. These two names are the
+# whole surface: `add_capability` is the call, `RuntimeCapability` is the trait
+# its argument implements.
+RUNTIME_ACL_NAMES = ("add_capability", "RuntimeCapability")
+
+# The commands the application page actually invokes, each of which is dead on
+# the loopback origin unless a remote capability grants it.
+#
+# `open_external_url` is every outbound link, reached from `openExternalUrl` in
+# frontend/src/shared/lib/desktop.ts. `open_app_in_browser` is the header menu
+# item and the desktop toolbar button. The two update-check commands are the
+# buttons on the update notice, which now report a refusal instead of hiding
+# themselves, so dropping their grant turns a working notice into a visibly
+# broken one rather than into nothing.
+#
+# `open_log_file` and `get_app_url` are deliberately absent: the launcher shell
+# calls them, the application page does not, and a command nobody calls does not
+# need a remote grant.
+APP_WINDOW_COMMANDS = (
+    "open_external_url",
+    "open_app_in_browser",
+    "set_update_check_enabled",
+    "decline_update_version",
+)
 
 DEFAULT_PORTS = {"http": 80, "https": 443}
 
@@ -217,6 +258,31 @@ def app_origin_addresses() -> tuple[set[str], list[str]]:
     return hosts, addresses
 
 
+def runtime_acl_call_sites() -> list[str]:
+    """Find code under the desktop crate that grants a capability at runtime.
+
+    Comment lines are skipped so this file's own reasoning, and any doc comment
+    that names the feature in order to explain why it is avoided, can say the
+    words without tripping the check. Real calls do not live on comment lines.
+    The narrower reading is deliberate: a gate nobody can describe in prose
+    without breaking it gets described wrongly instead, or switched off.
+
+    Returns:
+        One ``path:line: text`` string per occurrence, empty when there are none.
+    """
+    found: list[str] = []
+    for path in sorted(SOURCE_DIR.rglob("*.rs")):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("//"):
+                continue
+            for name in RUNTIME_ACL_NAMES:
+                if re.search(rf"\b{name}\b", line):
+                    found.append(f"{path.relative_to(ROOT)}:{number}: {stripped[:100]}")
+                    break
+    return found
+
+
 def main() -> int:
     problems = self_test_matcher()
     if problems:
@@ -226,6 +292,24 @@ def main() -> int:
         print(
             "\nUntil that is fixed this check cannot tell a working grant from a broken one,\n"
             "so it refuses rather than reporting a pass it did not earn."
+        )
+        return 1
+
+    runtime_grants = runtime_acl_call_sites()
+    if runtime_grants:
+        print("The desktop crate grants itself a capability at runtime:")
+        for site in runtime_grants:
+            print(f"  {site}")
+        print(
+            "\nA capability added through Manager::add_capability exists only while the process\n"
+            "runs and is written down nowhere. Everything a reviewer reads to answer 'what may\n"
+            "the application window call' lives in desktop/src-tauri/capabilities/, and a\n"
+            "runtime grant is invisible there, so the files would keep describing a narrower\n"
+            "application than the one that ships. Tauri compiles this in by default, which is\n"
+            "why the absence of it is worth checking rather than assuming.\n"
+            "\nDeclare the grant in a capability file instead. If a runtime grant is genuinely\n"
+            "needed, that is a decision to make deliberately and record here, not one to let\n"
+            "through on the strength of the code compiling."
         )
         return 1
 
@@ -283,29 +367,42 @@ def main() -> int:
         )
         return 1
 
-    reaching = [
-        (path, capability)
+    covering = [
+        (path, capability, allowed)
         for path, capability, allowed in remote_grants
-        if LINK_COMMAND in allowed
-        and any(
+        if any(
             pattern_matches(pattern, address)
             for pattern in capability.get("remote", {}).get("urls", [])
             for address in addresses
         )
     ]
 
-    if not reaching:
-        print(f"No capability lets the application window call {LINK_COMMAND}.")
+    unreachable = sorted(
+        command for command in APP_WINDOW_COMMANDS if not any(command in allowed for _, _, allowed in covering)
+    )
+
+    if unreachable:
+        print("Commands the application window invokes that it cannot reach: " + ", ".join(unreachable))
         print(
             f"\nThe launcher navigates the webview to one of {sorted(hosts)} on a port it picks at\n"
             "runtime, and Tauri classifies that as a remote origin. A capability therefore needs\n"
             'a "remote" block whose URL patterns cover that address, and permissions that resolve\n'
-            f"to {LINK_COMMAND}. Without both, clicking any outbound link in the product does\n"
+            "to each command the page invokes. Without both, the control that calls it does\n"
             "nothing at all: the command is refused before it runs.\n"
-            f"\nCapabilities carrying a remote block: {len(remote_grants)}.\n"
+            "\nA grant being present for one command says nothing about the others, so each is\n"
+            "checked on its own. If one of these is genuinely no longer called from the page,\n"
+            "take it out of APP_WINDOW_COMMANDS in the same commit that takes out the call.\n"
+            f"\nCapabilities carrying a remote block: {len(remote_grants)}, of which\n"
+            f"{len(covering)} cover the launcher address.\n"
             f"Addresses checked: {', '.join(addresses[:4])} and {len(addresses) - 4} more."
         )
         return 1
+
+    reaching = [
+        (path, capability)
+        for path, capability, allowed in covering
+        if any(command in allowed for command in APP_WINDOW_COMMANDS)
+    ]
 
     if prefixed_remote:
         print("A remote origin is being granted a plugin permission: " + "; ".join(prefixed_remote))
@@ -323,7 +420,8 @@ def main() -> int:
         f"desktop link ACL: {permission_file_count} permission file(s) define "
         f"{len(commands)} permission(s) and {len(sets)} set(s); "
         f"all {len(handlers)} registered command(s) are granted; "
-        f"{LINK_COMMAND} reaches the application window through {names}."
+        f"all {len(APP_WINDOW_COMMANDS)} command(s) the application page invokes "
+        f"({', '.join(APP_WINDOW_COMMANDS)}) reach it through {names}."
     )
     return 0
 
