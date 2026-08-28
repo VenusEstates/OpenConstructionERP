@@ -275,7 +275,10 @@ def _parse_user_uuid(user_id: str | None) -> uuid.UUID | None:
 # ── Autocomplete metadata helpers (Phase F v2.7.0) ────────────────────────
 
 
-_BREAKDOWN_KEYS: tuple[str, ...] = ("labor_cost", "material_cost", "equipment_cost")
+# ``other_cost`` is the catch-all a reprice stamps for component types that are
+# none of the three named buckets, a subcontractor line being the common one.
+# Without it the breakdown would be short of the rate it explains.
+_BREAKDOWN_KEYS: tuple[str, ...] = ("labor_cost", "material_cost", "equipment_cost", "other_cost")
 
 
 def _extract_cost_breakdown(metadata: dict[str, Any] | None) -> dict[str, float] | None:
@@ -842,6 +845,7 @@ async def search_cost_items(
                         "labor_cost",
                         "material_cost",
                         "equipment_cost",
+                        "other_cost",
                         "labor_hours",
                         "workers_per_unit",
                         "scope_of_work",

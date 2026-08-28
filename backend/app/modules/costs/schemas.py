@@ -97,6 +97,55 @@ def _normalize_mass_per_unit(value: Decimal | str | float | None) -> str:
     return format(dec, "f")
 
 
+def _canonicalize_components(components: list[dict[str, Any]] | None) -> list[dict[str, Any]] | None:
+    """Move a recipe component's ``factor`` onto the canonical ``quantity``.
+
+    ``quantity`` is what every reader of ``CostItem.components`` looks for, and
+    what the CWICR ingest writes. ``factor`` is the assemblies module's word for
+    the same idea, and the import guide and the shipped recipe template asked
+    for it up to 16.2.0, so files written against that documentation are out
+    there. We keep reading them, but we stop storing them that way: the alias is
+    resolved here, once, on the way in, so no reader downstream has to know
+    about it.
+
+    ``factor`` is left in place alongside the ``quantity`` it filled in. The
+    component dict is the caller's own shape and dropping a key they sent is a
+    second surprise; a duplicate is harmless because every reader prefers
+    ``quantity``.
+
+    Args:
+        components: The submitted component list, or ``None``.
+
+    Returns:
+        The list with ``quantity`` filled in wherever only ``factor`` was given.
+
+    Raises:
+        ValueError: When a component carries both keys with different values.
+            A half-migrated file is exactly where a silent precedence rule turns
+            into the next wrong number, so it is refused rather than resolved.
+    """
+    if not components:
+        return components
+    for index, comp in enumerate(components):
+        if not isinstance(comp, dict) or "factor" not in comp:
+            continue
+        factor = comp["factor"]
+        quantity = comp.get("quantity")
+        if quantity is None or quantity == "":
+            comp["quantity"] = factor
+            continue
+        try:
+            same = Decimal(str(quantity)) == Decimal(str(factor))
+        except (InvalidOperation, ValueError, TypeError):
+            same = str(quantity) == str(factor)
+        if not same:
+            raise ValueError(
+                f"component[{index}] carries both 'quantity' ({quantity}) and 'factor' ({factor}) "
+                f"with different values; 'factor' is a legacy alias for 'quantity', so drop one"
+            )
+    return components
+
+
 # ── Create / Update ───────────────────────────────────────────────────────
 
 
@@ -159,6 +208,11 @@ class CostItemCreate(BaseModel):
     def _validate_mass_per_unit(cls, v: Decimal | str | float | None) -> str:
         return _normalize_mass_per_unit(v)
 
+    @field_validator("components")
+    @classmethod
+    def _canonicalize_components(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return _canonicalize_components(v) or []
+
 
 class CostItemUpdate(BaseModel):
     """Update a cost item (all fields optional)."""
@@ -192,6 +246,11 @@ class CostItemUpdate(BaseModel):
         if v is None:
             return None
         return _normalize_mass_per_unit(v)
+
+    @field_validator("components")
+    @classmethod
+    def _canonicalize_components(cls, v: list[dict[str, Any]] | None) -> list[dict[str, Any]] | None:
+        return _canonicalize_components(v)
 
 
 # ── Response ───────────────────────────────────────────────────────────
@@ -997,7 +1056,15 @@ class RepriceResponse(BaseModel):
     items_fully_priced: int
     items_partially_priced: int
     items_unpriced: int
+    # Items whose rate was left alone because their recipe could not be read:
+    # a component carried no usable quantity, so no total was computable.
+    items_unreadable: int = 0
+    # Items whose rate was left alone because a fully priced recipe came to
+    # nothing while the item already carried a rate.
+    items_zero_total: int = 0
     coverage: float
     missing_resource_count: int
     missing_resources_sample: list[str]
+    unreadable_resource_count: int = 0
+    unreadable_resources_sample: list[str] = Field(default_factory=list)
     dry_run: bool

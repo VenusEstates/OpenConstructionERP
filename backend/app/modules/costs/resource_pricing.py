@@ -76,7 +76,14 @@ def resource_key_for(code: str | None, name: str | None) -> str:
 
 
 def _to_decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
-    """Parse a money/quantity value (str | int | float | None) to Decimal."""
+    """Parse a money value (str | int | float | None) to Decimal.
+
+    An absent or unparseable value yields ``default``. That is the right
+    contract for every price slot in this module: a coefficient base ships no
+    prices at all, and a 0 there is then classified as unpriced by
+    ``_PRICE_EPS``. It is NOT the right contract for a component's quantity -
+    see :func:`component_quantity`.
+    """
     if value is None or value == "":
         return default
     try:
@@ -85,9 +92,103 @@ def _to_decimal(value: Any, default: Decimal = Decimal("0")) -> Decimal:
         return default
 
 
+# Keys a recipe component may carry its norm quantity under. ``quantity`` is
+# canonical and is what the CWICR ingest writes. ``factor`` is read as a legacy
+# alias: it is the assemblies module's word for the same idea
+# (``oe_assemblies_component.factor``), it is what the shipped recipe template
+# and the import guide asked for up to 16.2.0, so customer files written against
+# that documentation exist and must keep working. New writes are canonicalised
+# to ``quantity`` at the API boundary (see ``CostItemCreate.components``).
+_QUANTITY_KEYS: tuple[str, ...] = ("quantity", "factor")
+
+
+def component_quantity(comp: dict[str, Any]) -> Decimal | None:
+    """Norm quantity of a recipe component, or ``None`` when it carries none.
+
+    A missing quantity is not a quantity of zero. Reading it as zero prices the
+    line at nothing while the line still looks successfully priced, which turns
+    a recipe the platform cannot read into a rate of ``0.00`` that reports
+    itself as complete. So this returns ``None`` for anything unusable and
+    leaves it to the caller to refuse or report the component.
+
+    Args:
+        comp: One entry of ``CostItem.components``.
+
+    Returns:
+        The quantity as a :class:`~decimal.Decimal` when the component carries a
+        usable one - an explicit ``0`` included, which is a real quantity.
+        ``None`` when the key is absent, blank, unparseable, not finite (a NaN
+        can reach here from a parquet column with nulls) or negative.
+    """
+    for key in _QUANTITY_KEYS:
+        if key not in comp:
+            continue
+        raw = comp[key]
+        if raw is None or raw == "":
+            continue
+        try:
+            qty = Decimal(str(raw))
+        except (InvalidOperation, ValueError, TypeError):
+            return None
+        if not qty.is_finite() or qty < 0:
+            return None
+        return qty
+    return None
+
+
 def _q2(value: Decimal) -> Decimal:
     """Round to 2 dp (money) with the schema's half-up convention."""
     return value.quantize(Decimal("0.01"))
+
+
+# Component types folded into each published breakdown bucket. Anything not
+# listed lands in ``other_cost``, so the three named buckets plus the catch-all
+# always add up to the rate no matter what a base calls its component types.
+_LABOR_TYPES: frozenset[str] = frozenset({"labor", "operator"})
+_EQUIPMENT_TYPES: frozenset[str] = frozenset({"equipment", "electricity"})
+_MATERIAL_TYPES: frozenset[str] = frozenset({"material"})
+
+
+def _breakdown_metadata(
+    metadata: dict[str, Any] | None,
+    by_type: dict[str, Decimal],
+    total: Decimal,
+) -> dict[str, Any]:
+    """Restate an item's cost breakdown so it adds up to the repriced rate.
+
+    Every component type that went into the rate is accounted for. The three
+    named buckets keep the shape the catalogue API and the estimator UI already
+    read; every other type (a subcontractor line, say) lands in ``other_cost``
+    rather than being summed into the rate and left out of the explanation of
+    it. ``cost_by_type`` carries the same money split by its own type name, so a
+    reader can say what the catch-all is made of.
+
+    All four money keys are written unconditionally, zeros included. The rate
+    has just been recomputed from the price sheet, so any figure the previous
+    import stamped is stale, and a stale bucket sitting next to a fresh rate is
+    the same defect in a smaller place.
+
+    Args:
+        metadata: The item's existing metadata, or ``None``.
+        by_type: Line costs accumulated per component ``type``.
+        total: The recomputed rate; the buckets are guaranteed to sum to it.
+
+    Returns:
+        A new metadata dict. The caller assigns it, so the ORM sees a new object
+        and marks the JSON column dirty.
+    """
+    meta = dict(metadata or {})
+    labor = sum((v for k, v in by_type.items() if k in _LABOR_TYPES), Decimal("0"))
+    material = sum((v for k, v in by_type.items() if k in _MATERIAL_TYPES), Decimal("0"))
+    equipment = sum((v for k, v in by_type.items() if k in _EQUIPMENT_TYPES), Decimal("0"))
+    meta["labor_cost"] = float(_q2(labor))
+    meta["material_cost"] = float(_q2(material))
+    meta["equipment_cost"] = float(_q2(equipment))
+    # Derived from the total rather than re-summed, so rounding can never leave
+    # the four buckets short of the rate they claim to explain.
+    meta["other_cost"] = float(_q2(total - labor - material - equipment))
+    meta["cost_by_type"] = {ctype: float(_q2(amount)) for ctype, amount in sorted(by_type.items())}
+    return meta
 
 
 @dataclass
@@ -126,7 +227,14 @@ class RepriceResult:
     items_fully_priced: int = 0
     items_partially_priced: int = 0
     items_unpriced: int = 0
+    # Items left untouched because their recipe could not be read: at least one
+    # component carried no usable quantity. Kept apart from ``items_unpriced``,
+    # which means "we know the recipe, we do not know the prices".
+    items_unreadable: int = 0
+    # Items left untouched because a fully priced recipe computed to nothing.
+    items_zero_total: int = 0
     missing_resources: set[str] = field(default_factory=set)
+    unreadable_resources: set[str] = field(default_factory=set)
     dry_run: bool = False
 
     def as_dict(self) -> dict[str, Any]:
@@ -138,9 +246,13 @@ class RepriceResult:
             "items_fully_priced": self.items_fully_priced,
             "items_partially_priced": self.items_partially_priced,
             "items_unpriced": self.items_unpriced,
+            "items_unreadable": self.items_unreadable,
+            "items_zero_total": self.items_zero_total,
             "coverage": (round(self.items_fully_priced / self.items_total, 4) if self.items_total else 0.0),
             "missing_resource_count": len(self.missing_resources),
             "missing_resources_sample": sorted(self.missing_resources)[:25],
+            "unreadable_resource_count": len(self.unreadable_resources),
+            "unreadable_resources_sample": sorted(self.unreadable_resources)[:25],
             "dry_run": self.dry_run,
         }
 
@@ -488,9 +600,17 @@ class ResourcePriceService:
 
         For each work item: ``rate = sum(component.quantity x sheet_price)``. Each
         component's ``unit_rate`` and ``cost`` are rewritten to match the sheet,
-        and the metadata labour/material/equipment breakdown is refreshed, so the
+        and the metadata breakdown is refreshed to add up to the new rate, so the
         stored rate and its explanation stay consistent. ``dry_run`` computes the
         summary without writing.
+
+        Three outcomes leave an item's rate alone rather than publish a number
+        that cannot be trusted, and each is reported separately: no priced line
+        at all (``items_unpriced``), a component with no usable quantity
+        (``items_unreadable``), and a fully priced recipe that computes to
+        nothing while the item already carries a rate (``items_zero_total``).
+        Only an item whose rate was actually recomputed counts towards
+        ``items_fully_priced`` and therefore towards ``coverage``.
         """
         result = RepriceResult(region=region, dry_run=dry_run)
         prices = await self._price_map(region)
@@ -520,6 +640,7 @@ class ResourcePriceService:
             by_type: dict[str, Decimal] = {}
             priced_lines = 0
             total_lines = 0
+            unreadable_lines = 0
             new_components: list[dict[str, Any]] = []
             for comp in components:
                 if not isinstance(comp, dict):
@@ -527,9 +648,18 @@ class ResourcePriceService:
                     continue
                 total_lines += 1
                 key = resource_key_for(comp.get("code"), comp.get("name"))
-                unit_price = prices.get(key)
-                qty = _to_decimal(comp.get("quantity"))
+                qty = component_quantity(comp)
                 new_comp = dict(comp)
+                if qty is None:
+                    # No usable quantity: this line cannot contribute a cost and
+                    # must not be counted as one. Checked before the price so a
+                    # malformed line is reported as malformed rather than as an
+                    # ordinary gap in price coverage.
+                    unreadable_lines += 1
+                    result.unreadable_resources.add(key)
+                    new_components.append(new_comp)
+                    continue
+                unit_price = prices.get(key)
                 if unit_price is not None and unit_price >= _PRICE_EPS:
                     priced_lines += 1
                     line_cost = _q2(qty * unit_price)
@@ -542,16 +672,34 @@ class ResourcePriceService:
                     result.missing_resources.add(key)
                 new_components.append(new_comp)
 
-            if total_lines and priced_lines == total_lines:
-                result.items_fully_priced += 1
-            elif priced_lines:
-                result.items_partially_priced += 1
-            else:
+            if unreadable_lines:
+                # A recipe we cannot read is not a recipe we can price. Writing
+                # a rate here would publish a number computed from a total that
+                # was never computable, and the counts above would call it a
+                # success. Leave the item exactly as it was and report it.
+                result.items_unreadable += 1
+                continue
+
+            fully_priced = bool(total_lines) and priced_lines == total_lines
+            if not priced_lines:
                 result.items_unpriced += 1
                 # No line priced: leave the item untouched rather than zero it.
                 continue
 
             new_rate_str = str(_q2(new_total))
+            if new_total == 0 and _to_decimal(item.rate) != 0:
+                # Every priced line came to nothing yet the item already carries
+                # a rate. Whatever the cause, overwriting a real rate with 0.00
+                # and calling the run fully priced is the worst of the two
+                # possible mistakes, so refuse and report instead.
+                result.items_zero_total += 1
+                continue
+
+            if fully_priced:
+                result.items_fully_priced += 1
+            else:
+                result.items_partially_priced += 1
+
             changed = new_rate_str != str(item.rate)
             if changed:
                 result.items_changed += 1
@@ -560,17 +708,7 @@ class ResourcePriceService:
             if not dry_run:
                 item.rate = new_rate_str
                 item.components = new_components
-                meta = dict(item.metadata_ or {})
-                if by_type.get("labor") is not None or by_type.get("operator") is not None:
-                    meta["labor_cost"] = float(
-                        _q2(by_type.get("labor", Decimal("0")) + by_type.get("operator", Decimal("0")))
-                    )
-                if by_type.get("material") is not None:
-                    meta["material_cost"] = float(_q2(by_type["material"]))
-                equip = by_type.get("equipment", Decimal("0")) + by_type.get("electricity", Decimal("0"))
-                if equip:
-                    meta["equipment_cost"] = float(_q2(equip))
-                item.metadata_ = meta
+                item.metadata_ = _breakdown_metadata(item.metadata_, by_type, new_total)
                 pending += 1
                 if pending >= 500:
                     await self.session.flush()
@@ -601,7 +739,7 @@ class ResourcePriceService:
                     source_module="oe_costs",
                 )
         logger.info(
-            "Repriced %s: %d/%d items (%d changed, %d fully, %d partial, %d unpriced)%s",
+            "Repriced %s: %d/%d items (%d changed, %d fully, %d partial, %d unpriced, %d unreadable, %d zero-total)%s",
             region,
             result.items_repriced,
             result.items_total,
@@ -609,6 +747,8 @@ class ResourcePriceService:
             result.items_fully_priced,
             result.items_partially_priced,
             result.items_unpriced,
+            result.items_unreadable,
+            result.items_zero_total,
             " [dry-run]" if dry_run else "",
         )
         return result

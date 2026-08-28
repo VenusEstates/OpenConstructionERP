@@ -28,14 +28,23 @@ Run:
 
 from __future__ import annotations
 
+import csv
+import json
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.modules.costs.models import CostItem, ResourcePrice
-from app.modules.costs.resource_pricing import ResourcePriceService, resource_key_for
+from app.modules.costs.resource_pricing import (
+    ResourcePriceService,
+    component_quantity,
+    resource_key_for,
+)
+from app.modules.costs.schemas import CostItemCreate, CostItemUpdate
 from tests._pg import transactional_session
 
 
@@ -347,3 +356,268 @@ async def test_region_stats(session):
     assert stats["priced"] == 1
     assert stats["unpriced"] == 1
     assert stats["coverage"] == 0.5
+
+
+# ── shipped recipe template ──────────────────────────────────────────────────
+#
+# The defect these pin: the template shipped its component quantities under
+# ``factor``, nothing read that key, and the reader turned the absence into a
+# quantity of zero. Every line then priced at nothing while still counting as
+# priced, so the base repriced to 0.00 and reported itself fully priced with no
+# missing resources. Three artefacts had to agree on the wrong shape for that to
+# ship - the template, the reader, and a smoke test that only checked the blob
+# survived storage - so these pin the mechanism, not just the template.
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_TEMPLATE_JSON = _REPO_ROOT / "data" / "templates" / "cost_database_with_assemblies.json"
+_TEMPLATE_CSV = _REPO_ROOT / "data" / "templates" / "example_us_construction.csv"
+
+
+def _shipped_recipes() -> list[dict]:
+    return json.loads(_TEMPLATE_JSON.read_text(encoding="utf-8"))
+
+
+def _shipped_leaf_prices() -> dict[str, str]:
+    """Resource code -> unit price, from the flat CSV the recipes reference."""
+    with _TEMPLATE_CSV.open(encoding="utf-8") as fh:
+        return {row["code"]: row["rate"] for row in csv.DictReader(fh)}
+
+
+def _breakdown_total(metadata: dict) -> Decimal:
+    """Sum of the published breakdown buckets, which must equal the rate."""
+    keys = ("labor_cost", "material_cost", "equipment_cost", "other_cost")
+    return sum((Decimal(str(metadata.get(key, 0))) for key in keys), Decimal("0"))
+
+
+def test_component_quantity_tells_absent_from_zero():
+    # A real zero is a quantity. An absent, blank or unusable one is not, and
+    # must not be reported as zero - that is the whole defect in one function.
+    assert component_quantity({"quantity": 2.5}) == Decimal("2.5")
+    assert component_quantity({"quantity": 0}) == Decimal("0")
+    assert component_quantity({"quantity": "0.00"}) == Decimal("0.00")
+    assert component_quantity({}) is None
+    assert component_quantity({"quantity": None}) is None
+    assert component_quantity({"quantity": ""}) is None
+    assert component_quantity({"quantity": "not a number"}) is None
+    assert component_quantity({"quantity": float("nan")}) is None
+    assert component_quantity({"quantity": -1}) is None
+    # Legacy alias, and only when the canonical key carries nothing.
+    assert component_quantity({"factor": 0.18}) == Decimal("0.18")
+    assert component_quantity({"quantity": 3, "factor": 9}) == Decimal("3")
+
+
+@pytest.mark.asyncio
+async def test_shipped_recipe_template_prices_to_real_rates(session):
+    """The shipped template, priced from its own companion CSV, is not zero."""
+    region = "US_TEMPLATE"
+    recipes = _shipped_recipes()
+    for rec in recipes:
+        await _add_item(
+            session,
+            region=region,
+            code=rec["code"],
+            rate=rec["rate"],
+            components=rec["components"],
+            currency="USD",
+        )
+
+    svc = ResourcePriceService(session)
+    # Price the sheet directly. Seeding from the base cannot arm this test: the
+    # recipes carry no unit_rate, so seed_region produces a sheet of zeros, every
+    # resource reads as unpriced and the reprice leaves every item alone. That is
+    # the run that hides the defect rather than the one that shows it.
+    await svc.set_prices_bulk(
+        region,
+        [{"resource_key": code, "unit_price": price} for code, price in _shipped_leaf_prices().items()],
+    )
+
+    result = await svc.reprice_region(region)
+    assert result.items_total == len(recipes)
+    assert result.items_fully_priced == len(recipes)
+    assert result.items_unreadable == 0
+    assert result.items_zero_total == 0
+    assert result.missing_resources == set()
+
+    items = {
+        i.code: i for i in ((await session.execute(select(CostItem).where(CostItem.region == region))).scalars().all())
+    }
+    for code, item in items.items():
+        assert Decimal(item.rate) > 0, f"{code} repriced to {item.rate}"
+        assert _breakdown_total(item.metadata_) == Decimal(item.rate), (
+            f"{code}: breakdown {item.metadata_} does not add up to rate {item.rate}"
+        )
+
+    # The roofing recipe carries the subcontractor line, so it is where a
+    # breakdown that only knows labour / material / equipment goes short.
+    # 1.00 sq x 425.00 subcontractor + 0.18 hr x 95.00 foreman = 442.10.
+    roof = items["WI-ROOF-ASPH-PITCH"]
+    assert Decimal(roof.rate) == Decimal("442.10")
+    assert roof.metadata_["labor_cost"] == 17.10
+    assert roof.metadata_["other_cost"] == 425.00
+    assert roof.metadata_["cost_by_type"]["subcontractor"] == 425.00
+
+
+@pytest.mark.asyncio
+async def test_reprice_reads_the_legacy_factor_alias(session):
+    """A recipe written against the old documentation still prices."""
+    region = "US_ALIAS"
+    await _add_item(
+        session,
+        region=region,
+        code="OLD-1",
+        rate=0,
+        components=[
+            {"code": "M1", "factor": 4.0, "unit": "kg", "type": "material"},
+            {"code": "L1", "factor": 0.5, "unit": "hr", "type": "labor"},
+        ],
+        currency="USD",
+    )
+    svc = ResourcePriceService(session)
+    await svc.set_prices_bulk(
+        region,
+        [
+            {"resource_key": "M1", "unit_price": "3.00"},
+            {"resource_key": "L1", "unit_price": "40.00"},
+        ],
+    )
+
+    result = await svc.reprice_region(region)
+    assert result.items_fully_priced == 1
+    assert result.items_unreadable == 0
+
+    item = (await session.execute(select(CostItem).where(CostItem.region == region))).scalar_one()
+    # 4 * 3.00 + 0.5 * 40.00 = 32.00
+    assert Decimal(item.rate) == Decimal("32.00")
+    assert _breakdown_total(item.metadata_) == Decimal("32.00")
+
+
+@pytest.mark.asyncio
+async def test_reprice_refuses_a_component_with_no_quantity(session):
+    """No quantity is not a quantity of nothing, and never a priced line."""
+    region = "US_NOQTY"
+    await _add_item(
+        session,
+        region=region,
+        code="BROKEN-1",
+        rate="38.50",
+        components=[
+            {"code": "M1", "unit": "kg", "type": "material"},  # neither key
+            {"code": "L1", "quantity": 0.5, "unit": "hr", "type": "labor"},
+        ],
+        currency="USD",
+    )
+    svc = ResourcePriceService(session)
+    await svc.set_prices_bulk(
+        region,
+        [
+            {"resource_key": "M1", "unit_price": "3.00"},
+            {"resource_key": "L1", "unit_price": "40.00"},
+        ],
+    )
+
+    result = await svc.reprice_region(region)
+    assert result.items_unreadable == 1
+    assert result.items_fully_priced == 0
+    assert result.items_partially_priced == 0
+    assert result.items_repriced == 0
+    assert result.as_dict()["coverage"] == 0.0
+    assert "M1" in result.unreadable_resources
+    assert result.as_dict()["unreadable_resources_sample"] == ["M1"]
+
+    item = (await session.execute(select(CostItem).where(CostItem.region == region))).scalar_one()
+    assert Decimal(item.rate) == Decimal("38.50"), "a rate we could not recompute must be left alone"
+
+
+@pytest.mark.asyncio
+async def test_reprice_refuses_to_zero_a_rate_that_computes_to_nothing(session):
+    """A fully priced recipe worth 0.00 is reported, not published."""
+    region = "US_ZERO"
+    await _add_item(
+        session,
+        region=region,
+        code="ZERO-1",
+        rate="485.00",
+        components=[{"code": "M1", "quantity": 0, "unit": "kg", "type": "material"}],
+        currency="USD",
+    )
+    svc = ResourcePriceService(session)
+    await svc.set_prices_bulk(region, [{"resource_key": "M1", "unit_price": "3.00"}])
+
+    result = await svc.reprice_region(region)
+    assert result.items_zero_total == 1
+    assert result.items_fully_priced == 0
+    assert result.items_repriced == 0
+
+    item = (await session.execute(select(CostItem).where(CostItem.region == region))).scalar_one()
+    assert Decimal(item.rate) == Decimal("485.00")
+
+
+@pytest.mark.asyncio
+async def test_reprice_breakdown_accounts_for_every_component_type(session):
+    """Whatever a base calls a component type, its money is in the breakdown."""
+    region = "US_TYPES"
+    await _add_item(
+        session,
+        region=region,
+        code="MIX-1",
+        rate=0,
+        components=[
+            {"code": "L1", "quantity": 1, "unit": "hr", "type": "labor"},
+            {"code": "M1", "quantity": 1, "unit": "kg", "type": "material"},
+            {"code": "E1", "quantity": 1, "unit": "hr", "type": "equipment"},
+            {"code": "S1", "quantity": 1, "unit": "sq", "type": "subcontractor"},
+            {"code": "X1", "quantity": 1, "unit": "ea", "type": "transport"},
+        ],
+        currency="USD",
+    )
+    svc = ResourcePriceService(session)
+    await svc.set_prices_bulk(
+        region,
+        [{"resource_key": code, "unit_price": "10.00"} for code in ("L1", "M1", "E1", "S1", "X1")],
+    )
+
+    await svc.reprice_region(region)
+    item = (await session.execute(select(CostItem).where(CostItem.region == region))).scalar_one()
+    assert Decimal(item.rate) == Decimal("50.00")
+    meta = item.metadata_
+    assert meta["labor_cost"] == 10.0
+    assert meta["material_cost"] == 10.0
+    assert meta["equipment_cost"] == 10.0
+    assert meta["other_cost"] == 20.0, "subcontractor + transport are in the rate, so they are in the breakdown"
+    assert _breakdown_total(meta) == Decimal("50.00")
+    assert meta["cost_by_type"] == {
+        "equipment": 10.0,
+        "labor": 10.0,
+        "material": 10.0,
+        "subcontractor": 10.0,
+        "transport": 10.0,
+    }
+
+
+# ── write-boundary canonicalisation ──────────────────────────────────────────
+
+
+def test_cost_item_create_canonicalizes_factor_to_quantity():
+    item = CostItemCreate(
+        code="WI-1",
+        unit="sf",
+        rate=Decimal("10"),
+        components=[{"code": "M1", "factor": 0.25, "type": "material"}],
+    )
+    assert item.components[0]["quantity"] == 0.25
+
+
+def test_cost_item_create_refuses_conflicting_quantity_and_factor():
+    with pytest.raises(ValidationError, match="legacy alias"):
+        CostItemCreate(
+            code="WI-1",
+            unit="sf",
+            rate=Decimal("10"),
+            components=[{"code": "M1", "quantity": 0.25, "factor": 0.5, "type": "material"}],
+        )
+
+
+def test_cost_item_update_canonicalizes_factor_to_quantity():
+    patch = CostItemUpdate(components=[{"code": "M1", "factor": "1.5", "type": "material"}])
+    assert patch.components is not None
+    assert patch.components[0]["quantity"] == "1.5"
