@@ -143,12 +143,25 @@ class RateBreakdown(BaseModel):
 
 
 class TemplateCreate(BaseModel):
-    """Create a labor rate template with its on-cost components."""
+    """Create a labor rate template with its on-cost components.
+
+    ``base_wage`` is required and must be positive. It used to default to zero
+    with no constraint, and a template saved that way built up to an all-in rate
+    of ``0.00`` - which is not ``None``, so every consumer read it as a priced
+    rate and charged nothing for the labour hours while flagging nothing.
+    Percentage on-costs cannot rescue such a template either, because they are a
+    share of the base wage and a share of zero is zero.
+
+    The field is required rather than defaulted-and-constrained because Pydantic
+    does not validate defaults: ``Field(default=Decimal("0"), gt=0)`` still lets
+    an omitted field through as zero, which is the very payload that reported
+    the defect.
+    """
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
     name: str = Field(..., min_length=1, max_length=255)
-    base_wage: Decimal = Decimal("0")
+    base_wage: Decimal = Field(..., gt=0)
     currency: str = Field(default="", max_length=3)
     description: str = Field(default="", max_length=2000)
     components: list[OnCostIn] = Field(default_factory=list)
@@ -163,12 +176,16 @@ class TemplateUpdate(BaseModel):
 
     When ``components`` is provided the whole component list is replaced; when
     omitted the existing components are left untouched.
+
+    ``base_wage`` carries the same positive constraint as on create, so a
+    template cannot be corrected down into the silent zero that create refuses.
+    Omitting it still leaves the stored wage untouched.
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    base_wage: Decimal | None = None
+    base_wage: Decimal | None = Field(default=None, gt=0)
     currency: str | None = Field(default=None, max_length=3)
     description: str | None = Field(default=None, max_length=2000)
     components: list[OnCostIn] | None = None
