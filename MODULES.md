@@ -6,7 +6,7 @@ map of every module that ships in the box.
 OpenConstructionERP is modular by design: every business feature (BOQ, BIM,
 takeoff, schedule, CDE, regional BOQ packs and more) is a self-contained
 module that can be enabled, disabled, installed, or replaced without touching
-the core. The current build loads 180+ modules. You enable only the parts you
+the core. The current build loads 190 modules. You enable only the parts you
 need.
 
 This file is the single entry point. Deeper material lives alongside the code
@@ -16,9 +16,12 @@ it describes, and the links point there.
 
 ## 1. The module catalog
 
-All 185 modules that load in the current build, grouped by what they do for a
+All 190 modules that load in the current build, grouped by what they do for a
 construction team. The bold name is the module's display name; the code label
-is its backend folder under `backend/app/modules/`.
+is its backend folder under `backend/app/modules/`. The count is every directory
+under `backend/app/modules/` carrying a `manifest.py`, which is exactly what the
+loader discovers; a directory without one is a shared library, not a module, and
+does not load. Recount it that way rather than trusting this line.
 
 Jump to a group:
 [Estimating and BOQ](#estimating-and-boq) -
@@ -88,6 +91,7 @@ Measure quantities off drawings and models.
 - **Quantity Takeoff** `takeoff` - manual and assisted quantity takeoff from drawings and models.
 - **DWG Takeoff** `dwg_takeoff` - 2D DWG/DXF viewer with measurements, annotations and BOQ linking.
 - **Markups & Annotations** `markups` - drawing markups, scale calibration and stamp templates.
+- **Rebar Schedule** `rebar_schedule` - reinforcement bending schedules in the ABS interchange format, validated against the format rules and summarised by bar diameter.
 
 ### BIM, CAD and coordination
 
@@ -187,6 +191,7 @@ Prove the work meets the standard.
 - **Compliance DSL** `compliance` - author validation rules as YAML or JSON without writing Python.
 - **Compliance AI** `compliance_ai` - a natural-language rule builder that compiles into the validation engine.
 - **Compliance Documents** `compliance_docs` - track expiring insurance, permits, bonds and certifications.
+- **Certified Payroll** `certified_payroll` - weekly certified payroll for public works: wage determination, trade classification, hours by day and the signed statement of compliance.
 - **Requirements & Quality Gates** `requirements` - extract, validate and track construction requirements.
 - **Temporary Works Register** `temporary_works` - governs the safety-critical lifecycle of temporary works from design check through permit to load and strike.
 - **Credentials Registry** `credentials` - tracks professional licences and certifications with validity windows and reports who may not work today.
@@ -285,6 +290,8 @@ you work.
 - **Regional Pack - DACH (DE/AT/CH)** `dach_pack` - GAEB exchange formats, VOB terms, DIN 276 cost groups and HOAI fees.
 - **Regional Pack - United Kingdom** `uk_pack` - JCT and NEC4 forms, NRM2 measurement, CIS tax and interim valuations.
 - **Regional Pack - United States** `us_pack` - AIA G702 applications, MasterFormat divisions, imperial units and USD.
+- **Regional Pack - California** `us_ca_pack` - district sales tax stack, state prevailing wage, retention caps and the statutory payment and lien clocks, on top of the US pack.
+- **Regional Pack - Texas** `us_tx_pack` - lump sum against separated contract sales tax, local prevailing wage, public works retainage caps and the statutory payment and lien clocks, on top of the US pack.
 - **Regional Pack - India** `india_pack` - IS codes, CPWD and MES rate references, multi-rate GST and INR.
 - **Regional Pack - Latin America** `latam_pack` - SINAPI (Brazil), NTDIF (Mexico) and regional currencies.
 - **Regional Pack - Mexico** `mexico_pack` - APU unit-price analysis under LOPSRM public-works rules with IVA.

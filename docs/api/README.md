@@ -21,7 +21,7 @@ Every response carries an `X-API-Version` header with the running platform versi
 
 ## How endpoints are organised
 
-The platform ships 161 modules (projects, costs, boq, users, takeoff, validation, and many more). Each module owns a `router.py`, and the module loader mounts it automatically at:
+The platform ships 190 modules (projects, costs, boq, users, takeoff, validation, and many more). Each module owns a `router.py`, and the module loader mounts it automatically at:
 
 ```
 /api/v1/{module}/
