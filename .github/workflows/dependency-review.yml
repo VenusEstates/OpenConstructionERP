@@ -16,10 +16,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Read this before trusting the job below to catch a licence problem.
+      #
+      # It cannot, on its own. The trigger is pull_request, and this project
+      # commits directly to main without PRs, so the event has never occurred
+      # and this action has never once evaluated a dependency change. The
+      # trigger is left as it is because the action needs a pull-request diff
+      # and the GitHub dependency-review API to work at all; it is kept for the
+      # day a PR does arrive, not relied on.
+      #
+      # The denylist previously read "GPL-2.0, GPL-3.0, LGPL-2.1, LGPL-3.0,
+      # AGPL-1.0". It denied AGPL-1.0, which nothing in any ecosystem we touch
+      # uses, and omitted AGPL-3.0, which is the licence of PyMuPDF, the one
+      # genuinely AGPL package we ship. Had this job ever run it would have
+      # waved that through. AGPL-3.0 and the SPDX -only/-or-later spellings are
+      # now listed.
+      #
+      # LGPL-3.0 stays on the list knowing it does not match what we ship:
+      # psycopg2-binary is LGPL-3.0-or-later and is a deliberate base
+      # dependency, so a PR that bumps it would fail here. That is the right
+      # way round for a licence gate on an inbound change, and the failure is
+      # informative rather than mysterious.
+      #
+      # The control that actually runs on every push is
+      # scripts/check_dependency_licences.py, in the Repo hygiene workflow.
+      # It inventories the installed environment, carries a reasoned allowlist
+      # of the copyleft we accept, and can be run locally before a push.
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0, LGPL-2.1, LGPL-3.0, AGPL-1.0
+          deny-licenses: >-
+            AGPL-1.0, AGPL-3.0, AGPL-3.0-only, AGPL-3.0-or-later,
+            GPL-2.0, GPL-3.0, LGPL-2.1, LGPL-3.0,
+            SSPL-1.0
           comment-summary-in-pr: on-failure
           warn-only: false

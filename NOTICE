@@ -196,6 +196,46 @@ commercial licence directly from Artifex Software --
 OpenConstructionERP's commercial licence covers only
 OpenConstructionERP itself.
 
+Artifex sells PyMuPDF commercially alongside the AGPL offer and pursues
+commercial licensing actively, so this is a live question for a
+commercial deployment rather than a theoretical one. What that means for
+a customer, and what the options are, is written out in
+COMMERCIAL-LICENSE.md under "AGPL components inside the Software".
+
+These are the features that read PDFs through PyMuPDF, so that a reader
+can tell whether their own deployment touches it at all:
+
+  * PDF drawing takeoff, vector recognition. Reading the vector geometry
+    off a drawing page to propose quantities, and the "find similar
+    symbols" count seeded from one symbol.
+  * PDF drawing takeoff, page rendering. Turning a page into an image,
+    both for the raster detector and for the optional online AI
+    analysis, and counting pages and pulling text on upload.
+  * Bill of quantities import from PDF. Counting pages before parsing to
+    reject an oversized file, and extracting text when the primary
+    reader (pdfplumber) cannot.
+  * File search. Indexing the text of uploaded PDFs, and rendering pages
+    of scanned PDFs so OCR can read them.
+  * Geo Hub. Rasterizing a PDF site plan so it can be georeferenced and
+    overlaid on a map.
+
+Everything else in the product, including every module that does not
+handle a PDF, is unaffected. Two further uses are not features: the demo
+seeder counts pages of sample documents, and `openestimate doctor`
+imports the package to report whether PDF takeoff will work.
+
+Replacing PyMuPDF is possible and the shape of the work is known. Page
+rendering, page counting and plain text extraction are ordinary
+operations that pypdfium2 (BSD-3-Clause and Apache-2.0, already present
+in every install underneath pdfplumber) performs directly. Vector
+recognition is the harder half: PyMuPDF hands us an already-decoded list
+of drawing paths, and the equivalent in pypdfium2 is a lower-level walk
+over page objects that has to compose the transformation matrices and
+flatten curves itself. It is new code rather than a swap of import
+lines. DataDrivenConstruction maintains a costed plan for this work;
+contact info@datadrivenconstruction.io if the timing of it matters to a
+purchasing decision.
+
 PyMuPDF is the only AGPL package upstream of us, and it is not the only
 copyleft one. Naming it alone was how the wrong reassurance above became
 possible, so the rest are named here, resolved from the dependency tree

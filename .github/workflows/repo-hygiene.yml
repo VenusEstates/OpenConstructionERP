@@ -476,6 +476,29 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_demo_firm_names.py
 
+      # Below the install because it inventories the installed environment
+      # rather than the declarations: reading pyproject.toml would see none of
+      # the transitive packages, which is where copyleft usually arrives.
+      #
+      # This is the licence control that runs. The one in
+      # .github/workflows/dependency-review.yml triggers on pull_request, which
+      # this project does not produce, so it has never evaluated anything; its
+      # denylist also omitted AGPL-3.0, the licence of the single AGPL package
+      # we ship. Both are now fixed, but only this step executes on a push.
+      #
+      # The environment here is the [dev,server] superset, so it over-reports
+      # against the wheel a user installs. That is the safe direction, and the
+      # allowlist in the script records why each accepted entry is accepted,
+      # including pyinstaller, which is dev-only, and pymupdf, which is not.
+      #
+      # Proven able to fail rather than only observed passing: removing pymupdf
+      # from the script's allowlist turns it red and names pymupdf, and the
+      # --require guard makes a green run impossible against an environment
+      # where the packages under test are not installed.
+      - name: Check no dependency carries copyleft we have not accepted
+        if: ${{ !cancelled() }}
+        run: python scripts/check_dependency_licences.py
+
       # No competitor or vendor product name ships, in code, UI strings,
       # changelog or docs. That rule had one enforcement point, the CI workflow,
       # and a rule enforced in exactly one place that nobody reads is not

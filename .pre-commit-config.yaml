@@ -86,6 +86,25 @@ repos:
         pass_filenames: false
         files: ^(backend/pyproject\.toml|frontend/package\.json|CHANGELOG\.md|frontend/src/features/about/Changelog\.tsx)$
 
+      # Copyleft licence gate. Registered as a manual-stage hook on purpose, so
+      # it is discoverable here and runs on request rather than on every commit:
+      #
+      #   pre-commit run --hook-stage manual dependency-licence-check
+      #   python scripts/check_dependency_licences.py
+      #
+      # It inventories the installed Python environment, which is the only way
+      # to see transitive copyleft, and refuses to report clean when the
+      # packages it is meant to measure are not installed. As an automatic hook
+      # that refusal would block every commit from anyone who has not installed
+      # the backend, which is how a gate gets uninstalled. The lane that runs it
+      # on every push is the Repo hygiene workflow, after its backend install.
+      - id: dependency-licence-check
+        name: Check no dependency carries copyleft we have not accepted
+        entry: python scripts/check_dependency_licences.py
+        language: system
+        pass_filenames: false
+        stages: [manual]
+
       # Block competitor/vendor brand names from entering the repo. Scans the
       # staged files only (so it guards new work without a full-tree pass), and
       # permits the small reviewed set of functional interop names in
