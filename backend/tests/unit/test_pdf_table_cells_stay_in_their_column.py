@@ -553,3 +553,95 @@ async def test_an_action_item_longer_than_a_page_still_reaches_the_export_route(
     pages = len(pypdf.PdfReader(io.BytesIO(pdf)).pages)
     spoken = sum(run.text.count("Remedy") for page in range(pages) for run in drawn_runs(pdf, page_number=page))
     assert spoken == 700, f"the action item lost words on the way to the page: {spoken} of 700"
+
+
+# ── Regulator reports ────────────────────────────────────────────────────────
+#
+# All four regulator generators funnel through one skeleton, so its two tables
+# are measured once there rather than four times through four database
+# fixtures. Both tables were built out of bare strings, which reportlab draws
+# with drawString at the column's left edge and lets run on: colWidths decides
+# where the grid line goes, not where the ink stops.
+
+REGULATORY_FRAME_RIGHT = A4[0] - 15 * mm
+
+# An escrow row of a RERA disclosure builds its value out of a bank name and
+# six figures, which is the longest thing the report puts in a table cell.
+LONG_ESCROW_VALUE = "Bank Emirates NBD Bank PJSC | Balance 128456789.55 AED (credits 154000000.00, debits 25543210.45)"
+LONG_SIGNATORY = "Dr Abdulrahman Al Marzouqi, Chief Development Officer and Authorised Signatory"
+
+
+def regulatory_pdf(**overrides: Any) -> bytes:
+    """A regulator report built through the skeleton all four generators share."""
+    from app.modules.property_dev.regulatory import _render_pdf
+
+    payload: dict[str, Any] = {
+        "title": "RERA Quarterly Project Disclosure",
+        "subtitle": "Marina Heights (MH-001) - 2026-Q2",
+        "sections": [("Escrow activity (Article 11)", [("ESCROW-8871-004", LONG_ESCROW_VALUE)])],
+        "signature_line": "Developer authorised signatory",
+        "qr_payload": "RERA|MH-001|2026-Q2",
+    }
+    payload.update(overrides)
+    return _render_pdf(**payload)
+
+
+def test_a_long_escrow_line_stays_inside_the_regulator_report_page() -> None:
+    """Value is the last column, so anything overflowing it leaves the paper."""
+    runs = drawn_runs(regulatory_pdf())
+    assert_column_stays_put(
+        runs,
+        starts_at=column_start(runs, "Value"),
+        boundary=REGULATORY_FRAME_RIGHT,
+        what="the escrow value",
+        beside="the right margin",
+    )
+
+
+def test_a_long_authorised_signatory_is_not_printed_over_the_date_beside_it() -> None:
+    """The signature block sets a free text name beside the date it was signed.
+
+    Rendered with no sections so the only table on the page is the signature
+    block, which keeps its column unambiguous whichever way the cells are built.
+    """
+    runs = drawn_runs(regulatory_pdf(sections=[], signature_line=LONG_SIGNATORY))
+    opening = [run for run in runs if run.text.startswith("Dr Abdulrahman")]
+    assert len(opening) == 1, (
+        f"expected the signature line to be drawn once so its column is unambiguous, found {len(opening)}"
+    )
+    assert_column_stays_put(
+        runs,
+        starts_at=opening[0].x0,
+        boundary=column_start(runs, "Date"),
+        what="the authorised signatory",
+        beside="the date",
+    )
+
+
+def test_a_regulator_value_that_already_fitted_keeps_its_columns() -> None:
+    """A report that never overflowed is laid out in the same columns it was.
+
+    The baseline sits 1pt higher than it did before the cells were wrapped, at
+    645.2 where it was 644.2, because a Paragraph places its first line on its
+    leading where a bare string sat on its font size. That is recorded here
+    rather than tuned away: the columns are what a reader sees, and they have
+    not moved by any amount.
+    """
+    runs = drawn_runs(regulatory_pdf(sections=[("Sales (Article 9)", [("Units sold", "42")])]))
+    placed = {run.text: (round(run.x0, 1), round(run.y, 1)) for run in runs}
+    assert placed["Units sold"] == (62.7, 645.2), placed["Units sold"]
+    assert placed["42"] == (232.8, 645.2), placed["42"]
+
+
+def test_a_regulator_value_carrying_markup_characters_is_printed_as_typed() -> None:
+    """The cells are parsed as markup now that they are Paragraphs.
+
+    A developer name is free text out of the database. An ampersand, an
+    apostrophe and a pair of angle brackets all mean something to reportlab's
+    paragraph parser, so the value has to arrive escaped and leave looking like
+    what somebody typed.
+    """
+    typed = "Al Majaz R&D <Holdings> O'Brien"
+    runs = drawn_runs(regulatory_pdf(sections=[("Parties", [("Developer", typed)])]))
+    drawn = " ".join(run.text for run in runs)
+    assert typed in drawn, f"the value was altered on the way to the page: {drawn!r}"

@@ -357,7 +357,7 @@ def _render_pdf(
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
         from reportlab.platypus import (
             Paragraph,
@@ -394,6 +394,31 @@ def _render_pdf(
     styles["Heading2"].fontName = BOLD_FONT
     styles["Heading3"].fontName = BOLD_FONT
     styles["BodyText"].fontName = BODY_FONT
+    # A cell holding a bare string cannot wrap. reportlab draws it with
+    # drawString at the column's left edge and lets it run on, so a long escrow
+    # line ran off the page and a long signatory printed over the date beside
+    # it. Paragraphs wrap inside the column instead. A Paragraph reads its face,
+    # size and colour from its own style and never from the TableStyle, so the
+    # values the table used to declare are declared here to keep the same look.
+    styles.add(
+        ParagraphStyle(
+            "GridHeader",
+            parent=styles["BodyText"],
+            fontName=BOLD_FONT,
+            fontSize=9,
+            leading=11,
+            textColor=colors.whitesmoke,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            "GridCell",
+            parent=styles["BodyText"],
+            fontName=BODY_FONT,
+            fontSize=9,
+            leading=11,
+        )
+    )
     story: list[Any] = [
         # Report title, section headings and the token all carry regulator
         # and development names, which a paragraph would parse as markup.
@@ -411,16 +436,16 @@ def _render_pdf(
             story.append(Paragraph("(no data)", styles["BodyText"]))
             story.append(Spacer(1, 0.3 * cm))
             continue
-        data = [["Field", "Value"]] + [[label, str(value)] for label, value in rows]
+        header = [Paragraph(_esc(head), styles["GridHeader"]) for head in ("Field", "Value")]
+        data = [header] + [
+            [Paragraph(_esc(label), styles["GridCell"]), Paragraph(_esc(value), styles["GridCell"])]
+            for label, value in rows
+        ]
         table = Table(data, colWidths=[6 * cm, 11 * cm])
         table.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("FONTNAME", (0, 0), (-1, 0), BOLD_FONT),
-                    ("FONTNAME", (0, 1), (-1, -1), BODY_FONT),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
                     ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f3f4f6")),
                     ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
@@ -436,8 +461,14 @@ def _render_pdf(
     story.append(Paragraph("Authorised signatory", styles["Heading3"]))
     sig_table = Table(
         [
-            [signature_line or "Authorised signatory", "Date"],
-            ["", datetime.now(UTC).strftime("%Y-%m-%d")],
+            [
+                Paragraph(_esc(signature_line or "Authorised signatory"), styles["GridCell"]),
+                Paragraph("Date", styles["GridCell"]),
+            ],
+            [
+                Paragraph("", styles["GridCell"]),
+                Paragraph(datetime.now(UTC).strftime("%Y-%m-%d"), styles["GridCell"]),
+            ],
         ],
         colWidths=[10 * cm, 7 * cm],
     )
@@ -445,8 +476,6 @@ def _render_pdf(
         TableStyle(
             [
                 ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.black),
-                ("FONTNAME", (0, 0), (-1, -1), BODY_FONT),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ],
         ),

@@ -338,11 +338,30 @@ def sales_contract_pdf() -> bytes:
     )
 
 
+def regulator_report_pdf() -> bytes:
+    """The skeleton every regulator generator funnels through.
+
+    Its heading cells became Paragraphs when the report was taught to wrap, so
+    the colour that keeps them legible now lives in a ParagraphStyle where a
+    TableStyle command can no longer reach it.
+    """
+    from app.modules.property_dev.regulatory import _render_pdf
+
+    return _render_pdf(
+        title="RERA Quarterly Project Disclosure",
+        subtitle="Marina Heights (MH-001) - 2026-Q2",
+        sections=[("Escrow activity (Article 11)", [("ESCROW-8871-004", "Bank Emirates NBD | Balance 1200.00 AED")])],
+        signature_line="Developer authorised signatory",
+        qr_payload="RERA|MH-001|2026-Q2",
+    )
+
+
 DOCUMENTS = {
     "bill of quantities": boq_pdf,
     "bill of quantities, large": large_boq_pdf,
     "methodology": methodology_pdf,
     "report": report_pdf,
+    "regulator report": regulator_report_pdf,
     "sales contract": sales_contract_pdf,
 }
 
