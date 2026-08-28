@@ -23,9 +23,7 @@ def load_input_record_map(records_dir: Path | None) -> dict[str, dict]:
     return mapping
 
 
-def parse_results(
-    path: Path, input_record_map: dict[str, dict] | None = None
-) -> pd.DataFrame:
+def parse_results(path: Path, input_record_map: dict[str, dict] | None = None) -> pd.DataFrame:
     input_record_map = input_record_map or {}
     rows = []
     with path.open("r", encoding="utf-8") as fh:
@@ -57,22 +55,14 @@ def parse_results(
                 {
                     "custom_id": custom_id,
                     "tm_key": source_record.get("tm_key", payload.get("tm_key", "")),
-                    "source_lang": source_record.get(
-                        "source_lang", payload.get("source_lang", "")
-                    ),
-                    "target_lang": source_record.get(
-                        "target_lang", payload.get("target_lang", "")
-                    ),
+                    "source_lang": source_record.get("source_lang", payload.get("source_lang", "")),
+                    "target_lang": source_record.get("target_lang", payload.get("target_lang", "")),
                     "target_text": payload.get("target_text", ""),
                     "status": status,
                     "translator": "openai_batch",
                     "model": model,
-                    "review_notes": json.dumps(
-                        payload.get("review", {}), ensure_ascii=False, sort_keys=True
-                    ),
-                    "raw_payload": json.dumps(
-                        payload, ensure_ascii=False, sort_keys=True
-                    ),
+                    "review_notes": json.dumps(payload.get("review", {}), ensure_ascii=False, sort_keys=True),
+                    "raw_payload": json.dumps(payload, ensure_ascii=False, sort_keys=True),
                 }
             )
     return pd.DataFrame(rows)

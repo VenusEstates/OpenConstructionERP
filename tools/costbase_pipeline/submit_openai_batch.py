@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 from urllib import error, request
 
-
 API_BASE = "https://api.openai.com/v1"
 
 
@@ -75,9 +74,7 @@ def create_batch(file_id: str, api_key: str, completion_window: str) -> dict:
         "endpoint": "/v1/chat/completions",
         "completion_window": completion_window,
     }
-    return _api_request(
-        "POST", "/batches", api_key, body=json.dumps(payload).encode("utf-8")
-    )
+    return _api_request("POST", "/batches", api_key, body=json.dumps(payload).encode("utf-8"))
 
 
 def main() -> None:
@@ -89,16 +86,10 @@ def main() -> None:
 
     api_key = os.environ.get("OPENAI_API_KEY") or load_dotenv_key()
     if not api_key:
-        raise SystemExit(
-            "OPENAI_API_KEY is not set. Set it in your shell; do not write it into files."
-        )
+        raise SystemExit("OPENAI_API_KEY is not set. Set it in your shell; do not write it into files.")
 
     if args.dry_run:
-        lines = sum(
-            1
-            for line in args.requests_jsonl.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        )
+        lines = sum(1 for line in args.requests_jsonl.read_text(encoding="utf-8").splitlines() if line.strip())
         print(
             json.dumps(
                 {"dry_run": True, "requests": lines, "file": str(args.requests_jsonl)},

@@ -10,24 +10,14 @@ import pandas as pd
 def quarantine(translations: pd.DataFrame, qa_report: dict) -> pd.DataFrame:
     failed_keys = set(qa_report.get("failed_tm_keys") or [])
     if not failed_keys:
-        failed_keys = {
-            error["tm_key"]
-            for error in qa_report.get("errors", [])
-            if "tm_key" in error
-        }
+        failed_keys = {error["tm_key"] for error in qa_report.get("errors", []) if "tm_key" in error}
     out = translations.copy()
     mask = out["tm_key"].isin(failed_keys)
     out.loc[mask, "status"] = "needs_review"
-    existing_notes = (
-        out.loc[mask, "review_notes"].fillna("").astype(str)
-        if "review_notes" in out.columns
-        else ""
-    )
+    existing_notes = out.loc[mask, "review_notes"].fillna("").astype(str) if "review_notes" in out.columns else ""
     if "review_notes" not in out.columns:
         out["review_notes"] = ""
-    out.loc[mask, "review_notes"] = (
-        existing_notes + " QA quarantine: protected/script/terminology failure."
-    )
+    out.loc[mask, "review_notes"] = existing_notes + " QA quarantine: protected/script/terminology failure."
     return out
 
 
@@ -51,8 +41,7 @@ def main() -> None:
             {
                 "rows": int(len(out)),
                 "quarantined": int(
-                    out["status"].eq("needs_review").sum()
-                    - translations["status"].eq("needs_review").sum()
+                    out["status"].eq("needs_review").sum() - translations["status"].eq("needs_review").sum()
                 ),
                 "output": str(args.output_parquet),
             },

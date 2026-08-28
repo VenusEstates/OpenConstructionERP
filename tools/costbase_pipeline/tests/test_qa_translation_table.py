@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-
 from qa_translation_table import protected_tokens, run_qa, validate_materialized_frame
 
 

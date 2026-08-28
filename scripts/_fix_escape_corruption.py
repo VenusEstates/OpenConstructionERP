@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """‌⁠‍Fix the escape corruption introduced by earlier passes.
 
 Earlier passes did `value.replace("\\\\", "\\\\\\\\")` which doubled all backslashes,
 then escaped quotes again, producing `\\\\\\\\\"` where there should be just `\\\"`.
 This pass detects and fixes such corruption.
 """
-import re
+
 from pathlib import Path
 
 MN_PATH = Path("frontend/src/app/locales/mn.ts")
@@ -23,6 +22,6 @@ out = mn.replace('\\\\\\"', '\\"')
 if out == mn:
     print("No corruption found")
 else:
-    diffs = sum(1 for c, o in zip(mn, out) if c != o)
+    diffs = sum(1 for c, o in zip(mn, out, strict=False) if c != o)
     MN_PATH.write_text(out, encoding="utf-8", newline="")
     print(f"Fixed escape corruption: removed {len(mn) - len(out)} chars total")

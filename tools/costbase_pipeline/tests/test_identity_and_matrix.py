@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-
 from build_identity_translations import build_identity_translations
 from translation_matrix_status import build_matrix, render_progress_status
 

@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 
 import pandas as pd
-
 from fetch_openai_batch import download_file, get_json
 from parse_openai_batch_results import load_input_record_map, parse_results
 from qa_translation_table import read_table, run_qa
@@ -17,7 +16,6 @@ from translation_matrix_status import (
     load_target_languages,
     render_progress_status,
 )
-
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 OUTPUTS_DIR = PIPELINE_DIR / "outputs"
@@ -53,9 +51,7 @@ def save_jobs(jobs: list[dict], path: Path = JOBS_PATH) -> None:
 
 def discover_request_files(outputs_dir: Path = OUTPUTS_DIR) -> list[Path]:
     return sorted(
-        path
-        for path in outputs_dir.glob("llm_batches_*_*/requests/*.requests.jsonl")
-        if path.stat().st_size > 0
+        path for path in outputs_dir.glob("llm_batches_*_*/requests/*.requests.jsonl") if path.stat().st_size > 0
     )
 
 
@@ -93,19 +89,13 @@ def load_pair_priorities(
     return priorities
 
 
-def ordered_request_files(
-    outputs_dir: Path = OUTPUTS_DIR, matrix_path: Path = MATRIX_STATUS_PATH
-) -> list[Path]:
+def ordered_request_files(outputs_dir: Path = OUTPUTS_DIR, matrix_path: Path = MATRIX_STATUS_PATH) -> list[Path]:
     priorities = load_pair_priorities(matrix_path)
     request_files = discover_request_files(outputs_dir)
-    retry_pairs = {
-        pair_for_request(path) for path in request_files if "retry" in path.name.lower()
-    }
+    retry_pairs = {pair_for_request(path) for path in request_files if "retry" in path.name.lower()}
     if retry_pairs:
         request_files = [
-            path
-            for path in request_files
-            if pair_for_request(path) not in retry_pairs or "retry" in path.name.lower()
+            path for path in request_files if pair_for_request(path) not in retry_pairs or "retry" in path.name.lower()
         ]
 
     def sort_key(path: Path) -> tuple[int, int, int, str, str, str]:
@@ -117,14 +107,10 @@ def ordered_request_files(
 
 
 def jobs_by_request(jobs: list[dict]) -> dict[str, dict]:
-    return {
-        str(Path(job["request_file"])): job for job in jobs if job.get("request_file")
-    }
+    return {str(Path(job["request_file"])): job for job in jobs if job.get("request_file")}
 
 
-def merge_with_existing_translations(
-    new_translations: pd.DataFrame, existing_path: Path
-) -> pd.DataFrame:
+def merge_with_existing_translations(new_translations: pd.DataFrame, existing_path: Path) -> pd.DataFrame:
     if not existing_path.exists():
         return new_translations
     existing = pd.read_parquet(existing_path)
@@ -245,39 +231,27 @@ def parse_completed_pairs() -> dict:
                 continue
         records = load_input_record_map(pair_dir)
         frames = [parse_results(path, records) for path in result_files]
-        translations = (
-            pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-        )
+        translations = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
         if translations.empty:
             skipped.append({"pair_dir": str(pair_dir), "reason": "empty_results"})
             continue
         if translations.duplicated(["tm_key", "target_lang"]).any():
-            translations = translations.drop_duplicates(
-                ["tm_key", "target_lang"], keep="last"
-            )
+            translations = translations.drop_duplicates(["tm_key", "target_lang"], keep="last")
 
         raw_path = pair_dir / f"{stem}_translations.parquet"
         qa_path = pair_dir / f"{stem}_qa_report.json"
         final_qa_path = pair_dir / f"{stem}_qa_after_merge.json"
         translations.to_parquet(raw_path, index=False)
-        translations.to_csv(
-            raw_path.with_suffix(".csv"), index=False, encoding="utf-8-sig"
-        )
+        translations.to_csv(raw_path.with_suffix(".csv"), index=False, encoding="utf-8-sig")
 
         qa_report = run_qa(corpus, translations)
-        qa_path.write_text(
-            json.dumps(qa_report, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        qa_path.write_text(json.dumps(qa_report, ensure_ascii=False, indent=2), encoding="utf-8")
         quarantined = quarantine(translations, qa_report)
         quarantined = merge_with_existing_translations(quarantined, quarantined_path)
         final_qa_report = run_qa(corpus, quarantined)
-        final_qa_path.write_text(
-            json.dumps(final_qa_report, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        final_qa_path.write_text(json.dumps(final_qa_report, ensure_ascii=False, indent=2), encoding="utf-8")
         quarantined.to_parquet(quarantined_path, index=False)
-        quarantined.to_csv(
-            quarantined_path.with_suffix(".csv"), index=False, encoding="utf-8-sig"
-        )
+        quarantined.to_csv(quarantined_path.with_suffix(".csv"), index=False, encoding="utf-8-sig")
         outputs.append(str(quarantined_path))
     return {"parsed_pairs": len(outputs), "outputs": outputs, "skipped": skipped}
 
@@ -304,9 +278,7 @@ def status() -> dict:
     for job in jobs:
         status_value = str(job.get("status", "unknown"))
         statuses[status_value] = statuses.get(status_value, 0) + 1
-    next_unsubmitted = [str(path) for path in request_files if str(path) not in known][
-        :10
-    ]
+    next_unsubmitted = [str(path) for path in request_files if str(path) not in known][:10]
     return {
         "request_files": len(request_files),
         "submitted_jobs": len(jobs),
@@ -318,9 +290,7 @@ def status() -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "command", choices=["status", "submit", "fetch", "parse", "all"]
-    )
+    parser.add_argument("command", choices=["status", "submit", "fetch", "parse", "all"])
     parser.add_argument("--max-submit", type=int, default=0)
     parser.add_argument("--sleep-seconds", type=float, default=0.3)
     args = parser.parse_args()
@@ -329,18 +299,14 @@ def main() -> None:
     if args.command == "status":
         result = status()
     elif args.command == "submit":
-        result = submit_missing(
-            max_submit=args.max_submit, sleep_seconds=args.sleep_seconds
-        )
+        result = submit_missing(max_submit=args.max_submit, sleep_seconds=args.sleep_seconds)
     elif args.command == "fetch":
         result = fetch_jobs()
     elif args.command == "parse":
         result = {"parse": parse_completed_pairs(), "matrix": refresh_matrix_status()}
     else:
         result = {
-            "submit": submit_missing(
-                max_submit=args.max_submit, sleep_seconds=args.sleep_seconds
-            ),
+            "submit": submit_missing(max_submit=args.max_submit, sleep_seconds=args.sleep_seconds),
             "fetch": fetch_jobs(),
             "parse": parse_completed_pairs(),
             "matrix": refresh_matrix_status(),

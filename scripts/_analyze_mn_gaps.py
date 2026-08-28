@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """‌⁠‍Analyze what's left untranslated in mn.ts."""
+
 import re
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 en = Path("frontend/src/app/locales/en.ts").read_text(encoding="utf-8")
 mn = Path("frontend/src/app/locales/mn.ts").read_text(encoding="utf-8")

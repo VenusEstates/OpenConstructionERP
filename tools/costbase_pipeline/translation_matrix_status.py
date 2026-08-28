@@ -5,9 +5,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
-
 from build_translation_batches import classify_string_kind
-
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 DEFAULT_CORPUS = PIPELINE_DIR / "outputs" / "translation_corpus.parquet"
@@ -41,9 +39,7 @@ def summarize_existing(outputs_dir: Path) -> dict[tuple[str, str], dict]:
     identity = outputs_dir / "identity_translations.parquet"
     if identity.exists():
         df = pd.read_parquet(identity, columns=["source_lang", "target_lang", "status"])
-        for (source_lang, target_lang), group in df.groupby(
-            ["source_lang", "target_lang"]
-        ):
+        for (source_lang, target_lang), group in df.groupby(["source_lang", "target_lang"]):
             summary[(source_lang, target_lang)] = {
                 "rows": int(len(group)),
                 "accepted": int(group["status"].isin(["reviewed", "approved"]).sum()),
@@ -53,14 +49,10 @@ def summarize_existing(outputs_dir: Path) -> dict[tuple[str, str], dict]:
     return summary
 
 
-def build_matrix(
-    corpus: pd.DataFrame, target_languages: list[str], outputs_dir: Path
-) -> pd.DataFrame:
+def build_matrix(corpus: pd.DataFrame, target_languages: list[str], outputs_dir: Path) -> pd.DataFrame:
     corpus = corpus.copy()
     corpus["kind"] = corpus["columns"].map(classify_string_kind)
-    free_counts = (
-        corpus[corpus["kind"].eq("free_text")].groupby("source_lang").size().to_dict()
-    )
+    free_counts = corpus[corpus["kind"].eq("free_text")].groupby("source_lang").size().to_dict()
     existing = summarize_existing(outputs_dir)
     rows = []
     for source_lang in sorted(free_counts):
@@ -70,18 +62,12 @@ def build_matrix(
             if current:
                 accepted = current["accepted"]
                 needs_review = current["needs_review"]
-                status = (
-                    "complete_green"
-                    if accepted >= expected or accepted + needs_review >= expected
-                    else "partial"
-                )
+                status = "complete_green" if accepted >= expected or accepted + needs_review >= expected else "partial"
                 artifact = current["artifact"]
             else:
                 accepted = 0
                 needs_review = 0
-                status = (
-                    "pending_api" if source_lang != target_lang else "pending_identity"
-                )
+                status = "pending_api" if source_lang != target_lang else "pending_identity"
                 artifact = ""
             rows.append(
                 {
@@ -123,9 +109,7 @@ def summarize_matrix(matrix: pd.DataFrame) -> dict:
     target_rows.sort(key=lambda row: (-row["accepted"], row["target_lang"]))
 
     pending_api = matrix[matrix["status"].eq("pending_api")].copy()
-    pending_api = pending_api.sort_values(
-        ["expected_free_text", "source_lang", "target_lang"]
-    )
+    pending_api = pending_api.sort_values(["expected_free_text", "source_lang", "target_lang"])
     partial = matrix[matrix["status"].eq("partial")].copy()
     partial = partial.sort_values(["missing", "source_lang", "target_lang"])
     return {
@@ -135,9 +119,7 @@ def summarize_matrix(matrix: pd.DataFrame) -> dict:
         "accepted_total": accepted_total,
         "needs_review_total": needs_review_total,
         "missing_total": missing_total,
-        "accepted_pct": (accepted_total / expected_total * 100)
-        if expected_total
-        else 0.0,
+        "accepted_pct": (accepted_total / expected_total * 100) if expected_total else 0.0,
         "target_rows": target_rows,
         "next_pending_api": pending_api.head(10).to_dict("records"),
         "next_partial": partial.head(10).to_dict("records"),
@@ -146,24 +128,14 @@ def summarize_matrix(matrix: pd.DataFrame) -> dict:
 
 def summarize_batch_readiness(outputs_dir: Path) -> dict:
     batch_files = [
-        path
-        for path in outputs_dir.glob("llm_batches_*_*/*.jsonl")
-        if not path.name.endswith(".requests.jsonl")
+        path for path in outputs_dir.glob("llm_batches_*_*/*.jsonl") if not path.name.endswith(".requests.jsonl")
     ]
     request_files = [
-        path
-        for path in outputs_dir.glob("llm_batches_*_*/requests/*.requests.jsonl")
-        if path.stat().st_size > 0
+        path for path in outputs_dir.glob("llm_batches_*_*/requests/*.requests.jsonl") if path.stat().st_size > 0
     ]
-    retry_pairs = {
-        path.parent.parent.name
-        for path in request_files
-        if "retry" in path.name.lower()
-    }
+    retry_pairs = {path.parent.parent.name for path in request_files if "retry" in path.name.lower()}
     effective_request_files = [
-        path
-        for path in request_files
-        if path.parent.parent.name not in retry_pairs or "retry" in path.name.lower()
+        path for path in request_files if path.parent.parent.name not in retry_pairs or "retry" in path.name.lower()
     ]
     missing_requests = 0
     effective_missing_requests = 0
@@ -177,9 +149,7 @@ def summarize_batch_readiness(outputs_dir: Path) -> dict:
         "batch_jsonl": len(batch_files),
         "request_jsonl": len(request_files),
         "effective_request_jsonl": len(effective_request_files),
-        "retry_request_jsonl": sum(
-            1 for path in request_files if "retry" in path.name.lower()
-        ),
+        "retry_request_jsonl": sum(1 for path in request_files if "retry" in path.name.lower()),
         "missing_requests": missing_requests,
         "effective_missing_requests": effective_missing_requests,
         "batch_dirs": len({path.parent.name for path in batch_files}),
@@ -195,8 +165,7 @@ def _format_pairs(rows: list[dict], value_column: str) -> str:
     if not rows:
         return "none"
     return ", ".join(
-        f"`{row['source_lang']} -> {row['target_lang']}` ({_format_int(int(row[value_column]))})"
-        for row in rows
+        f"`{row['source_lang']} -> {row['target_lang']}` ({_format_int(int(row[value_column]))})" for row in rows
     )
 
 

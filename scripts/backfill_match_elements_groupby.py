@@ -6,17 +6,16 @@ construction/UI dictionary. EN is already done in en.ts.
 Anchor: existing line `"match_elements.trade_filter":` — insert the
 six new lines RIGHT AFTER it so the file stays diff-friendly.
 """
+
 from __future__ import annotations
+
 import pathlib
 import re
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-LOCALES_DIR = (
-    pathlib.Path(__file__).resolve().parents[1]
-    / "frontend" / "src" / "app" / "locales"
-)
+LOCALES_DIR = pathlib.Path(__file__).resolve().parents[1] / "frontend" / "src" / "app" / "locales"
 
 TRANSLATIONS: dict[str, dict[str, str]] = {
     "de": {

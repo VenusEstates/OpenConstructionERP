@@ -123,6 +123,24 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_case_routes.py
 
+      # frontend/src/features/cases/countryPortraits.generated.ts is derived
+      # from the filenames under frontend/public/assets/people and imported at
+      # compile time by caseFaces.ts. `npm run build` is tsc followed by vite
+      # with no codegen ahead of either, so the module has to be committed and
+      # has to agree with the folder, and neither of those was checked
+      # anywhere: the generator carried a --check flag from the day it was
+      # written and no workflow ever called it.
+      #
+      # Two failures, not one. A webp dropped into the folder without
+      # regenerating leaves the manifest stale, so the art ships and the
+      # feature cannot see it. The louder one is absence: --check compares the
+      # rendered module against the file on disk and a missing file is not
+      # equal to it, so a manifest that never reached git fails here rather
+      # than in whatever clone first tries to compile the import.
+      - name: Check the case country-portrait manifest against the asset folder
+        if: ${{ !cancelled() }}
+        run: python scripts/gen_case_country_portraits.py --check
+
       # An unregistered key resolves to False for every role while admin
       # short-circuits above the check, so the route is admin-only in
       # production and every admin-authenticated test still passes. The
@@ -131,6 +149,21 @@ jobs:
       - name: Check permission keys against the registry
         if: ${{ !cancelled() }}
         run: python scripts/check_permission_registration.py
+
+      # The loader finds modules by their manifest, and skips a directory
+      # without one on a bare continue: no log line, no warning, no error. Every
+      # other way a module can be wrong is loud, so absence is the single case
+      # where a module that is missing is indistinguishable from a module that
+      # was never written, and there is no diagnostic to grep for. The module
+      # would be absent from the registry and from GET /api/v1/modules, its
+      # router unmounted with every endpoint answering 404, and its models never
+      # seen by Alembic autogenerate. The three support libraries that carry no
+      # manifest on purpose are allowlisted with a reason each, and the script
+      # rechecks that reason rather than trusting it: an allowlisted directory
+      # that grows a router.py or a models.py fails.
+      - name: Check every module directory carries a manifest
+        if: ${{ !cancelled() }}
+        run: python scripts/check_module_manifests.py
 
       # A collection endpoint moving from a bare array to {items, total,
       # offset, limit} breaks every caller left behind. The build catches most
@@ -237,10 +270,94 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_bundled_font_licences.py
 
-      # Last in the job on purpose. It is the only step here that installs
-      # anything, and the eight guards above finish in seconds; putting the
-      # install ahead of them would make every one of them wait on a dependency
-      # resolver. Steps rather than a fourth job because the resource this
+      # Python outside backend/. CI lints the backend by running ruff from
+      # inside backend/ (ci.yml, "Lint with ruff"), which is where the
+      # configuration lives, so scripts/ and tools/ were linted by nothing at
+      # all, including the scripts that implement the guards in this very job.
+      #
+      # --config is not a convenience here, it is the whole check. There is no
+      # pyproject.toml or ruff.toml at the repository root, so ruff invoked from
+      # the root discovers no configuration, falls back to its own defaults and
+      # measures this tree against line-length 88 instead of the 120 the project
+      # uses. That failure is silent and it reports violations, which is the
+      # worst shape: a gate that is confidently wrong. Naming the backend config
+      # explicitly is what makes the answer mean anything.
+      #
+      # The version is read out of the backend dev extra rather than written
+      # here, so the pin has one home. `ruff format --check` compares against a
+      # specific formatter's exact output and shifts between releases, so a
+      # second literal in this file would drift from backend/pyproject.toml and
+      # .pre-commit-config.yaml without anything noticing.
+      #
+      # What it found on the way in, across 267 findings: 135 duplicate dictionary
+      # keys in one locale builder, where Python keeps the last value and the
+      # earlier translation is discarded unread, and 23 file handles left to the
+      # garbage collector. The duplicates were removed last-occurrence-wins, so
+      # the mapping the file builds is unchanged.
+      #
+      # What this reads: 116 files, against 121 tracked .py under these two
+      # directories. The seven-file difference is worth knowing about, because
+      # it is not an exclusion anybody wrote for ruff. `.gitignore` line 394
+      # carries `scripts/translate_mn_*.py`; git exempts a file it already
+      # tracks from its own ignore rules, so those seven stay in the repository
+      # and look perfectly normal, while ruff applies the same patterns with no
+      # notion of an index and never opens them. A pattern meant to keep new
+      # files out is silently deciding what gets linted.
+      #
+      # What is still uncovered, said plainly so it does not read as done:
+      # packs/, packages/, modules/, frontend/ and desktop/ hold another 66
+      # tracked Python files that no lane reads. Widening the paths below is the
+      # whole change once those are normalised.
+      - name: Install the ruff the backend pins
+        id: ruff
+        if: ${{ !cancelled() }}
+        run: |
+          spec=$(python -c "import tomllib;d=tomllib.load(open('backend/pyproject.toml','rb'));print(next(s for s in d['project']['optional-dependencies']['dev'] if s.startswith('ruff==')))")
+          echo "installing $spec, as pinned by the backend dev extra"
+          python -m pip install --quiet "$spec"
+
+      # Proves the two steps below are reading something. Both commands treat a
+      # path that resolves to zero Python files as success: they print a warning
+      # to stderr, `ruff check` even prints "All checks passed!", and both exit
+      # 0. So a widened `.gitignore` pattern, a broadened exclude or a renamed
+      # directory would leave a permanently green lane that has never opened a
+      # file, and nothing in the log would look wrong. A typo is not the risk,
+      # that is already loud: a path that does not exist exits 1 from check and
+      # 2 from format. The silent case is a path that exists and holds no
+      # Python, and this is the only step that can see it.
+      #
+      # The floor is zero rather than a number near today's 116, deliberately.
+      # A count that has to be edited whenever a file is added or removed is a
+      # ratchet somebody eventually raises without reading, whereas zero never
+      # needs touching. The trade is that a partial collapse still passes, so
+      # the count is echoed to make that visible to a human reading the log.
+      - name: Check the ruff lane is reading files at all
+        if: ${{ !cancelled() && steps.ruff.outcome == 'success' }}
+        run: |
+          count=$(ruff check --show-files --config backend/pyproject.toml scripts tools | wc -l)
+          echo "the two steps below read $count Python files"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::ruff resolved zero Python files under scripts and tools, so the two steps below would pass without opening anything"
+            exit 1
+          fi
+
+      - name: Lint the Python outside the backend
+        if: ${{ !cancelled() && steps.ruff.outcome == 'success' }}
+        run: ruff check --config backend/pyproject.toml scripts tools
+
+      # Separate step rather than a second line in the one above. A step stops
+      # at its first failing command, and the two answer different questions, so
+      # sharing a step would mean a lint error hides every formatting error
+      # behind it and the next push finds them one at a time.
+      - name: Check the formatting of the Python outside the backend
+        if: ${{ !cancelled() && steps.ruff.outcome == 'success' }}
+        run: ruff format --check --config backend/pyproject.toml scripts tools
+
+      # Last in the job on purpose, and much the heaviest install here: the ruff
+      # wheel above is one small download, this resolves the whole application.
+      # The guards above finish in seconds; putting this ahead of them would
+      # make every one of them wait on a dependency resolver. Steps rather than
+      # a fourth job because the resource this
       # layout exists to conserve is runner slots, and a new job would take one
       # while doing its own checkout of the same 8764-file tree.
       #

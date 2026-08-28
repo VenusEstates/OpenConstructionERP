@@ -76,9 +76,7 @@ def main() -> int:
         print(f"ERROR: no files matched {LOCALE_GLOB!r}", file=sys.stderr)
         return 1
 
-    reference_path = next(
-        (p for p in paths if os.path.basename(p) == f"{REFERENCE}.ts"), None
-    )
+    reference_path = next((p for p in paths if os.path.basename(p) == f"{REFERENCE}.ts"), None)
     if reference_path is None:
         print(f"ERROR: reference locale {REFERENCE}.ts not found", file=sys.stderr)
         return 1
@@ -95,9 +93,7 @@ def main() -> int:
                 hits.append((path, lineno, key, english[key]))
 
     if hits:
-        print(
-            f"ERROR: {len(hits)} value(s) lost every escape backslash:", file=sys.stderr
-        )
+        print(f"ERROR: {len(hits)} value(s) lost every escape backslash:", file=sys.stderr)
         for path, lineno, key, original in hits:
             print(f"  {path}:{lineno}: {key}", file=sys.stderr)
             print(f"      en: {original[:120]}", file=sys.stderr)
@@ -113,9 +109,7 @@ def main() -> int:
         )
         return 1
 
-    print(
-        f"locale lost-escape OK: {len(escaped_keys)} escaped key(s), {len(paths) - 1} locales, none stripped"
-    )
+    print(f"locale lost-escape OK: {len(escaped_keys)} escaped key(s), {len(paths) - 1} locales, none stripped")
     return 0
 
 

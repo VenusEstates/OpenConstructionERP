@@ -67,7 +67,7 @@ TARGETS = [
 
 def strip_file(path: str, stats: dict[str, int], kept: dict[str, int]) -> bool:
     """Strip the stray characters in place; return True if the file changed."""
-    with open(path, "r", encoding="utf-8", newline="") as fh:
+    with open(path, encoding="utf-8", newline="") as fh:
         data = fh.read()
 
     for ch in SPELLING_CHARS:

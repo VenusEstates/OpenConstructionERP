@@ -3,10 +3,12 @@
 //
 // Gate for the load-time half of the country-portrait feature.
 //
-// caseFaces.test.ts proves which FILE the code asks for. It cannot prove what
-// happens when that file is not there, because whether a country portrait
-// exists is not knowable at build time - that is the whole point of the
-// convention - so the only place the fallback can be checked is the request.
+// caseFaces.test.ts proves which FILE the code asks for, and that the file is
+// on disk when it asks. It cannot prove what happens when the file turns out
+// not to be there anyway - a deploy that shipped the manifest without the
+// webp, a webp pulled afterwards - because that is decided at load time. The
+// faces below are therefore built by hand rather than dealt: the point is the
+// request failing, not the request being chosen.
 //
 // jsdom never fetches an <img>, so nothing here fires `error` on its own and a
 // test that merely rendered would pass while proving nothing at all. The error

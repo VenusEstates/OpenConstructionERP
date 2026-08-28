@@ -11,6 +11,7 @@ Run from repo root with backend/ as CWD:
     cd backend
     python ../scripts/e2e_match_elements.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,21 +22,22 @@ from pathlib import Path
 
 # Make sure we run against the dev DB.
 os.environ.setdefault(
-    "DATABASE_URL", "sqlite+aiosqlite:///openestimate.db",
+    "DATABASE_URL",
+    "sqlite+aiosqlite:///openestimate.db",
 )
 os.environ.setdefault(
-    "DATABASE_SYNC_URL", "sqlite:///openestimate.db",
+    "DATABASE_SYNC_URL",
+    "sqlite:///openestimate.db",
 )
 
 # Add backend to path if running from repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.modules.match_elements import schemas
 from app.modules.match_elements.service import get_service
-
 
 PROJECTS = [
     ("Boylston Crossing", "USD"),
@@ -100,9 +102,7 @@ async def run_for(session_factory, project_id: uuid.UUID, project_name: str, cur
                     ),
                 )
                 await db.commit()
-                out["matched_groups"] = sum(
-                    1 for g in matched if g.confidence is not None
-                )
+                out["matched_groups"] = sum(1 for g in matched if g.confidence is not None)
             except Exception as exc:
                 out["errors"].append(f"run_match(vector): {exc}")
                 # Try lexical as a fallback.
@@ -118,9 +118,7 @@ async def run_for(session_factory, project_id: uuid.UUID, project_name: str, cur
                             ),
                         )
                         await db2.commit()
-                        out["matched_groups"] = sum(
-                            1 for g in matched if g.confidence is not None
-                        )
+                        out["matched_groups"] = sum(1 for g in matched if g.confidence is not None)
                     except Exception as exc2:
                         out["errors"].append(f"run_match(lexical): {exc2}")
 
@@ -164,10 +162,7 @@ async def main() -> int:
         for name, ccy in PROJECTS:
             row = (
                 await s.execute(
-                    text(
-                        "SELECT id FROM oe_projects_project "
-                        "WHERE name LIKE :name LIMIT 1"
-                    ),
+                    text("SELECT id FROM oe_projects_project WHERE name LIKE :name LIMIT 1"),
                     {"name": f"{name}%"},
                 )
             ).first()
@@ -189,17 +184,13 @@ async def main() -> int:
         print(f"  matched_groups    = {r['matched_groups']}")
         print(f"  confirmed_groups  = {r['confirmed_groups']}")
         print(f"  boq_positions     = {r['boq_positions']}")
-        print(
-            f"  grand_total       = {r['grand_total']:,.2f} "
-            f"{r['result_currency'] or ''}"
-        )
+        print(f"  grand_total       = {r['grand_total']:,.2f} {r['result_currency'] or ''}")
         if r["errors"]:
             for e in r["errors"]:
                 print(f"  ERR: {e}")
 
     print("\n=== Summary ===")
-    print(f"{'Project':28s} {'CCY':4s} {'groups':>7s} {'matched':>7s} {'conf':>6s} "
-          f"{'pos':>5s} {'total':>14s}")
+    print(f"{'Project':28s} {'CCY':4s} {'groups':>7s} {'matched':>7s} {'conf':>6s} {'pos':>5s} {'total':>14s}")
     for r in results:
         print(
             f"{r['name'][:28]:28s} {r['currency']:4s} "

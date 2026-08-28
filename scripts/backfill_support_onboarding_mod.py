@@ -5,11 +5,12 @@ Anchor for insertion: line containing "onboarding.mod_collaboration_desc" in eac
 
 Run:  python scripts/backfill_support_onboarding_mod.py
 """
+
 from __future__ import annotations
 
+import pathlib
 import re
 import sys
-import pathlib
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -3612,9 +3613,7 @@ TRANSLATIONS["id"] = {
 def main() -> None:
     assert len(ORDERED_KEYS) == 134, f"Expected 134 keys, got {len(ORDERED_KEYS)}"
     anchor_pat = re.compile(rf'^\s*"{re.escape(ANCHOR_KEY)}"\s*:')
-    key_pat = re.compile(
-        r'"(?:support\.[a-z_]+|onboarding\.mod_[a-z0-9_]+)"\s*:'
-    )
+    key_pat = re.compile(r'"(?:support\.[a-z_]+|onboarding\.mod_[a-z0-9_]+)"\s*:')
 
     for locale, mapping in TRANSLATIONS.items():
         path = LOCALES_DIR / f"{locale}.ts"
@@ -3625,10 +3624,12 @@ def main() -> None:
         eol = "\r\n" if "\r\n" in text else "\n"
 
         # Skip if already backfilled (idempotent)
-        existing_keys = set(re.findall(
-            r'"((?:support\.[a-z_]+|onboarding\.mod_[a-z0-9_]+))"',
-            text,
-        ))
+        existing_keys = set(
+            re.findall(
+                r'"((?:support\.[a-z_]+|onboarding\.mod_[a-z0-9_]+))"',
+                text,
+            )
+        )
         to_insert = [k for k in ORDERED_KEYS if k not in existing_keys]
         if not to_insert:
             print(f"{locale}: already complete (skip)")

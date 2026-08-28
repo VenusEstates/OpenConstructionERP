@@ -17,7 +17,6 @@ import ast
 from pathlib import Path
 
 import pytest
-
 from extract_translation_corpus import BASE_DIR_ENV, resolve_base_dir
 
 PIPELINE_DIR = Path(__file__).resolve().parents[1]

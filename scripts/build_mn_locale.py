@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """‌⁠‍
 Builds a complete frontend/src/app/locales/mn.ts (Mongolian translation)
 from the source-of-truth en.ts.
@@ -137,7 +136,6 @@ EXISTING_MN: dict[str, str] = {
     "error.unauthorized": "Зөвшөөрөлгүй",
     "error.server_error": "Серверийн алдаа",
     "error.try_again": "Дахин оролдоно уу",
-
     # --- New sidebar CTA keys (added 2026-05-13) ---
     "nav.add_module": "Модуль нэмэх",
     "nav.add_module_hint": "Өөрөө бүтээх · хөгжүүлэгчийн заавар",
@@ -154,40 +152,29 @@ EXISTING_MN: dict[str, str] = {
 
 EXACT: dict[str, str] = {
     # --- generic verbs / labels ---
-    "Save": "Хадгалах",
-    "Cancel": "Цуцлах",
-    "Close": "Хаах",
-    "Open": "Нээх",
     "Delete": "Устгах",
     "Edit": "Засах",
     "Create": "Үүсгэх",
-    "Search": "Хайх",
     "Loading...": "Ачаалж байна...",
     "Loading…": "Ачаалж байна…",
     "Yes": "Тийм",
     "No": "Үгүй",
-    "Confirm": "Баталгаажуулах",
     "OK": "OK",
     "Back": "Буцах",
     "Next": "Дараах",
     "Previous": "Өмнөх",
     "Add": "Нэмэх",
     "Remove": "Хасах",
-    "Copy": "Хуулах",
     "Export": "Экспорт",
     "Import": "Импорт",
     "Download": "Татах",
     "Upload": "Илгээх",
-    "Refresh": "Шинэчлэх",
     "Filter": "Шүүх",
-    "Sort": "Эрэмбэлэх",
     "Actions": "Үйлдэл",
     "Action": "Үйлдэл",
     "Settings": "Тохиргоо",
     "Help": "Тусламж",
-    "Apply": "Хэрэглэх",
     "Reset": "Дахин тохируулах",
-    "Clear": "Цэвэрлэх",
     "Clear all": "Бүгдийг цэвэрлэх",
     "Clear All": "Бүгдийг цэвэрлэх",
     "Clear filter": "Шүүлтүүрийг цэвэрлэх",
@@ -197,16 +184,10 @@ EXACT: dict[str, str] = {
     "Submit": "Илгээх",
     "Send": "Илгээх",
     "Sent": "Илгээгдсэн",
-    "Continue": "Үргэлжлүүлэх",
-    "Dismiss": "Хаах",
     "Done": "Дууссан",
-    "Error": "Алдаа",
     "Success": "Амжилттай",
-    "Warning": "Анхааруулга",
     "Info": "Мэдээлэл",
-    "Status": "Төлөв",
     "Date": "Огноо",
-    "Type": "Төрөл",
     "Name": "Нэр",
     "Title": "Гарчиг",
     "Description": "Тайлбар",
@@ -221,56 +202,32 @@ EXACT: dict[str, str] = {
     "Rate": "Үнэлгээ",
     "Unit Rate": "Нэгжийн үнэ",
     "Amount": "Дүн",
-    "Currency": "Валют",
-    "Region": "Бүс",
-    "Project": "Төсөл",
     "Projects": "Төслүүд",
     "Item": "Зүйл",
-    "Items": "Зүйлүүд",
     "items": "зүйл",
     "Position": "Байрлал",
     "Positions": "Байрлалууд",
     "positions": "байрлал",
-    "Section": "Хэсэг",
     "Sections": "Хэсгүүд",
     "sections": "хэсэг",
-    "Material": "Материал",
-    "Materials": "Материалууд",
-    "Labor": "Хөдөлмөр",
-    "Equipment": "Тоног төхөөрөмж",
     "Subcontractor": "Туслан гүйцэтгэгч",
-    "Other": "Бусад",
-    "All": "Бүх",
     "None": "Байхгүй",
-    "Active": "Идэвхтэй",
     "Inactive": "Идэвхгүй",
     "Archived": "Архивлагдсан",
     "Pending": "Хүлээгдэж буй",
-    "Approved": "Зөвшөөрөгдсөн",
-    "Rejected": "Татгалзсан",
     "Draft": "Ноорог",
     "draft": "ноорог",
-    "Submitted": "Илгээсэн",
     "Issued": "Гаргасан",
     "Closed": "Хаагдсан",
-    "Completed": "Дууссан",
-    "Cancelled": "Цуцлагдсан",
     "Reviewed": "Хянагдсан",
-    "Under Review": "Хяналтанд",
     "In Progress": "Явагдаж байна",
     "On Track": "Хэвийн",
     "At Risk": "Эрсдэлд",
-    "Delayed": "Хойшилсон",
-    "Critical": "Чухал",
-    "High": "Өндөр",
-    "Medium": "Дунд",
-    "Low": "Бага",
     "Severity": "Хүндрэлийн зэрэг",
     "Priority": "Чухал зэрэг",
     "Location": "Байршил",
     "Address": "Хаяг",
     "Phone": "Утас",
-    "Email": "Имэйл",
     "Company": "Компани",
     "Country": "Улс",
     "Language": "Хэл",
@@ -279,23 +236,16 @@ EXACT: dict[str, str] = {
     "Light": "Цайвар",
     "Dark": "Бараан",
     "System": "Систем",
-    "Profile": "Профайл",
     "Account": "Бүртгэл",
-    "Sign in": "Нэвтрэх",
     "Sign In": "Нэвтрэх",
     "Sign Out": "Гарах",
     "Log Out": "Гарах",
     "Sign out": "Гарах",
-    "Show": "Харуулах",
-    "Hide": "Нуух",
-    "Showing": "Харуулж байна",
     "Show all": "Бүгдийг харуулах",
     "Show less": "Бага харуулах",
     "Show more": "Илүү ихийг харуулах",
     "View": "Үзэх",
     "Preview": "Урьдчилан үзэх",
-    "Test": "Шалгах",
-    "Test Connection": "Холболтыг шалгах",
     "Testing...": "Шалгаж байна...",
     "Restore": "Сэргээх",
     "Duplicate": "Хуулбарлах",
@@ -316,16 +266,12 @@ EXACT: dict[str, str] = {
     "Updated": "Шинэчлэгдсэн",
     "Created": "Үүсгэгдсэн",
     "Deleted": "Устгагдсан",
-    "Saved": "Хадгалагдсан",
     "Saving...": "Хадгалж байна...",
     "Creating...": "Үүсгэж байна...",
     "Adding...": "Нэмж байна...",
-    "Importing...": "Импортолж байна...",
     "Exporting...": "Экспортлож байна...",
     "Deactivate": "Идэвхгүй болгох",
     "Activate": "Идэвхжүүлэх",
-    "Never": "Хэзээ ч үгүй",
-    "Just now": "Дөнгөж сая",
     "just now": "дөнгөж сая",
     "Today": "Өнөөдөр",
     "Yesterday": "Өчигдөр",
@@ -340,11 +286,8 @@ EXACT: dict[str, str] = {
     "All Countries": "Бүх улсууд",
     "All Directions": "Бүх чиглэл",
     "All Regions": "Бүх бүс",
-    "Reports": "Тайлан",
-    "Documents": "Баримт бичиг",
     "Photos": "Зураг",
     "Files": "Файлууд",
-    "Document": "Баримт бичиг",
     "Author": "Зохиогч",
     "Comments": "Сэтгэгдэл",
     "Comment": "Сэтгэгдэл",
@@ -354,17 +297,13 @@ EXACT: dict[str, str] = {
     "Unknown": "Үл мэдэгдэх",
     "Coming soon": "Удахгүй гарна",
     "Coming Soon": "Удахгүй гарна",
-    "Recommended": "Зөвлөмжтэй",
     "Optional": "Заавал биш",
     "optional": "заавал биш",
     "Required": "Шаардлагатай",
     "(empty)": "(хоосон)",
     "(none)": "(байхгүй)",
     "(missing)": "(дутуу)",
-    "Mark Complete": "Дууссан гэж тэмдэглэх",
     "Mark Resolved": "Шийдвэрлэсэн гэж тэмдэглэх",
-    "Mark Paid": "Төлөгдсөн гэж тэмдэглэх",
-    "Mark Awarded": "Олгогдсон гэж тэмдэглэх",
     "Unassigned": "Хариуцагчгүй",
     "Approve": "Зөвшөөрөх",
     "Reject": "Татгалзах",
@@ -399,9 +338,6 @@ EXACT: dict[str, str] = {
     "Suggestion": "Санал",
     "Suggested": "Санал болгосон",
     "Applied": "Хэрэглэсэн",
-    "Original": "Эх",
-    "Revised": "Шинэчилсэн",
-    "Variance": "Зөрүү",
     "Forecast": "Урьдчилсан тооцоо",
     "Committed": "Үүрэг авсан",
     "Actual": "Бодит",
@@ -413,7 +349,6 @@ EXACT: dict[str, str] = {
     "Gross Total": "Бохир дүн",
     "Grand Total": "Нийт дүн",
     "Direct Cost": "Шууд зардал",
-    "Discipline": "Мэргэжил",
     "Disciplines": "Мэргэжлүүд",
     "Properties": "Шинж чанарууд",
     "Quantities": "Тоо хэмжээнүүд",
@@ -434,14 +369,11 @@ EXACT: dict[str, str] = {
     "Week": "Долоо хоног",
     "Month": "Сар",
     "Year": "Жил",
-
     # --- specific page titles ---
     "Dashboard": "Хяналтын самбар",
     "Bill of Quantities": "Ажил материалын жагсаалт",
-    "BOQ": "БМЖ",
     "Cost Database": "Үнийн мэдээллийн сан",
     "Assemblies": "Нэгдлүүд",
-    "Resource Catalog": "Нөөцийн каталог",
     "PDF Takeoff": "PDF-ээс хэмжээ авах",
     "CAD/BIM Takeoff": "CAD/BIM хэмжээ авах",
     "Quantity Takeoff": "Тоо хэмжээ авах",
@@ -454,13 +386,11 @@ EXACT: dict[str, str] = {
     "Modules": "Модулиуд",
     "About": "Тухай",
     "Analytics": "Аналитик",
-    "AI Estimate": "AI тооцоо",
     "AI Cost Advisor": "AI зардлын зөвлөх",
     "AI Chat": "AI чат",
     "Change Orders": "Өөрчлөлтийн захиалга",
     "Risk Register": "Эрсдэлийн бүртгэл",
     "Project Photos": "Төслийн зураг",
-    "Project Files": "Төслийн файлууд",
     "Daily Diary": "Өдрийн тэмдэглэл",
     "Equipment & Fleet": "Тоног төхөөрөмж ба тээвэр",
     "Resources & Crew": "Нөөц ба баг",
@@ -487,28 +417,23 @@ EXACT: dict[str, str] = {
     "Submittals": "Илгээмж",
     "Transmittals": "Дамжуулалт",
     "Contacts": "Холбоо барих",
-    "Correspondence": "Захидал харилцаа",
     "Notifications": "Мэдэгдэл",
     "Inspections": "Шалгалт",
     "NCRs": "Үл нийцлийн тайлан",
     "Safety": "Аюулгүй байдал",
-    "Field Reports": "Талбайн тайлан",
     "Punch List": "Шалгах жагсаалт",
     "Risk Analysis": "Эрсдэлийн шинжилгээ",
     "Markups & Annotations": "Тэмдэглэгээ ба тайлбар",
     "Common Data Environment": "Нийтлэг өгөгдлийн орчин",
     "Finance": "Санхүү",
     "Procurement": "Худалдан авалт",
-    "Reports": "Тайлан",
     "Reporting": "Тайлагнал",
     "User Management": "Хэрэглэгчийн удирдлага",
     "Architecture Map": "Архитектурын зураг",
     "Project Intelligence": "Төслийн интеллект",
     "Estimation Dashboard": "Тооцоолох самбар",
     "Requirements": "Шаардлага",
-
     # --- Login / auth ---
-    "Sign in": "Нэвтрэх",
     "Email": "Имэйл",
     "Password": "Нууц үг",
     "Confirm Password": "Нууц үгийг баталгаажуулах",
@@ -523,11 +448,9 @@ EXACT: dict[str, str] = {
     "Invalid email or password": "Имэйл эсвэл нууц үг буруу",
     "Minimum 8 characters": "Хамгийн багадаа 8 тэмдэгт",
     "Strong": "Хүчтэй",
-    "Medium": "Дунд",
     "Weak": "Сул",
     "Send reset link": "Сэргээх холбоос илгээх",
     "Passwords do not match": "Нууц үгүүд таарахгүй байна",
-
     # --- Dashboard ---
     "Welcome to OpenConstructionERP": "OpenConstructionERP-д тавтай морил",
     "Recent Projects": "Сүүлийн үеийн төслүүд",
@@ -539,18 +462,15 @@ EXACT: dict[str, str] = {
     "Total Value": "Нийт үнэ цэн",
     "Total Budget": "Нийт төсөв",
     "Active Projects": "Идэвхтэй төслүүд",
-    "Quality Score": "Чанарын оноо",
     "Getting Started": "Эхлэх",
     "New Project": "Шинэ төсөл",
     "New BOQ": "Шинэ БМЖ",
     "New Task": "Шинэ даалгавар",
     "Create BOQ": "БМЖ үүсгэх",
-    "Import Database": "Мэдээллийн сан импортлох",
     "Demo": "Демо",
     "Star on GitHub": "GitHub дээр одоор үнэлэх",
     "Become a Sponsor": "Ивээн тэтгэгч болох",
     "Professional Consulting": "Мэргэжлийн зөвлөгөө",
-
     # --- Common BOQ fields ---
     "BOQ Name": "БМЖ-ийн нэр",
     "Section": "Хэсэг",
@@ -568,7 +488,6 @@ EXACT: dict[str, str] = {
     "Overhead": "Нэмэгдэл зардал",
     "Profit": "Ашиг",
     "Contingency": "Нөөц",
-    "Insurance": "Даатгал",
     "Bond": "Баталгаа",
     "Active": "Идэвхтэй",
     "Percentage": "Хувь",
@@ -578,10 +497,8 @@ EXACT: dict[str, str] = {
     "filtered": "шүүгдсэн",
     "errors": "алдаа",
     "warnings": "анхааруулга",
-
     # --- Settings ---
     "AI Configuration": "AI тохиргоо",
-    "AI Provider": "AI үйлчилгээ үзүүлэгч",
     "API Key": "API түлхүүр",
     "Save Settings": "Тохиргоог хадгалах",
     "Appearance": "Гадаад төрх",
@@ -604,31 +521,21 @@ EXACT: dict[str, str] = {
     "Simple": "Энгийн",
     "Advanced": "Дэвшилтэт",
     "Toggle theme": "Загвар сэлгэх",
-
     # --- Tendering ---
     "Tender Package": "Тендерийн багц",
     "New Tender Package": "Шинэ тендерийн багц",
     "Create Package": "Багц үүсгэх",
-    "Bid Comparison": "Үнийн санал харьцуулалт",
-    "Bid Totals Overview": "Үнийн саналын нийт дүн",
-    "Bids Received": "Хүлээн авсан үнийн санал",
     "Total Amount": "Нийт дүн",
-    "Lowest": "Хамгийн бага",
-    "Highest": "Хамгийн өндөр",
     "Recommendation": "Зөвлөмж",
     "Add Bid": "Үнийн санал нэмэх",
     "Submit Bid": "Үнийн санал илгээх",
     "Award contract?": "Гэрээг олгох уу?",
-    "Mark Awarded": "Олгогдсон гэж тэмдэглэх",
     "Source BOQ": "Эх БМЖ",
-    "Company Name": "Компанийн нэр",
     "Contact Email": "Холбоо барих имэйл",
     "Deadline": "Эцсийн хугацаа",
     "Evaluate Bids": "Үнийн саналыг үнэлэх",
     "Start Collecting": "Цуглуулж эхлэх",
-
     # --- Validation ---
-    "Run Validation": "Шалгалт ажиллуулах",
     "Quality Score": "Чанарын оноо",
     "Excellent": "Маш сайн",
     "Good": "Сайн",
@@ -646,7 +553,6 @@ EXACT: dict[str, str] = {
     "Element": "Элемент",
     "Show All Issues": "Бүх асуудлыг харуулах",
     "Export Report PDF": "Тайланг PDF болгож экспортлох",
-
     # --- Schedule ---
     "Activity": "Үйл ажиллагаа",
     "Activity Name": "Үйл ажиллагааны нэр",
@@ -664,7 +570,6 @@ EXACT: dict[str, str] = {
     "WBS Code": "WBS код",
     "Generate from BOQ": "БМЖ-ээс үүсгэх",
     "Risk Analysis (PERT)": "Эрсдэлийн шинжилгээ (PERT)",
-
     # --- Reports ---
     "BOQ Report": "БМЖ-ийн тайлан",
     "Cost Report": "Зардлын тайлан",
@@ -683,11 +588,9 @@ EXACT: dict[str, str] = {
     "Generate Report": "Тайлан үүсгэх",
     "Report downloaded successfully": "Тайлан амжилттай татагдлаа",
     "Failed to generate report": "Тайлан үүсгэж чадсангүй",
-
     # --- Catalog ---
     "Resource Catalog": "Нөөцийн каталог",
     "My Catalog": "Миний каталог",
-    "Add Resource": "Нөөц нэмэх",
     "Add Custom Resource": "Хувийн нөөц нэмэх",
     "Build Assembly": "Нэгдэл бүтээх",
     "Create Assembly": "Нэгдэл үүсгэх",
@@ -699,22 +602,18 @@ EXACT: dict[str, str] = {
     "Showing": "Харуулж байна",
     "Price Range": "Үнийн хязгаар",
     "Price (avg)": "Үнэ (дундаж)",
-
     # --- Finance ---
     "Invoices": "Нэхэмжлэх",
     "Invoice #": "Нэхэмжлэх #",
     "New Invoice": "Шинэ нэхэмжлэх",
     "New Budget Line": "Шинэ төсвийн мөр",
     "Payments": "Төлбөр",
-    "Payable": "Төлөх",
-    "Receivable": "Авах",
     "Total Paid": "Нийт төлөгдсөн",
     "Paid": "Төлөгдсөн",
     "Mark Paid": "Төлөгдсөн гэж тэмдэглэх",
     "Approve invoice?": "Нэхэмжлэхийг зөвшөөрөх үү?",
     "Mark as paid?": "Төлөгдсөн гэж тэмдэглэх үү?",
     "Issue Date": "Гаргасан огноо",
-    "Due Date": "Хугацаа",
     "Payment Date": "Төлбөрийн огноо",
     "Payment Terms": "Төлбөрийн нөхцөл",
     "Budgets": "Төсөв",
@@ -724,24 +623,19 @@ EXACT: dict[str, str] = {
     "Original": "Эх",
     "Revised": "Шинэчилсэн",
     "Variance": "Зөрүү",
-
     # --- Procurement ---
     "Purchase Orders": "Худалдан авах захиалга",
     "Goods Receipts": "Бараа хүлээн авалт",
     "New Purchase Order": "Шинэ худалдан авах захиалга",
-    "PO #": "Худалдан авах захиалга #",
-    "Order Details": "Захиалгын дэлгэрэнгүй",
     "Terms": "Нөхцөл",
     "Delivery Date": "Хүргэх огноо",
     "Receipt Date": "Хүлээн авах огноо",
-
     # --- Contacts ---
     "Add Contact": "Холбоо барих нэмэх",
     "Create Contact": "Холбоо барих үүсгэх",
     "Contact Name": "Холбоо барих нэр",
     "Company Name": "Компанийн нэр",
     "Contacts Directory": "Холбоо барих лавлах",
-
     # --- RFI ---
     "Create RFI": "RFI үүсгэх",
     "New RFI": "Шинэ RFI",
@@ -752,55 +646,39 @@ EXACT: dict[str, str] = {
     "Ball in Court": "Хариуцагч",
     "Cost impact": "Зардлын нөлөө",
     "Schedule impact": "Хуваарийн нөлөө",
-
     # --- Risk ---
     "Risk Analysis (Monte Carlo)": "Эрсдэлийн шинжилгээ (Монте Карло)",
-    "Risk Matrix": "Эрсдэлийн матриц",
     "New Risk": "Шинэ эрсдэл",
     "Risk Owner": "Эрсдэлийн эзэн",
     "Mitigation Strategy": "Бууруулах стратеги",
     "Contingency Plan": "Нөөц төлөвлөгөө",
     "Score": "Оноо",
-    "Impact": "Нөлөө",
     "Probability": "Магадлал",
     "Cost Impact": "Зардлын нөлөө",
     "Optimistic": "Өөдрөг",
     "Pessimistic": "Гутрангуй",
     "Std Dev": "Стандарт хазайлт",
-    "Distribution": "Тархалт",
-
     # --- Files ---
     "Project Files": "Төслийн файлууд",
     "All files": "Бүх файлууд",
     "Upload files": "Файл илгээх",
     "Upload photos": "Зураг илгээх",
-    "Open": "Нээх",
     "Grid": "Сүлжээ",
-    "Calendar": "Хуанли",
     "List": "Жагсаалт",
     "Kanban": "Канбан",
     "Timeline": "Цаг хугацаа",
-    "Modified": "Засварласан",
     "Size": "Хэмжээ",
     "Storage": "Хадгалалт",
     "Path": "Зам",
     "Metadata": "Мета өгөгдөл",
-
     # --- Tasks ---
     "Create Task": "Даалгавар үүсгэх",
-    "Assignee": "Хариуцагч",
     "Due Date": "Хугацаа",
-    "All": "Бүх",
-
     # --- AI / Onboarding ---
     "Welcome": "Тавтай морил",
     "Welcome to OpenEstimate": "OpenEstimate-д тавтай морил",
-    "Skip": "Алгасах",
-    "Save & Continue": "Хадгалаад үргэлжлүүлэх",
     "Project Name": "Төслийн нэр",
     "Region": "Бүс",
-    "Currency": "Валют",
-    "Standard": "Стандарт",
     "Auto": "Авто",
     "Auto-detect": "Автоматаар таних",
     "Any type": "Аливаа төрөл",
@@ -813,28 +691,21 @@ EXACT: dict[str, str] = {
     "Hospitality": "Зочид буудлын",
     "Infrastructure": "Дэд бүтцийн",
     "Mixed Use": "Холимог хэрэглээний",
-
     # --- Sustainability / Carbon ---
     "Sustainability / CO2": "Тогтвортой байдал / CO2",
     "Total CO2": "Нийт CO2",
-    "Material": "Материал",
     "Benchmark": "Жишиг",
     "Calculate": "Тооцоолох",
     "Export CO2 Report PDF": "CO2 тайланг PDF болгож экспортлох",
-
     # --- Misc ---
-    "Test failed": "Шалгалт амжилтгүй",
     "Connection failed": "Холболт амжилтгүй",
     "Connection successful": "Холболт амжилттай",
-    "Connection successful!": "Холболт амжилттай!",
     "Response time: {{ms}}ms": "Хариу өгөх хугацаа: {{ms}}мс",
     "(last tested: {{time}})": "(сүүлд шалгасан: {{time}})",
-    "Not configured": "Тохируулагдаагүй",
     "Recommended": "Зөвлөмжтэй",
     "Get an API key": "API түлхүүр авах",
     "Configure AI Provider": "AI үйлчилгээ үзүүлэгчийг тохируулах",
     "AI Connected": "AI холбогдсон",
-
     # --- Common errors ---
     "Server error": "Серверийн алдаа",
     "Not found": "Олдсонгүй",
@@ -842,12 +713,9 @@ EXACT: dict[str, str] = {
     "Go back": "Буцах",
     "Go to Dashboard": "Хяналтын самбар руу очих",
     "Something went wrong": "Алдаа гарлаа",
-    "An unexpected error occurred while rendering this page. You can try reloading or go back to the dashboard.":
-        "Энэ хуудсыг харуулах үед санамсаргүй алдаа гарлаа. Дахин ачаалах эсвэл хяналтын самбар руу буцаж болно.",
+    "An unexpected error occurred while rendering this page. You can try reloading or go back to the dashboard.": "Энэ хуудсыг харуулах үед санамсаргүй алдаа гарлаа. Дахин ачаалах эсвэл хяналтын самбар руу буцаж болно.",
     "Error details": "Алдааны дэлгэрэнгүй",
-    "The page you are looking for does not exist or has been moved. Check the URL or go back to the dashboard.":
-        "Хайж байгаа хуудас байхгүй эсвэл шилжсэн байна. URL-ыг шалгах эсвэл хяналтын самбар руу буцна уу.",
-
+    "The page you are looking for does not exist or has been moved. Check the URL or go back to the dashboard.": "Хайж байгаа хуудас байхгүй эсвэл шилжсэн байна. URL-ыг шалгах эсвэл хяналтын самбар руу буцна уу.",
     # --- high-frequency strings added in pass 2 ---
     "Project...": "Төсөл...",
     "Select project...": "Төсөл сонгох...",
@@ -894,7 +762,6 @@ EXACT: dict[str, str] = {
     "Restore failed": "Сэргээх амжилтгүй",
     "Apply failed": "Хэрэглэх амжилтгүй",
     "Skip failed": "Алгасах амжилтгүй",
-    "Connection error": "Холболтын алдаа",
     "Search failed": "Хайлт амжилтгүй",
     "Search failed. Check vector database.": "Хайлт амжилтгүй. Вектор мэдээллийн санг шалгана уу.",
     "Bulk delete failed": "Бөөнөөр устгах амжилтгүй",
@@ -913,8 +780,6 @@ EXACT: dict[str, str] = {
     "Importing...": "Импортолж байна...",
     "Categories": "Ангилал",
     "Authors": "Зохиогчид",
-    "How it works": "Хэрхэн ажилладаг",
-    "How matching works": "Тааруулалт хэрхэн ажилладаг",
     "selected": "сонгогдсон",
     "Selected": "Сонгогдсон",
     "Deselect all": "Бүгдийг хасах",
@@ -960,11 +825,9 @@ EXACT: dict[str, str] = {
     "No matching projects": "Тохирох төсөл олдсонгүй",
     "Complete": "Бүрэн",
     "Completed": "Дууссан",
-    "Cancelled": "Цуцлагдсан",
     "No project selected": "Төсөл сонгоогүй",
     "No active project": "Идэвхтэй төсөл алга",
     "No project": "Төсөл алга",
-    "Format": "Формат",
     "Role": "Үүрэг",
     "Structural": "Барилгын бүтэц",
     "Architectural": "Архитектур",
@@ -978,7 +841,6 @@ EXACT: dict[str, str] = {
     "Workforce": "Ажиллах хүч",
     "Workers": "Ажилчид",
     "workers": "ажилчид",
-    "Trade": "Чиглэл",
     "Weather": "Цаг агаар",
     "Weather Conditions": "Цаг агаарын нөхцөл",
     "Temperature": "Температур",
@@ -1000,11 +862,9 @@ EXACT: dict[str, str] = {
     "Submit for Approval": "Зөвшөөрүүлэхээр илгээх",
     "Submit Review": "Хяналт илгээх",
     "Submit Response": "Хариу илгээх",
-
     # categories / types
     "Material": "Материал",
     "Materials": "Материал",
-    "Equipment": "Тоног төхөөрөмж",
     "Labor": "Хөдөлмөр",
     "Operator": "Оператор",
     "Electricity": "Цахилгаан",
@@ -1012,20 +872,13 @@ EXACT: dict[str, str] = {
     "HVAC": "HVAC",
     "Fire Safety": "Галын аюулгүй байдал",
     "Finishing": "Засал чимэглэл",
-    "Finishes": "Засал чимэглэл",
     "Exterior": "Гадна тал",
     "Landscaping": "Ландшафт",
     "General": "Ерөнхий",
     "Mitigated": "Бууруулсан",
-
     # punch list
-    "Low": "Бага",
-    "Medium": "Дунд",
-    "High": "Өндөр",
     "Critical": "Чухал",
-
     # files / sharing
-    "Share": "Хуваалцах",
     "Generate share link": "Хуваалцах холбоос үүсгэх",
     "Share URL": "Хуваалцах URL",
     "Create link": "Холбоос үүсгэх",
@@ -1052,7 +905,6 @@ EXACT: dict[str, str] = {
     "Owner": "Эзэн",
     "Editor": "Засварлагч",
     "Viewer": "Үзэгч",
-
     # documents
     "Site": "Талбай",
     "Progress": "Явц",
@@ -1067,13 +919,11 @@ EXACT: dict[str, str] = {
     "Tags": "Шошго",
     "Taken at": "Авсан",
     "GPS Coordinates": "GPS координат",
-
     # Common labels seen across pages
     "Spec Section": "Спецификацийн хэсэг",
     "Rev": "Хувилбар",
     "Revision History": "Хувилбарын түүх",
     "Cover Note": "Хавсралт тэмдэглэл",
-    "Items": "Зүйлүүд",
     "Purpose": "Зорилго",
     "Response Due": "Хариу хүлээх",
     "Direction": "Чиглэл",
@@ -1104,15 +954,12 @@ EXACT: dict[str, str] = {
     "Bid bond": "Тендерийн баталгаа",
     "Safety certification": "Аюулгүй байдлын гэрчилгээ",
     "Other certification": "Бусад гэрчилгээ",
-
     # Validation / FX
-    "Currency": "Валют",
     "Currency normalization": "Валют хувиргалт",
     "Sequential": "Дараалсан",
     "Short decimal": "Богино аравтын",
     "Gap of 10": "10-ийн зайтай",
     "Gap of 100": "100-ийн зайтай",
-
     # AI labels
     "Cost drivers": "Зардлын хүчин зүйл",
     "Price volatility": "Үнийн хэлбэлзэл",
@@ -1127,12 +974,10 @@ EXACT: dict[str, str] = {
     "Refresh analysis": "Шинжилгээг шинэчлэх",
     "Thinking...": "Бодож байна...",
     "Unnamed Project": "Нэргүй төсөл",
-
     # File detail
     "Kind": "Төрөл",
     "Grid view": "Сүлжээгээр харах",
     "List view": "Жагсаалтаар харах",
-
     # Schedule confidence
     "Deterministic": "Тогтсон",
     "Mean (critical path)": "Дундаж (эгзэгтэй зам)",
@@ -1142,28 +987,20 @@ EXACT: dict[str, str] = {
     "95% confidence": "95% итгэлцэл",
     "Planned duration": "Төлөвлөсөн хугацаа",
     "active": "идэвхтэй",
-
     # validation / compliance
     "Insurance": "Даатгал",
     "Permit": "Зөвшөөрөл",
     "Compliance documents": "Нийцэлийн баримт бичиг",
     "New document": "Шинэ баримт",
-
     # punch
-    "Cancel": "Цуцлах",
     "Discard": "Хаях",
     "Save & Continue": "Хадгалаад үргэлжлүүлэх",
     "Continue": "Үргэлжлүүлэх",
-
     # AI / providers
     "AI Provider": "AI үйлчилгээ үзүүлэгч",
     "Not configured": "Тохируулагдаагүй",
     "Key configured": "Түлхүүр тохируулсан",
-
     # Match elements / phase A labels
-    "Confidence": "Итгэлцэл",
-    "Library": "Сан",
-    "Detail": "Дэлгэрэнгүй",
     "Apply preview": "Урьдчилан үзэлтийг хэрэглэх",
     "Apply": "Хэрэглэх",
     "Apply to BOQ": "БМЖ-д хэрэглэх",
@@ -1174,7 +1011,6 @@ EXACT: dict[str, str] = {
     "Sort": "Эрэмбэлэх",
     "Limit": "Хязгаар",
     "Views": "Харагдац",
-    "Save view": "Харагдац хадгалах",
     "Saved views": "Хадгалсан харагдац",
     "Number": "Тоо",
     "Percent": "Хувь",
@@ -1183,7 +1019,6 @@ EXACT: dict[str, str] = {
     "Line": "Шугам",
     "Scatter": "Тархалт",
     "Heatmap": "Дулааны зураг",
-
     # short status
     "TBD": "Тодорхойлогдоогүй",
     "tbd": "тбд",
@@ -1195,21 +1030,17 @@ EXACT: dict[str, str] = {
     "overridden": "өөрчилсөн",
     "void": "хүчингүй",
     "confirm": "баталгаажуулах",
-
     # Catalog
     "Avg Rate": "Дундаж үнэ",
     "Total Cost": "Нийт зардал",
     "Total Qty": "Нийт тоо",
     "Pos.": "Бай.",
     "pos.": "бай.",
-    "Pos": "Бай.",
-
     # FieldReports / weather added above
     "Daily Report": "Өдрийн тайлан",
     "Inspection": "Шалгалт",
     "Safety Report": "Аюулгүй байдлын тайлан",
     "Concrete Pour": "Бетон асгалт",
-
     # NCR
     "Open": "Нээлттэй",
     "Close": "Хаах",
@@ -1217,21 +1048,17 @@ EXACT: dict[str, str] = {
     "Root Cause": "Үндсэн шалтгаан",
     "Corrective Action": "Засах арга",
     "Preventive Action": "Урьдчилан сэргийлэх арга",
-
     # Tasks
     "Mark Complete": "Дууссан гэж тэмдэглэх",
     "Assignee": "Хариуцагч",
-
     # CDE
     "Containers": "Багц",
-    "Container": "Багц",
     "State": "Төлөв",
     "Suit.": "Тохир.",
     "History": "Түүх",
     "Container Code": "Багцын код",
     "Suitability Code": "Тохиромжтой код",
     "Suitability": "Тохиромжтой",
-
     # users
     "Total Users": "Нийт хэрэглэгч",
     "Admins": "Админууд",
@@ -1243,7 +1070,6 @@ EXACT: dict[str, str] = {
     "Read-only access": "Зөвхөн уншиж болох",
     "Create and edit content": "Контент үүсгэх ба засах",
     "Project and team management": "Төсөл ба багийн удирдлага",
-
     # safety / risk
     "Days Lost": "Алдсан өдөр",
     "Risk Score": "Эрсдэлийн оноо",
@@ -1255,7 +1081,6 @@ EXACT: dict[str, str] = {
     "Triangular": "Гурвалжин",
     "Uniform": "Жигд",
     "PERT": "PERT",
-
     # explorer
     "Model Name": "Загварын нэр",
     "Elements": "Элементүүд",
@@ -1273,7 +1098,6 @@ EXACT: dict[str, str] = {
     "rows": "мөр",
     "groups": "бүлэг",
     "Save view": "Харагдац хадгалах",
-
     # changeorders
     "Total Orders": "Нийт захиалга",
     "Cost Delta": "Зардлын зөрүү",
@@ -1283,13 +1107,11 @@ EXACT: dict[str, str] = {
     "Original Qty": "Эх тоо",
     "Original Rate": "Эх үнэ",
     "Awaiting approval": "Зөвшөөрөл хүлээж байна",
-
     # boq export formats
     "Excel (.xlsx)": "Excel (.xlsx)",
     "CSV (.csv)": "CSV (.csv)",
     "PDF": "PDF",
     "GAEB XML (.x83)": "GAEB XML (.x83)",
-
     # 5d
     "Performance": "Гүйцэтгэл",
     "Earned": "Олсон",
@@ -1301,7 +1123,6 @@ EXACT: dict[str, str] = {
     "Impact": "Нөлөө",
     "Calculate Impact": "Нөлөө тооцоолох",
     "What-If Scenarios": "Хэрэв-Бол хувилбар",
-
     # Cost benchmark
     "Cost per m² Benchmark": "м²-ийн зардлын жишиг",
     "Cost / m²": "Зардал / м²",
@@ -1312,14 +1133,12 @@ EXACT: dict[str, str] = {
     "Within range": "Хязгаарт",
     "Outside range": "Хязгаараас гадуур",
     "Near boundary": "Хязгаарт ойртсон",
-
     # validation/extra
     "Validation pending — not yet checked": "Шалгалт хүлээгдэж байна — хараахан шалгаагүй",
     "Validation passed": "Шалгалт амжилттай",
     "Recalculation complete": "Дахин тооцоолол дууссан",
     "Recalculation failed": "Дахин тооцоолол амжилтгүй",
     "No changes needed": "Өөрчлөлт хэрэггүй",
-
     # generic toast strings
     "Status updated": "Төлөв шинэчлэгдсэн",
     "Profile updated": "Профайл шинэчлэгдсэн",
@@ -1341,7 +1160,6 @@ EXACT: dict[str, str] = {
     "Assembly duplicated": "Нэгдэл хуулагдсан",
     "Critical path calculated": "Эгзэгтэй зам тооцоолсон",
     "Risk analysis complete": "Эрсдэлийн шинжилгээ дууссан",
-
     # auth
     "Sign in": "Нэвтрэх",
     "Get started with OpenEstimate": "OpenEstimate-тэй эхлэх",
@@ -1349,23 +1167,18 @@ EXACT: dict[str, str] = {
     "Repeat your password": "Нууц үгээ дахин оруулна уу",
     "John Smith": "Жон Смит",
     "Enter your credentials to access your workspace": "Ажлын талбартаа нэвтрэхийн тулд мэдээллээ оруулна уу",
-
     # Common confirmation prompts
     "Delete?": "Устгах уу?",
-    "Are you sure you want to delete {{count}} selected positions? This action cannot be undone.":
-        "Сонгосон {{count}} байрлалыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.",
+    "Are you sure you want to delete {{count}} selected positions? This action cannot be undone.": "Сонгосон {{count}} байрлалыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.",
     "Delete positions": "Байрлалуудыг устгах",
-
     # generic listing
     "Showing first 50 of {{total}} rows": "{{total}} мөрийн эхний 50-г харуулж байна",
-
     # Settings
     "Manage your account and preferences": "Бүртгэл болон тохиргоог удирдах",
     "Your personal information": "Хувийн мэдээлэл",
     "Choose your preferred color scheme": "Өнгөний загвар сонгоно уу",
     "Choose your preferred language": "Хэлээ сонгоно уу",
     "Sign out or manage your account": "Гарах эсвэл бүртгэлийг удирдах",
-
     # short common error messages
     "Failed to save": "Хадгалж чадсангүй",
     "Failed to delete": "Устгаж чадсангүй",
@@ -1374,12 +1187,10 @@ EXACT: dict[str, str] = {
     "Failed to load change orders. Please try again.": "Өөрчлөлтийн захиалгыг ачаалж чадсангүй. Дахин оролдоно уу.",
     "Failed to load cost risk analysis. Please try again.": "Зардлын эрсдэлийн шинжилгээг ачаалж чадсангүй. Дахин оролдоно уу.",
     "Failed to load sensitivity analysis. Please try again.": "Мэдрэмжийн шинжилгээг ачаалж чадсангүй. Дахин оролдоно уу.",
-
     # Markup actions
     "Markups exported to CSV": "Тэмдэглэгээг CSV болгож экспортлосон",
     "Markup status updated": "Тэмдэглэгээний төлөв шинэчлэгдсэн",
     "Markup deleted": "Тэмдэглэгээ устгагдсан",
-
     # BOQ short toast
     "Position added": "Байрлал нэмэгдсэн",
     "Position deleted": "Байрлал устгагдсан",
@@ -1393,10 +1204,8 @@ EXACT: dict[str, str] = {
     "Column removed": "Багана устгагдсан",
     "Markup added": "Тэмдэглэгээ нэмэгдсэн",
     "Variables saved": "Хувьсагч хадгалагдсан",
-
     # validation buttons
     "Run Validation": "Шалгалт ажиллуулах",
-
     # AI quick estimate
     "AI Estimate": "AI тооцоо",
     "Create an estimate from any source": "Аливаа эх сурвалжаас тооцоо үүсгэх",
@@ -1406,26 +1215,20 @@ EXACT: dict[str, str] = {
     "Building Type": "Барилгын төрөл",
     "Currency": "Валют",
     "Standard": "Стандарт",
-
     # daily diary / equipment
     "Equipment": "Тоног төхөөрөмж",
     "Fleet": "Тээврийн парк",
     "Crew": "Баг",
-
     # Match elements UI
     "Match Elements": "Элементийг тааруулах",
     "Match candidates": "Тохирох сонголтууд",
     "How matching works": "Тааруулалт хэрхэн ажилладаг",
-    "Library": "Сан",
-    "Detail": "Дэлгэрэнгүй",
     "Cancel": "Цуцлах",
     "Confidence": "Итгэлцэл",
-
     # explorer
     "CAD-BIM BI Explorer": "CAD-BIM BI судлагч",
     "Powered by": "Дэмжсэн",
     "Save Analysis": "Шинжилгээ хадгалах",
-
     # bim
     "BIM Viewer": "BIM үзэгч",
     "BIM 3D Viewer": "BIM 3D үзэгч",
@@ -1437,41 +1240,29 @@ EXACT: dict[str, str] = {
     "Zoom to selection": "Сонголт руу томруулах",
     "Discipline": "Мэргэжил",
     "Storey": "Давхар",
-
     # files share
     "Share": "Хуваалцах",
-
     # marketplace
-    "Free": "Үнэгүй",
     "Included": "Багтсан",
-    "Built-in": "Суурилуулсан",
-    "Module Marketplace": "Модулийн зах",
-
     # finance summary
     "Receivable": "Авах",
     "Payable": "Төлөх",
-
     # short markup labels
     "Color": "Өнгө",
     "Label": "Шошго",
     "Label / Text": "Шошго / Текст",
-
     # AI dialog
     "Dismiss": "Хаах",
-
     # generic empty/none variants
     "No results found": "Үр дүн олдсонгүй",
     "No documents uploaded": "Илгээсэн баримт алга",
-
     # tenant access
     "Owner — full control": "Эзэн — бүрэн хяналт",
     "Editor — upload + delete own": "Засварлагч — илгээх + өөрийнхөө устгах",
     "Viewer — read only": "Үзэгч — зөвхөн уншина",
-
     # field reports
     "Field Reports": "Талбайн тайлан",
     "Calendar": "Хуанли",
-
     # --- pass 3: more frequent untranslated strings ---
     "Add {{count}} to BOQ": "БМЖ-д {{count}} нэмэх",
     "Add to BOQ": "БМЖ-д нэмэх",
@@ -1512,7 +1303,6 @@ EXACT: dict[str, str] = {
     "SPI": "SPI",
     "Overall Variance": "Нийт зөрүү",
     "vs budget": "төсөвтэй харьцуулсан",
-    "Mode": "Горим",
     "Drop your file here": "Файлаа энд оруулна уу",
     "Drop your file here, or click to browse": "Файлаа энд оруулна уу эсвэл сонгож үзнэ үү",
     "Drop your PDF drawing here": "PDF зургаа энд оруулна уу",
@@ -1553,22 +1343,18 @@ EXACT: dict[str, str] = {
     "No notifications": "Мэдэгдэл алга",
     "Mark all as read": "Бүгдийг уншсан гэж тэмдэглэх",
     "Unread": "Уншаагүй",
-
     # Cost related
     "All categories": "Бүх ангилал",
     "All databases": "Бүх мэдээллийн сан",
     "All sources": "Бүх эх сурвалж",
     "All regions": "Бүх бүс",
-    "All": "Бүх",
     "Add Item": "Зүйл нэмэх",
     "Add Position": "Байрлал нэмэх",
     "Add Section": "Хэсэг нэмэх",
     "Add Resource": "Нөөц нэмэх",
     "Activity Type": "Үйл ажиллагааны төрөл",
-
     # CDE
     "No state transitions yet — promote the container to start the audit trail.": "Хараахан төлвийн шилжилт байхгүй — багцыг ахиулж аудит эхлүүлнэ үү.",
-
     # Conflict resolution
     "Conflict": "Зөрчил",
     "Merge Conflict Detected": "Нэгтгэлийн зөрчил илрэв",
@@ -1578,13 +1364,11 @@ EXACT: dict[str, str] = {
     "Accept theirs": "Тэдийнхийг авах",
     "Manual merge...": "Гарын нэгтгэл...",
     "Apply merged value": "Нэгтгэсэн утгыг хэрэглэх",
-
     # Common short
     "Connection error": "Холболтын алдаа",
     "Test Connection": "Холболт шалгах",
     "Test": "Шалгах",
     "Required By": "Шаардсан огноо",
-
     # Procurement
     "Manage purchase orders and goods receipts": "Худалдан авах захиалга, бараа хүлээн авалтыг удирдах",
     "Track budgets, invoices, and earned value": "Төсөв, нэхэмжлэх, олсон үнэ цэнг хянах",
@@ -1593,18 +1377,15 @@ EXACT: dict[str, str] = {
     "Track incidents, observations, and risk scores": "Тохиолдол, ажиглалт, эрсдэлийн оноог хянах",
     "Aggregated KPIs across all projects": "Бүх төслүүдийн нэгдсэн KPI",
     "Cross-Project Analytics": "Төслүүд хоорондын аналитик",
-
     # short tend
     "Lowest bid from": "Хамгийн бага үнийн санал",
     "Bids": "Үнийн санал",
     "bids": "үнийн санал",
-
     # benchmark
     "Total Spent": "Нийт зарцуулсан",
     "Remaining": "Үлдсэн",
     "Remaining Budget": "Үлдсэн төсөв",
     "Total Invoiced (Payable)": "Нийт нэхэмжилсэн (Төлөх)",
-
     # report
     "Reports": "Тайлан",
     "Reporting Dashboards": "Тайлангийн самбар",
@@ -1621,17 +1402,13 @@ EXACT: dict[str, str] = {
     "RFI Summary": "RFI хураангуй",
     "Safety Overview": "Аюулгүй байдлын тойм",
     "Procurement Summary": "Худалдан авалтын хураангуй",
-
     # users
     "Manage team members, roles, and access": "Багийн гишүүд, үүрэг, хандалтыг удирдах",
-
     # AI test
     "Connection successful!": "Холболт амжилттай!",
-
     # Validation more
     "No validation report yet": "Хараахан шалгалтын тайлан алга",
     "Failed to load validation": "Шалгалтыг ачаалж чадсангүй",
-
     # Onboarding
     "AI-powered quick estimation": "AI-р хийсэн хурдан тооцоо",
     "AI cost advisor and chat assistant": "AI зардлын зөвлөх ба чат туслах",
@@ -1676,15 +1453,12 @@ EXACT: dict[str, str] = {
     "Sustainability and carbon tracking": "Тогтвортой байдал ба нүүрстөрөгчийн хяналт",
     "Cost benchmarking analysis": "Зардлын жишиг шинжилгээ",
     "Real-time collaboration tools": "Бодит цагийн хамтын ажиллагааны хэрэгсэл",
-
     # Modal titles
     "Tip:": "Зөвлөгөө:",
     "Tips & Hints": "Зөвлөгөө ба санамж",
     "How it works": "Хэрхэн ажилладаг",
-
     # confirm wording
     "This action cannot be undone.": "Энэ үйлдлийг буцаах боломжгүй.",
-
     # tendering
     "Mark Awarded": "Олгогдсон гэж тэмдэглэх",
     "Bid Comparison": "Үнийн санал харьцуулалт",
@@ -1693,7 +1467,6 @@ EXACT: dict[str, str] = {
     "Highest": "Хамгийн өндөр",
     "Lowest": "Хамгийн бага",
     "TOTAL": "НИЙТ",
-
     # explorer continued
     "Conversion complete": "Хөрвүүлэлт дууссан",
     "Converting...": "Хөрвүүлж байна...",
@@ -1705,7 +1478,6 @@ EXACT: dict[str, str] = {
     "Format": "Формат",
     "Recent Models": "Сүүлийн загвар",
     "New File": "Шинэ файл",
-
     # short approvals
     "Approved": "Зөвшөөрсөн",
     "Rejected": "Татгалзсан",
@@ -1715,37 +1487,29 @@ EXACT: dict[str, str] = {
     "Collecting": "Цуглуулж байна",
     "Awarded": "Олгосон",
     "Accepted": "Хүлээн авсан",
-
     # Procurement Sections
     "Order Details": "Захиалгын мэдэгдэл",
     "Items": "Зүйлүүд",
-
     # finance hints
     "cost efficiency": "зардлын үр ашиг",
     "schedule efficiency": "хуваарийн үр ашиг",
     "forecast total cost": "урьдчилсан нийт зардал",
-
     # Permissions
     "Restricted: {{count}} member can access": "Хязгаарласан: {{count}} гишүүн хандах боломжтой",
     "Restricted: {{count}} members can access": "Хязгаарласан: {{count}} гишүүн хандах боломжтой",
     "All project members can access this folder.": "Төслийн бүх гишүүд энэ хавтсанд хандана.",
-
     # confirm verbs
     "Are you sure?": "Та итгэлтэй байна уу?",
     "Continue?": "Үргэлжлүүлэх үү?",
     "Discard changes?": "Өөрчлөлтүүдийг хаях уу?",
-
     # changeorders types
     "Added": "Нэмэгдсэн",
     "Modified": "Өөрчилсөн",
     "Removed": "Хасагдсан",
-
     # short labels in lists
     "Trade": "Чиглэл",
     "Risk": "Эрсдэл",
     "Risks": "Эрсдэл",
-    "Mode": "Горим",
-
     # Marketplace
     "Module Marketplace": "Модулийн зах",
     "Installed Modules": "Суулгасан модуль",
@@ -1754,14 +1518,12 @@ EXACT: dict[str, str] = {
     "Validation Rule Sets": "Шалгалтын дүрмийн багц",
     "Vector Index": "Вектор индекс",
     "rules": "дүрэм",
-
     # Onboarding company types
     "General Contractor": "Ерөнхий гүйцэтгэгч",
     "Estimator / Cost Consultant": "Тооцоолуур / Зардлын зөвлөх",
     "Project Management Firm": "Төслийн удирдлагын компани",
     "Architecture / Engineering Office": "Архитектур / Инженерийн оффис",
     "Full Enterprise": "Бүрэн байгууллага",
-
     # modules groups
     "Core Estimation": "Үндсэн тооцоо",
     "Takeoff & AI": "Хэмжээ авах ба AI",
@@ -1771,16 +1533,13 @@ EXACT: dict[str, str] = {
     "Quality & Safety": "Чанар ба аюулгүй байдал",
     "Field": "Талбай",
     "Analytics & Extras": "Аналитик ба нэмэлт",
-
     # AI labels
     "Cost Intelligence Advisor": "Зардлын интеллектийн зөвлөх",
     "Refresh": "Шинэчлэх",
-
     # files share extra
     "{{count}} download": "{{count}} татаж авалт",
     "{{count}} downloads": "{{count}} татаж авалт",
     "QR code for share link": "Хуваалцах холбоосын QR код",
-
     # ai photo
     "Building photo or scanned document": "Барилгын зураг эсвэл сканердсан баримт",
     "BOQ sheets, specs, tender docs": "БМЖ хуудас, спецификаци, тендерийн баримт",
@@ -1788,51 +1547,39 @@ EXACT: dict[str, str] = {
     "Revit, IFC, DWG, DGN files": "RVT, IFC, DWG, DGN файл",
     "Copy-paste from any app": "Аливаа аппаас хуулж буулгах",
     "Describe your project in plain text": "Төслөө энгийн текстээр тайлбарлах",
-
     # confidence levels (already covered) and band labels
     "High": "Өндөр",
     "Medium": "Дунд",
     "Low": "Бага",
-
     # files filters
     "Type": "Төрөл",
     "All": "Бүх",
-
     # validation
     "Mode": "Горим",
     "Search": "Хайх",
-
     # Tendering hint
     "Other": "Бусад",
-
     # validation result statuses
     "Error": "Алдаа",
     "Warning": "Анхааруулга",
-
     # CDE/transmittal
     "Container": "Багц",
-
     # Action items
     "Action Items": "Үйл ажиллагааны зүйл",
     "Agenda": "Хөтөлбөр",
     "Attendees": "Оролцогчид",
-
     # Procurement extra
     "GR Ref": "Хүлээн авалт",
     "PO Ref": "ХАЗ дугаар",
     "PO #": "ХАЗ #",
-
     # Cards
     "Free": "Үнэгүй",
     "Built-in": "Суулгасан",
-
     # markup canvas
     "Geometry data available": "Геометрийн өгөгдөл байна",
     "No geometry data": "Геометрийн өгөгдөл алга",
-
     # files
     "Document": "Баримт",
-
     # match elements stages
     "Demolition": "Буулгалт",
     "Earthwork": "Шороон ажил",
@@ -1846,21 +1593,17 @@ EXACT: dict[str, str] = {
     "Fixed furnishings": "Тогтсон тавилга",
     "Sitework": "Талбайн ажил",
     "Any stage": "Аливаа үе",
-
     # match elements buttons
     "Detail": "Дэлгэрэнгүй",
     "Library": "Сан",
-
     # short feedback
     "Cancelled": "Цуцлагдсан",
     "Saved": "Хадгалсан",
-
     # ai estimate buttons
     "New Estimate": "Шинэ тооцоо",
     "Estimate Results": "Тооцооны үр дүн",
     "Save": "Хадгалах",
     "Pos": "Бай.",
-
     # boq results
     "Estimated total": "Тооцоолсон нийт",
 }
@@ -2063,9 +1806,7 @@ def main() -> int:
         mn_val = translate_value(en_val)
         if mn_val == en_val:
             skipped_english += 1
-        elif mn_val in EXACT.values() or (
-            isinstance(en_val, str) and en_val.strip() in EXACT
-        ):
+        elif mn_val in EXACT.values() or (isinstance(en_val, str) and en_val.strip() in EXACT):
             translated_exact += 1
         else:
             translated_pattern += 1

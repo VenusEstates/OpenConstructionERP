@@ -32,7 +32,6 @@ refutes a broken scan is usually not the number you were looking at.
 
 from __future__ import annotations
 
-import io
 import os
 import re
 import sys
@@ -67,7 +66,8 @@ def read_graph(
     for name in sorted(os.listdir(versions_dir)):
         if not name.endswith(".py") or name.startswith("__"):
             continue
-        text = io.open(os.path.join(versions_dir, name), encoding="utf-8").read()
+        with open(os.path.join(versions_dir, name), encoding="utf-8") as fh:
+            text = fh.read()
         found = REVISION.search(text)
         if found is None:
             unparsed.append(name)
@@ -76,9 +76,7 @@ def read_graph(
         if revision in revisions:
             # Two files claiming one id is its own defect: Alembic would load
             # whichever it walked last and silently drop the other.
-            unparsed.append(
-                f"{name} (duplicate id {revision}, also in {revisions[revision]})"
-            )
+            unparsed.append(f"{name} (duplicate id {revision}, also in {revisions[revision]})")
             continue
         revisions[revision] = name
         block = DOWN_REVISION.search(text)
@@ -106,8 +104,7 @@ def main() -> int:
     dangling = sorted(p for p in referenced if p not in revisions)
 
     print(
-        f"migration graph: {len(revisions)} revisions, {edges} parent edges, "
-        f"{len(heads)} head(s), {len(bases)} base(s)"
+        f"migration graph: {len(revisions)} revisions, {edges} parent edges, {len(heads)} head(s), {len(bases)} base(s)"
     )
 
     failed = False
@@ -121,9 +118,7 @@ def main() -> int:
         failed = True
 
     if unparsed:
-        print(
-            f"ERROR: {len(unparsed)} file(s) in versions/ carry no usable revision id:"
-        )
+        print(f"ERROR: {len(unparsed)} file(s) in versions/ carry no usable revision id:")
         for name in unparsed:
             print(f"  {name}")
         failed = True

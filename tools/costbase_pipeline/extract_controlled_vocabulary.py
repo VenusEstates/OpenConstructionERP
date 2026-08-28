@@ -52,21 +52,15 @@ def _norm(series: pd.Series) -> pd.Series:
 def harvest(clone: Path, columns: tuple[str, ...] = CONTROLLED_COLUMNS) -> dict:
     """Walk every published edition and collect base label -> target label per language."""
     # pairs[column][lang][source_label] -> {target_label: [regions that show it]}
-    pairs: dict = defaultdict(
-        lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    )
+    pairs: dict = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list))))
     editions = 0
-    for base_path in sorted(
-        clone.glob("*/[A-Z]*_workitems_costs_resources_DDC_CWICR.parquet")
-    ):
+    for base_path in sorted(clone.glob("*/[A-Z]*_workitems_costs_resources_DDC_CWICR.parquet")):
         region = base_path.name.split("_workitems")[0]
         base = pd.read_parquet(base_path)
         present = [c for c in columns if c in base.columns]
         if not present:
             continue
-        for edition in sorted(
-            base_path.parent.glob(f"*___DDC_CWICR/{region}_*_workitems_*.parquet")
-        ):
+        for edition in sorted(base_path.parent.glob(f"*___DDC_CWICR/{region}_*_workitems_*.parquet")):
             if ".bak" in edition.name:
                 continue
             lang = edition.name[len(region) + 1 :].split("_workitems")[0]
@@ -76,7 +70,7 @@ def harvest(clone: Path, columns: tuple[str, ...] = CONTROLLED_COLUMNS) -> dict:
                 src, tgt = _norm(base[column]), _norm(frame[column])
                 # value_counts over the pair is far cheaper than iterating 110k rows, and a
                 # closed vocabulary collapses to a handful of distinct pairs per column.
-                for (s, t), _ in pd.Series(list(zip(src, tgt))).value_counts().items():
+                for (s, t), _ in pd.Series(list(zip(src, tgt, strict=False))).value_counts().items():
                     if not s or not t:
                         continue
                     pairs[column][lang][s][t].append(region)
@@ -110,9 +104,7 @@ def resolve(pairs: dict) -> tuple[dict, list[dict]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--clone", type=Path, required=True, help="published repository clone"
-    )
+    parser.add_argument("--clone", type=Path, required=True, help="published repository clone")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = parser.parse_args()
 
@@ -136,10 +128,7 @@ def main() -> None:
     )
     summary = {
         "editions_read": editions,
-        "columns": {
-            c: {"languages": len(v), "labels": len(next(iter(v.values())))}
-            for c, v in table.items()
-        },
+        "columns": {c: {"languages": len(v), "labels": len(next(iter(v.values())))} for c, v in table.items()},
         "conflicts": len(conflicts),
         "out": str(args.out),
     }

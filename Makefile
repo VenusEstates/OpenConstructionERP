@@ -84,9 +84,17 @@ lint: ## Lint all code
 format: ## Format the backend code (the frontend has no automatic formatter)
 	cd $(BACKEND_DIR) && ruff format app/ tests/
 
+# The frontend half runs the build rather than `npm run typecheck`. Both start
+# from the same compiler, but `npm run typecheck` is `tsc --noEmit` and stops
+# there, while `npm run build` is `tsc -b` followed by `vite build`, so it also
+# resolves the module graph the way the bundle does and `tsc -b` answers from
+# .tsbuildinfo where a cold --noEmit does not. `npm run build` is the gate this
+# project treats as authoritative, and a green `tsc --noEmit` read as a green
+# build is how three broken HEADs shipped recently. It costs a bundle write
+# into frontend/dist, which is the price of checking the thing that ships.
 typecheck: ## Run type checking
 	cd $(BACKEND_DIR) && mypy app/
-	cd $(FRONTEND_DIR) && npm run typecheck
+	cd $(FRONTEND_DIR) && npm run build
 
 # ─── Database ───────────────────────────────────────────────────────────────
 migrate: ## Run all pending migrations

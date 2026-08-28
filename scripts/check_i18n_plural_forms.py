@@ -257,9 +257,7 @@ def main() -> int:
     new = sorted(set(findings) - baseline)
     gone = sorted(baseline - set(findings))
     if gone:
-        print(
-            f"\n{len(gone)} baselined plural hole(s) fixed; remove them from {BASELINE_PATH}."
-        )
+        print(f"\n{len(gone)} baselined plural hole(s) fixed; remove them from {BASELINE_PATH}.")
     if new:
         print(
             f"\n{len(new)} counted key(s) are missing a form their language needs. "
@@ -270,10 +268,7 @@ def main() -> int:
         )
         return 1
 
-    print(
-        f"i18n plural forms OK: {len(by_locale)} locales, "
-        f"{len(findings)} baselined hole(s) still open, no new ones."
-    )
+    print(f"i18n plural forms OK: {len(by_locale)} locales, {len(findings)} baselined hole(s) still open, no new ones.")
     return 0
 
 

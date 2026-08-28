@@ -7,6 +7,7 @@ appended just before the trailing ``},`` of that block, and BLEED keys
 
 Idempotent: applying the same patch twice produces the same file.
 """
+
 from __future__ import annotations
 
 import json
@@ -100,7 +101,7 @@ def _replace_or_append(
         m = key_pattern.search(new_body)
         if m:
             new_line = f"{m.group(1)}'{key}': {_ts_quote(translation)},"
-            new_body = new_body[: m.start()] + new_line + new_body[m.end():]
+            new_body = new_body[: m.start()] + new_line + new_body[m.end() :]
         else:
             appended_lines.append(f"      '{key}': {_ts_quote(translation)},")
 
@@ -139,7 +140,7 @@ def main() -> None:
     # don't contain hyphens in this codebase, so this is unambiguous.
     by_lang: dict[str, dict[str, str]] = {}
     for patch_path in sorted(TMP.glob("patch-*.json")):
-        rest = patch_path.stem[len("patch-"):]
+        rest = patch_path.stem[len("patch-") :]
         lang = rest.split("-", 1)[0]
         try:
             chunk = json.loads(patch_path.read_text(encoding="utf-8"))

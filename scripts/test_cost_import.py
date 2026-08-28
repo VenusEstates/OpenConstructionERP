@@ -15,6 +15,7 @@ Usage: python scripts/test_cost_import.py
 Requires the backend to be running on http://localhost:8000 with the demo
 account seeded (`demo@openconstructionerp.com`).
 """
+
 from __future__ import annotations
 
 import csv
@@ -76,9 +77,7 @@ def push_recipes(s: requests.Session) -> int:
         if r.status_code == 201:
             created += 1
             continue
-        if r.status_code in (400, 409, 422) and any(
-            kw in r.text.lower() for kw in ("exists", "unique", "duplicate")
-        ):
+        if r.status_code in (400, 409, 422) and any(kw in r.text.lower() for kw in ("exists", "unique", "duplicate")):
             already += 1
             continue
         fail(f"recipe {item['code']} HTTP {r.status_code}: {r.text[:300]}")
@@ -101,10 +100,7 @@ def verify_round_trip(s: requests.Session) -> None:
         if r.status_code != 200:
             missing.append(f"{code}: HTTP {r.status_code}")
             continue
-        items = [
-            it for it in r.json().get("items", [])
-            if it.get("code") == code
-        ]
+        items = [it for it in r.json().get("items", []) if it.get("code") == code]
         if not items:
             missing.append(code)
             continue
@@ -129,19 +125,13 @@ def verify_recipe_components(s: requests.Session) -> None:
         r = s.get(f"{API}/costs/?q={rec['code']}&limit=5", timeout=30)
         if r.status_code != 200:
             fail(f"recipe lookup {rec['code']}: HTTP {r.status_code}")
-        items = [
-            it for it in r.json().get("items", [])
-            if it.get("code") == rec["code"]
-        ]
+        items = [it for it in r.json().get("items", []) if it.get("code") == rec["code"]]
         if not items:
             fail(f"recipe {rec['code']} not found after push")
         got = items[0]
         got_components = got.get("components") or []
         if len(got_components) != len(rec["components"]):
-            fail(
-                f"recipe {rec['code']} components count "
-                f"{len(got_components)} != {len(rec['components'])}"
-            )
+            fail(f"recipe {rec['code']} components count {len(got_components)} != {len(rec['components'])}")
         # Compare each by code + factor
         by_code = {c["code"]: c for c in got_components if isinstance(c, dict) and c.get("code")}
         for expected_c in rec["components"]:
@@ -150,15 +140,12 @@ def verify_recipe_components(s: requests.Session) -> None:
                 fail(f"recipe {rec['code']} missing component {ec_code}")
             got_factor = float(by_code[ec_code].get("factor", 0))
             if abs(got_factor - float(expected_c["factor"])) > 1e-6:
-                fail(
-                    f"recipe {rec['code']} component {ec_code}: "
-                    f"factor {got_factor} != {expected_c['factor']}"
-                )
+                fail(f"recipe {rec['code']} component {ec_code}: factor {got_factor} != {expected_c['factor']}")
     print(f"      all {len(recipes)} recipes have correct component breakdowns")
 
 
 def main() -> None:
-    print(f"== cost-database import smoke test ==")
+    print("== cost-database import smoke test ==")
     print(f"   API: {API}")
     print(f"   CSV: {CSV_PATH}")
     print(f"   JSON: {JSON_PATH}")

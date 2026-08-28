@@ -109,9 +109,7 @@ _MIN_EXPECTED_FLAGGED = 10
 # shortest is 74 characters.
 _MIN_REASON_CHARS = 30
 
-_PLACEHOLDER_RE = re.compile(
-    r"^(todo|tbd|n/?a|none|unknown|see above|fixme)\b", re.IGNORECASE
-)
+_PLACEHOLDER_RE = re.compile(r"^(todo|tbd|n/?a|none|unknown|see above|fixme)\b", re.IGNORECASE)
 
 _DECL_RE = re.compile(r"#\s*boot-repair:\s*(.+?)\s*$")
 _REF_RE = re.compile(r"^(registry|boot-path)=(\S+)$")
@@ -166,11 +164,7 @@ def _registrations() -> dict[str, str | None]:
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
-            name = (
-                func.attr
-                if isinstance(func, ast.Attribute)
-                else getattr(func, "id", "")
-            )
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
             if name != REGISTRY_FUNC:
                 continue
             for inner in ast.walk(node):
@@ -181,11 +175,7 @@ def _registrations() -> dict[str, str | None]:
                 if not (isinstance(rid, ast.Constant) and isinstance(rid.value, str)):
                     continue
                 rev = kwargs.get("revision")
-                found[rid.value] = (
-                    rev.value
-                    if isinstance(rev, ast.Constant) and isinstance(rev.value, str)
-                    else None
-                )
+                found[rid.value] = rev.value if isinstance(rev, ast.Constant) and isinstance(rev.value, str) else None
     return found
 
 
@@ -372,9 +362,7 @@ def main(argv: list[str]) -> int:  # noqa: ARG001 - argv taken for symmetry with
         return 1
 
     if gaps:
-        print(
-            f"Data rewrites that do NOT reach an ordinary install ({len(gaps)} declared):"
-        )
+        print(f"Data rewrites that do NOT reach an ordinary install ({len(gaps)} declared):")
         for name, reason in gaps:
             print(f"  {name}")
             print(f"      {reason}")
@@ -395,9 +383,7 @@ def main(argv: list[str]) -> int:  # noqa: ARG001 - argv taken for symmetry with
 
     if dangling:
         print()
-        print(
-            "Registrations naming a revision that is not in backend/alembic/versions:"
-        )
+        print("Registrations naming a revision that is not in backend/alembic/versions:")
         for repair_id, revision in dangling:
             print(f"  {repair_id}  names {revision!r}")
         print()
@@ -413,9 +399,7 @@ def main(argv: list[str]) -> int:  # noqa: ARG001 - argv taken for symmetry with
     if missing or problems:
         print()
         if missing:
-            print(
-                "Revisions that rewrite pre-existing rows and do not say whether it reaches an install:"
-            )
+            print("Revisions that rewrite pre-existing rows and do not say whether it reaches an install:")
             for name, tables in missing:
                 print(f"  {name}  (rewrites {tables})")
         for name, bad in problems:

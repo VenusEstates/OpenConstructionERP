@@ -9,11 +9,10 @@ from pathlib import Path
 import pandas as pd
 import pyarrow.parquet as pq
 
-
 PIPELINE_DIR = Path(__file__).resolve().parent
 # Data location comes from configuration, never from where this file happens to sit.
 # See extract_translation_corpus.resolve_base_dir for why.
-from extract_translation_corpus import BASE_DIR_ENV, resolve_base_dir  # noqa: E402
+from extract_translation_corpus import resolve_base_dir  # noqa: E402
 
 CONTROLLED_COLUMNS = [
     "row_type",
@@ -165,14 +164,10 @@ def build_controlled_values() -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     unit_counter: Counter[tuple[str, str, str]] = Counter()
     manifest = {"source_files": [], "controlled_columns": CONTROLLED_COLUMNS}
 
-    for path in sorted(
-        resolve_base_dir().glob("*_workitems_costs_resources_DDC_CWICR.parquet")
-    ):
+    for path in sorted(resolve_base_dir().glob("*_workitems_costs_resources_DDC_CWICR.parquet")):
         region = path.name.split("_workitems", 1)[0]
         schema_cols = pq.read_schema(path).names
-        df = pd.read_parquet(
-            path, columns=[c for c in CONTROLLED_COLUMNS if c in schema_cols]
-        )
+        df = pd.read_parquet(path, columns=[c for c in CONTROLLED_COLUMNS if c in schema_cols])
         manifest["source_files"].append(path.name)
 
         if "row_type" in df.columns:
@@ -180,9 +175,7 @@ def build_controlled_values() -> tuple[pd.DataFrame, pd.DataFrame, dict]:
                 if value:
                     row_counter[(region, value)] += int(count)
 
-        for column in [
-            c for c in CONTROLLED_COLUMNS if c != "row_type" and c in df.columns
-        ]:
+        for column in [c for c in CONTROLLED_COLUMNS if c != "row_type" and c in df.columns]:
             for value, count in Counter(df[column].map(normalize_text)).items():
                 if value:
                     unit_counter[(region, column, value)] += int(count)
@@ -229,9 +222,7 @@ def main() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     row_types, units, manifest = build_controlled_values()
-    row_types.to_csv(
-        args.out_dir / "row_type_aliases.csv", index=False, encoding="utf-8-sig"
-    )
+    row_types.to_csv(args.out_dir / "row_type_aliases.csv", index=False, encoding="utf-8-sig")
     units.to_csv(args.out_dir / "unit_aliases.csv", index=False, encoding="utf-8-sig")
     (args.out_dir / "controlled_values_manifest.json").write_text(
         json.dumps(
@@ -239,9 +230,7 @@ def main() -> None:
                 **manifest,
                 "row_type_aliases": int(len(row_types)),
                 "unit_aliases": int(len(units)),
-                "unit_aliases_needing_review": int(
-                    units["audit_status"].eq("needs_review").sum()
-                ),
+                "unit_aliases_needing_review": int(units["audit_status"].eq("needs_review").sum()),
             },
             ensure_ascii=False,
             indent=2,

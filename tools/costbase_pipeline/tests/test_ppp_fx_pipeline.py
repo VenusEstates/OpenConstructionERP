@@ -3,22 +3,19 @@ from __future__ import annotations
 import json
 
 import pandas as pd
-
 from ppp_fx_pipeline import (
     Economy,
     build_multiplier_table,
     build_worldbank_ppp_table,
-    fetch_worldbank_ppp,
     load_numbeo_snapshot,
-    load_worldbank_ppp_snapshot,
     load_target_catalogues,
+    load_worldbank_ppp_snapshot,
     parse_ecb_daily_xml,
     read_economies,
     require_fx_rates,
     require_numbeo_indices,
     require_worldbank_ppp,
 )
-
 
 ECB_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01"
@@ -45,13 +42,7 @@ def test_parse_ecb_daily_xml_adds_eur_base_rate() -> None:
 def test_load_target_catalogues_blocks_missing_currency(tmp_path) -> None:
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
-        json.dumps(
-            {
-                "target_catalogues": [
-                    {"region": "DE_BERLIN", "country_iso": "DE", "city": "Berlin"}
-                ]
-            }
-        ),
+        json.dumps({"target_catalogues": [{"region": "DE_BERLIN", "country_iso": "DE", "city": "Berlin"}]}),
         encoding="utf-8",
     )
     try:
@@ -65,9 +56,7 @@ def test_load_target_catalogues_blocks_missing_currency(tmp_path) -> None:
 
 def test_read_source_economies_blocks_missing_country(tmp_path) -> None:
     path = tmp_path / "source_economies.csv"
-    pd.DataFrame([{"region": "TR", "city": "Istanbul", "currency": "TRY"}]).to_csv(
-        path, index=False
-    )
+    pd.DataFrame([{"region": "TR", "city": "Istanbul", "currency": "TRY"}]).to_csv(path, index=False)
     try:
         read_economies(path)
     except ValueError as exc:
@@ -124,18 +113,14 @@ def test_missing_fx_or_numbeo_coverage_blocks() -> None:
         raise AssertionError("missing ECB currency did not block")
 
     try:
-        require_numbeo_indices(
-            economies, {("TR", "istanbul"): {"cost_of_living_index": 40.0}}
-        )
+        require_numbeo_indices(economies, {("TR", "istanbul"): {"cost_of_living_index": 40.0}})
     except ValueError as exc:
         assert "DE_BERLIN" in str(exc)
     else:
         raise AssertionError("missing Numbeo economy did not block")
 
     try:
-        require_worldbank_ppp(
-            economies, {"TR": {"ppp_conversion_factor": 12.0, "year": 2025}}
-        )
+        require_worldbank_ppp(economies, {"TR": {"ppp_conversion_factor": 12.0, "year": 2025}})
     except ValueError as exc:
         assert "DE_BERLIN" in str(exc)
     else:

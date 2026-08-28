@@ -119,7 +119,7 @@ def matches(target: str, route: str) -> bool:
     t_parts, r_parts = segments(target), segments(route)
     if len(t_parts) != len(r_parts):
         return False
-    return all(r.startswith(":") or r == t for t, r in zip(t_parts, r_parts))
+    return all(r.startswith(":") or r == t for t, r in zip(t_parts, r_parts, strict=False))
 
 
 def resolve_unscoped(target: str) -> str | None:

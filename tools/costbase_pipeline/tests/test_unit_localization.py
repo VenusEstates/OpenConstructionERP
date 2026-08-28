@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 
 import pandas as pd
-
 from unit_localization import (
     US_CUSTOMARY_CONVERSIONS,
     apply_unit_localization,
@@ -30,9 +29,7 @@ def test_resource_unit_conversion_preserves_resource_cost() -> None:
     assert converted.loc[0, "resource_unit"] == "LF"
     assert converted.loc[0, "resource_unit_metric"] == "m"
     assert math.isclose(converted.loc[0, "resource_quantity"], 2.0 * factor)
-    assert math.isclose(
-        converted.loc[0, "resource_price_per_unit_current"], 10.0 / factor
-    )
+    assert math.isclose(converted.loc[0, "resource_price_per_unit_current"], 10.0 / factor)
     assert converted.loc[0, "resource_cost"] == 20.0
     assert validate_resource_cost_invariance(source, converted)["ok"]
 
@@ -62,19 +59,13 @@ def test_position_basis_conversion_rebases_totals_to_one_target_unit() -> None:
     assert converted.loc[0, "rate_unit_copy"] == "CY"
     assert converted.loc[0, "rate_unit_copy_metric"] == "m3"
     assert converted.loc[0, "resource_unit"] == "LB"
-    assert math.isclose(
-        converted.loc[0, "resource_quantity"], 100.0 * kg_factor * cy_basis
-    )
-    assert math.isclose(
-        converted.loc[0, "resource_price_per_unit_current"], 2.0 / kg_factor
-    )
+    assert math.isclose(converted.loc[0, "resource_quantity"], 100.0 * kg_factor * cy_basis)
+    assert math.isclose(converted.loc[0, "resource_price_per_unit_current"], 2.0 / kg_factor)
     # Rebasing to "per 1 CY" shrinks the resource money by the basis, exactly like the
     # quantity, so the row still multiplies out and sums back to the position total.
     assert math.isclose(converted.loc[0, "resource_cost"], 200.0 * cy_basis)
     assert math.isclose(converted.loc[0, "total_cost_per_position"], 200.0 * cy_basis)
-    assert math.isclose(
-        converted.loc[0, "total_resource_cost_per_position"], 200.0 * cy_basis
-    )
+    assert math.isclose(converted.loc[0, "total_resource_cost_per_position"], 200.0 * cy_basis)
     quantity = converted.loc[0, "resource_quantity"]
     price = converted.loc[0, "resource_price_per_unit_current"]
     assert math.isclose(quantity * price, converted.loc[0, "resource_cost"])
@@ -110,16 +101,10 @@ def test_unchanged_units_are_not_modified() -> None:
 
 
 def test_us_customary_gate_only_converts_usa() -> None:
-    source = pd.DataFrame(
-        [{"rate_unit": "m2", "resource_unit": "m", "resource_quantity": 1.0}]
-    )
+    source = pd.DataFrame([{"rate_unit": "m2", "resource_unit": "m", "resource_quantity": 1.0}])
 
-    usa, usa_report = apply_unit_localization(
-        source, target_region="USA_USD", target_lang="en"
-    )
-    gb, gb_report = apply_unit_localization(
-        source, target_region="GB_LONDON", target_lang="en"
-    )
+    usa, usa_report = apply_unit_localization(source, target_region="USA_USD", target_lang="en")
+    gb, gb_report = apply_unit_localization(source, target_region="GB_LONDON", target_lang="en")
 
     assert usa_report["unit_system"] == "us_customary"
     assert usa.loc[0, "rate_unit"] == "SF"

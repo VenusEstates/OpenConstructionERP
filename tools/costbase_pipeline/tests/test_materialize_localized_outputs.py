@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 
 import pandas as pd
-
 from extract_translation_corpus import tm_key
 from materialize_localized_outputs import (
     apply_ppp_conversion,
@@ -15,34 +14,20 @@ from materialize_localized_outputs import (
 
 def test_strip_pipeline_artifacts_recovers_and_drops() -> None:
     # filled wrapper: strip tags, keep the value
-    assert (
-        strip_pipeline_artifacts(
-            "pipe DN <protected_token>50 mm</protected_token> long"
-        )
-        == "pipe DN 50 mm long"
-    )
+    assert strip_pipeline_artifacts("pipe DN <protected_token>50 mm</protected_token> long") == "pipe DN 50 mm long"
     # multiple wrappers in one string
     assert (
-        strip_pipeline_artifacts(
-            "<protected_token>A</protected_token>-<protected_token>B</protected_token>"
-        )
-        == "A-B"
+        strip_pipeline_artifacts("<protected_token>A</protected_token>-<protected_token>B</protected_token>") == "A-B"
     )
     # empty wrapper lost its value -> unusable, fall back to source
-    assert (
-        strip_pipeline_artifacts("diameter <protected_token></protected_token> mm")
-        is None
-    )
+    assert strip_pipeline_artifacts("diameter <protected_token></protected_token> mm") is None
     # unbalanced / unclosed tag -> residue remains -> drop
     assert strip_pipeline_artifacts("diameter <protected_token> mm") is None
     # unrestored curly substitution -> drop
     assert strip_pipeline_artifacts("wall {protected_tokens[0]} thick") is None
     assert strip_pipeline_artifacts("mesh {protected_tokens}") is None
     # clean text and empty/None pass through untouched
-    assert (
-        strip_pipeline_artifacts("concrete C25/30 wall 24 cm")
-        == "concrete C25/30 wall 24 cm"
-    )
+    assert strip_pipeline_artifacts("concrete C25/30 wall 24 cm") == "concrete C25/30 wall 24 cm"
     assert strip_pipeline_artifacts("") == ""
     assert strip_pipeline_artifacts(None) is None
 
@@ -68,9 +53,7 @@ def test_build_translation_map_uses_only_approved_statuses() -> None:
     assert mapping == {"k1": "Beton"}
 
 
-def test_materialize_region_preserves_empty_sources_and_identity_columns(
-    tmp_path, monkeypatch
-) -> None:
+def test_materialize_region_preserves_empty_sources_and_identity_columns(tmp_path, monkeypatch) -> None:
     source = pd.DataFrame(
         [
             {
@@ -319,16 +302,10 @@ def test_native_edition_returns_content_columns_unchanged(tmp_path) -> None:
     mapping = {
         tm_key("tr", "Düz işçi"): "General laborer",
         tm_key("tr", "Operatör makinist"): "Operator machinist",
-        tm_key(
-            "tr", "Kalıp yapılması ve sökülmesi"
-        ): "Formwork erection and dismantling",
+        tm_key("tr", "Kalıp yapılması ve sökülmesi"): "Formwork erection and dismantling",
         tm_key("tr", "İnşaat işleri"): "Construction work",
-        tm_key(
-            "tr", "Çevre ve Şehircilik Bakanlığı"
-        ): "Ministry of Environment and Urbanisation",
-        tm_key(
-            "tr", "Beton santralinde üretilen C 20/25 beton"
-        ): "C 20/25 concrete from a batching plant",
+        tm_key("tr", "Çevre ve Şehircilik Bakanlığı"): "Ministry of Environment and Urbanisation",
+        tm_key("tr", "Beton santralinde üretilen C 20/25 beton"): "C 20/25 concrete from a batching plant",
         tm_key("tr", "Labour"): "Labour",
     }
     out = materialize_region(
@@ -343,8 +320,7 @@ def test_native_edition_returns_content_columns_unchanged(tmp_path) -> None:
     localized = pd.read_parquet(out)
     for column in _NATIVE_CONTENT_COLUMNS:
         assert localized.loc[0, column] == source.loc[0, column], (
-            f"native edition rewrote {column}: "
-            f"{source.loc[0, column]!r} -> {localized.loc[0, column]!r}"
+            f"native edition rewrote {column}: {source.loc[0, column]!r} -> {localized.loc[0, column]!r}"
         )
     # Current behaviour on the controlled columns, pinned so a change to it is visible rather
     # than incidental. `Labour` is the English canon sitting in the Turkish base; the file a
@@ -367,16 +343,10 @@ def test_non_native_edition_still_translates_the_same_columns(tmp_path) -> None:
     mapping = {
         tm_key("tr", "Düz işçi"): "General laborer",
         tm_key("tr", "Operatör makinist"): "Operator machinist",
-        tm_key(
-            "tr", "Kalıp yapılması ve sökülmesi"
-        ): "Formwork erection and dismantling",
+        tm_key("tr", "Kalıp yapılması ve sökülmesi"): "Formwork erection and dismantling",
         tm_key("tr", "İnşaat işleri"): "Construction work",
-        tm_key(
-            "tr", "Çevre ve Şehircilik Bakanlığı"
-        ): "Ministry of Environment and Urbanisation",
-        tm_key(
-            "tr", "Beton santralinde üretilen C 20/25 beton"
-        ): "C 20/25 concrete from a batching plant",
+        tm_key("tr", "Çevre ve Şehircilik Bakanlığı"): "Ministry of Environment and Urbanisation",
+        tm_key("tr", "Beton santralinde üretilen C 20/25 beton"): "C 20/25 concrete from a batching plant",
         tm_key("tr", "Labour"): "Labour",
     }
     out = materialize_region(
@@ -391,18 +361,11 @@ def test_non_native_edition_still_translates_the_same_columns(tmp_path) -> None:
     localized = pd.read_parquet(out)
     assert localized.loc[0, "resource_name"] == "General laborer"
     assert localized.loc[0, "labor_title"] == "Operator machinist"
-    assert (
-        localized.loc[0, "work_composition_text"] == "Formwork erection and dismantling"
-    )
+    assert localized.loc[0, "work_composition_text"] == "Formwork erection and dismantling"
     assert localized.loc[0, "section_name"] == "Construction work"
-    assert (
-        localized.loc[0, "rate_final_name"] == "C 20/25 concrete from a batching plant"
-    )
+    assert localized.loc[0, "rate_final_name"] == "C 20/25 concrete from a batching plant"
     # the one column that is preserved in every locale, native or not
-    assert (
-        localized.loc[0, "rate_original_name"]
-        == "Beton santralinde üretilen C 20/25 beton"
-    )
+    assert localized.loc[0, "rate_original_name"] == "Beton santralinde üretilen C 20/25 beton"
     summary = json.loads(localized.loc[0, "translation_status_summary"])
     assert summary["identity_edition"] is False
 

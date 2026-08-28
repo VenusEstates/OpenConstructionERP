@@ -75,9 +75,7 @@ def _is_module_dir(parent: str) -> bool:
     of the five names it is supposed to be checking.
     """
     parts = parent.split("/")
-    return parts[-1] == "lib" or (
-        len(parts) >= 2 and parts[-2] == "lib" and parts[-1] == "postgresql"
-    )
+    return parts[-1] == "lib" or (len(parts) >= 2 and parts[-2] == "lib" and parts[-1] == "postgresql")
 
 
 def _is_bin_dir(parent: str) -> bool:
@@ -116,10 +114,7 @@ def main() -> int:
         # way as one that is missing, and the two need different fixes, so say
         # which of the two this is.
         elsewhere = sorted(
-            name
-            for name in names
-            for stem in missing_modules + missing_binaries
-            if _split(name)[1] == stem
+            name for name in names for stem in missing_modules + missing_binaries if _split(name)[1] == stem
         )
         if elsewhere:
             print(f"  found under another path: {', '.join(elsewhere[:5])}")

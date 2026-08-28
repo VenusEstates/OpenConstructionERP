@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """‌⁠‍Dump all untranslated mn keys as a JSON file for translation pipeline."""
+
 import json
 import re
 from pathlib import Path

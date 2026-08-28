@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-
 from publish_editions import (
     assert_publishable,
     build_edition,

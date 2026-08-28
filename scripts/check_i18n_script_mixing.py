@@ -162,11 +162,7 @@ def _read(path: str) -> tuple[dict[str, str], int]:
 
 
 def _foreign(value: str, allowed: set[str]) -> set[str]:
-    return {
-        name
-        for name, pat in PATTERNS.items()
-        if name not in allowed and pat.search(value)
-    }
+    return {name for name, pat in PATTERNS.items() if name not in allowed and pat.search(value)}
 
 
 def _offenders(value: str, script: str, limit: int = 6) -> str:
@@ -214,11 +210,7 @@ def main() -> int:
         unparsed_total += unparsed
         scanned += len(values)
         allowed = set(SCRIPTS[locale])
-        found = {
-            (key, script)
-            for key, value in values.items()
-            for script in _foreign(value, allowed)
-        }
+        found = {(key, script) for key, value in values.items() for script in _foreign(value, allowed)}
         hits[locale] = found
         for pair in found:
             shared[pair] = shared.get(pair, 0) + 1
@@ -247,17 +239,12 @@ def main() -> int:
             if ident in baseline:
                 continue
             chars = _offenders(samples[locale][key], script)
-            print(
-                f"ERROR: {locale} value for {key} contains {script}, which {locale} "
-                f"does not write in: {chars}"
-            )
+            print(f"ERROR: {locale} value for {key} contains {script}, which {locale} does not write in: {chars}")
 
     new = sorted(set(findings) - baseline)
     gone = sorted(baseline - set(findings))
     if gone:
-        print(
-            f"\n{len(gone)} baselined script mix(es) fixed; remove them from {BASELINE_PATH}."
-        )
+        print(f"\n{len(gone)} baselined script mix(es) fixed; remove them from {BASELINE_PATH}.")
     if new:
         print(
             f"\n{len(new)} value(s) are written in a script their language does not use. "
@@ -270,11 +257,7 @@ def main() -> int:
     print(
         f"i18n script mixing OK: {len(locales)} locales, {scanned} values scanned, "
         f"{len(findings)} baselined mix(es) still open, no new ones."
-        + (
-            f" ({unparsed_total} key line(s) carried no single-line value.)"
-            if unparsed_total
-            else ""
-        )
+        + (f" ({unparsed_total} key line(s) carried no single-line value.)" if unparsed_total else "")
     )
     return 0
 

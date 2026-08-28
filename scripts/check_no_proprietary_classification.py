@@ -133,46 +133,34 @@ _ALLOWED_NOMINATIVE: dict[str, frozenset[str]] = {
     # Validation rules are named after the standard whose conformance they check.
     "backend/app/core/validation/rules/__init__.py": frozenset({"name", "description"}),
     "backend/app/modules/validation/manifest.py": frozenset({"description"}),
-    "backend/app/modules/validation/rules/bim_model_rule.py": frozenset(
-        {"description"}
-    ),
+    "backend/app/modules/validation/rules/bim_model_rule.py": frozenset({"description"}),
     "backend/app/modules/validation/rules/bim_universal.py": frozenset({"description"}),
     # Agents that classify into a standard have to say which ones they can target.
     "backend/app/modules/ai_agents/agents/advisors.py": frozenset({"description"}),
-    "backend/app/modules/ai_agents/agents/cost_classifier.py": frozenset(
-        {"description"}
-    ),
+    "backend/app/modules/ai_agents/agents/cost_classifier.py": frozenset({"description"}),
     # API parameter documentation naming the classification a filter accepts.
     "backend/app/modules/assemblies/router.py": frozenset({"description"}),
     # Column-header aliases exist to recognise the name in a customer's spreadsheet.
     "backend/app/modules/eac/aliases/seed_catalog.json": frozenset({"name"}),
     # A whole pack whose job is to name the standards US work interoperates with.
-    "packs/us-costdata/": frozenset(
-        {"title", "label", "name", "standard", "description"}
-    ),
+    "packs/us-costdata/": frozenset({"title", "label", "name", "standard", "description"}),
     # Partner pack: naming this supplier's database as the pack's data source is
     # sanctioned under a real partnership agreement, so it is not a finding here and
     # must not be rewritten. An earlier wave read it as an unlicensed claim and
     # rewrote it; the entry exists so that cannot happen a second time.
-    "packs/batimatech-ca/": frozenset(
-        {"title", "label", "name", "standard", "description"}
-    ),
+    "packs/batimatech-ca/": frozenset({"title", "label", "name", "standard", "description"}),
     # Pickers and presets: the user chooses a standard and must see which one.
     "frontend/src/features/ai/QuickEstimatePage.tsx": frozenset({"label"}),
     "frontend/src/features/projects/CreateProjectPage.tsx": frozenset({"label"}),
     "frontend/src/features/boq/CreateBOQPage.tsx": frozenset({"standard"}),
     "frontend/src/features/boq/MarkupPanel.tsx": frozenset({"standard"}),
     "frontend/src/features/boq/presets/index.ts": frozenset({"name", "description"}),
-    "frontend/src/features/eac/components/EacBlockPalette.tsx": frozenset(
-        {"description"}
-    ),
+    "frontend/src/features/eac/components/EacBlockPalette.tsx": frozenset({"description"}),
     "frontend/src/modules/regional-exchange/regionalRegistry.ts": frozenset({"label"}),
     # Shipped release notes are a historical record and are not rewritten.
     "frontend/src/features/about/Changelog.tsx": frozenset({"summary"}),
     # Generated inventories that copy descriptions already allowed at their source.
-    "frontend/src/features/architecture/architecture_manifest.json": frozenset(
-        {"description"}
-    ),
+    "frontend/src/features/architecture/architecture_manifest.json": frozenset({"description"}),
     "scripts/_88_module_inventory.json": frozenset({"description"}),
 }
 
@@ -236,9 +224,7 @@ _PAIR_RXS = (
     # of up to seventy lengths at every candidate start, which measured five
     # times slower over the tree once the class was widened to admit brackets.
     # Trailing rule characters are dropped in ``_title_fragments`` instead.
-    re.compile(
-        r"""(?:Division\s+)?(?P<num>\d{2})\s*[-:|]\s*(?P<title>[^\W\d_][^"'\n]{2,70})"""
-    ),
+    re.compile(r"""(?:Division\s+)?(?P<num>\d{2})\s*[-:|]\s*(?P<title>[^\W\d_][^"'\n]{2,70})"""),
     # {"number": "03", "title": "..."} and {code: '03', label: '...'}
     re.compile(
         r"""["']?(?:number|code|division)["']?\s*:\s*["'](?P<num>\d{2})["']\s*,\s*"""
@@ -335,29 +321,17 @@ def _logical_lines(text: str) -> Iterator[tuple[int, str]]:
         parts = [raw[index]]
         # The substring test keeps the regex off the overwhelming majority of lines;
         # generated manifests run to six figures of lines and the difference shows.
-        while (
-            index + 1 < total
-            and raw[index + 1].lstrip()[:1] in ('"', "'")
-            and _CONT_RX.match(raw[index + 1])
-        ):
+        while index + 1 < total and raw[index + 1].lstrip()[:1] in ('"', "'") and _CONT_RX.match(raw[index + 1]):
             index += 1
             parts.append(raw[index].strip())
         line = " ".join(parts) if len(parts) > 1 else parts[0]
-        if (
-            len(parts) > 1
-            or '" "' in line
-            or "' '" in line
-            or '""' in line
-            or "''" in line
-        ):
+        if len(parts) > 1 or '" "' in line or "' '" in line or '""' in line or "''" in line:
             line = _SPLICE_RX.sub("", line)
         yield start + 1, line
         index += 1
 
 
-def _allowed_fields_for(
-    path: str, allowlist: dict[str, frozenset[str]]
-) -> frozenset[str]:
+def _allowed_fields_for(path: str, allowlist: dict[str, frozenset[str]]) -> frozenset[str]:
     """Look the path up directly, then as a prefix, so a whole pack can be exempted."""
     key = path.replace("\\", "/")
     if key in allowlist:
@@ -489,9 +463,7 @@ def _tracked_files() -> list[str]:
     returns paths relative to it, which resolve to nothing under the repository root:
     the gate then scans zero files and reports success.
     """
-    out = subprocess.run(
-        ["git", "ls-files"], cwd=REPO_ROOT, capture_output=True, text=True, check=True
-    )
+    out = subprocess.run(["git", "ls-files"], cwd=REPO_ROOT, capture_output=True, text=True, check=True)
     return out.stdout.splitlines()
 
 
@@ -535,8 +507,7 @@ def main(argv: list[str]) -> int:
             # a CI pathspec must fail loudly, or the gate quietly stops guarding what it
             # was pointed at and keeps printing success.
             print(
-                "ERROR: these arguments matched no scannable file: "
-                + ", ".join(unresolved),
+                "ERROR: these arguments matched no scannable file: " + ", ".join(unresolved),
                 file=sys.stderr,
             )
             return 1
@@ -554,9 +525,7 @@ def main(argv: list[str]) -> int:
             skipped_by_suffix += 1
             continue
         scanned += 1
-        findings.extend(
-            scan_text(rel, full.read_text(encoding="utf-8", errors="replace"))
-        )
+        findings.extend(scan_text(rel, full.read_text(encoding="utf-8", errors="replace")))
 
     if not scanned:
         # A sweep that reached nothing is not a clean sweep. Saying "OK" here is how a
@@ -566,11 +535,7 @@ def main(argv: list[str]) -> int:
         where = "the whole tree" if not explicit else "the given paths"
         print(
             f"ERROR: asked to scan {where} and found no files to scan"
-            + (
-                f" ({skipped_by_suffix} skipped by file type)"
-                if skipped_by_suffix
-                else ""
-            ),
+            + (f" ({skipped_by_suffix} skipped by file type)" if skipped_by_suffix else ""),
             file=sys.stderr,
         )
         return 1
@@ -591,10 +556,7 @@ def main(argv: list[str]) -> int:
         )
         return 1
 
-    print(
-        f"classification denylist OK: {scanned} files scanned, "
-        "no proprietary titles or brand strings"
-    )
+    print(f"classification denylist OK: {scanned} files scanned, no proprietary titles or brand strings")
     return 0
 
 

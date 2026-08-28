@@ -39,9 +39,7 @@ def flatten(data: dict, prefix: str = "") -> dict[str, str]:
 
 
 def load(code: str) -> dict[str, str]:
-    return flatten(
-        json.loads((LOCALES_DIR / f"{code}.json").read_text(encoding="utf-8"))
-    )
+    return flatten(json.loads((LOCALES_DIR / f"{code}.json").read_text(encoding="utf-8")))
 
 
 def main() -> int:
@@ -58,20 +56,14 @@ def main() -> int:
         missing = sorted(key for key in english if key not in load(code))
         locales[code] = {
             "missing": len(missing),
-            "digest": hashlib.sha256("\n".join(missing).encode("utf-8")).hexdigest()[
-                :16
-            ],
+            "digest": hashlib.sha256("\n".join(missing).encode("utf-8")).hexdigest()[:16],
         }
 
     payload = {"english_keys": len(english), "locales": locales}
-    BASELINE_PATH.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    BASELINE_PATH.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     total = sum(int(entry["missing"]) for entry in locales.values())
-    print(
-        f"{BASELINE_PATH.relative_to(REPO_ROOT)}: {len(locales)} locales, {total} keys of debt"
-    )
+    print(f"{BASELINE_PATH.relative_to(REPO_ROOT)}: {len(locales)} locales, {total} keys of debt")
     return 0
 
 

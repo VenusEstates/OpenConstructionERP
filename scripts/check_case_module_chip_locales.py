@@ -122,9 +122,7 @@ def read_chips(data_glob: str) -> list[Chip]:
                 continue
             following = lines[i + 1] if i + 1 < len(lines) else ""
             key = _LABEL_KEY.match(following)
-            chips.append(
-                Chip(posix, i + 1, label.group(2), key.group(2) if key else None)
-            )
+            chips.append(Chip(posix, i + 1, label.group(2), key.group(2) if key else None))
     return chips
 
 
@@ -148,14 +146,10 @@ def read_locale_keys(locale_glob: str) -> dict[str, set[str]]:
     return by_locale
 
 
-def missing_locales(
-    key: str, by_locale: dict[str, set[str]], bases: dict[str, str | None]
-) -> list[str]:
+def missing_locales(key: str, by_locale: dict[str, set[str]], bases: dict[str, str | None]) -> list[str]:
     """Locales whose reader would see this chip's English label."""
     reach = {stem for stem, keys in by_locale.items() if key in keys}
-    return sorted(
-        stem for stem in by_locale if stem not in reach and bases[stem] not in reach
-    )
+    return sorted(stem for stem in by_locale if stem not in reach and bases[stem] not in reach)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -203,9 +197,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if keyless:
-        print(
-            f"\n{len(keyless)} chip(s) carry no moduleLabelKey and read English in every language:"
-        )
+        print(f"\n{len(keyless)} chip(s) carry no moduleLabelKey and read English in every language:")
         for chip in keyless:
             print(f"    {chip.path}:{chip.line}  moduleLabel={chip.label!r}")
 

@@ -138,9 +138,7 @@ def should_use_us_customary(
 ) -> bool:
     if unit_system:
         return unit_system == "us_customary"
-    return (target_region or "").upper() == "USA_USD" and (
-        target_lang or ""
-    ).lower() in {"en", "en-us", "en_us"}
+    return (target_region or "").upper() == "USA_USD" and (target_lang or "").lower() in {"en", "en-us", "en_us"}
 
 
 def apply_unit_localization(
@@ -150,17 +148,13 @@ def apply_unit_localization(
     target_lang: str | None = None,
     unit_system: str | None = None,
 ) -> tuple[pd.DataFrame, dict]:
-    if should_use_us_customary(
-        target_region=target_region, target_lang=target_lang, unit_system=unit_system
-    ):
+    if should_use_us_customary(target_region=target_region, target_lang=target_lang, unit_system=unit_system):
         return convert_metric_to_us_customary(frame)
     unchanged = frame.copy(deep=True)
     unchanged["unit_system"] = unit_system or "metric"
     unchanged["unit_conversion_basis"] = "metric_no_conversion"
     return unchanged, {
-        "unit_system": unchanged["unit_system"].iloc[0]
-        if len(unchanged)
-        else unit_system or "metric",
+        "unit_system": unchanged["unit_system"].iloc[0] if len(unchanged) else unit_system or "metric",
         "unit_conversion_basis": "metric_no_conversion",
         "converted": False,
     }
@@ -199,17 +193,11 @@ def _divide_numeric(df: pd.DataFrame, column: str, factors: pd.Series) -> None:
 
 
 def _target_units_for(series: pd.Series) -> pd.Series:
-    return series.map(
-        lambda value: (
-            conversion_for(value).target_unit if conversion_for(value) else value
-        )
-    )
+    return series.map(lambda value: conversion_for(value).target_unit if conversion_for(value) else value)
 
 
 def _factors_for(series: pd.Series) -> pd.Series:
-    return series.map(
-        lambda value: conversion_for(value).factor if conversion_for(value) else pd.NA
-    )
+    return series.map(lambda value: conversion_for(value).factor if conversion_for(value) else pd.NA)
 
 
 def convert_metric_to_us_customary(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
@@ -292,15 +280,11 @@ def convert_metric_to_us_customary(frame: pd.DataFrame) -> tuple[pd.DataFrame, d
         if rate_factor is None:
             rate_factor = factors
             report["rate_basis_converted_rows"] = int(converted.sum())
-        localized.loc[converted, column] = _target_units_for(
-            localized.loc[converted, f"{column}_metric"]
-        )
+        localized.loc[converted, column] = _target_units_for(localized.loc[converted, f"{column}_metric"])
 
     if rate_factor is not None:
         basis_size_in_metric = rate_factor.map(
-            lambda value: (
-                1 / float(value) if pd.notna(value) and float(value) else pd.NA
-            )
+            lambda value: 1 / float(value) if pd.notna(value) and float(value) else pd.NA
         )
         _multiply_numeric(localized, RESOURCE_QUANTITY_COLUMN, basis_size_in_metric)
         for column in POSITION_MONEY_COLUMNS:
@@ -321,13 +305,8 @@ def convert_metric_to_us_customary(frame: pd.DataFrame) -> tuple[pd.DataFrame, d
     return localized, report
 
 
-def validate_resource_cost_invariance(
-    before: pd.DataFrame, after: pd.DataFrame, *, epsilon: float = 0.01
-) -> dict:
-    if (
-        RESOURCE_COST_COLUMN not in before.columns
-        or RESOURCE_COST_COLUMN not in after.columns
-    ):
+def validate_resource_cost_invariance(before: pd.DataFrame, after: pd.DataFrame, *, epsilon: float = 0.01) -> dict:
+    if RESOURCE_COST_COLUMN not in before.columns or RESOURCE_COST_COLUMN not in after.columns:
         return {"ok": True, "checked_rows": 0, "max_abs_delta": 0.0}
     left = pd.to_numeric(before[RESOURCE_COST_COLUMN], errors="coerce")
     right = pd.to_numeric(after[RESOURCE_COST_COLUMN], errors="coerce")
@@ -351,9 +330,7 @@ def main() -> None:
 
     source = pd.read_parquet(args.input_parquet)
     converted, report = convert_metric_to_us_customary(source)
-    report["resource_cost_invariance"] = validate_resource_cost_invariance(
-        source, converted
-    )
+    report["resource_cost_invariance"] = validate_resource_cost_invariance(source, converted)
     args.output_parquet.parent.mkdir(parents=True, exist_ok=True)
     converted.to_parquet(args.output_parquet, index=False)
     if args.output_csv:

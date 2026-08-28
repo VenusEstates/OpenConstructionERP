@@ -40,20 +40,36 @@
 // general-contractor cases still wear eight different people, each of them
 // German, instead of collapsing onto one national face per company type.
 //
-// Which country files exist is NOT knowable here, and deliberately so. This
-// module mints `prf-<country>-<stem>.webp` for every regioned case and the
-// browser decides: the file loads, or it 404s and `CaseFacePhoto` swaps in the
-// pooled portrait on the error event. Dropping a webp into
-// public/assets/people therefore changes what the page shows with no code
-// edit, no rebuilt list of known filenames and no redeploy of this file. A
-// hardcoded set of "countries we have art for" is the trap `COMPANY_ART_IDS`
-// in CompanyArt.tsx is still sitting in, an empty set gating a path that does
-// not exist on disk at all.
+// Which country files exist is READ off the folder, not discovered by asking
+// for them. `countryPortraits.generated.ts` lists the `prf-<cc>-*.webp` that
+// are actually there; scripts/gen_case_country_portraits.py writes it out of
+// public/assets/people, and this module asks for a country portrait only when
+// that list says one was bought. Adding art stays a folder operation - drop
+// the webp in, run the script - and no filename is ever typed into TypeScript
+// by hand.
+//
+// The trap `COMPANY_ART_IDS` in CompanyArt.tsx is still sitting in is a list
+// MAINTAINED by hand: an empty set gating a path that nothing compares to the
+// disk. A list DERIVED from the disk, with a test that fails when the two
+// disagree in either direction, is the same open set with the discovery moved
+// off the network. The version of this module that shipped without a manifest
+// let the browser find out instead, which sounds cheaper and was not: with no
+// country art bought yet, every render of the hub, the case page and the
+// dashboard gallery spent 61 image requests learning that the folder is empty,
+// changed nothing on screen, and left 61 4xx lines in front of whoever opened
+// the console.
+//
+// The browser still gets the last word. `CaseFace` carries the pooled portrait
+// beside the requested one and `CaseFacePhoto` swaps to it on the error event,
+// because the manifest is generated at commit time: a deploy that ships the
+// list without the webp, or loses the webp afterwards, has to land on a
+// picture rather than a broken-image glyph.
 //
 // Bespoke `pbk-*` photos stay country-blind. They are shot for one named case,
 // and a case belongs to one market at most, so the country is already in the
 // picture; a `pbk-de-*` would be the same photograph under a longer name.
 
+import { COUNTRY_PORTRAITS } from './countryPortraits.generated';
 import type { CompanyType } from './types';
 
 /** Base public path every returned image URL is rooted at. */
@@ -164,43 +180,46 @@ const POOLED_PORTRAIT_PREFIX = `${PEOPLE_ASSETS_BASE}/prf-`;
 /**
  * The country-specific portrait for a pooled one, or the pooled one unchanged.
  *
- * `prf-commercial-manager.webp` + `DE` -> `prf-de-commercial-manager.webp`.
- * Returns the input untouched for a case with no region, for a region that is
- * not an ISO 3166-1 alpha-2 code, and for a bespoke `pbk-*` photo - the three
- * cases where there is nothing national to prefer.
+ * `prf-commercial-manager.webp` + `DE` -> `prf-de-commercial-manager.webp`,
+ * but only when that file is in `available`. Returns the input untouched for a
+ * case with no region, for a region that is not an ISO 3166-1 alpha-2 code,
+ * for a bespoke `pbk-*` photo, and for a market whose art has not been shot -
+ * the four cases where there is nothing national to prefer.
  *
- * Whether the returned file EXISTS is not decided here and cannot be: see the
- * module header. The caller pairs it with the pooled path so a 404 has
- * somewhere to land.
+ * The last of those is the one that decides how much this feature costs. The
+ * name is minted either way; asking for it is what the manifest gates.
  *
  * @param pooled A path returned by the pooled casting.
  * @param region `Playbook.region`, e.g. "DE". Case-insensitive; the filename
  *   is always lowercase.
+ * @param available The country portraits on disk, as bare filenames.
  */
-function countryPortraitFor(pooled: string, region?: string): string {
+function countryPortraitFor(pooled: string, region: string | undefined, available: ReadonlySet<string>): string {
   if (!region) return pooled;
   const code = region.trim().toLowerCase();
   if (!/^[a-z]{2}$/.test(code)) return pooled;
   if (!pooled.startsWith(POOLED_PORTRAIT_PREFIX)) return pooled;
-  return `${POOLED_PORTRAIT_PREFIX}${code}-${pooled.slice(POOLED_PORTRAIT_PREFIX.length)}`;
+  const stem = pooled.slice(POOLED_PORTRAIT_PREFIX.length);
+  return available.has(`prf-${code}-${stem}`) ? `${POOLED_PORTRAIT_PREFIX}${code}-${stem}` : pooled;
 }
 
 /**
  * The photograph for one case: what to request, and what to show when the
  * request fails.
  *
- * Two fields rather than one string because the two have different
- * guarantees. `pooled` is closed - it always names a file that is on disk,
- * and `caseFaces.test.ts` proves it for every case in the catalogue. `src` is
- * open by design, since the country files are bought and dropped in over time
- * and no build-time list of them may exist. Recovering one from the other by
- * parsing was the alternative and is worse: it would bake "a country code is
- * two lowercase letters" into a second place, and leave the closed-set test
- * asserting on a string it had to take apart first.
+ * Two fields rather than one string because the two answer different
+ * questions. `src` is what to ask for, and it moves as country art arrives;
+ * `pooled` is what this case wore before any market had a photograph, and it
+ * is what a load failure lands on. Both are on disk - `caseFaces.test.ts`
+ * proves it for every case in the catalogue, `src` included, now that the
+ * manifest decides. Recovering one from the other by parsing was the
+ * alternative and is worse: it would bake "a country code is two lowercase
+ * letters" into a second place, and leave the closed-set test asserting on a
+ * string it had to take apart first.
  */
 export interface CaseFace {
   /** The portrait to request: the country variant when the case names a
-   *  market and the pooled portrait otherwise. May 404. */
+   *  market that has been photographed, and the pooled portrait otherwise. */
   src: string;
   /** The pooled portrait. Always on disk; what `src` falls back to at load
    *  time (see `CaseFacePhoto`). Equal to `src` when there is no variant. */
@@ -225,10 +244,12 @@ export interface CaseFace {
  * lines above already settled on. Country is a different axis from company
  * type and must not overrule it, so a market with art for some company types
  * and none for others falls back one pairing at a time rather than all or
- * nothing - each case carries its own `pooled` and each tile fails over on its
- * own. There is no country parameter on the entry point that returns a bare
- * string, because there is no such entry point any more: a surface that called
- * one would show a country-blind face and nothing would say so.
+ * nothing - the manifest is consulted per FILENAME, so the German estimator
+ * whose photograph exists is used and the German scheduler whose photograph
+ * does not stays pooled. There is no country parameter on the entry point
+ * that returns a bare string, because there is no such entry point any more:
+ * a surface that called one would show a country-blind face and nothing would
+ * say so.
  *
  * @param caseId Case slug (e.g. `tender-from-boq`).
  * @param companyTypes The case's company types, primary first.
@@ -236,6 +257,12 @@ export interface CaseFace {
  *   under its primary company type, in display order.
  * @param region The case's market (`Playbook.region`, ISO 3166-1 alpha-2), or
  *   undefined for a universal case.
+ * @param available The country portraits on disk. Defaults to the generated
+ *   manifest, which is what every caller in the app wants. It is a parameter
+ *   at all because the shipped manifest is empty until the first webp is
+ *   bought, and a branch no test can reach is a branch that will be broken by
+ *   the change that finally reaches it - the tests hand it a market that has
+ *   art so the country half is exercised before any exists.
  * @returns The requested path and its pooled fallback, or null when no company
  *   type in `companyTypes` has a cast.
  */
@@ -244,6 +271,7 @@ export function caseFaceFor(
   companyTypes: readonly CompanyType[],
   indexInRole: number,
   region?: string,
+  available: ReadonlySet<string> = COUNTRY_PORTRAITS,
 ): CaseFace | null {
   const bespoke = BESPOKE_CASE_PHOTOS[caseId];
   if (bespoke) return { src: bespoke, pooled: bespoke };
@@ -251,7 +279,7 @@ export function caseFaceFor(
     const cast = ROLE_CAST[companyType];
     if (cast && cast.length > 0) {
       const pooled = `${PEOPLE_ASSETS_BASE}/${cast[mod(indexInRole, cast.length)]}.webp`;
-      return { src: countryPortraitFor(pooled, region), pooled };
+      return { src: countryPortraitFor(pooled, region, available), pooled };
     }
   }
   return null;
@@ -344,11 +372,20 @@ export interface CaseFaceInput {
  * half bought does not put every one of its cases on the one stem that
  * happens to exist.
  *
+ * The manifest does not touch the counter. A market with half its art bought
+ * deals exactly the same stems it dealt before the art arrived - the country
+ * only decides whether the stem is asked for in its national cut - so buying
+ * one photograph never re-casts the cases around it.
+ *
  * @param cases The full case catalogue, in display order.
+ * @param available The country portraits on disk; see {@link caseFaceFor}.
  * @returns Case slug -> requested path plus pooled fallback, holding only the
  *   cases that have a face.
  */
-export function dealCaseFaces(cases: readonly CaseFaceInput[]): Map<string, CaseFace> {
+export function dealCaseFaces(
+  cases: readonly CaseFaceInput[],
+  available: ReadonlySet<string> = COUNTRY_PORTRAITS,
+): Map<string, CaseFace> {
   const dealt = new Map<string, number>();
   const faces = new Map<string, CaseFace>();
   for (const c of cases) {
@@ -358,7 +395,7 @@ export function dealCaseFaces(cases: readonly CaseFaceInput[]): Map<string, Case
     if (!companyType) continue;
     const index = dealt.get(companyType) ?? 0;
     dealt.set(companyType, index + 1);
-    const face = caseFaceFor(c.id, [companyType], index, c.region);
+    const face = caseFaceFor(c.id, [companyType], index, c.region, available);
     if (face) faces.set(c.id, face);
   }
   return faces;

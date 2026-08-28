@@ -5,12 +5,11 @@ import hashlib
 import json
 import os
 import unicodedata
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
 import pyarrow.parquet as pq
-
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 
@@ -141,7 +140,7 @@ def normalize_text(value: object) -> str:
 
 
 def tm_key(source_lang: str, text: str) -> str:
-    payload = f"{source_lang}\x1f{normalize_text(text)}".encode("utf-8")
+    payload = f"{source_lang}\x1f{normalize_text(text)}".encode()
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -163,15 +162,12 @@ def _load_classification(base_dir: Path) -> pd.DataFrame:
     raw = pd.read_parquet(path, columns=cols)
     classification_fields = [c for c in cols if c not in {"region", "rate_code"}]
     conflicts = (
-        raw.drop_duplicates(["region", "rate_code", *classification_fields])
-        .groupby(["region", "rate_code"])
-        .size()
+        raw.drop_duplicates(["region", "rate_code", *classification_fields]).groupby(["region", "rate_code"]).size()
     )
     conflicts = conflicts[conflicts.gt(1)]
     if not conflicts.empty:
         sample = [
-            {"region": r, "rate_code": code, "variants": int(count)}
-            for (r, code), count in conflicts.head(20).items()
+            {"region": r, "rate_code": code, "variants": int(count)} for (r, code), count in conflicts.head(20).items()
         ]
         raise ValueError(f"Conflicting classification rows: {sample}")
     return raw.drop_duplicates(["region", "rate_code"], keep="first")
@@ -224,9 +220,7 @@ def build_corpus(base_dir: Path) -> tuple[pd.DataFrame, dict]:
         else:
             context_rate = df["rate_code"]
         df["context_rate_code"] = context_rate
-        cls = classification[classification["region"].eq(region)].rename(
-            columns={"rate_code": "context_rate_code"}
-        )
+        cls = classification[classification["region"].eq(region)].rename(columns={"rate_code": "context_rate_code"})
         df = df.merge(cls, on=["region", "context_rate_code"], how="left")
         source_rows_after_merge = int(len(df))
         leading_null_context_count = int(df["context_rate_code"].isna().sum())
@@ -277,9 +271,7 @@ def build_corpus(base_dir: Path) -> tuple[pd.DataFrame, dict]:
                 continue
 
             counts = temp["_text"].value_counts()
-            example_rows = temp.drop_duplicates("_text", keep="first").set_index(
-                "_text"
-            )
+            example_rows = temp.drop_duplicates("_text", keep="first").set_index("_text")
             examples_by_text = {
                 text_value: [row.fillna("").astype(str).to_dict()]
                 for text_value, row in example_rows[local_example_cols].iterrows()
@@ -317,9 +309,7 @@ def build_corpus(base_dir: Path) -> tuple[pd.DataFrame, dict]:
         ascending=[True, False, True],
     )
     manifest["translation_units"] = int(len(corpus))
-    manifest["translation_units_by_source_lang"] = (
-        corpus.groupby("source_lang").size().to_dict()
-    )
+    manifest["translation_units_by_source_lang"] = corpus.groupby("source_lang").size().to_dict()
     return corpus, manifest
 
 
@@ -336,9 +326,7 @@ def main() -> None:
 
     corpus, manifest = build_corpus(resolve_base_dir(args.base_dir))
     corpus.to_parquet(args.out_dir / "translation_corpus.parquet", index=False)
-    corpus.to_csv(
-        args.out_dir / "translation_corpus.csv", index=False, encoding="utf-8-sig"
-    )
+    corpus.to_csv(args.out_dir / "translation_corpus.csv", index=False, encoding="utf-8-sig")
     (args.out_dir / "translation_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8",

@@ -4,7 +4,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 PIPELINE_DIR = Path(__file__).resolve().parent
 DEFAULT_PROMPT = """You are translating construction cost catalogue translation-memory units.
 
@@ -54,12 +53,7 @@ def convert_batch(input_path: Path, output_path: Path, model: str) -> int:
             if not line:
                 continue
             record = json.loads(line)
-            dst.write(
-                json.dumps(
-                    make_request(record, model), ensure_ascii=False, sort_keys=True
-                )
-                + "\n"
-            )
+            dst.write(json.dumps(make_request(record, model), ensure_ascii=False, sort_keys=True) + "\n")
             count += 1
     return count
 

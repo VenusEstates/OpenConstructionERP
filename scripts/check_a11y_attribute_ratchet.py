@@ -84,9 +84,7 @@ TEXT_ATTRS = ("aria-label", "title", "alt", "placeholder")
 # question with a different answer.
 HOST_TAG = re.compile(r"<([a-z][a-z0-9-]*)\b")
 
-ATTR_LITERAL = re.compile(
-    r'\b(' + "|".join(re.escape(a) for a in TEXT_ATTRS) + r')\s*=\s*"([^"\n]*)"'
-)
+ATTR_LITERAL = re.compile(r"\b(" + "|".join(re.escape(a) for a in TEXT_ATTRS) + r')\s*=\s*"([^"\n]*)"')
 
 SEEDED_HOOK = re.compile(r"\buse(State|Ref)\s*(?:<[^>()]*>)?\s*\(")
 
@@ -381,7 +379,8 @@ def scan():
     found = {name: {} for name, _ in CHECKS}
     for path in walk_files():
         try:
-            text = open(path, encoding="utf-8").read()
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
         except (OSError, UnicodeDecodeError):
             continue
         for name, fn in CHECKS:
@@ -461,16 +460,19 @@ SELFTEST = [
 ]
 
 MUST_NOT_FIRE = [
-    ("untranslated_attributes", '<Input placeholder="Search projects" />',
-     "a component prop is not an HTML attribute"),
-    ("untranslated_attributes", '<input placeholder="BP-001" />',
-     "a specimen value is not prose"),
-    ("untranslated_attributes", '<input placeholder="name@company.com" />',
-     "an email specimen looks the same in every language"),
-    ("unnamed_icon_controls", "<button onClick={go}><X size={16} /><span>{label}</span></button>",
-     "an expression child may render the name"),
-    ("unnamed_icon_controls", "<button onClick={go}><X size={16} /> Close</button>",
-     "a literal text child names it"),
+    ("untranslated_attributes", '<Input placeholder="Search projects" />', "a component prop is not an HTML attribute"),
+    ("untranslated_attributes", '<input placeholder="BP-001" />', "a specimen value is not prose"),
+    (
+        "untranslated_attributes",
+        '<input placeholder="name@company.com" />',
+        "an email specimen looks the same in every language",
+    ),
+    (
+        "unnamed_icon_controls",
+        "<button onClick={go}><X size={16} /><span>{label}</span></button>",
+        "an expression child may render the name",
+    ),
+    ("unnamed_icon_controls", "<button onClick={go}><X size={16} /> Close</button>", "a literal text child names it"),
 ]
 
 FNS = dict(CHECKS)
@@ -481,20 +483,20 @@ def selftest() -> int:
     for check, defective, clean in SELFTEST:
         fn = FNS[check]
         if not fn("selftest.tsx", defective):
-            failures.append("%s did NOT fire on its planted defect: %s" % (check, defective))
+            failures.append(f"{check} did NOT fire on its planted defect: {defective}")
         if fn("selftest.tsx", clean):
-            failures.append("%s fired on the REPAIRED twin: %s" % (check, clean))
+            failures.append(f"{check} fired on the REPAIRED twin: {clean}")
         # every other check must ignore this defect, or the arms are not distinct
         for other, other_fn in CHECKS:
             if other != check and other_fn("selftest.tsx", defective):
-                failures.append("%s also fired on %s's defect - the arms are not independent" % (other, check))
+                failures.append(f"{other} also fired on {check}'s defect - the arms are not independent")
 
     for check, source, why in MUST_NOT_FIRE:
         if FNS[check]("selftest.tsx", source):
-            failures.append("%s FALSE POSITIVE (%s): %s" % (check, why, source))
+            failures.append(f"{check} FALSE POSITIVE ({why}): {source}")
 
     if failures:
-        print("NEGATIVE CONTROL FAILED (%d)\n" % len(failures))
+        print(f"NEGATIVE CONTROL FAILED ({len(failures)})\n")
         for f in failures:
             print("  " + f)
         print(
@@ -503,9 +505,8 @@ def selftest() -> int:
         )
         return 1
     print(
-        "negative control OK: %d checks each fire on their own planted defect, stay silent on the\n"
-        "repaired twin, ignore the other checks' defects, and do not fire on %d legitimate shapes."
-        % (len(SELFTEST), len(MUST_NOT_FIRE))
+        f"negative control OK: {len(SELFTEST)} checks each fire on their own planted defect, stay silent on the\n"
+        f"repaired twin, ignore the other checks' defects, and do not fire on {len(MUST_NOT_FIRE)} legitimate shapes."
     )
     return 0
 
@@ -527,7 +528,7 @@ def main() -> int:
 
     if args.list:
         for name, items in found.items():
-            print("%s: %d" % (name, len(items)))
+            print(f"{name}: {len(items)}")
             for fp in sorted(items):
                 print("   ", fp)
         return 0
@@ -543,7 +544,7 @@ def main() -> int:
             json.dump(baseline, fh, indent=1, ensure_ascii=False, sort_keys=True)
             fh.write("\n")
         total = sum(len(v) for v in new_debt.values())
-        print("baseline rewritten: %d recorded findings across %d checks" % (total, len(new_debt)))
+        print(f"baseline rewritten: {total} recorded findings across {len(new_debt)} checks")
         return 0
 
     failures, repaired = [], []
@@ -557,26 +558,23 @@ def main() -> int:
                 repaired.append((name, fp))
 
     if failures:
-        print("NEW ACCESSIBILITY DEFECTS (%d)\n" % len(failures))
+        print(f"NEW ACCESSIBILITY DEFECTS ({len(failures)})\n")
         by = {}
         for name, fp in failures:
             by.setdefault(name, []).append(fp)
         blurb = {
-            "untranslated_attributes":
-                "An attribute holding a bare English string. It renders English in every\n"
-                "  language and no key gate can see it, because it never became a key.\n"
-                "  Fix: t('some.key', { defaultValue: '...' }) plus the key in en.ts and\n"
-                "  every locale the check_i18n_orphan_keys.py `missing:` line names.",
-            "language_frozen_values":
-                "A value seeded from t() into useState/useRef. The initialiser runs once,\n"
-                "  so this freezes the language the component mounted in. Fix: hold the\n"
-                "  unset case (null) and derive during render with t in the dependency list.",
-            "unnamed_icon_controls":
-                "An icon-only control with no accessible name in ANY language. A screen\n"
-                "  reader announces it as 'button'. Fix: give it aria-label={t(...)}.",
+            "untranslated_attributes": "An attribute holding a bare English string. It renders English in every\n"
+            "  language and no key gate can see it, because it never became a key.\n"
+            "  Fix: t('some.key', { defaultValue: '...' }) plus the key in en.ts and\n"
+            "  every locale the check_i18n_orphan_keys.py `missing:` line names.",
+            "language_frozen_values": "A value seeded from t() into useState/useRef. The initialiser runs once,\n"
+            "  so this freezes the language the component mounted in. Fix: hold the\n"
+            "  unset case (null) and derive during render with t in the dependency list.",
+            "unnamed_icon_controls": "An icon-only control with no accessible name in ANY language. A screen\n"
+            "  reader announces it as 'button'. Fix: give it aria-label={t(...)}.",
         }
         for name, fps in by.items():
-            print("%s (%d)" % (name, len(fps)))
+            print(f"{name} ({len(fps)})")
             print("  " + blurb[name])
             for fp in fps:
                 print("    " + fp)
@@ -586,9 +584,9 @@ def main() -> int:
         return 1
 
     if repaired:
-        print("STALE BASELINE ENTRIES (%d): recorded debt that no longer exists.\n" % len(repaired))
+        print(f"STALE BASELINE ENTRIES ({len(repaired)}): recorded debt that no longer exists.\n")
         for name, fp in repaired:
-            print("  %s  %s" % (name, fp))
+            print(f"  {name}  {fp}")
         print(
             "\nThis is good news that has to be written down: the baseline must keep\n"
             "telling the truth about what is left, or the next reader trusts a number\n"
@@ -600,9 +598,8 @@ def main() -> int:
     total = sum(len(v) for v in found.values())
     recorded = sum(len(v) for v in debt.values())
     print(
-        "a11y attribute ratchet OK: %d findings, all recorded (%d as debt, the rest allowlisted). "
+        f"a11y attribute ratchet OK: {total} findings, all recorded ({recorded} as debt, the rest allowlisted). "
         "No new untranslated attributes, language-frozen values or unnamed icon controls."
-        % (total, recorded)
     )
     return 0
 

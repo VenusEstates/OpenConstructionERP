@@ -11,6 +11,7 @@ Sets up the parallel-agent pipeline: each agent reads its missing-{lang}.json,
 translates, writes patch-{lang}.json. The merge step (``i18n_apply.py``)
 reads all patches and rewrites i18n-fallbacks.ts in one pass.
 """
+
 from __future__ import annotations
 
 import json
@@ -136,9 +137,7 @@ def main() -> None:
     if "en" not in blocks:
         raise SystemExit("EN block not found")
     en = blocks["en"]
-    (OUT / "en-source.json").write_text(
-        json.dumps(en, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    (OUT / "en-source.json").write_text(json.dumps(en, ensure_ascii=False, indent=2), encoding="utf-8")
     state: dict[str, dict[str, int]] = {}
     for lang, kv in blocks.items():
         if lang == "en":

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-
 from normalize_translation_statuses import normalize_statuses
 
 

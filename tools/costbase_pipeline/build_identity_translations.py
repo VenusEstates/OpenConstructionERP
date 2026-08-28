@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 PIPELINE_DIR = Path(__file__).resolve().parent
 DEFAULT_CORPUS = PIPELINE_DIR / "outputs" / "translation_corpus.parquet"
 DEFAULT_MANIFEST = PIPELINE_DIR / "outputs" / "translation_manifest.json"
@@ -18,9 +17,7 @@ def load_target_languages(manifest_path: Path) -> set[str]:
     return set(manifest["target_languages"])
 
 
-def build_identity_translations(
-    corpus: pd.DataFrame, target_languages: set[str]
-) -> pd.DataFrame:
+def build_identity_translations(corpus: pd.DataFrame, target_languages: set[str]) -> pd.DataFrame:
     rows = []
     eligible = corpus[corpus["source_lang"].isin(target_languages)].copy()
     for row in eligible.itertuples(index=False):

@@ -72,7 +72,6 @@ would have broken it.
 
 from __future__ import annotations
 
-import io
 import os
 import re
 import sys
@@ -182,25 +181,17 @@ def english_source(locales_dir: str, playbooks_dir: str | None) -> dict[str, str
     out: dict[str, str] = {}
     path = os.path.join(locales_dir, "en.ts")
     if os.path.exists(path):
-        out.update(
-            PAIR.findall(io.open(path, encoding="utf-8", errors="replace").read())
-        )
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            out.update(PAIR.findall(fh.read()))
     if playbooks_dir and os.path.isdir(playbooks_dir):
         for name in sorted(os.listdir(playbooks_dir)):
             if not name.endswith(".ts"):
                 continue
-            text = io.open(
-                os.path.join(playbooks_dir, name), encoding="utf-8", errors="replace"
-            ).read()
+            with open(os.path.join(playbooks_dir, name), encoding="utf-8", errors="replace") as fh:
+                text = fh.read()
             for key_field, default_field in DEFAULT_PAIRS:
                 for m in re.finditer(
-                    key_field
-                    + r"\s*:\s*"
-                    + STR
-                    + r"[\s\S]{0,400}?"
-                    + default_field
-                    + r"\s*:\s*\n?\s*"
-                    + STR,
+                    key_field + r"\s*:\s*" + STR + r"[\s\S]{0,400}?" + default_field + r"\s*:\s*\n?\s*" + STR,
                     text,
                 ):
                     out.setdefault(m.group(1), m.group(2))
@@ -218,11 +209,7 @@ def english_scope(locales_dir: str, playbooks_dir: str | None = None) -> set[str
     src = english_source(locales_dir, playbooks_dir)
     by_text = {k for k, v in src.items() if CLAIM_SENSE.search(v)}
     by_name = {k for k in src if KEY_NAMED.search(k)}
-    by_screen = {
-        k
-        for k, v in src.items()
-        if k.startswith(PAYMENT_SCREENS) and BARE_APPLICATION.search(v)
-    }
+    by_screen = {k for k, v in src.items() if k.startswith(PAYMENT_SCREENS) and BARE_APPLICATION.search(v)}
     return (by_text | by_name | by_screen) - set(EXCLUDED_BY_DESIGN)
 
 
@@ -238,9 +225,8 @@ def check(locales_dir: str, playbooks_dir: str | None = None) -> list[str]:
         if not name.endswith(".ts") or name in ("en.ts", "en-US.ts"):
             continue
         loc = name[:-3]
-        text = io.open(
-            os.path.join(locales_dir, name), encoding="utf-8", errors="replace"
-        ).read()
+        with open(os.path.join(locales_dir, name), encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
         roots = APP_ROOTS + LOCALE_ROOTS.get(loc, ())
         for key in sorted(scope):
             v = value(text, key)
@@ -251,6 +237,12 @@ def check(locales_dir: str, playbooks_dir: str | None = None) -> list[str]:
             if hit:
                 problems.append(f"{loc}: {key} = {v}    (contains {hit!r})")
     return problems
+
+
+def _write(path: str, text: str) -> None:
+    """Write a selftest fixture. Only here so the handle closes deterministically."""
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
 
 
 def selftest() -> int:
@@ -266,11 +258,12 @@ def selftest() -> int:
         '  "subcontractors.no_payment_apps": "No payment applications under this agreement.",\n'
     )
     with tempfile.TemporaryDirectory() as tmp:
-        io.open(os.path.join(tmp, "en.ts"), "w", encoding="utf-8").write(english)
-        io.open(os.path.join(tmp, "xx.ts"), "w", encoding="utf-8").write(
+        _write(os.path.join(tmp, "en.ts"), english)
+        _write(
+            os.path.join(tmp, "xx.ts"),
             '  "cvr.payment_applications": "Aplicaciones de pago",\n'
             '  "payportal.back_to_app": "Volver a la aplicacion",\n'
-            '  "subcontractors.no_payment_apps": "Sin aplicaciones de pago.",\n'
+            '  "subcontractors.no_payment_apps": "Sin aplicaciones de pago.",\n',
         )
         found = check(tmp)
         if len(found) != 2:
@@ -283,20 +276,17 @@ def selftest() -> int:
         if any("back_to_app" in f for f in found):
             print("selftest FAILED: reported the key that is correct by design")
             return 1
-        io.open(os.path.join(tmp, "xx.ts"), "w", encoding="utf-8").write(
+        _write(
+            os.path.join(tmp, "xx.ts"),
             '  "cvr.payment_applications": "Solicitudes de pago",\n'
-            '  "subcontractors.no_payment_apps": "Sin solicitudes de pago.",\n'
+            '  "subcontractors.no_payment_apps": "Sin solicitudes de pago.",\n',
         )
         if check(tmp):
             print("selftest FAILED: still reporting after the values were corrected")
             return 1
         # An English string that is not about the claim must not be pulled in.
-        io.open(os.path.join(tmp, "en.ts"), "w", encoding="utf-8").write(
-            '  "settings.mobile": "Download the mobile application",\n'
-        )
-        io.open(os.path.join(tmp, "xx.ts"), "w", encoding="utf-8").write(
-            '  "settings.mobile": "Descargue la aplicacion movil",\n'
-        )
+        _write(os.path.join(tmp, "en.ts"), '  "settings.mobile": "Download the mobile application",\n')
+        _write(os.path.join(tmp, "xx.ts"), '  "settings.mobile": "Descargue la aplicacion movil",\n')
         if check(tmp):
             print("selftest FAILED: guarded a string that is genuinely about software")
             return 1
@@ -308,16 +298,13 @@ def selftest() -> int:
         loc, books = os.path.join(tmp, "l"), os.path.join(tmp, "p")
         os.makedirs(loc)
         os.makedirs(books)
-        io.open(os.path.join(loc, "en.ts"), "w", encoding="utf-8").write(
-            '  "unrelated.key": "Nothing to do with money",\n'
-        )
-        io.open(os.path.join(books, "a.playbook.ts"), "w", encoding="utf-8").write(
+        _write(os.path.join(loc, "en.ts"), '  "unrelated.key": "Nothing to do with money",\n')
+        _write(
+            os.path.join(books, "a.playbook.ts"),
             '  descKey: "cases.bill_the_month.desc",\n'
-            '  descDefault: "Raise the progress claim and send it for certification.",\n'
+            '  descDefault: "Raise the progress claim and send it for certification.",\n',
         )
-        io.open(os.path.join(loc, "xx.ts"), "w", encoding="utf-8").write(
-            '  "cases.bill_the_month.desc": "Crea la aplicacion de pago del mes.",\n'
-        )
+        _write(os.path.join(loc, "xx.ts"), '  "cases.bill_the_month.desc": "Crea la aplicacion de pago del mes.",\n')
         if check(loc):
             print("selftest FAILED: found a playbook key without being given playbooks")
             return 1
@@ -328,11 +315,12 @@ def selftest() -> int:
     # French, where the software noun is spelled exactly as in English, so
     # the root is scoped to the one language and has to be proved four ways.
     with tempfile.TemporaryDirectory() as tmp:
-        io.open(os.path.join(tmp, "en.ts"), "w", encoding="utf-8").write(
+        _write(
+            os.path.join(tmp, "en.ts"),
             '  "cvr.no_payapps": "No payment applications yet",\n'
             '  "cvr.rollup_gross": "Gross applied",\n'
             '  "notifications.subcontractors.payment_app_submitted.body":'
-            ' "Application {{application_number}} submitted.",\n'
+            ' "Application {{application_number}} submitted.",\n',
         )
         broken = (
             '  "cvr.no_payapps": "Aucune application de paiement pour le moment",\n'
@@ -340,7 +328,7 @@ def selftest() -> int:
             '  "notifications.subcontractors.payment_app_submitted.body":'
             ' "Demande {{application_number}} deposee.",\n'
         )
-        io.open(os.path.join(tmp, "fr.ts"), "w", encoding="utf-8").write(broken)
+        _write(os.path.join(tmp, "fr.ts"), broken)
         found = check(tmp)
         if len(found) != 1 or "cvr.no_payapps" not in found[0]:
             print("selftest FAILED: the French noun was not caught, got:", found)
@@ -355,7 +343,7 @@ def selftest() -> int:
         # phrase left untranslated is a leak, not a mistranslation, and the
         # leak baseline owns it.
         os.remove(os.path.join(tmp, "fr.ts"))
-        io.open(os.path.join(tmp, "yy.ts"), "w", encoding="utf-8").write(broken)
+        _write(os.path.join(tmp, "yy.ts"), broken)
         if check(tmp):
             print("selftest FAILED: a French-scoped root fired on another language")
             return 1

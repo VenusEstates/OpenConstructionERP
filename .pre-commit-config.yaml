@@ -19,12 +19,44 @@ repos:
   # --check" gate compares against the formatter's exact output, so a hook on
   # an older ruff would reformat differently and fail CI on code that passed
   # locally. Bump this in lockstep with the pyproject pin.
+  #
+  # Two pairs of hooks, split by path, and the split is load bearing. Ruff finds
+  # its configuration by walking up from each file, and the only configuration
+  # in this repository is backend/pyproject.toml. A file under backend/ finds it
+  # and is formatted at 120 columns with the demo pack data tables excluded. A
+  # file under scripts/ or tools/ finds nothing, falls back to the default 88,
+  # and gets reformatted to a width no gate here asks for.
+  #
+  # Passing --config to a single pair does not fix it, it breaks the other half:
+  # measured, `ruff format --check --config backend/pyproject.toml` run from the
+  # repository root reports 19 of the demo pack tables as needing reformatting,
+  # because an explicit config resolves its exclude patterns differently from a
+  # discovered one. Those tables are hand laid out, one BOQ position per line,
+  # and the formatter explodes each row into eight or more.
+  #
+  # So: backend keeps discovery and changes not at all, and the scripts and tools
+  # trees get the config named explicitly, which is what the CI gate for them
+  # does too.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.20
     hooks:
       - id: ruff
+        name: ruff (backend, configuration discovered)
+        files: ^backend/
         args: [--fix]
       - id: ruff-format
+        name: ruff-format (backend, configuration discovered)
+        files: ^backend/
+      - id: ruff
+        name: ruff (scripts and tools)
+        alias: ruff-scripts
+        files: ^(scripts|tools)/
+        args: [--fix, --config, backend/pyproject.toml]
+      - id: ruff-format
+        name: ruff-format (scripts and tools)
+        alias: ruff-format-scripts
+        files: ^(scripts|tools)/
+        args: [--config, backend/pyproject.toml]
 
   # Secret scanning
   - repo: https://github.com/gitleaks/gitleaks

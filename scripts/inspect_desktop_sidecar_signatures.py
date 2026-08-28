@@ -124,15 +124,11 @@ def member_names(reader) -> list[str]:
         names = []
         for entry in toc:
             if isinstance(entry, (list, tuple)) and entry:
-                names.append(
-                    str(entry[-1]) if isinstance(entry[-1], str) else str(entry[0])
-                )
+                names.append(str(entry[-1]) if isinstance(entry[-1], str) else str(entry[0]))
             else:
                 names.append(str(entry))
         return names
-    print(
-        f"unfamiliar reader shape, attributes: {sorted(a for a in dir(reader) if not a.startswith('_'))}"
-    )
+    print(f"unfamiliar reader shape, attributes: {sorted(a for a in dir(reader) if not a.startswith('_'))}")
     return []
 
 
@@ -165,18 +161,14 @@ def describe(path: Path) -> dict[str, str]:
     sig = SIGNATURE.search(text)
     flags = FLAGS.search(text)
     return {
-        "team": team.group(1).strip()
-        if team
-        else ("unsigned" if "not signed" in text else "unknown"),
+        "team": team.group(1).strip() if team else ("unsigned" if "not signed" in text else "unknown"),
         "signature": sig.group(1).strip() if sig else "none",
         "flags": flags.group(1).strip() if flags else "-",
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("executable", type=Path)
     parser.add_argument(
         "--limit",
@@ -215,9 +207,7 @@ def main() -> int:
         return 1
 
     wrapper = describe(args.executable)
-    print(
-        f"wrapper: Signature={wrapper['signature']} TeamIdentifier={wrapper['team']} flags={wrapper['flags']}"
-    )
+    print(f"wrapper: Signature={wrapper['signature']} TeamIdentifier={wrapper['team']} flags={wrapper['flags']}")
     print()
 
     reader = open_archive(args.executable)
@@ -262,9 +252,7 @@ def main() -> int:
 
         print(f"Mach-O members inspected: {checked}")
         if skipped_over_limit:
-            print(
-                f"Mach-O members NOT inspected because --limit {args.limit} was reached: {skipped_over_limit}"
-            )
+            print(f"Mach-O members NOT inspected because --limit {args.limit} was reached: {skipped_over_limit}")
         if unreadable_names:
             print(f"members the reader could not extract: {len(unreadable_names)}")
             for name in sorted(unreadable_names)[:12]:
@@ -286,16 +274,11 @@ def main() -> int:
         # script blind in the other direction: a wrapper signed with a real Team
         # ID over members PyInstaller left ad-hoc disagrees just as completely,
         # and used to leave here printing an all-clear.
-        wrapper_team = (
-            None
-            if wrapper["team"] in ("not set", "unsigned", "unknown")
-            else wrapper["team"]
-        )
+        wrapper_team = None if wrapper["team"] in ("not set", "unsigned", "unknown") else wrapper["team"]
         foreign = {
             t: m
             for t, m in by_team.items()
-            if t != "unknown"
-            and (None if t in ("not set", "unsigned") else t) != wrapper_team
+            if t != "unknown" and (None if t in ("not set", "unsigned") else t) != wrapper_team
         }
         # "unknown" means codesign printed something this script could not parse
         # a TeamIdentifier out of. Folding it into "no Team ID" is how a member
@@ -306,9 +289,7 @@ def main() -> int:
         # measured, and a verdict cannot be wider than the census under it.
         inconclusive = list(by_team.get("unknown", [])) + unreadable_names
         if skipped_over_limit:
-            inconclusive.append(
-                f"<{skipped_over_limit} member(s) never reached, --limit {args.limit}>"
-            )
+            inconclusive.append(f"<{skipped_over_limit} member(s) never reached, --limit {args.limit}>")
         # The wrapper is one end of every comparison below. If its own signature
         # did not parse, there is no value to compare members against, and a
         # verdict either way would be about a number this run never read.
@@ -328,32 +309,20 @@ def main() -> int:
             if len(inconclusive) > 12:
                 print(f"    ... and {len(inconclusive) - 12} more")
 
-        missing_required = [
-            pat
-            for pat in (args.require_member or [])
-            if not any(pat in n for n in inspected_names)
-        ]
+        missing_required = [pat for pat in (args.require_member or []) if not any(pat in n for n in inspected_names)]
         if missing_required:
             print()
             for pat in missing_required:
-                print(
-                    f"NOT INSPECTED: no member whose name contains {pat!r} was measured."
-                )
-            print(
-                "A census that never opened the file named in the failure cannot clear it."
-            )
+                print(f"NOT INSPECTED: no member whose name contains {pat!r} was measured.")
+            print("A census that never opened the file named in the failure cannot clear it.")
 
         if foreign and wrapper_team is None:
             print()
             print("MISMATCH: the wrapper carries no Team ID and these members do.")
-            print(
-                "This is the shape that makes dyld refuse to map them into the process."
-            )
+            print("This is the shape that makes dyld refuse to map them into the process.")
         elif foreign:
             print()
-            print(
-                f"MISMATCH: the wrapper carries Team ID {wrapper_team} and these members do not."
-            )
+            print(f"MISMATCH: the wrapper carries Team ID {wrapper_team} and these members do not.")
             print(
                 "The wrapper is the process at launch, so every member it unpacks is compared "
                 "against that Team ID and refused for disagreeing with it. Signing the wrapper "
@@ -363,9 +332,7 @@ def main() -> int:
         elif not inconclusive and not missing_required:
             print()
             if wrapper_team is None:
-                print(
-                    "No member carries a Team ID, so no member can disagree with the process about one."
-                )
+                print("No member carries a Team ID, so no member can disagree with the process about one.")
             else:
                 print(
                     f"Every inspected member carries the wrapper's Team ID {wrapper_team}, "
@@ -376,9 +343,7 @@ def main() -> int:
         # unmeasured required member are each failures in their own right: the
         # gate's whole claim is that nothing in there disagrees with the process,
         # and that claim is only as wide as what was opened.
-        if args.fail_on_foreign_team_id and (
-            foreign or inconclusive or missing_required
-        ):
+        if args.fail_on_foreign_team_id and (foreign or inconclusive or missing_required):
             return 1
     finally:
         shutil.rmtree(workdir, ignore_errors=True)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 import run_openrouter_jsonl
 from run_openrouter_jsonl import restore_protected_tokens, result_to_row, run_records
 

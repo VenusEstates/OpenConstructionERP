@@ -36,8 +36,7 @@ import sys
 from pathlib import Path
 
 _VERIFIER_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "backend" / "app" / "modules" / "takeoff" / "manifest_verifier.py"
+    Path(__file__).resolve().parent.parent / "backend" / "app" / "modules" / "takeoff" / "manifest_verifier.py"
 )
 
 _SENTINEL_RE = re.compile(
@@ -54,10 +53,14 @@ def generate_keypair() -> tuple[str, bytes]:
     )
 
     private = Ed25519PrivateKey.generate()
-    pubkey_hex = private.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    ).hex()
+    pubkey_hex = (
+        private.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        .hex()
+    )
     private_pem = private.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -100,17 +103,13 @@ def main() -> int:
     parser.add_argument(
         "--print-only",
         action="store_true",
-        help=(
-            "Generate + print a keypair but do NOT modify "
-            "manifest_verifier.py. Useful for dry runs."
-        ),
+        help=("Generate + print a keypair but do NOT modify manifest_verifier.py. Useful for dry runs."),
     )
     args = parser.parse_args()
 
     if not args.confirm and not args.print_only:
         print(
-            "Refusing to rotate without --confirm. Pass --confirm to "
-            "actually rotate, or --print-only for a dry run.",
+            "Refusing to rotate without --confirm. Pass --confirm to actually rotate, or --print-only for a dry run.",
             file=sys.stderr,
         )
         return 2

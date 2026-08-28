@@ -93,9 +93,7 @@ REMEDIATOR = os.path.join("scripts", "strip_zero_width.py")
 # A caller writing its own class writes an escape: \x{200B}, \u200B or \u{200B}.
 # Prose that merely names a codepoint, "U+200C" in a comment, has no backslash
 # and is not a second copy of the rule, so it does not trip this.
-ESCAPE_RE = re.compile(
-    r"\\(?:x\{([0-9A-Fa-f]{1,6})\}|u\{([0-9A-Fa-f]{1,6})\}|u([0-9A-Fa-f]{4}))"
-)
+ESCAPE_RE = re.compile(r"\\(?:x\{([0-9A-Fa-f]{1,6})\}|u\{([0-9A-Fa-f]{1,6})\}|u([0-9A-Fa-f]{4}))")
 GOVERNED = {ord(c) for c in STRAY_CHARS} | {ord(c) for c in SPELLING_CHARS}
 
 
@@ -175,9 +173,7 @@ def iter_files(repo_root: str, root: str):
 # One compiled pass over the raw bytes answers "is anything in here", and only a
 # file that says yes gets decoded and located by line. The pattern is built from
 # STRAY_CHARS, never written out.
-STRAY_BYTES_RE = re.compile(
-    b"|".join(re.escape(ch.encode("utf-8")) for ch in STRAY_CHARS)
-)
+STRAY_BYTES_RE = re.compile(b"|".join(re.escape(ch.encode("utf-8")) for ch in STRAY_CHARS))
 
 
 def scan(repo_root: str, roots: list[str]) -> tuple[list[tuple[str, int, str]], dict[str, int]]:
@@ -243,9 +239,7 @@ def self_check(repo_root: str) -> list[str]:
             rel = f"{rel} (lint:unicode)"
 
         if expected not in text:
-            problems.append(
-                f"{rel} does not call {expected}, so it is a second copy of the rule"
-            )
+            problems.append(f"{rel} does not call {expected}, so it is a second copy of the rule")
 
         for match in ESCAPE_RE.finditer(text):
             code = int(next(g for g in match.groups() if g), 16)
@@ -267,9 +261,7 @@ def self_check(repo_root: str) -> list[str]:
         with open(path, encoding="utf-8", newline="") as fh:
             text = fh.read()
     except OSError:
-        problems.append(
-            f"{REMEDIATOR} is missing, so it cannot be shown to import this class"
-        )
+        problems.append(f"{REMEDIATOR} is missing, so it cannot be shown to import this class")
     else:
         if "from check_zero_width import" not in text:
             problems.append(
@@ -306,17 +298,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     sys.stdout.reconfigure(encoding="utf-8")
-    repo_root = os.path.abspath(
-        args.repo_root or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-    )
+    repo_root = os.path.abspath(args.repo_root or os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
     roots = list(args.roots) if args.roots else list(DEFAULT_ROOTS)
 
     if not args.skip_self_check:
         problems = self_check(repo_root)
         if problems:
-            print(
-                "The zero-width rule is defined in scripts/check_zero_width.py and nowhere else."
-            )
+            print("The zero-width rule is defined in scripts/check_zero_width.py and nowhere else.")
             for problem in problems:
                 print(f"  {problem}")
             return 2

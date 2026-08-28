@@ -43,7 +43,6 @@ Usage::
 
 from __future__ import annotations
 
-import io
 import json
 import re
 import sys
@@ -93,7 +92,7 @@ def outside_addresses(text: str, bad: str) -> bool:
 
 def string_literals(path: Path) -> list[tuple[int, str]]:
     """Every string literal in a Python file, as (line number, text)."""
-    with io.open(path, encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         try:
             return [
                 (tok.start[0], tok.string)
@@ -114,9 +113,7 @@ def main(argv: list[str]) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
 
-    denylist: dict[str, dict[str, str]] = json.loads(
-        DENYLIST.read_text(encoding="utf-8")
-    )
+    denylist: dict[str, dict[str, str]] = json.loads(DENYLIST.read_text(encoding="utf-8"))
 
     wanted = {str(Path(a).as_posix()) for a in argv}
     targets = {k: v for k, v in denylist.items() if not wanted or k in wanted}
@@ -138,9 +135,7 @@ def main(argv: list[str]) -> int:
 
     # Print the denominator. "0 reverted" over nothing scanned reads exactly like
     # "0 reverted" over eleven files, and only one of those is a clean bill.
-    print(
-        f"seed diacritics: {scanned} file(s) scanned against {entries} recorded spelling(s)"
-    )
+    print(f"seed diacritics: {scanned} file(s) scanned against {entries} recorded spelling(s)")
     sys.stdout.flush()
     if not scanned and denylist:
         print(

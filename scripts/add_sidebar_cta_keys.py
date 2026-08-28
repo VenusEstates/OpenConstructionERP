@@ -2,6 +2,7 @@
 
 Idempotent: if a key already exists in a locale, it's left unchanged.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

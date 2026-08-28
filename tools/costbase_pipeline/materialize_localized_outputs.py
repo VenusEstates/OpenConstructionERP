@@ -7,7 +7,6 @@ import unicodedata
 from pathlib import Path
 
 import pandas as pd
-
 from extract_translation_corpus import (
     BASE_DIR_ENV,
     SOURCE_LANG_BY_REGION,
@@ -17,7 +16,6 @@ from extract_translation_corpus import (
 )
 from qa_translation_table import read_table, run_qa, validate_materialized_frame
 from unit_localization import apply_unit_localization
-
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 DEFAULT_CORPUS = PIPELINE_DIR / "outputs" / "translation_corpus.parquet"
@@ -68,9 +66,7 @@ def normalize_text(value: object) -> str:
     return " ".join(unicodedata.normalize("NFC", str(value)).split()).strip()
 
 
-def build_translation_map(
-    translations: pd.DataFrame, target_lang: str
-) -> dict[str, str]:
+def build_translation_map(translations: pd.DataFrame, target_lang: str) -> dict[str, str]:
     subset = translations[
         translations["target_lang"].astype(str).str.strip().eq(target_lang)
         & translations["status"].astype(str).str.strip().isin(APPROVED_STATUSES)
@@ -79,7 +75,7 @@ def build_translation_map(
         raise ValueError(f"No approved translations for target_lang={target_lang}")
     if subset.duplicated(["tm_key", "target_lang"]).any():
         raise ValueError(f"Duplicate translations for target_lang={target_lang}")
-    return dict(zip(subset["tm_key"], subset["target_text"].map(normalize_text)))
+    return dict(zip(subset["tm_key"], subset["target_text"].map(normalize_text), strict=False))
 
 
 def infer_money_columns(frame: pd.DataFrame) -> list[str]:
@@ -95,9 +91,7 @@ def infer_money_columns(frame: pd.DataFrame) -> list[str]:
     return columns
 
 
-def infer_unconverted_money_like_columns(
-    frame: pd.DataFrame, converted_columns: list[str]
-) -> list[str]:
+def infer_unconverted_money_like_columns(frame: pd.DataFrame, converted_columns: list[str]) -> list[str]:
     converted = set(converted_columns)
     skipped: list[str] = []
     for column in frame.columns:
@@ -116,9 +110,7 @@ def infer_unconverted_money_like_columns(
     return skipped
 
 
-def load_ppp_row(
-    ppp_multipliers: Path, *, source_region: str, target_region: str
-) -> dict:
+def load_ppp_row(ppp_multipliers: Path, *, source_region: str, target_region: str) -> dict:
     table = read_table(ppp_multipliers)
     required = {"source_region", "target_catalogue_region", "price_multiplier"}
     missing = required - set(table.columns)
@@ -192,9 +184,7 @@ def apply_ppp_conversion(
 
     return localized, {
         "applied": True,
-        "basis": localized["ppp_conversion_basis"].iloc[0]
-        if len(localized)
-        else str(ppp_row.get("formula", "")),
+        "basis": localized["ppp_conversion_basis"].iloc[0] if len(localized) else str(ppp_row.get("formula", "")),
         "price_multiplier": multiplier,
         "source_currency": str(ppp_row.get("source_currency", "")),
         "target_currency": str(ppp_row.get("target_currency", "")),
@@ -202,15 +192,11 @@ def apply_ppp_conversion(
         "provider": str(ppp_row.get("ppp_provider", "")),
         "indicator": str(ppp_row.get("ppp_indicator", "")),
         "converted_columns": converted_columns,
-        "skipped_money_like_columns": infer_unconverted_money_like_columns(
-            localized, converted_columns
-        ),
+        "skipped_money_like_columns": infer_unconverted_money_like_columns(localized, converted_columns),
     }
 
 
-def _approved_transform_columns(
-    localized: pd.DataFrame, source: pd.DataFrame
-) -> set[str]:
+def _approved_transform_columns(localized: pd.DataFrame, source: pd.DataFrame) -> set[str]:
     approved = {
         "locale_code",
         "language",
@@ -281,10 +267,7 @@ def validate_position_cost_reconciliation(
     resource rows. This is the law an estimator relies on when a position is expanded
     into its resource breakdown, and it must hold in both metric and imperial units.
     """
-    if (
-        "rate_code" not in frame.columns
-        or "total_resource_cost_per_position" not in frame.columns
-    ):
+    if "rate_code" not in frame.columns or "total_resource_cost_per_position" not in frame.columns:
         return {
             "ok": True,
             "checked_positions": 0,
@@ -292,9 +275,7 @@ def validate_position_cost_reconciliation(
             "max_abs_delta": 0.0,
         }
     work = frame[["rate_code"]].copy()
-    work["_pt"] = pd.to_numeric(
-        frame["total_resource_cost_per_position"], errors="coerce"
-    )
+    work["_pt"] = pd.to_numeric(frame["total_resource_cost_per_position"], errors="coerce")
     work["_rc"] = pd.to_numeric(frame.get("resource_cost"), errors="coerce")
     grouped = work.groupby("rate_code")
     pos_total = grouped["_pt"].max()
@@ -415,19 +396,13 @@ def materialize_region(
     # the costly ops), cache across columns, then apply with a vectorized Series.map. The
     # old per-cell loop hashed all ~1.7M cells/source; low-cardinality columns (units,
     # categories) collapse to a handful of uniques, giving the same result far faster.
-    key_cache: dict[
-        str, str | None
-    ] = {}  # normalized source text -> target (None if no translation)
-    for column in [
-        c for c in TEXT_COLUMNS if c in localized.columns and c not in preserved
-    ]:
+    key_cache: dict[str, str | None] = {}  # normalized source text -> target (None if no translation)
+    for column in [c for c in TEXT_COLUMNS if c in localized.columns and c not in preserved]:
         col = df[column]
         resolved: dict = {}  # raw source value -> target text (only where a translation exists)
         for raw_value, count in col.value_counts(dropna=False).items():
             n = int(count)
-            if raw_value is None or (
-                isinstance(raw_value, float) and pd.isna(raw_value)
-            ):
+            if raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)):
                 status_counts["empty_source"] += n
                 continue
             src_text = normalize_text(raw_value)
@@ -435,9 +410,7 @@ def materialize_region(
                 status_counts["empty_source"] += n
                 continue
             if src_text not in key_cache:
-                key_cache[src_text] = strip_pipeline_artifacts(
-                    translation_by_key.get(tm_key(source_lang, src_text))
-                )
+                key_cache[src_text] = strip_pipeline_artifacts(translation_by_key.get(tm_key(source_lang, src_text)))
             target_text = key_cache[src_text]
             if target_text:
                 resolved[raw_value] = target_text
@@ -445,9 +418,7 @@ def materialize_region(
             else:
                 status_counts["missing_translation"] += n
                 if len(missing_examples) < 50:
-                    missing_examples.append(
-                        {"column": column, "source_text": src_text[:240]}
-                    )
+                    missing_examples.append({"column": column, "source_text": src_text[:240]})
         if resolved:
             mapped = col.map(resolved)
             localized[column] = mapped.where(mapped.notna(), col)
@@ -477,9 +448,7 @@ def materialize_region(
 
     invariant_report = validate_materialized_frame(df, localized)
     if not invariant_report["ok"]:
-        raise ValueError(
-            f"Materialized frame invariant failure for {region}/{target_lang}: {invariant_report}"
-        )
+        raise ValueError(f"Materialized frame invariant failure for {region}/{target_lang}: {invariant_report}")
 
     localized, ppp_report = apply_ppp_conversion(localized, ppp_row=ppp_row)
 
@@ -509,9 +478,7 @@ def materialize_region(
     # (Berlin/Vienna/Zurich all 'de') each keep their own PPP-priced, unit-localized
     # output instead of overwriting one another. Falls back to lang when no economy.
     econ = target_region or target_lang
-    out_path = (
-        out_dir / econ / region / f"{econ}_{region}_{target_lang}_DDC_CWICR.parquet"
-    )
+    out_path = out_dir / econ / region / f"{econ}_{region}_{target_lang}_DDC_CWICR.parquet"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     localized.to_parquet(out_path, index=False)
     report_path = out_path.with_suffix(".qa.json")
@@ -559,9 +526,7 @@ def main() -> None:
     parser.add_argument("--unit-system", choices=["metric", "us_customary"])
     parser.add_argument("--ppp-multipliers", type=Path)
     parser.add_argument("--region", action="append", dest="regions")
-    parser.add_argument(
-        "--out-dir", type=Path, help="defaults to <base-dir>/translated_outputs"
-    )
+    parser.add_argument("--out-dir", type=Path, help="defaults to <base-dir>/translated_outputs")
     parser.add_argument(
         "--base-dir",
         type=Path,
@@ -599,9 +564,7 @@ def main() -> None:
         ppp_row = None
         if args.ppp_multipliers:
             if not args.target_region:
-                raise SystemExit(
-                    "--target-region is required when --ppp-multipliers is used"
-                )
+                raise SystemExit("--target-region is required when --ppp-multipliers is used")
             ppp_row = load_ppp_row(
                 args.ppp_multipliers,
                 source_region=region,

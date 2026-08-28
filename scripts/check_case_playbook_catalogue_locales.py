@@ -68,7 +68,8 @@ def catalogue_keys(text: str) -> set[str]:
 def playbook_keys(data_dir: str) -> dict[str, set[str]]:
     out: dict[str, set[str]] = {}
     for path in sorted(glob.glob(os.path.join(data_dir, "*.playbook.ts"))):
-        text = open(path, encoding="utf-8", errors="replace").read()
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
         keys = catalogue_keys(text)
         if keys:
             out[os.path.basename(path)] = keys
@@ -76,7 +77,8 @@ def playbook_keys(data_dir: str) -> dict[str, set[str]]:
 
 
 def locale_keys(path: str) -> set[str]:
-    text = open(path, encoding="utf-8", errors="replace").read()
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        text = fh.read()
     return set(re.findall(_Q + r"(cases\.[A-Za-z0-9_.]+)" + _Q + r"\s*:", text))
 
 
@@ -96,6 +98,18 @@ def check(data_dir: str, locales_dir: str, reference: tuple[str, ...]) -> list[s
     return problems
 
 
+def _append(path: str, text: str) -> None:
+    """Append to a selftest fixture. Only here so the handle closes deterministically."""
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(text)
+
+
+def _write(path: str, text: str) -> None:
+    """Write a selftest fixture. Only here so the handle closes deterministically."""
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+
+
 def selftest() -> int:
     """The gate must be able to fail, so prove it on data built to fail.
 
@@ -109,13 +123,9 @@ def selftest() -> int:
         locs = os.path.join(tmp, "locales")
         os.makedirs(data)
         os.makedirs(locs)
-        open(os.path.join(data, "a.playbook.ts"), "w", encoding="utf-8").write(
-            'titleKey: "cases.a.title",\ndescKey: "cases.a.desc",\n'
-        )
+        _write(os.path.join(data, "a.playbook.ts"), 'titleKey: "cases.a.title",\ndescKey: "cases.a.desc",\n')
         # xx has the title and not the description.
-        open(os.path.join(locs, "xx.ts"), "w", encoding="utf-8").write(
-            '  "cases.a.title": "t",\n'
-        )
+        _write(os.path.join(locs, "xx.ts"), '  "cases.a.title": "t",\n')
         missing = check(data, locs, ("xx",))
         if len(missing) != 1 or "cases.a.desc" not in missing[0]:
             print("selftest FAILED: expected exactly the missing desc, got:")
@@ -124,9 +134,7 @@ def selftest() -> int:
             return 1
 
         # And it must go quiet once the gap is filled, or it is just noise.
-        open(os.path.join(locs, "xx.ts"), "a", encoding="utf-8").write(
-            '  "cases.a.desc": "d",\n'
-        )
+        _append(os.path.join(locs, "xx.ts"), '  "cases.a.desc": "d",\n')
         if check(data, locs, ("xx",)):
             print("selftest FAILED: still reporting after the key was added")
             return 1
@@ -151,10 +159,7 @@ def main() -> int:
 
     total = len(playbook_keys(DATA))
     if not problems:
-        print(
-            f"Every one of the {total} case playbooks has its catalogue text in "
-            f"{', '.join(REFERENCE_LOCALES)}."
-        )
+        print(f"Every one of the {total} case playbooks has its catalogue text in {', '.join(REFERENCE_LOCALES)}.")
         return 0
 
     print(f"{len(problems)} catalogue strings are missing from a finished language.\n")

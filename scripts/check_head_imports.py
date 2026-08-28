@@ -145,7 +145,9 @@ def main() -> int:
     # real investigation before a release: a 3.11 on PATH accused four healthy
     # files, one of them on the single line `type JobHandler = ...`. "I cannot
     # read this" is not "this is wrong", so refuse rather than accuse.
-    if sys.version_info < (3, 12):
+    # Not a compatibility branch ruff can fold away: this check parses 3.12 syntax
+    # and has to refuse rather than report a false clean when run on an older one.
+    if sys.version_info < (3, 12):  # noqa: UP036
         running = ".".join(str(p) for p in sys.version_info[:3])
         print(f"ERROR: this check parses 3.12 syntax and is running on {running}, so it proved nothing")
         print("Re-run with the project interpreter, e.g. .venv-run/Scripts/python.exe scripts/check_head_imports.py")

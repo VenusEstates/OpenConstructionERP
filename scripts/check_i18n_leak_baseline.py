@@ -266,7 +266,7 @@ _PAIR = re.compile(r'^\s*"([a-zA-Z0-9_.\-]+)":\s*"((?:[^"\\]|\\.)*)"', re.MULTIL
 # strict parser above would miss (single-quoted keys/values, which are valid
 # TypeScript and invisible to _PAIR) - never to extract values, since it does
 # not know how to un-escape a single-quoted body.
-_LOOSE_PAIR = re.compile(r'''^\s*['"]([a-zA-Z0-9_.\-]+)['"]:\s*['"]''', re.MULTILINE)
+_LOOSE_PAIR = re.compile(r"""^\s*['"]([a-zA-Z0-9_.\-]+)['"]:\s*['"]""", re.MULTILINE)
 _ESCAPE = re.compile(r"\\(.)")
 
 # Two keys, in exactly these two locale files, are legitimately written with
@@ -346,7 +346,10 @@ def main() -> int:  # noqa: PLR0912, PLR0915 - one linear check, splitting it hi
         print(f"ERROR: no files matched {LOCALE_GLOB!r}", file=sys.stderr)
         return 1
 
-    pairs_by_locale = {_locale_stem(p): _extract_pairs(open(p, encoding="utf-8").read()) for p in paths}
+    pairs_by_locale = {}
+    for path in paths:
+        with open(path, encoding="utf-8") as fh:
+            pairs_by_locale[_locale_stem(path)] = _extract_pairs(fh.read())
     if "en" not in pairs_by_locale:
         print("ERROR: en.ts not found among locale files", file=sys.stderr)
         return 1
@@ -404,7 +407,8 @@ def main() -> int:  # noqa: PLR0912, PLR0915 - one linear check, splitting it hi
     parity_failures: list[tuple[str, str]] = []
     for path in paths:
         stem = _locale_stem(path)
-        text = open(path, encoding="utf-8").read()
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
         strict_keys = set(pairs_by_locale[stem])
         loose_keys = set(_LOOSE_PAIR.findall(text))
         hidden = loose_keys - strict_keys
@@ -412,9 +416,12 @@ def main() -> int:  # noqa: PLR0912, PLR0915 - one linear check, splitting it hi
         for key in sorted(unexpected):
             parity_failures.append((stem, key))
     if parity_failures:
-        print("ERROR: locale file entries are invisible to the strict double-quote "
-              "scan this guard relies on, and are not one of the named, known "
-              "exceptions:", file=sys.stderr)
+        print(
+            "ERROR: locale file entries are invisible to the strict double-quote "
+            "scan this guard relies on, and are not one of the named, known "
+            "exceptions:",
+            file=sys.stderr,
+        )
         for stem, key in parity_failures:
             print(f"  {stem}: {key!r}", file=sys.stderr)
         print(
@@ -441,8 +448,9 @@ def main() -> int:  # noqa: PLR0912, PLR0915 - one linear check, splitting it hi
     for key in sorted(pending):
         entry = pending[key]
         if not entry.get("reason"):
-            pending_failures.append(f"{key}: missing or empty 'reason' - an entry with no reason is a claim "
-                                     "nobody made")
+            pending_failures.append(
+                f"{key}: missing or empty 'reason' - an entry with no reason is a claim nobody made"
+            )
         if not entry.get("added_by"):
             pending_failures.append(f"{key}: missing or empty 'added_by' - record who put it there")
     if len(pending) > PENDING_REVIEW_CEILING:
@@ -524,7 +532,10 @@ def main() -> int:  # noqa: PLR0912, PLR0915 - one linear check, splitting it hi
 
     if false_repairs:
         failed = True
-        print(f"ERROR: {len(false_repairs)} baseline cell(s) left the leaked set by DELETION, not translation:", file=sys.stderr)
+        print(
+            f"ERROR: {len(false_repairs)} baseline cell(s) left the leaked set by DELETION, not translation:",
+            file=sys.stderr,
+        )
         for key, stem in false_repairs:
             print(f"  {key} / {stem} - key no longer present in that locale file", file=sys.stderr)
         print(
@@ -541,8 +552,11 @@ def main() -> int:  # noqa: PLR0912, PLR0915 - one linear check, splitting it hi
 
     if unclassified:
         failed = True
-        print(f"ERROR: {len(unclassified)} key(s) identical to en.ts in >= {THRESHOLD}/{len(non_en)} "
-              "locales and not in any of the three lists:", file=sys.stderr)
+        print(
+            f"ERROR: {len(unclassified)} key(s) identical to en.ts in >= {THRESHOLD}/{len(non_en)} "
+            "locales and not in any of the three lists:",
+            file=sys.stderr,
+        )
         for key, identical in sorted(unclassified):
             print(f"  {key}  n={len(identical)}  en={en_pairs[key]!r}", file=sys.stderr)
         print(

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 
 import pandas as pd
-
 from build_translation_batches import build_batches, classify_string_kind
 
 
@@ -36,11 +35,7 @@ def test_build_batches_writes_contextual_jsonl(tmp_path) -> None:
     )
     manifest = build_batches(corpus, ["de"], tmp_path, batch_size=1)
     assert len(manifest["batches"]) == 1
-    lines = (
-        (tmp_path / manifest["batches"][0]["file"])
-        .read_text(encoding="utf-8")
-        .splitlines()
-    )
+    lines = (tmp_path / manifest["batches"][0]["file"]).read_text(encoding="utf-8").splitlines()
     record = json.loads(lines[0])
     assert record["tm_key"] == "k1"
     assert record["custom_id"] == "tm:k1:de:v1"
@@ -66,9 +61,7 @@ def test_build_batches_includes_matched_termbase_terms(tmp_path) -> None:
         ]
     )
     manifest = build_batches(corpus, ["de"], tmp_path, batch_size=1)
-    record = json.loads(
-        (tmp_path / manifest["batches"][0]["file"]).read_text(encoding="utf-8")
-    )
+    record = json.loads((tmp_path / manifest["batches"][0]["file"]).read_text(encoding="utf-8"))
     assert record["matched_terms"][0]["source_term"] == "ΓΓΔΕ"
     assert record["matched_terms"][0]["approved_target_term"] == "GGDE"
 

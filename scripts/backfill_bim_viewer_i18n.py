@@ -13,6 +13,7 @@ After running, verify:
     cd frontend && npx tsc --noEmit
     grep -c "bim.geometry_load_failed" frontend/src/app/locales/*.ts  # → 27
 """
+
 from __future__ import annotations
 
 import re
@@ -413,9 +414,32 @@ def main() -> int:
         return 1
 
     expected = {
-        "ar", "bg", "cs", "da", "de", "es", "fi", "fr", "hi", "hr", "id", "it",
-        "ja", "ko", "mn", "nl", "no", "pl", "pt", "ro", "ru", "sv", "th", "tr",
-        "vi", "zh",
+        "ar",
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "es",
+        "fi",
+        "fr",
+        "hi",
+        "hr",
+        "id",
+        "it",
+        "ja",
+        "ko",
+        "mn",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sv",
+        "th",
+        "tr",
+        "vi",
+        "zh",
     }
     missing = expected - set(TRANSLATIONS)
     if missing:

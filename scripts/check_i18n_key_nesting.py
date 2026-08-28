@@ -45,9 +45,7 @@ import re
 import sys
 from pathlib import Path
 
-LOCALES = (
-    Path(__file__).resolve().parent.parent / "frontend" / "src" / "app" / "locales"
-)
+LOCALES = Path(__file__).resolve().parent.parent / "frontend" / "src" / "app" / "locales"
 NOT_LOCALES = {"index.ts", "types.ts"}
 
 OPEN_TRANSLATION = re.compile(rb'^\s*"?translation"?\s*:\s*\{')
@@ -56,9 +54,7 @@ KEY_LINE = re.compile(rb'^\s*"([^"]+)"\s*:')
 
 def translation_span(lines: list[bytes]) -> tuple[int, int] | None:
     """Line indices of the `translation` opener and its matching close."""
-    opener = next(
-        (i for i, line in enumerate(lines) if OPEN_TRANSLATION.match(line)), None
-    )
+    opener = next((i for i, line in enumerate(lines) if OPEN_TRANSLATION.match(line)), None)
     if opener is None:
         return None
     depth = 0
@@ -123,9 +119,7 @@ def main() -> int:
         )
         return 1
 
-    print(
-        f"i18n nesting: {len(files)} locale files, every key inside the translation object"
-    )
+    print(f"i18n nesting: {len(files)} locale files, every key inside the translation object")
     return 0
 
 

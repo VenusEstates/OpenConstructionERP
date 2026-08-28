@@ -23,17 +23,15 @@ from __future__ import annotations
 import argparse
 import ast
 import json
-import os
 import re
 import sys
-import textwrap
 from pathlib import Path
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
+
 
 def _safe_parse(filepath: Path) -> ast.Module | None:
     """‌⁠‍Parse a Python file into an AST, returning None on failure."""
@@ -67,11 +65,7 @@ def _extract_list_kwarg(call_node: ast.Call, kwarg_name: str) -> list[str]:
     """Extract a list-of-strings keyword argument from a Call node."""
     for kw in call_node.keywords:
         if kw.arg == kwarg_name and isinstance(kw.value, ast.List):
-            return [
-                elt.value
-                for elt in kw.value.elts
-                if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
-            ]
+            return [elt.value for elt in kw.value.elts if isinstance(elt, ast.Constant) and isinstance(elt.value, str)]
     return []
 
 
@@ -87,6 +81,7 @@ def _extract_bool_kwarg(call_node: ast.Call, kwarg_name: str) -> bool | None:
 # 1. Module manifest scanning
 # ---------------------------------------------------------------------------
 
+
 def scan_module_manifest(manifest_path: Path) -> dict[str, Any]:
     """Parse a manifest.py and extract ModuleManifest(...) keyword arguments."""
     tree = _safe_parse(manifest_path)
@@ -99,9 +94,8 @@ def scan_module_manifest(manifest_path: Path) -> dict[str, Any]:
             continue
         # Match: ModuleManifest(...)
         func = node.func
-        name_matches = (
-            (isinstance(func, ast.Name) and func.id == "ModuleManifest")
-            or (isinstance(func, ast.Attribute) and func.attr == "ModuleManifest")
+        name_matches = (isinstance(func, ast.Name) and func.id == "ModuleManifest") or (
+            isinstance(func, ast.Attribute) and func.attr == "ModuleManifest"
         )
         if not name_matches:
             continue
@@ -123,6 +117,7 @@ def scan_module_manifest(manifest_path: Path) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # 2. SQLAlchemy model extraction
 # ---------------------------------------------------------------------------
+
 
 def _is_mapped_column_call(node: ast.expr) -> bool:
     """Check if node is a call to mapped_column(...)."""
@@ -173,9 +168,8 @@ def _extract_column_info(assign_node: ast.AnnAssign) -> dict[str, Any] | None:
     for arg in call.args:
         if isinstance(arg, ast.Call):
             func = arg.func
-            is_fk = (
-                (isinstance(func, ast.Name) and func.id == "ForeignKey")
-                or (isinstance(func, ast.Attribute) and func.attr == "ForeignKey")
+            is_fk = (isinstance(func, ast.Name) and func.id == "ForeignKey") or (
+                isinstance(func, ast.Attribute) and func.attr == "ForeignKey"
             )
             if is_fk and arg.args and isinstance(arg.args[0], ast.Constant):
                 fk_target = arg.args[0].value
@@ -203,9 +197,8 @@ def _extract_relationship_info(assign_node: ast.AnnAssign) -> dict[str, Any] | N
         return None
 
     func = assign_node.value.func
-    is_rel = (
-        (isinstance(func, ast.Name) and func.id == "relationship")
-        or (isinstance(func, ast.Attribute) and func.attr == "relationship")
+    is_rel = (isinstance(func, ast.Name) and func.id == "relationship") or (
+        isinstance(func, ast.Attribute) and func.attr == "relationship"
     )
     if not is_rel:
         return None
@@ -221,8 +214,8 @@ def _extract_relationship_info(assign_node: ast.AnnAssign) -> dict[str, Any] | N
     match = re.search(r'"(\w+)"', annotation_str)
     if match:
         target_model = match.group(1)
-    elif re.search(r'Mapped\[(\w+)\]', annotation_str):
-        target_model = re.search(r'Mapped\[(\w+)\]', annotation_str).group(1)
+    elif re.search(r"Mapped\[(\w+)\]", annotation_str):
+        target_model = re.search(r"Mapped\[(\w+)\]", annotation_str).group(1)
 
     # Determine type: list -> one-to-many, single -> many-to-one
     rel_type = "one-to-many" if "list" in annotation_str.lower() else "many-to-one"
@@ -365,7 +358,21 @@ def scan_routes(router_path: Path) -> list[dict[str, Any]]:
                     continue
                 ann_str = _unparse_annotation(ann)
                 # Skip dependency-injection params (Session, CurrentUser, etc.)
-                if any(skip in ann_str for skip in ["Session", "Depends", "CurrentUser", "UUID", "str", "int", "float", "bool", "Query", "Path"]):
+                if any(
+                    skip in ann_str
+                    for skip in [
+                        "Session",
+                        "Depends",
+                        "CurrentUser",
+                        "UUID",
+                        "str",
+                        "int",
+                        "float",
+                        "bool",
+                        "Query",
+                        "Path",
+                    ]
+                ):
                     continue
                 # Likely a Pydantic schema
                 request_schema = ann_str
@@ -438,9 +445,8 @@ def scan_schemas(schemas_path: Path) -> list[dict[str, Any]]:
             # Check for Field(...) default
             if item.value and isinstance(item.value, ast.Call):
                 func = item.value.func
-                is_field = (
-                    (isinstance(func, ast.Name) and func.id == "Field")
-                    or (isinstance(func, ast.Attribute) and func.attr == "Field")
+                is_field = (isinstance(func, ast.Name) and func.id == "Field") or (
+                    isinstance(func, ast.Attribute) and func.attr == "Field"
                 )
                 if is_field:
                     desc = _extract_string_kwarg(item.value, "description")
@@ -459,6 +465,7 @@ def scan_schemas(schemas_path: Path) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # 5. Cross-module import dependency graph
 # ---------------------------------------------------------------------------
+
 
 def scan_imports(module_dir: Path, modules_root: Path) -> list[str]:
     """Scan all .py files in a module directory for imports from other modules."""
@@ -495,6 +502,7 @@ def scan_imports(module_dir: Path, modules_root: Path) -> list[str]:
 # 6. Frontend feature scanning
 # ---------------------------------------------------------------------------
 
+
 def scan_frontend_features(features_dir: Path) -> list[dict[str, Any]]:
     """Scan frontend/src/features/ and list feature directories with file counts."""
     if not features_dir.is_dir():
@@ -510,13 +518,15 @@ def scan_frontend_features(features_dir: Path) -> list[dict[str, Any]]:
         css_files = list(entry.rglob("*.css"))
         test_files = [f for f in ts_files if ".test." in f.name or ".spec." in f.name]
 
-        features.append({
-            "name": entry.name,
-            "ts_files": len(ts_files),
-            "css_files": len(css_files),
-            "test_files": len(test_files),
-            "total_files": len(list(entry.rglob("*.*"))),
-        })
+        features.append(
+            {
+                "name": entry.name,
+                "ts_files": len(ts_files),
+                "css_files": len(css_files),
+                "test_files": len(test_files),
+                "total_files": len(list(entry.rglob("*.*"))),
+            }
+        )
 
     return features
 
@@ -524,6 +534,7 @@ def scan_frontend_features(features_dir: Path) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Main orchestrator
 # ---------------------------------------------------------------------------
+
 
 def generate_manifest(root: Path) -> dict[str, Any]:
     """Generate the full architecture manifest dictionary."""
@@ -555,7 +566,8 @@ def generate_manifest(root: Path) -> dict[str, Any]:
     modules_with_manifests = 0
 
     module_dirs = sorted(
-        d for d in backend_modules_dir.iterdir()
+        d
+        for d in backend_modules_dir.iterdir()
         if d.is_dir() and not d.name.startswith("_") and d.name != "__pycache__"
     )
 
@@ -642,9 +654,7 @@ def generate_manifest(root: Path) -> dict[str, Any]:
         declared_deps = []
         if mod["manifest"] and mod["manifest"].get("depends"):
             # Convert oe_projects -> projects
-            declared_deps = [
-                d.replace("oe_", "") for d in mod["manifest"]["depends"]
-            ]
+            declared_deps = [d.replace("oe_", "") for d in mod["manifest"]["depends"]]
         import_deps = mod["import_dependencies"]
         combined = sorted(set(declared_deps) | set(import_deps))
         dep_graph[mod["module_id"]] = combined
@@ -652,7 +662,7 @@ def generate_manifest(root: Path) -> dict[str, Any]:
     manifest["dependency_graph"] = dep_graph
 
     # ── Frontend features ───────────────────────────────────────────────
-    print(f"\nScanning frontend features...")
+    print("\nScanning frontend features...")
     frontend_features = scan_frontend_features(frontend_features_dir)
     manifest["frontend_features"] = frontend_features
 
@@ -697,9 +707,7 @@ def generate_manifest(root: Path) -> dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate architecture manifest for OpenConstructionERP."
-    )
+    parser = argparse.ArgumentParser(description="Generate architecture manifest for OpenConstructionERP.")
     parser.add_argument(
         "--root",
         type=Path,

@@ -1,4 +1,5 @@
 """‌⁠‍Measure real Mongolian translation coverage of mn.ts vs en.ts."""
+
 import re
 from pathlib import Path
 
@@ -15,9 +16,11 @@ both = set(en_pairs) & set(mn_pairs)
 missing = set(en_pairs) - set(mn_pairs)
 extra = set(mn_pairs) - set(en_pairs)
 
+
 # Cyrillic range covers Mongolian Cyrillic alphabet (incl. өүңь)
 def has_cyrillic(s: str) -> bool:
     return any("Ѐ" <= c <= "ӿ" for c in s)
+
 
 identical = [k for k in both if en_pairs[k] == mn_pairs[k] and en_pairs[k]]
 translated = [k for k in both if has_cyrillic(mn_pairs[k]) and mn_pairs[k] != en_pairs[k]]
@@ -30,8 +33,8 @@ print(f"  missing in mn:    {len(missing)}")
 print(f"  extra in mn:      {len(extra)}")
 print()
 print(f"Of the {len(both)} keys present in both files:")
-print(f"  translated (Cyrillic, differs from en): {len(translated)}  ({100*len(translated)/len(both):.1f}%)")
-print(f"  identical to English (untranslated):    {len(identical)}  ({100*len(identical)/len(both):.1f}%)")
+print(f"  translated (Cyrillic, differs from en): {len(translated)}  ({100 * len(translated) / len(both):.1f}%)")
+print(f"  identical to English (untranslated):    {len(identical)}  ({100 * len(identical) / len(both):.1f}%)")
 print(f"  empty in both:                          {len(empty)}")
 print(f"  other (ASCII but differs):              {len(other)}")
 print()

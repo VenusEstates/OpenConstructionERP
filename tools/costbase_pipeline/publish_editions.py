@@ -31,12 +31,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import unicodedata
 from pathlib import Path
 
 import pandas as pd
-
 from extract_controlled_vocabulary import CONTROLLED_COLUMNS
 from extract_translation_corpus import SOURCE_LANG_BY_REGION, TEXT_COLUMNS
 
@@ -97,9 +94,7 @@ def native_script_share(series: pd.Series, lang: str) -> float | None:
 
 def load_vocabulary(path: Path) -> dict:
     if not path.exists():
-        raise SystemExit(
-            f"controlled vocabulary not found at {path}; run extract_controlled_vocabulary first"
-        )
+        raise SystemExit(f"controlled vocabulary not found at {path}; run extract_controlled_vocabulary first")
     return json.loads(path.read_text(encoding="utf-8"))["vocabulary"]
 
 
@@ -112,32 +107,21 @@ def build_edition(
 ) -> tuple[pd.DataFrame, dict]:
     """Base, with free text taken from `translated` and controlled labels mapped."""
     if len(base) != len(translated):
-        raise ValueError(
-            f"row counts differ: base {len(base)}, translated {len(translated)}"
-        )
+        raise ValueError(f"row counts differ: base {len(base)}, translated {len(translated)}")
     edition = base.copy(deep=True)
     report: dict = {"free_text": {}, "controlled": {}, "unmapped_labels": {}}
 
     for column in TEXT_COLUMNS:
-        if (
-            column in CONTROLLED_COLUMNS
-            or column not in base.columns
-            or column not in translated.columns
-        ):
+        if column in CONTROLLED_COLUMNS or column not in base.columns or column not in translated.columns:
             continue
         source, target = base[column], translated[column]
         # An empty translated cell is a lost value, not a translation of an empty one, so the
         # base text is kept. This is the guard that stopped 509 populated Turkish cells being
         # blanked during the manual repair.
-        keep = target.fillna("").astype(str).str.strip().eq("") & source.fillna(
-            ""
-        ).astype(str).str.strip().ne("")
+        keep = target.fillna("").astype(str).str.strip().eq("") & source.fillna("").astype(str).str.strip().ne("")
         edition[column] = target.where(~keep, source)
         report["free_text"][column] = int(
-            (
-                source.fillna("~").astype(str)
-                != edition[column].fillna("~").astype(str)
-            ).sum()
+            (source.fillna("~").astype(str) != edition[column].fillna("~").astype(str)).sum()
         )
 
     for column in CONTROLLED_COLUMNS:
@@ -157,9 +141,7 @@ def build_edition(
     return edition, report
 
 
-def assert_publishable(
-    base: pd.DataFrame, edition: pd.DataFrame, *, region: str, lang: str
-) -> dict:
+def assert_publishable(base: pd.DataFrame, edition: pd.DataFrame, *, region: str, lang: str) -> dict:
     """Refuse anything that is not a text-only overlay, and catch the native-edition defect.
 
     Three separate laws, because the incident passed two checks that looked like three:
@@ -170,15 +152,9 @@ def assert_publishable(
     if len(base) != len(edition):
         raise ValueError(f"row count changed: {len(base)} -> {len(edition)}")
 
-    moved = [
-        c
-        for c in base.columns
-        if pd.api.types.is_numeric_dtype(base[c]) and not base[c].equals(edition[c])
-    ]
+    moved = [c for c in base.columns if pd.api.types.is_numeric_dtype(base[c]) and not base[c].equals(edition[c])]
     if moved:
-        raise ValueError(
-            f"publication must not touch numbers, but these moved: {moved}"
-        )
+        raise ValueError(f"publication must not touch numbers, but these moved: {moved}")
 
     checks: dict = {
         "numeric_columns_unchanged": True,
@@ -209,17 +185,13 @@ def assert_publishable(
         if after < before - 1.0:
             lost.append(f"{column} {before:.1f}% -> {after:.1f}%")
     if lost:
-        raise ValueError(
-            f"native edition {region}_{lang} lost its own language in: {'; '.join(lost)}"
-        )
+        raise ValueError(f"native edition {region}_{lang} lost its own language in: {'; '.join(lost)}")
     return checks
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--clone", type=Path, required=True, help="published clone, read for the base"
-    )
+    parser.add_argument("--clone", type=Path, required=True, help="published clone, read for the base")
     parser.add_argument("--region", required=True)
     parser.add_argument("--lang", required=True)
     parser.add_argument(
@@ -248,17 +220,13 @@ def main() -> None:
                 )
 
     base_path = (
-        args.clone
-        / PUBLISHED_FOLDER[args.region]
-        / f"{args.region}_workitems_costs_resources_DDC_CWICR.parquet"
+        args.clone / PUBLISHED_FOLDER[args.region] / f"{args.region}_workitems_costs_resources_DDC_CWICR.parquet"
     )
     base = pd.read_parquet(base_path)
     translated = pd.read_parquet(args.translated)
     vocabulary = load_vocabulary(args.vocabulary)
 
-    edition, report = build_edition(
-        base, translated, lang=args.lang, vocabulary=vocabulary
-    )
+    edition, report = build_edition(base, translated, lang=args.lang, vocabulary=vocabulary)
     checks = assert_publishable(base, edition, region=args.region, lang=args.lang)
 
     out_path = published_path(args.out_root, args.region, args.lang)

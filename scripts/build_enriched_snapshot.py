@@ -61,6 +61,7 @@ Constraints honoured (per the spec doc):
 - Does NOT change embedding dimensions or model.
 - Does NOT remove existing payload fields — only ADDS two new ones.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -360,9 +361,7 @@ def _ensure_target_collection(
     try:
         info = client.get_collection(source)
     except Exception as exc:
-        raise RuntimeError(
-            f"source collection {source!r} doesn't exist or is unreachable: {exc}"
-        ) from exc
+        raise RuntimeError(f"source collection {source!r} doesn't exist or is unreachable: {exc}") from exc
 
     existing = {c.name for c in client.get_collections().collections}
     if target in existing:
@@ -385,9 +384,7 @@ def _ensure_target_collection(
 
     sparse_param: dict[str, qmodels.SparseVectorParams] | None = None
     if isinstance(sparse_vectors_config, dict) and sparse_vectors_config:
-        sparse_param = {
-            name: qmodels.SparseVectorParams() for name in sparse_vectors_config
-        }
+        sparse_param = {name: qmodels.SparseVectorParams() for name in sparse_vectors_config}
 
     print(
         f"  [ensure] creating target {target!r} with vectors={list(vectors_param.keys())} "
@@ -406,9 +403,7 @@ def _ensure_target_collection(
     # collection's ``payload_schema`` (introspected at runtime).
     schema = getattr(info, "payload_schema", {}) or {}
     for field_name, meta in schema.items():
-        data_type = getattr(meta, "data_type", None) or (
-            meta.get("data_type") if isinstance(meta, dict) else None
-        )
+        data_type = getattr(meta, "data_type", None) or (meta.get("data_type") if isinstance(meta, dict) else None)
         if not data_type:
             continue
         try:
@@ -525,11 +520,13 @@ def build_enriched_snapshot(
         previews = []
         for p in points:
             passage = _build_passage_text(p.payload or {})
-            previews.append({
-                "id": str(p.id),
-                "rate_code": (p.payload or {}).get("rate_code"),
-                "passage_text": passage,
-            })
+            previews.append(
+                {
+                    "id": str(p.id),
+                    "rate_code": (p.payload or {}).get("rate_code"),
+                    "passage_text": passage,
+                }
+            )
             print(f"    {p.id} ({(p.payload or {}).get('rate_code')!r}): {passage}", flush=True)
         return {
             "mode": "dry-run",
@@ -581,7 +578,12 @@ def build_enriched_snapshot(
 
         points = []
         for pid, payload, passage, d, s in zip(
-            pending_ids, pending_payloads, pending_passages, dense, sparse, strict=False,
+            pending_ids,
+            pending_payloads,
+            pending_passages,
+            dense,
+            sparse,
+            strict=False,
         ):
             new_payload = dict(payload)
             new_payload["description"] = _build_description(passage)
@@ -595,7 +597,7 @@ def build_enriched_snapshot(
             )
 
         for chunk_start in range(0, len(points), upsert_batch_size):
-            chunk = points[chunk_start:chunk_start + upsert_batch_size]
+            chunk = points[chunk_start : chunk_start + upsert_batch_size]
             try:
                 client.upsert(collection_name=target, points=chunk, wait=False)
                 encoded += len(chunk)
@@ -646,8 +648,7 @@ def build_enriched_snapshot(
                     elapsed = time.perf_counter() - started
                     rate = encoded / elapsed if elapsed > 0 else 0
                     print(
-                        f"  [encode] {encoded} done / {total_seen} seen "
-                        f"({rate:.1f} pt/s, elapsed {elapsed:.0f}s)",
+                        f"  [encode] {encoded} done / {total_seen} seen ({rate:.1f} pt/s, elapsed {elapsed:.0f}s)",
                         flush=True,
                     )
 
@@ -695,8 +696,7 @@ def main(argv: list[str] | None = None) -> int:
         "--limit",
         type=int,
         default=None,
-        help="Cap on points to encode this run (default: all). "
-        "Resume-aware — already-encoded points are skipped.",
+        help="Cap on points to encode this run (default: all). Resume-aware — already-encoded points are skipped.",
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(

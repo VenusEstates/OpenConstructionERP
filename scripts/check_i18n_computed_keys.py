@@ -212,9 +212,7 @@ _KEY_LINE = re.compile(r'^\s*"([A-Za-z0-9_.\-]+)"\s*:', re.MULTILINE)
 # identical-fraction heuristic, so a value this misses (wrapped across lines,
 # which the generator does not produce) only narrows that sample and never
 # affects which keys count as missing.
-_KEY_VALUE_LINE = re.compile(
-    r'^\s*"([A-Za-z0-9_.\-]+)"\s*:\s*"((?:[^"\\]|\\.)*)"', re.MULTILINE
-)
+_KEY_VALUE_LINE = re.compile(r'^\s*"([A-Za-z0-9_.\-]+)"\s*:\s*"((?:[^"\\]|\\.)*)"', re.MULTILINE)
 
 # `{ code: 'xx', ... }` entries inside SUPPORTED_LANGUAGES.
 _SUPPORTED_CODE = re.compile(r"code:\s*'([A-Za-z0-9\-]+)'")
@@ -224,16 +222,12 @@ _TPL_HEAD = re.compile(r"\bt\(\s*`")
 
 # The opening of `t(` with a variable key: an identifier or property path,
 # never a quoted literal (the orphan guard owns those).
-_VAR_HEAD = re.compile(
-    r"\bt\(\s*([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z0-9_$]+)*)\s*,\s*\{"
-)
+_VAR_HEAD = re.compile(r"\bt\(\s*([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z0-9_$]+)*)\s*,\s*\{")
 
 # A table entry naming its key: any `<something>Key` or `key` field holding a
 # literal. Broad on purpose; the tree calls these labelKey, i18nKey, ariaKey
 # and titleKey, and a guard keyed to one name would miss the next one.
-_KEY_FIELD = re.compile(
-    r"\b([A-Za-z_][A-Za-z0-9_]*[Kk]ey)\s*:\s*(['\"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\2"
-)
+_KEY_FIELD = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*[Kk]ey)\s*:\s*(['\"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\2")
 # The English standing in for the key. `defaultLabel` is the common name but
 # the tree also writes defaultName, defaultDesc, defaultText, defaultTitle and
 # defaultHelp for the same job, and a guard keyed to one of them would call the
@@ -241,9 +235,7 @@ _KEY_FIELD = re.compile(
 # because that is the t() option itself, handled by the call-site scan above;
 # pairing on it would let an unrelated key field three lines away form a
 # spurious pair.
-_DEFAULT_FIELD = re.compile(
-    r"\b(default(?!Value\b)[A-Z][A-Za-z0-9_]*)\s*:\s*(['\"])(.*?)\2"
-)
+_DEFAULT_FIELD = re.compile(r"\b(default(?!Value\b)[A-Z][A-Za-z0-9_]*)\s*:\s*(['\"])(.*?)\2")
 
 # A `<x>Key` field whose English sits in a sibling `<x>` field rather than in
 # a default* one, so _DEFAULT_FIELD never anchors and no pair forms. The case
@@ -251,9 +243,7 @@ _DEFAULT_FIELD = re.compile(
 # `moduleLabelKey`, `label` beside `labelKey`. Counted and named below rather
 # than paired, because the two populations underneath this shape answer to
 # different questions and one check cannot hold both. See the docstring.
-_SIBLING_KEY = re.compile(
-    r"\b([A-Za-z_][A-Za-z0-9_]*)Key\s*:\s*(['\"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\2"
-)
+_SIBLING_KEY = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)Key\s*:\s*(['\"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\2")
 
 # A `<x>Key` field whose English sits in a `<x>Default` field. _DEFAULT_FIELD
 # anchors on the PREFIX spelling, `default` then a capital, so it never fires
@@ -275,9 +265,7 @@ _SIBLING_KEY = re.compile(
 # A guide section puts titleKey, titleDefault, bodyKey and bodyDefault inside
 # the same three-line window, so a window-wide search would hand bodyDefault
 # the titleKey and count one key twice while never reading the other.
-_SUFFIX_PAIR_KEY = re.compile(
-    r"\b([A-Za-z_][A-Za-z0-9_]*)Key\s*:\s*(['\"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\2"
-)
+_SUFFIX_PAIR_KEY = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)Key\s*:\s*(['\"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\2")
 
 # The one family excluded from the en.ts question below, for the reason the
 # docstring already gives about the `cases.<slug>.*` content keys: they keep
@@ -516,9 +504,7 @@ def missing_locales(
     """
     reach = _reach(key, by_locale)
     return sorted(
-        stem
-        for stem in by_locale
-        if stem not in reach and bases[stem] not in reach and stem not in in_progress
+        stem for stem in by_locale if stem not in reach and bases[stem] not in reach and stem not in in_progress
     )
 
 
@@ -530,9 +516,7 @@ def downgraded_locales(
 ) -> list[str]:
     """In-progress locales this key's English default would still reach."""
     reach = _reach(key, by_locale)
-    return sorted(
-        stem for stem in in_progress if stem not in reach and bases[stem] not in reach
-    )
+    return sorted(stem for stem in in_progress if stem not in reach and bases[stem] not in reach)
 
 
 def read_supported_languages(path: str = DEFAULT_I18N_TS_PATH) -> set[str]:
@@ -668,9 +652,7 @@ def main(argv: list[str] | None = None) -> int:
     for posix, raw in sites.template:
         where.setdefault(static_prefix(raw), []).append(posix)
 
-    empty = {
-        p: files for p, files in where.items() if not any(k.startswith(p) for k in keys)
-    }
+    empty = {p: files for p, files in where.items() if not any(k.startswith(p) for k in keys)}
     new_prefixes = sorted(set(empty) - baseline)
 
     # A prefix leaves the debt list for two unrelated reasons and the message has
@@ -705,9 +687,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
     en_values = read_en_values(args.en)
-    in_progress, fractions, abandoned = classify_locales(
-        by_locale, supported, en_values, args.locales
-    )
+    in_progress, fractions, abandoned = classify_locales(by_locale, supported, en_values, args.locales)
     in_progress = frozenset(in_progress)
 
     member_gaps: dict[str, dict[str, list[str]]] = {}  # prefix -> locale -> keys
@@ -736,10 +716,7 @@ def main(argv: list[str] | None = None) -> int:
             new_member_gaps.append((prefix, by_stem))
             continue
         declared = {stem: set(ks) for stem, ks in entry.get("missing", {}).items()}
-        widened = {
-            stem: sorted(set(ks) - declared.get(stem, set()))
-            for stem, ks in by_stem.items()
-        }
+        widened = {stem: sorted(set(ks) - declared.get(stem, set())) for stem, ks in by_stem.items()}
         widened = {stem: ks for stem, ks in widened.items() if ks}
         if widened:
             widened_member_gaps.append((prefix, widened))
@@ -753,9 +730,7 @@ def main(argv: list[str] | None = None) -> int:
     # `<x>Default` shape. Two questions, asked separately because the answers
     # are nothing alike: is the key in en.ts, and can every locale answer it.
     # ----
-    suffix_scope = [
-        p for p in sites.suffix_pairs if not p[2].startswith(_SUFFIX_PAIR_EXCLUDED)
-    ]
+    suffix_scope = [p for p in sites.suffix_pairs if not p[2].startswith(_SUFFIX_PAIR_EXCLUDED)]
     suffix_absent: dict[str, set[str]] = {}  # family prefix -> keys absent from en.ts
     suffix_present: set[str] = set()
     for _posix, _line, key, _stem in suffix_scope:
@@ -838,10 +813,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     for expr, n in Counter(e for _, e in sites.variable).most_common(10):
         print(f"          {n:4d}  t({expr}, {{ defaultValue ... }})")
-    print(
-        f"  {len(sites.headless):5d} template key(s) begin with an interpolation and so have "
-        "no static prefix."
-    )
+    print(f"  {len(sites.headless):5d} template key(s) begin with an interpolation and so have no static prefix.")
     for posix, raw in sites.headless[:5]:
         print(f"          {posix}: `{raw}`")
     incomplete = sorted(set(member_gaps))
@@ -863,10 +835,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     for stem, n in Counter(s for _, _, _, s in sites.sibling).most_common(5):
         print(f"          {n:4d}  {stem}Key beside {stem}")
-    print(
-        "        The module chips among those are owned by "
-        "check_case_module_chip_locales.py."
-    )
+    print("        The module chips among those are owned by check_case_module_chip_locales.py.")
     excluded = len(sites.suffix_pairs) - len(suffix_scope)
     print(
         f"  {excluded:5d} <x>Key/<x>Default pair(s) are cases.* content keys, "
@@ -898,9 +867,7 @@ def main(argv: list[str] | None = None) -> int:
             f"{', '.join(sorted(abandoned))}"
         )
     else:
-        print(
-            "0 locale(s) outside SUPPORTED_LANGUAGES read as an abandoned, unoffered file."
-        )
+        print("0 locale(s) outside SUPPORTED_LANGUAGES read as an abandoned, unoffered file.")
 
     if answered:
         print(
@@ -915,9 +882,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     if member_healed:
         shown = ", ".join(member_healed[:12])
-        more = (
-            f", and {len(member_healed) - 12} more" if len(member_healed) > 12 else ""
-        )
+        more = f", and {len(member_healed) - 12} more" if len(member_healed) > 12 else ""
         print(
             f"\n{len(member_healed)} member-baselined prefix(es) now have every member in "
             f"every locale that needs one; remove them from {args.member_baseline}: "
@@ -965,8 +930,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for posix, line, key, default in missing_pairs:
         print(
-            f"ERROR: {key} is paired with the default {default!r} but no key by that "
-            f"name is in {args.en}",
+            f"ERROR: {key} is paired with the default {default!r} but no key by that name is in {args.en}",
             file=sys.stderr,
         )
         print(f"  declared at {posix}:{line}", file=sys.stderr)

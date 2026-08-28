@@ -646,9 +646,7 @@ def _scan_display_literals(path: Path, norm: str) -> list[tuple[int, str]]:
         if line.lstrip().startswith(_COMMENT_STARTS):
             continue
         code = _code_before_comment(line)
-        field = _FIELD_RE.match(line) or (
-            _FIELD_RE.match(lines[lineno - 2]) if lineno > 1 else None
-        )
+        field = _FIELD_RE.match(line) or (_FIELD_RE.match(lines[lineno - 2]) if lineno > 1 else None)
         if field and field.group(1) in identity:
             continue
         for match in _QUOTED_RE.finditer(code):
@@ -675,10 +673,7 @@ def _load_allowlist() -> list[tuple[str, str]]:
 
 def _is_allowed(relpath: str, line: str, allowlist: list[tuple[str, str]]) -> bool:
     rp = relpath.replace("\\", "/")
-    return any(
-        (not path_sub or path_sub in rp) and line_sub and line_sub in line
-        for path_sub, line_sub in allowlist
-    )
+    return any((not path_sub or path_sub in rp) and line_sub and line_sub in line for path_sub, line_sub in allowlist)
 
 
 def _git_files(args: list[str]) -> list[Path]:
@@ -794,30 +789,19 @@ def main(argv: list[str]) -> int:
         norm = shown.replace("\\", "/")
         if norm.startswith(_LOCALE_DIR):
             for lineno, key, name in _scan_trademark_form(rp):
-                unmarked.append(
-                    f"{shown}:{lineno}: {key} names {name} with no {_REGISTERED}"
-                )
-        elif (
-            norm.startswith(_FRONTEND_SRC)
-            and norm.endswith((".ts", ".tsx"))
-            and not _is_test_path(norm)
-        ):
+                unmarked.append(f"{shown}:{lineno}: {key} names {name} with no {_REGISTERED}")
+        elif norm.startswith(_FRONTEND_SRC) and norm.endswith((".ts", ".tsx")) and not _is_test_path(norm):
             # A default is also a quoted literal, so report each line once and
             # let the more specific message win.
             seen: set[int] = set()
             for lineno, name in _scan_component_defaults(rp):
                 seen.add(lineno)
-                unmarked.append(
-                    f"{shown}:{lineno}: i18n default names {name} with no {_REGISTERED}"
-                )
+                unmarked.append(f"{shown}:{lineno}: i18n default names {name} with no {_REGISTERED}")
             if norm not in _ARCHIVE_FILES:
                 for lineno, name in _scan_display_literals(rp, norm):
                     if lineno in seen:
                         continue
-                    unmarked.append(
-                        f"{shown}:{lineno}: display string names {name} "
-                        f"with no {_REGISTERED}"
-                    )
+                    unmarked.append(f"{shown}:{lineno}: display string names {name} with no {_REGISTERED}")
 
     if unmarked:
         print(
@@ -832,9 +816,7 @@ def main(argv: list[str]) -> int:
         )
 
     if failures:
-        print(
-            "[FAIL] competitor/vendor brand token(s) found - remove and use a neutral name:"
-        )
+        print("[FAIL] competitor/vendor brand token(s) found - remove and use a neutral name:")
         for f in failures:
             print(f"  {f}")
         print(

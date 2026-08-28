@@ -9,12 +9,11 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
-
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 DEFAULT_MANIFEST = PIPELINE_DIR / "outputs" / "translation_manifest.json"
@@ -22,9 +21,7 @@ DEFAULT_OUT = PIPELINE_DIR / "outputs" / "ppp_fx_multipliers.parquet"
 ECB_DAILY_XML_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
 NUMBEO_INDICES_URL = "https://www.numbeo.com/api/indices"
 NUMBEO_COUNTRY_INDICES_URL = "https://www.numbeo.com/api/country_indices"
-WORLD_BANK_PPP_URL_TEMPLATE = (
-    "https://api.worldbank.org/v2/country/{countries}/indicator/PA.NUS.PPP"
-)
+WORLD_BANK_PPP_URL_TEMPLATE = "https://api.worldbank.org/v2/country/{countries}/indicator/PA.NUS.PPP"
 
 
 REQUIRED_ECONOMY_COLUMNS = {
@@ -67,9 +64,7 @@ def load_target_catalogues(manifest_path: Path) -> list[Economy]:
     economies: list[Economy] = []
     missing: list[dict] = []
     for row in catalogues:
-        absent = [
-            col for col in REQUIRED_ECONOMY_COLUMNS if not str(row.get(col, "")).strip()
-        ]
+        absent = [col for col in REQUIRED_ECONOMY_COLUMNS if not str(row.get(col, "")).strip()]
         if absent:
             missing.append({"row": row, "missing": absent})
             continue
@@ -101,11 +96,7 @@ def read_economies(path: Path) -> list[Economy]:
     missing_rows = []
     economies: list[Economy] = []
     for idx, row in frame.iterrows():
-        absent = [
-            col
-            for col in REQUIRED_ECONOMY_COLUMNS
-            if pd.isna(row[col]) or not str(row[col]).strip()
-        ]
+        absent = [col for col in REQUIRED_ECONOMY_COLUMNS if pd.isna(row[col]) or not str(row[col]).strip()]
         if absent:
             missing_rows.append({"row_index": int(idx), "missing": absent})
             continue
@@ -179,9 +170,7 @@ def load_numbeo_snapshot(path: Path) -> tuple[dict[tuple[str, str], dict], dict]
         frame = pd.read_csv(path)
     missing_cols = REQUIRED_NUMBEO_COLUMNS - set(frame.columns)
     if missing_cols:
-        raise ValueError(
-            f"{path} is missing Numbeo snapshot columns: {sorted(missing_cols)}"
-        )
+        raise ValueError(f"{path} is missing Numbeo snapshot columns: {sorted(missing_cols)}")
     lookup: dict[tuple[str, str], dict] = {}
     bad_rows = []
     for idx, row in frame.iterrows():
@@ -190,14 +179,10 @@ def load_numbeo_snapshot(path: Path) -> tuple[dict[tuple[str, str], dict], dict]
         try:
             col_index = float(row["cost_of_living_index"])
         except (TypeError, ValueError):
-            bad_rows.append(
-                {"row_index": int(idx), "reason": "invalid_cost_of_living_index"}
-            )
+            bad_rows.append({"row_index": int(idx), "reason": "invalid_cost_of_living_index"})
             continue
         if not country_iso or not city or col_index <= 0:
-            bad_rows.append(
-                {"row_index": int(idx), "reason": "missing_or_non_positive_value"}
-            )
+            bad_rows.append({"row_index": int(idx), "reason": "missing_or_non_positive_value"})
             continue
         lookup[(country_iso, _normalized_city(city))] = {
             "country_iso": country_iso,
@@ -218,9 +203,7 @@ def load_numbeo_snapshot(path: Path) -> tuple[dict[tuple[str, str], dict], dict]
     }
 
 
-def fetch_numbeo_indices(
-    economies: Iterable[Economy], api_key: str
-) -> tuple[dict[tuple[str, str], dict], dict]:
+def fetch_numbeo_indices(economies: Iterable[Economy], api_key: str) -> tuple[dict[tuple[str, str], dict], dict]:
     if not api_key:
         raise ValueError("Numbeo API key is required when no snapshot is provided")
     lookup: dict[tuple[str, str], dict] = {}
@@ -234,34 +217,24 @@ def fetch_numbeo_indices(
             url = NUMBEO_INDICES_URL + "?" + urllib.parse.urlencode(params)
         with urllib.request.urlopen(url, timeout=30) as response:
             payload = json.loads(response.read().decode("utf-8"))
-        value = (
-            payload.get("cost_of_living_index")
-            or payload.get("costOfLivingIndex")
-            or payload.get("cpi")
-        )
+        value = payload.get("cost_of_living_index") or payload.get("costOfLivingIndex") or payload.get("cpi")
         if value is None:
-            raise ValueError(
-                f"Numbeo response missing cost_of_living_index for {economy.region}"
-            )
+            raise ValueError(f"Numbeo response missing cost_of_living_index for {economy.region}")
         col_index = float(value)
         if col_index <= 0:
-            raise ValueError(
-                f"Numbeo response has non-positive cost_of_living_index for {economy.region}"
-            )
+            raise ValueError(f"Numbeo response has non-positive cost_of_living_index for {economy.region}")
         lookup[(economy.country_iso, _normalized_city(economy.city))] = {
             "country_iso": economy.country_iso,
             "city": economy.city,
             "cost_of_living_index": col_index,
             "source": "numbeo_api",
-            "snapshot_date": str(
-                payload.get("date") or payload.get("last_update") or ""
-            ),
+            "snapshot_date": str(payload.get("date") or payload.get("last_update") or ""),
         }
     return lookup, {
         "provider": "Numbeo",
         "kind": "api",
         "url": NUMBEO_INDICES_URL,
-        "fetched_at_utc": datetime.now(timezone.utc).isoformat(),
+        "fetched_at_utc": datetime.now(UTC).isoformat(),
     }
 
 
@@ -274,9 +247,7 @@ def load_worldbank_ppp_snapshot(path: Path) -> tuple[dict[str, dict], dict]:
         frame = pd.read_csv(path)
     missing_cols = REQUIRED_WORLDBANK_COLUMNS - set(frame.columns)
     if missing_cols:
-        raise ValueError(
-            f"{path} is missing World Bank PPP snapshot columns: {sorted(missing_cols)}"
-        )
+        raise ValueError(f"{path} is missing World Bank PPP snapshot columns: {sorted(missing_cols)}")
     lookup: dict[str, dict] = {}
     bad_rows = []
     for idx, row in frame.iterrows():
@@ -288,9 +259,7 @@ def load_worldbank_ppp_snapshot(path: Path) -> tuple[dict[str, dict], dict]:
             bad_rows.append({"row_index": int(idx), "reason": "invalid_ppp_or_year"})
             continue
         if not country_iso or ppp <= 0:
-            bad_rows.append(
-                {"row_index": int(idx), "reason": "missing_or_non_positive_value"}
-            )
+            bad_rows.append({"row_index": int(idx), "reason": "missing_or_non_positive_value"})
             continue
         previous = lookup.get(country_iso)
         if previous is None or year > int(previous["year"]):
@@ -316,14 +285,12 @@ def load_worldbank_ppp_snapshot(path: Path) -> tuple[dict[str, dict], dict]:
 def fetch_worldbank_ppp(economies: Iterable[Economy]) -> tuple[dict[str, dict], dict]:
     country_codes = sorted({economy.country_iso.upper() for economy in economies})
     lookup: dict[str, dict] = {}
-    fetched_at = datetime.now(timezone.utc).isoformat()
+    fetched_at = datetime.now(UTC).isoformat()
     # Keep URLs short enough for proxy stacks.
     for start in range(0, len(country_codes), 35):
         chunk = country_codes[start : start + 35]
         params = urllib.parse.urlencode({"format": "json", "per_page": 20000})
-        url = (
-            WORLD_BANK_PPP_URL_TEMPLATE.format(countries=";".join(chunk)) + "?" + params
-        )
+        url = WORLD_BANK_PPP_URL_TEMPLATE.format(countries=";".join(chunk)) + "?" + params
         with urllib.request.urlopen(url, timeout=60) as response:
             payload = json.loads(response.read().decode("utf-8"))
         if not isinstance(payload, list) or len(payload) < 2:
@@ -359,9 +326,7 @@ def fetch_worldbank_ppp(economies: Iterable[Economy]) -> tuple[dict[str, dict], 
     }
 
 
-def require_worldbank_ppp(
-    economies: Iterable[Economy], lookup: dict[str, dict]
-) -> None:
+def require_worldbank_ppp(economies: Iterable[Economy], lookup: dict[str, dict]) -> None:
     missing = [
         {
             "region": economy.region,
@@ -372,22 +337,16 @@ def require_worldbank_ppp(
         if economy.country_iso.upper() not in lookup
     ]
     if missing:
-        raise ValueError(
-            f"World Bank PPP factors missing required countries: {missing[:30]}"
-        )
+        raise ValueError(f"World Bank PPP factors missing required countries: {missing[:30]}")
 
 
 def require_fx_rates(economies: Iterable[Economy], rates: dict[str, float]) -> None:
-    missing = sorted(
-        {economy.currency for economy in economies if economy.currency not in rates}
-    )
+    missing = sorted({economy.currency for economy in economies if economy.currency not in rates})
     if missing:
         raise ValueError(f"ECB FX rates missing required currencies: {missing}")
 
 
-def require_numbeo_indices(
-    economies: Iterable[Economy], lookup: dict[tuple[str, str], dict]
-) -> None:
+def require_numbeo_indices(economies: Iterable[Economy], lookup: dict[tuple[str, str], dict]) -> None:
     missing = [
         {
             "region": economy.region,
@@ -398,9 +357,7 @@ def require_numbeo_indices(
         if (economy.country_iso, _normalized_city(economy.city)) not in lookup
     ]
     if missing:
-        raise ValueError(
-            f"Numbeo cost-of-living indices missing required economies: {missing[:20]}"
-        )
+        raise ValueError(f"Numbeo cost-of-living indices missing required economies: {missing[:20]}")
 
 
 def build_multiplier_table(
@@ -416,19 +373,15 @@ def build_multiplier_table(
     require_fx_rates(all_economies, ecb_rates)
     require_numbeo_indices(all_economies, numbeo_lookup)
     rows = []
-    built_at = datetime.now(timezone.utc).isoformat()
+    built_at = datetime.now(UTC).isoformat()
     for source in source_economies:
         source_col = numbeo_lookup[(source.country_iso, _normalized_city(source.city))]
         for target in target_economies:
-            target_col = numbeo_lookup[
-                (target.country_iso, _normalized_city(target.city))
-            ]
+            target_col = numbeo_lookup[(target.country_iso, _normalized_city(target.city))]
             source_fx_per_eur = float(ecb_rates[source.currency])
             target_fx_per_eur = float(ecb_rates[target.currency])
             fx_multiplier = target_fx_per_eur / source_fx_per_eur
-            ppp_multiplier = float(target_col["cost_of_living_index"]) / float(
-                source_col["cost_of_living_index"]
-            )
+            ppp_multiplier = float(target_col["cost_of_living_index"]) / float(source_col["cost_of_living_index"])
             rows.append(
                 {
                     "source_region": source.region,
@@ -442,12 +395,8 @@ def build_multiplier_table(
                     "source_fx_per_eur": source_fx_per_eur,
                     "target_fx_per_eur": target_fx_per_eur,
                     "fx_multiplier_target_per_source": fx_multiplier,
-                    "source_cost_of_living_index": float(
-                        source_col["cost_of_living_index"]
-                    ),
-                    "target_cost_of_living_index": float(
-                        target_col["cost_of_living_index"]
-                    ),
+                    "source_cost_of_living_index": float(source_col["cost_of_living_index"]),
+                    "target_cost_of_living_index": float(target_col["cost_of_living_index"]),
                     "ppp_multiplier": ppp_multiplier,
                     "price_multiplier": fx_multiplier * ppp_multiplier,
                     "formula": "source_price * (target_fx_per_eur/source_fx_per_eur) * (target_col_index/source_col_index)",
@@ -482,7 +431,7 @@ def build_worldbank_ppp_table(
     all_economies = [*source_economies, *target_economies]
     require_worldbank_ppp(all_economies, worldbank_lookup)
     rows = []
-    built_at = datetime.now(timezone.utc).isoformat()
+    built_at = datetime.now(UTC).isoformat()
     for source in source_economies:
         source_ppp = worldbank_lookup[source.country_iso.upper()]
         for target in target_economies:
@@ -530,20 +479,14 @@ def write_outputs(table: pd.DataFrame, out_path: Path) -> None:
         table.to_csv(out_path, index=False, quoting=csv.QUOTE_MINIMAL)
     else:
         table.to_parquet(out_path, index=False)
-        table.to_csv(
-            out_path.with_suffix(".csv"), index=False, quoting=csv.QUOTE_MINIMAL
-        )
+        table.to_csv(out_path.with_suffix(".csv"), index=False, quoting=csv.QUOTE_MINIMAL)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Build PPP/FX price multipliers for target catalogues."
-    )
+    parser = argparse.ArgumentParser(description="Build PPP/FX price multipliers for target catalogues.")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--source-economies", type=Path, required=True)
-    parser.add_argument(
-        "--ppp-provider", choices=["numbeo", "worldbank"], default="numbeo"
-    )
+    parser.add_argument("--ppp-provider", choices=["numbeo", "worldbank"], default="numbeo")
     parser.add_argument("--numbeo-snapshot", type=Path)
     parser.add_argument("--worldbank-ppp-snapshot", type=Path)
     parser.add_argument("--ecb-xml", type=Path)
@@ -554,13 +497,9 @@ def main() -> None:
     target_economies = load_target_catalogues(args.manifest)
     if args.ppp_provider == "worldbank":
         if args.worldbank_ppp_snapshot:
-            worldbank_lookup, worldbank_provenance = load_worldbank_ppp_snapshot(
-                args.worldbank_ppp_snapshot
-            )
+            worldbank_lookup, worldbank_provenance = load_worldbank_ppp_snapshot(args.worldbank_ppp_snapshot)
         else:
-            worldbank_lookup, worldbank_provenance = fetch_worldbank_ppp(
-                [*source_economies, *target_economies]
-            )
+            worldbank_lookup, worldbank_provenance = fetch_worldbank_ppp([*source_economies, *target_economies])
         table = build_worldbank_ppp_table(
             source_economies=source_economies,
             target_economies=target_economies,
@@ -570,14 +509,10 @@ def main() -> None:
     else:
         ecb_rates, fx_provenance = load_ecb_rates(ecb_xml_path=args.ecb_xml)
         if args.numbeo_snapshot:
-            numbeo_lookup, numbeo_provenance = load_numbeo_snapshot(
-                args.numbeo_snapshot
-            )
+            numbeo_lookup, numbeo_provenance = load_numbeo_snapshot(args.numbeo_snapshot)
         else:
             api_key = os.environ.get("NUMBEO_API_KEY", "").strip()
-            numbeo_lookup, numbeo_provenance = fetch_numbeo_indices(
-                [*source_economies, *target_economies], api_key
-            )
+            numbeo_lookup, numbeo_provenance = fetch_numbeo_indices([*source_economies, *target_economies], api_key)
         table = build_multiplier_table(
             source_economies=source_economies,
             target_economies=target_economies,

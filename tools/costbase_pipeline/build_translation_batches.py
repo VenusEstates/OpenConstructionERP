@@ -7,9 +7,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
-
 from qa_translation_table import protected_tokens
-
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 DEFAULT_CORPUS = PIPELINE_DIR / "outputs" / "translation_corpus.parquet"
@@ -73,15 +71,9 @@ def record_for_batch(row: pd.Series, target_lang: str) -> dict:
             "nrm2_code": example.get("nrm2_code", ""),
             "din276_kg": example.get("din276_kg", ""),
             "masterformat_div": example.get("masterformat_div", ""),
-            "example_rate_codes": [example.get("rate_code", "")]
-            if example.get("rate_code", "")
-            else [],
-            "example_resource_codes": [example.get("resource_code", "")]
-            if example.get("resource_code", "")
-            else [],
-            "row_types_seen": [example.get("row_type", "")]
-            if example.get("row_type", "")
-            else [],
+            "example_rate_codes": [example.get("rate_code", "")] if example.get("rate_code", "") else [],
+            "example_resource_codes": [example.get("resource_code", "")] if example.get("resource_code", "") else [],
+            "row_types_seen": [example.get("row_type", "")] if example.get("row_type", "") else [],
         },
         "protected_tokens": protected_tokens(row["source_text"]),
         "matched_terms": matched_terms,
@@ -112,10 +104,7 @@ def match_terms(source_lang: str, target_lang: str, source_text: str) -> list[di
     for term in load_termbase():
         if term.get("audit_status") != "approved":
             continue
-        if (
-            term.get("source_lang") != source_lang
-            or term.get("target_lang") != target_lang
-        ):
+        if term.get("source_lang") != source_lang or term.get("target_lang") != target_lang:
             continue
         if term.get("source_term", "") in source_text:
             matches.append(
@@ -165,22 +154,15 @@ def build_batches(
         for source_lang, group in corpus.groupby("source_lang", sort=True):
             # Same-language rows still need review for controlled terminology, but can be
             # skipped by callers that want only cross-language translation.
-            records = [
-                record_for_batch(row, target_lang) for _, row in group.iterrows()
-            ]
+            records = [record_for_batch(row, target_lang) for _, row in group.iterrows()]
             total_batches = math.ceil(len(records) / batch_size)
             for idx in range(total_batches):
                 chunk = records[idx * batch_size : (idx + 1) * batch_size]
-                name = (
-                    f"{slug(source_lang)}__to__{slug(target_lang)}__{idx + 1:04d}.jsonl"
-                )
+                name = f"{slug(source_lang)}__to__{slug(target_lang)}__{idx + 1:04d}.jsonl"
                 path = out_dir / name
                 with path.open("w", encoding="utf-8", newline="\n") as fh:
                     for record in chunk:
-                        fh.write(
-                            json.dumps(record, ensure_ascii=False, sort_keys=True)
-                            + "\n"
-                        )
+                        fh.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
                 manifest["batches"].append(
                     {
                         "file": name,
@@ -203,9 +185,7 @@ def main() -> None:
     parser.add_argument("--target-lang", action="append", dest="target_langs")
     parser.add_argument("--source-lang", action="append", dest="source_langs")
     parser.add_argument("--batch-size", type=int, default=200)
-    parser.add_argument(
-        "--limit", type=int, default=0, help="Debug limit per source language."
-    )
+    parser.add_argument("--limit", type=int, default=0, help="Debug limit per source language.")
     parser.add_argument("--include-controlled", action="store_true")
     args = parser.parse_args()
 
@@ -215,11 +195,9 @@ def main() -> None:
     if args.limit:
         corpus = corpus.groupby("source_lang", group_keys=False).head(args.limit)
     target_langs = args.target_langs or sorted(
-        json.loads(
-            (PIPELINE_DIR / "outputs" / "translation_manifest.json").read_text(
-                encoding="utf-8"
-            )
-        )["target_languages"]
+        json.loads((PIPELINE_DIR / "outputs" / "translation_manifest.json").read_text(encoding="utf-8"))[
+            "target_languages"
+        ]
     )
     manifest = build_batches(
         corpus,

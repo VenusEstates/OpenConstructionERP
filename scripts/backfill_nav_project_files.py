@@ -7,6 +7,7 @@ left sidebar and the breadcrumb.
 Idempotent: if the key is already present in a locale, that file is
 skipped. Backups are not made — this is a tracked file in git.
 """
+
 from __future__ import annotations
 
 import pathlib

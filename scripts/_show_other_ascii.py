@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """‌⁠‍Show the 13 'other' (ASCII but differs) entries."""
+
 import re
 from pathlib import Path
 

@@ -11,9 +11,6 @@ from urllib import error, request
 
 import pandas as pd
 
-from parse_openai_batch_results import load_input_record_map
-
-
 PIPELINE_DIR = Path(__file__).resolve().parent
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -96,32 +93,22 @@ def restore_protected_tokens(target_text: str, protected_tokens: list[str]) -> s
             continue
         measure = " ".join(match.group("measure").split())
         unit = match.group("unit")
-        variants = LOCALIZED_UNIT_VARIANTS.get(unit) or LOCALIZED_UNIT_VARIANTS.get(
-            unit.lower(), []
-        )
+        variants = LOCALIZED_UNIT_VARIANTS.get(unit) or LOCALIZED_UNIT_VARIANTS.get(unit.lower(), [])
         if not variants:
             continue
-        measure_pattern = "".join(
-            "[xX×]" if ch in {"x", "X", "×"} else re.escape(ch) for ch in measure
-        )
+        measure_pattern = "".join("[xX×]" if ch in {"x", "X", "×"} else re.escape(ch) for ch in measure)
         measure_pattern = measure_pattern.replace(r"\ ", r"\s+")
-        unit_pattern = "|".join(
-            re.escape(variant) for variant in sorted(variants, key=len, reverse=True)
-        )
+        unit_pattern = "|".join(re.escape(variant) for variant in sorted(variants, key=len, reverse=True))
         pattern = re.compile(rf"(?<![\w.,/])({measure_pattern})\s*(?:{unit_pattern})")
         restored = pattern.sub(token, restored, count=1)
     return restored
 
 
-def missing_protected_tokens(
-    target_text: str, protected_tokens: list[str]
-) -> list[str]:
+def missing_protected_tokens(target_text: str, protected_tokens: list[str]) -> list[str]:
     return [token for token in protected_tokens if token and token not in target_text]
 
 
-def call_openrouter(
-    record: dict, *, api_key: str, model: str, max_retries: int, max_tokens: int
-) -> dict:
+def call_openrouter(record: dict, *, api_key: str, model: str, max_retries: int, max_tokens: int) -> dict:
     body = {
         "model": model,
         "temperature": 0,
@@ -195,9 +182,7 @@ def result_to_row(result: dict, model: str) -> dict:
     if result.get("error"):
         status = "needs_review"
     target_text = payload.get("target_text", "") if not result.get("error") else ""
-    protected = [
-        str(token) for token in record.get("protected_tokens", []) if str(token)
-    ]
+    protected = [str(token) for token in record.get("protected_tokens", []) if str(token)]
     if target_text and protected:
         target_text = restore_protected_tokens(str(target_text), protected)
         missing = missing_protected_tokens(target_text, protected)
@@ -251,9 +236,7 @@ def run_records(
                 model,
             )
             if any(marker in row["review_notes"] for marker in abort_markers):
-                raise RuntimeError(
-                    f"aborting on payment/rate-limit error: {row['review_notes']}"
-                )
+                raise RuntimeError(f"aborting on payment/rate-limit error: {row['review_notes']}")
             rows.append(row)
             if idx % 100 == 0:
                 print(f"completed {idx}/{len(records)}", flush=True)
@@ -274,9 +257,7 @@ def run_records(
         for idx, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             row = result_to_row(future.result(), model)
             if any(marker in row["review_notes"] for marker in abort_markers):
-                raise RuntimeError(
-                    f"aborting on payment/rate-limit error: {row['review_notes']}"
-                )
+                raise RuntimeError(f"aborting on payment/rate-limit error: {row['review_notes']}")
             rows.append(row)
             if idx % 100 == 0:
                 print(f"completed {idx}/{len(records)}", flush=True)
@@ -296,9 +277,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0)
     args = parser.parse_args()
 
-    api_key = os.environ.get("OPENROUTER_API_KEY") or load_dotenv_key(
-        "OPENROUTER_API_KEY"
-    )
+    api_key = os.environ.get("OPENROUTER_API_KEY") or load_dotenv_key("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY is not set.")
     records = read_records(args.input_jsonl)

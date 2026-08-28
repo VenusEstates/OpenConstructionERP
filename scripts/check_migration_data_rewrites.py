@@ -442,11 +442,7 @@ def _resolve_call(node: ast.Call, scope: dict[str, Resolved]) -> Resolved:
     # validator that returns its argument unchanged or raises). This is an
     # assumption, not a fact this script verified - callers get "derived",
     # never "literal", from it.
-    if (
-        len(node.args) == 1
-        and not node.keywords
-        and not isinstance(node.args[0], ast.Starred)
-    ):
+    if len(node.args) == 1 and not node.keywords and not isinstance(node.args[0], ast.Starred):
         inner = resolve_expr(node.args[0], scope)
         if inner.values is None:
             return UNRESOLVED
@@ -486,11 +482,7 @@ def _module_scope(tree: ast.Module) -> tuple[dict[str, Resolved], dict[str, obje
     for node in tree.body:
         if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             target, value = node.target.id, node.value
-        elif (
-            isinstance(node, ast.Assign)
-            and len(node.targets) == 1
-            and isinstance(node.targets[0], ast.Name)
-        ):
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             target, value = node.targets[0].id, node.value
         else:
             continue
@@ -504,9 +496,7 @@ def _module_scope(tree: ast.Module) -> tuple[dict[str, Resolved], dict[str, obje
     return str_scope, literal_values
 
 
-def _bind_for_target(
-    stmt: ast.For, scope: dict[str, Resolved], module_literals: dict[str, object]
-) -> None:
+def _bind_for_target(stmt: ast.For, scope: dict[str, Resolved], module_literals: dict[str, object]) -> None:
     """Extend ``scope`` with what a ``for`` loop's target(s) can be.
 
     Only handles iterating a module-level literal list/tuple (by far the
@@ -539,9 +529,7 @@ def _bind_for_target(
             values = {
                 item[idx]
                 for item in iterable
-                if isinstance(item, (tuple, list))
-                and idx < len(item)
-                and isinstance(item[idx], str)
+                if isinstance(item, (tuple, list)) and idx < len(item) and isinstance(item[idx], str)
             }
             if values:
                 _merge(scope, elt.id, Resolved(frozenset(values), "derived"))
@@ -552,11 +540,7 @@ def _local_function_defs(tree: ast.Module) -> dict[str, ast.FunctionDef]:
 
 
 def _called_local_names(func: ast.FunctionDef) -> set[str]:
-    return {
-        node.func.id
-        for node in ast.walk(func)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-    }
+    return {node.func.id for node in ast.walk(func) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)}
 
 
 def _reachable_from_upgrade(tree: ast.Module) -> list[ast.FunctionDef]:
@@ -601,26 +585,18 @@ class Statement:
     text: str
 
 
-def _find_dml_chain_table(
-    node: ast.expr, scope: dict[str, Resolved]
-) -> tuple[str, Resolved] | None:
+def _find_dml_chain_table(node: ast.expr, scope: dict[str, Resolved]) -> tuple[str, Resolved] | None:
     """If ``node`` contains a Core .insert()/.update()/.delete() call
     anywhere in it, resolve the table it was called on."""
     for inner in ast.walk(node):
-        if (
-            isinstance(inner, ast.Call)
-            and isinstance(inner.func, ast.Attribute)
-            and inner.func.attr in _DML_METHODS
-        ):
+        if isinstance(inner, ast.Call) and isinstance(inner.func, ast.Attribute) and inner.func.attr in _DML_METHODS:
             return inner.func.attr.upper(), resolve_expr(inner.func.value, scope)
     return None
 
 
 def _unwrap_transparent_methods(node: ast.expr) -> ast.expr:
     while (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr in _TRANSPARENT_METHODS
+        isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in _TRANSPARENT_METHODS
     ):
         node = node.func.value
     return node
@@ -663,9 +639,7 @@ def _unwrap_to_string_node(node: ast.expr) -> ast.expr:
     return node
 
 
-def _classify_prefix(
-    node: ast.expr, scope: dict[str, Resolved]
-) -> tuple[str, str, str] | None:
+def _classify_prefix(node: ast.expr, scope: dict[str, Resolved]) -> tuple[str, str, str] | None:
     """Classify using a SQL string's leading, fully-pinned-down segment.
 
     Fallback for when full resolution fails because some placeholder later
@@ -692,9 +666,7 @@ def _classify_prefix(
         leading = ""
         confidence = "literal"
         for value_node in node.values:
-            if isinstance(value_node, ast.Constant) and isinstance(
-                value_node.value, str
-            ):
+            if isinstance(value_node, ast.Constant) and isinstance(value_node.value, str):
                 leading += value_node.value
                 continue
             if isinstance(value_node, ast.FormattedValue):
@@ -805,11 +777,7 @@ def _handle_call(
     classified = _classify_sql_text(text_resolved)
     if classified is not None:
         kind, tables = classified
-        statements.append(
-            Statement(
-                node.lineno, kind, tables, text_resolved.confidence, ast.unparse(node)
-            )
-        )
+        statements.append(Statement(node.lineno, kind, tables, text_resolved.confidence, ast.unparse(node)))
         return
     if text_resolved.values is not None:
         # Resolved text, just not a DML verb (SELECT/SET/VACUUM/...) - nothing to record.
@@ -821,16 +789,10 @@ def _handle_call(
     # verb and table right after it, so if that much is already pinned
     # down - literal text, or literal text plus one placeholder that
     # resolves to a single value - this is still a real finding.
-    prefix = (
-        _classify_prefix(_unwrap_to_string_node(arg), scope) or text_resolved.prefix
-    )
+    prefix = _classify_prefix(_unwrap_to_string_node(arg), scope) or text_resolved.prefix
     if prefix is not None:
         kind, table, confidence = prefix
-        statements.append(
-            Statement(
-                node.lineno, kind, frozenset({table}), confidence, ast.unparse(node)
-            )
-        )
+        statements.append(Statement(node.lineno, kind, frozenset({table}), confidence, ast.unparse(node)))
     else:
         statements.append(
             Statement(
@@ -895,11 +857,7 @@ def _scan_body(
                 _scan_body(handler.body, scope, module_literals, created, statements)
             _scan_body(stmt.orelse, scope, module_literals, created, statements)
             _scan_body(stmt.finalbody, scope, module_literals, created, statements)
-        elif (
-            isinstance(stmt, ast.Assign)
-            and len(stmt.targets) == 1
-            and isinstance(stmt.targets[0], ast.Name)
-        ):
+        elif isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
             resolved = resolve_expr(stmt.value, scope)
             if resolved.values is None:
                 prefix = _classify_prefix(_unwrap_to_string_node(stmt.value), scope)
@@ -1010,8 +968,7 @@ def main(argv: list[str]) -> int:
             rows.append(
                 (
                     f.lineno,
-                    f"  {f.kind:<12} {f.table:<42} line {f.lineno:<5} "
-                    f"confidence={f.confidence}{ack_note}",
+                    f"  {f.kind:<12} {f.table:<42} line {f.lineno:<5} confidence={f.confidence}{ack_note}",
                 )
             )
             by_confidence[f.confidence] = by_confidence.get(f.confidence, 0) + 1
@@ -1067,10 +1024,7 @@ def main(argv: list[str]) -> int:
     if new_unresolved:
         blocking = True
         print()
-        print(
-            f"[FAIL] {len(new_unresolved)} unresolved statement(s) not in "
-            "_UNRESOLVED_BASELINE:"
-        )
+        print(f"[FAIL] {len(new_unresolved)} unresolved statement(s) not in _UNRESOLVED_BASELINE:")
         for name, stmt in new_unresolved:
             print(f"  {name} line {stmt.lineno}: {stmt.text}")
         print(
@@ -1093,8 +1047,7 @@ def main(argv: list[str]) -> int:
     print()
     if blocking or parse_errors:
         print(
-            "Blocking: Repo hygiene fails this run. See this script's module "
-            "docstring for the acknowledgement format."
+            "Blocking: Repo hygiene fails this run. See this script's module docstring for the acknowledgement format."
         )
     else:
         print("Blocking: every flagged table carries an acknowledgement. Run is clean.")

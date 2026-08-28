@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 
 import pandas as pd
-
 from run_openrouter_jsonl import load_dotenv_key, read_records, run_records
 
 
@@ -24,9 +23,7 @@ def is_complete(input_path: Path, output_path: Path) -> bool:
     if not output_path.exists():
         return False
     try:
-        return len(pd.read_parquet(output_path, columns=["tm_key"])) == expected_rows(
-            input_path
-        )
+        return len(pd.read_parquet(output_path, columns=["tm_key"])) == expected_rows(input_path)
     except Exception:
         return False
 
@@ -112,31 +109,20 @@ def main() -> None:
     parser.add_argument("--max-shards", type=int, default=0)
     args = parser.parse_args()
 
-    api_key = os.environ.get("OPENROUTER_API_KEY") or load_dotenv_key(
-        "OPENROUTER_API_KEY"
-    )
+    api_key = os.environ.get("OPENROUTER_API_KEY") or load_dotenv_key("OPENROUTER_API_KEY")
     if not api_key:
         raise SystemExit("OPENROUTER_API_KEY is not set.")
 
     input_paths = sorted(args.input_jsonl)
     args.shard_out_dir.mkdir(parents=True, exist_ok=True)
     if args.max_shards:
-        incomplete = [
-            path
-            for path in input_paths
-            if not is_complete(path, output_for(path, args.shard_out_dir))
-        ]
+        incomplete = [path for path in input_paths if not is_complete(path, output_for(path, args.shard_out_dir))]
         limited = set(incomplete[: args.max_shards])
         input_paths = [
-            path
-            for path in input_paths
-            if path in limited
-            or is_complete(path, output_for(path, args.shard_out_dir))
+            path for path in input_paths if path in limited or is_complete(path, output_for(path, args.shard_out_dir))
         ]
     summaries = []
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=args.shard_workers
-    ) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.shard_workers) as executor:
         futures = [
             executor.submit(
                 run_one,
@@ -156,14 +142,8 @@ def main() -> None:
             summaries.append(summary)
             print(json.dumps(summary, ensure_ascii=False), flush=True)
 
-    combined = combine_outputs(
-        input_paths, args.shard_out_dir, args.out_parquet, args.out_csv
-    )
-    print(
-        json.dumps(
-            {"shards": summaries, "combined": combined}, ensure_ascii=False, indent=2
-        )
-    )
+    combined = combine_outputs(input_paths, args.shard_out_dir, args.out_parquet, args.out_csv)
+    print(json.dumps({"shards": summaries, "combined": combined}, ensure_ascii=False, indent=2))
     if not combined.get("combined"):
         raise SystemExit(2)
 

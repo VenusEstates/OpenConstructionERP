@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """‌⁠‍Dump remaining untranslated entries."""
-import re
+
 import json
-from pathlib import Path
+import re
 from collections import defaultdict
+from pathlib import Path
 
 en = Path("frontend/src/app/locales/en.ts").read_text(encoding="utf-8")
 mn = Path("frontend/src/app/locales/mn.ts").read_text(encoding="utf-8")

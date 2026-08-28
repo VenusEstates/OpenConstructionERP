@@ -10,7 +10,6 @@ Idempotent: skips keys already present in a locale file.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 LOCALES_DIR = Path(__file__).resolve().parent.parent / "frontend" / "src" / "app" / "locales"
@@ -528,9 +527,34 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
 
 # Locale → ISO mapping for fallback resolution.
 # Locales not in TRANSLATIONS get the "en" string as fallback.
-SUPPORTED_LOCALES = (
-    "ar bg cs da de en es fi fr hi hr id it ja ko nl no pl pt ro ru sv th tr vi zh"
-).split()
+SUPPORTED_LOCALES = [
+    "ar",
+    "bg",
+    "cs",
+    "da",
+    "de",
+    "en",
+    "es",
+    "fi",
+    "fr",
+    "hi",
+    "hr",
+    "id",
+    "it",
+    "ja",
+    "ko",
+    "nl",
+    "no",
+    "pl",
+    "pt",
+    "ro",
+    "ru",
+    "sv",
+    "th",
+    "tr",
+    "vi",
+    "zh",
+]
 
 
 def value_for(locale: str, key: str) -> str:
@@ -600,9 +624,7 @@ def insert_keys(locale: str, path: Path) -> tuple[int, int]:
     # If next non-blank line is `}` and our last inserted line has a
     # comma, the trailing comma is fine in TS object literal syntax
     # (TS allows trailing commas).
-    out_lines = (
-        lines[: last_match_line_idx + 1] + new_lines + lines[last_match_line_idx + 1 :]
-    )
+    out_lines = lines[: last_match_line_idx + 1] + new_lines + lines[last_match_line_idx + 1 :]
     path.write_text("".join(out_lines), encoding="utf-8", newline="")
     return (inserted, skipped)
 

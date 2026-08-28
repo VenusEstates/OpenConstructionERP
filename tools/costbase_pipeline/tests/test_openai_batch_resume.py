@@ -22,15 +22,9 @@ def test_discover_request_files_finds_nested_openai_requests(tmp_path: Path) -> 
     assert discovered == sorted([first, second])
 
 
-def test_status_counts_submitted_and_unsubmitted_jobs(
-    tmp_path: Path, monkeypatch
-) -> None:
-    submitted_request = (
-        tmp_path / "llm_batches_de_fr" / "requests" / "part_001.requests.jsonl"
-    )
-    pending_request = (
-        tmp_path / "llm_batches_tr_ar" / "requests" / "part_001.requests.jsonl"
-    )
+def test_status_counts_submitted_and_unsubmitted_jobs(tmp_path: Path, monkeypatch) -> None:
+    submitted_request = tmp_path / "llm_batches_de_fr" / "requests" / "part_001.requests.jsonl"
+    pending_request = tmp_path / "llm_batches_tr_ar" / "requests" / "part_001.requests.jsonl"
     jobs = [
         {"request_file": str(submitted_request), "status": "completed"},
         {"batch_id": "batch_without_request", "status": "unknown"},
@@ -83,15 +77,9 @@ def test_load_jobs_accepts_legacy_list_format(tmp_path: Path) -> None:
 
 
 def test_ordered_request_files_prioritizes_small_partial_pairs(tmp_path: Path) -> None:
-    zh_es = (
-        tmp_path / "llm_batches_zh_es" / "requests" / "zh__to__es__0001.requests.jsonl"
-    )
-    zh_bg = (
-        tmp_path / "llm_batches_zh_bg" / "requests" / "zh__to__bg__0001.requests.jsonl"
-    )
-    el_ar = (
-        tmp_path / "llm_batches_el_ar" / "requests" / "el__to__ar__0001.requests.jsonl"
-    )
+    zh_es = tmp_path / "llm_batches_zh_es" / "requests" / "zh__to__es__0001.requests.jsonl"
+    zh_bg = tmp_path / "llm_batches_zh_bg" / "requests" / "zh__to__bg__0001.requests.jsonl"
+    el_ar = tmp_path / "llm_batches_el_ar" / "requests" / "el__to__ar__0001.requests.jsonl"
     for path in [zh_es, zh_bg, el_ar]:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}", encoding="utf-8")
@@ -118,18 +106,9 @@ def test_ordered_request_files_prioritizes_small_partial_pairs(tmp_path: Path) -
 def test_ordered_request_files_prefers_retry_files_for_same_pair(
     tmp_path: Path,
 ) -> None:
-    full = (
-        tmp_path / "llm_batches_zh_bg" / "requests" / "zh__to__bg__0001.requests.jsonl"
-    )
-    retry = (
-        tmp_path
-        / "llm_batches_zh_bg"
-        / "requests"
-        / "zh__to__bg__retry_missing.requests.jsonl"
-    )
-    other = (
-        tmp_path / "llm_batches_zh_fr" / "requests" / "zh__to__fr__0001.requests.jsonl"
-    )
+    full = tmp_path / "llm_batches_zh_bg" / "requests" / "zh__to__bg__0001.requests.jsonl"
+    retry = tmp_path / "llm_batches_zh_bg" / "requests" / "zh__to__bg__retry_missing.requests.jsonl"
+    other = tmp_path / "llm_batches_zh_fr" / "requests" / "zh__to__fr__0001.requests.jsonl"
     for path in [full, retry, other]:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}", encoding="utf-8")

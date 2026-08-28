@@ -66,13 +66,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 BACKEND_APP = REPO_ROOT / "backend" / "app"
 
 # One literal string argument, in either quote style, as the first argument.
-REQUESTED_RE = re.compile(
-    r"""Require(?:Permission|PermissionOrApiKey)\(\s*(["'])([^"']+)\1"""
-)
+REQUESTED_RE = re.compile(r"""Require(?:Permission|PermissionOrApiKey)\(\s*(["'])([^"']+)\1""")
 # The vector-route factory takes its two gates as keyword arguments.
-VECTOR_RE = re.compile(
-    r"""(?:read_permission|write_permission)\s*=\s*(["'])([^"']+)\1"""
-)
+VECTOR_RE = re.compile(r"""(?:read_permission|write_permission)\s*=\s*(["'])([^"']+)\1""")
 # Keys inside a registration dict. Scanned within the call's bracket span so a
 # neighbouring dict of something else cannot contribute.
 REGISTER_CALL_RE = re.compile(r"register_(?:module|core)_permissions\s*\(")

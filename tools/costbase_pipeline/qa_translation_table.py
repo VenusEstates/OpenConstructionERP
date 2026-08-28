@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 REQUIRED_TRANSLATION_COLUMNS = {
     "tm_key",
     "target_lang",
@@ -55,14 +54,10 @@ TOKEN_PATTERNS = [
         r"\s*/\s*\d+(?:[.,]\d+)?\s*(?:m2|m3|m²|m³|mm|cm|m|km|kg|t|kWh|HP)\b",
         re.IGNORECASE,
     ),
-    re.compile(
-        r"\b\d+(?:[.,]\d+)?(?:\s*[xX×χΧ]\s*\d+(?:[.,]\d+)?)+(?:\s*(?:mm|cm|m|CM|MM|M))?\b"
-    ),
+    re.compile(r"\b\d+(?:[.,]\d+)?(?:\s*[xX×χΧ]\s*\d+(?:[.,]\d+)?)+(?:\s*(?:mm|cm|m|CM|MM|M))?\b"),
     re.compile(r"[ØøΦφ]\s*\d+(?:[.,]\d+)?"),
     re.compile(r"[≤≥±×]"),
-    re.compile(
-        r"\b\d+(?:[.,]\d+)?\s*(?:m2|m3|m²|m³|mm|cm|m|km|kg|t|kWh|HP)\b", re.IGNORECASE
-    ),
+    re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:m2|m3|m²|m³|mm|cm|m|km|kg|t|kWh|HP)\b", re.IGNORECASE),
     re.compile(r"\d+(?:[.,]\d+)?(?:/\d+(?:[.,]\d+)?)*"),
     re.compile(r"\b(?:DIN|ISO|FIDIC|GAEB|NRM|CLSM|HP|CNY|EUR|TRY|BRL|GGDE)\b"),
 ]
@@ -104,10 +99,7 @@ def protected_tokens(text: str) -> list[str]:
     for pattern in TOKEN_PATTERNS:
         for match in pattern.finditer(normalized):
             start, end = match.span()
-            if any(
-                not (end <= used_start or start >= used_end)
-                for used_start, used_end in occupied
-            ):
+            if any(not (end <= used_start or start >= used_end) for used_start, used_end in occupied):
                 continue
             occupied.append((start, end))
             matches.append((start, end, match.group(0)))
@@ -123,20 +115,13 @@ def load_approved_token_transforms() -> dict[tuple[str, str, str], str]:
     for term in terms:
         if term.get("audit_status") != "approved":
             continue
-        transforms[(term["source_lang"], term["target_lang"], term["source_term"])] = (
-            term["approved_target_term"]
-        )
+        transforms[(term["source_lang"], term["target_lang"], term["source_term"])] = term["approved_target_term"]
     return transforms
 
 
-def normalize_tokens_for_target(
-    tokens: list[str], source_lang: str, target_lang: str
-) -> list[str]:
+def normalize_tokens_for_target(tokens: list[str], source_lang: str, target_lang: str) -> list[str]:
     transforms = load_approved_token_transforms()
-    return sorted(
-        canonical_token(transforms.get((source_lang, target_lang, token), token))
-        for token in tokens
-    )
+    return sorted(canonical_token(transforms.get((source_lang, target_lang, token), token)) for token in tokens)
 
 
 def canonical_token(token: str) -> str:
@@ -180,12 +165,8 @@ def run_qa(corpus: pd.DataFrame, translations: pd.DataFrame) -> dict:
     translations["target_text"] = translations["target_text"].map(normalize_text)
     translations["target_lang"] = translations["target_lang"].astype(str).str.strip()
     translations["status"] = translations["status"].astype(str).str.strip()
-    skipped_status_count = int(
-        (~translations["status"].isin(ACCEPTED_QA_STATUSES)).sum()
-    )
-    translations_for_checks = translations[
-        translations["status"].isin(ACCEPTED_QA_STATUSES)
-    ].copy()
+    skipped_status_count = int((~translations["status"].isin(ACCEPTED_QA_STATUSES)).sum())
+    translations_for_checks = translations[translations["status"].isin(ACCEPTED_QA_STATUSES)].copy()
 
     bad_langs = sorted(set(translations["target_lang"]) - TARGET_LANGS)
     if bad_langs:
@@ -234,14 +215,10 @@ def run_qa(corpus: pd.DataFrame, translations: pd.DataFrame) -> dict:
             )
             continue
 
-        src_tokens = normalize_tokens_for_target(
-            protected_tokens(src), row.source_lang, row.target_lang
-        )
+        src_tokens = normalize_tokens_for_target(protected_tokens(src), row.source_lang, row.target_lang)
         approved_targets_in_row = {
             canonical_token(target_term)
-            for source_term, target_term in approved_terms_for(
-                row.source_lang, row.target_lang
-            )
+            for source_term, target_term in approved_terms_for(row.source_lang, row.target_lang)
             if source_term in src
         }
         tgt_tokens = sorted(
@@ -262,9 +239,7 @@ def run_qa(corpus: pd.DataFrame, translations: pd.DataFrame) -> dict:
                 }
             )
 
-        for source_term, target_term in approved_terms_for(
-            row.source_lang, row.target_lang
-        ):
+        for source_term, target_term in approved_terms_for(row.source_lang, row.target_lang):
             if source_term in src and target_term not in tgt:
                 errors.append(
                     {
@@ -283,11 +258,7 @@ def run_qa(corpus: pd.DataFrame, translations: pd.DataFrame) -> dict:
         leak_exempt = {source_script, "zh"}
         if source_script == "zh":
             leak_exempt |= {"ja", "ko"}
-        if (
-            source_script
-            and row.target_lang != row.source_lang
-            and row.target_lang not in leak_exempt
-        ):
+        if source_script and row.target_lang != row.source_lang and row.target_lang not in leak_exempt:
             if has_script(tgt, source_script):
                 errors.append(
                     {
@@ -302,9 +273,7 @@ def run_qa(corpus: pd.DataFrame, translations: pd.DataFrame) -> dict:
         if row.target_lang in NON_LATIN_TARGETS and row.target_lang not in RTL_TARGETS:
             # Non-Latin targets may contain Latin code tokens, but should not be mostly untranslated Latin prose.
             letters = [ch for ch in tgt if ch.isalpha()]
-            latin_letters = [
-                ch for ch in letters if "LATIN" in unicodedata.name(ch, "")
-            ]
+            latin_letters = [ch for ch in letters if "LATIN" in unicodedata.name(ch, "")]
             if len(letters) >= 12 and len(latin_letters) / max(len(letters), 1) > 0.65:
                 warnings.append(
                     {
@@ -324,9 +293,7 @@ def run_qa(corpus: pd.DataFrame, translations: pd.DataFrame) -> dict:
             "error_count": int(len(errors)),
             "warning_count": int(len(warnings)),
         },
-        "failed_tm_keys": sorted(
-            {error["tm_key"] for error in errors if "tm_key" in error}
-        ),
+        "failed_tm_keys": sorted({error["tm_key"] for error in errors if "tm_key" in error}),
         "errors": errors[:1000],
         "warnings": warnings[:1000],
     }
@@ -419,9 +386,7 @@ def main() -> None:
     translations = read_table(args.translations)
     report = run_qa(corpus, translations)
     args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     if not report["ok"]:
         raise SystemExit(1)
 

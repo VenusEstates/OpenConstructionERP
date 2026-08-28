@@ -199,8 +199,7 @@ def main() -> int:
 
     if failures:
         print(
-            f"ERROR: {len(failures)} value(s) ask for a variable the call site "
-            f"does not pass:",
+            f"ERROR: {len(failures)} value(s) ask for a variable the call site does not pass:",
             file=sys.stderr,
         )
         for path, key, want, got in failures:
