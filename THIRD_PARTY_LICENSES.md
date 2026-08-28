@@ -62,3 +62,30 @@ described in NOTICE only.
 
 Note that the release job regenerates this file from scratch, so the
 copy in the repository is this explanation rather than an inventory.
+
+## The LGPL components, and why this file understates them
+
+Both halves of the generated inventory read what a package declares
+about itself, which is the right answer for the package and not always
+the right answer for what the package ships. Two rows are worth reading
+with that in mind.
+
+`psycopg2-binary` declares LGPL and the generated inventory shows it, so
+that one is visible. `opencv-python-headless` declares Apache-2.0 and the
+generated inventory shows that, which is correct for OpenCV itself and
+tells you nothing about FFmpeg, which is redistributed inside the same
+wheel under LGPL-2.1-or-later and is in every artefact as a result. No
+inventory built from package metadata can see that layer, in this
+project or in any other.
+
+The Linux `.AppImage` is a third case that no Python or npm inventory
+reaches at all, because what it carries is not a package: it bundles the
+GTK 3 and WebKitGTK desktop stack, which is LGPL-2.1.
+
+`NOTICE` has a section called **LGPL Components and How We Convey Them**
+that names all of these, says which artefact carries which, points at
+the licence texts committed in the source tree, and carries the offer of
+source. Read that rather than inferring the position from the table
+above. It also states, because it is the question people ask, that the
+same components on the same terms are in the community edition and the
+commercial edition alike.

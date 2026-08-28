@@ -66,9 +66,11 @@ Backend (base install via `pip install openconstructionerp`):
   * rapidfuzz ........................... MIT
   * asyncpg ............................. Apache-2.0
   * psycopg2-binary ..................... LGPL-3.0-or-later (with OpenSSL exception);
-                                          the wheel also carries libpq and
-                                          OpenSSL 3, see "Native Binaries
-                                          Inside Python Wheels" below
+                                          see "LGPL Components and How We
+                                          Convey Them" below. The wheel
+                                          also carries libpq and OpenSSL 3,
+                                          see "Native Binaries Inside
+                                          Python Wheels" below
   * pixeltable-pgserver ................. Apache-2.0; the wheel also carries a
                                           complete PostgreSQL 16 server, see
                                           the same section
@@ -76,7 +78,10 @@ Backend (base install via `pip install openconstructionerp`):
                                           see the same section
   * Pillow .............................. MIT-CMU
   * PyMuPDF (pymupdf) ................... AGPL-3.0-or-later  -- see "AGPL Cascade" below
-  * opencv-python-headless .............. Apache-2.0
+  * opencv-python-headless .............. Apache-2.0 for OpenCV itself; the
+                                          wheel also carries FFmpeg, which
+                                          is LGPL-2.1-or-later, see the same
+                                          two sections
 
 Backend optional extras. The group names are the ones `pip install
 openconstructionerp[...]` takes today; two of them were split after this list
@@ -257,12 +262,15 @@ rather than read off this file's own lists:
   * python-bidi and crc32c -- both LGPL, reached only through paddleocr in
     the optional [cv] group. They are the only copyleft an extra adds that
     the base install does not already carry.
-  * FFmpeg -- LGPL. Not a package and not in any inventory: it is a
-    library redistributed inside the opencv-python-headless wheel, which
-    is a base dependency, so it is in every artefact. It is a separate
-    dynamically loaded file we neither modify nor link statically, and
-    its notices and the LGPL text travel inside that wheel. The entry in
-    the native binaries section below records how it was found.
+  * FFmpeg -- LGPL-2.1-or-later. Not a package and not in any inventory:
+    it is a set of libraries redistributed inside the
+    opencv-python-headless wheel, which is a base dependency, so it is in
+    every artefact. We neither modify it nor link it statically. It is a
+    separate dynamically loaded file, and its notices travel with it, in
+    the Python package and the container image; in the desktop
+    installers it is packed into the frozen backend and its notices are
+    not. The entry in the native binaries section below records how it
+    was found, and the LGPL section after that says how we answer for it.
 
 None of these is modified by us and none is statically linked into our own
 code, so each is used on the terms its own licence sets for an unmodified
@@ -673,26 +681,204 @@ Vendored C libraries, inside duckdb
 
 FFmpeg and Intel IPP, inside opencv-python-headless
     Wheel contents: cv2/opencv_videoio_ffmpeg500_64.dll beside cv2.pyd
-    on Windows, the equivalent shared object elsewhere.
+    on Windows. On Linux the codecs are five separate shared objects
+    under opencv_python_headless.libs/, named libavcodec, libavformat,
+    libavutil, libswresample and libswscale.
+    Licence text: backend/app/core/licenses/LICENSE_LGPL_2_1
 
-    This entry is here for the opposite reason to the others. The
-    notices are carried correctly, in LICENSE-3RD-PARTY.txt in the
-    dist-info, so nothing is missing. What the entry records is what
-    that file says, because a reader looking for copyleft in a headless
-    computer vision package would not expect to find any. FFmpeg is
-    redistributed in every opencv-python package, headless included, and
-    it is under the GNU Lesser General Public License. Headless strips
-    the GUI toolkits, not the codecs. It ships as a separate dynamically
-    loaded library, which is the form LGPL asks for, and we neither
-    modify it nor link it statically. Intel IPP ICV is a different case
-    again: proprietary, statically linked into the x86_64 build, and
-    permitted under Intel's own redistribution terms reproduced in the
-    same file.
+    This entry is here for the opposite reason to the others. What it
+    records is what opencv's own LICENSE-3RD-PARTY.txt says, because a
+    reader looking for copyleft in a headless computer vision package
+    would not expect to find any. FFmpeg is redistributed in every
+    opencv-python package, headless included, and it is under the GNU
+    Lesser General Public License version 2.1. Headless strips the GUI
+    toolkits, not the codecs. We neither modify it nor link it
+    statically. Intel IPP ICV is a different case again: proprietary,
+    statically linked into the x86_64 build, and permitted under Intel's
+    own redistribution terms reproduced in the same file.
 
-    The Linux wheel, which is what the container image installs, adds
-    libvpx, bzip2, libfreetype, libpng, libz and another copy of
-    libcrypto and libssl. All of them are covered by that same
-    third-party file.
+    This entry used to end by saying the notices are carried correctly
+    in the dist-info so nothing is missing, and that FFmpeg ships as a
+    separate dynamically loaded library, which is the form LGPL asks
+    for. Both are true of the wheel and of the container image, where
+    the codecs sit beside cv2 as ordinary files and opencv's notice file
+    is installed with them. Neither is true of the desktop installers.
+    There the backend is frozen into a single executable, the codecs are
+    packed inside it, and opencv's notice file is not packed with them.
+    That was measured by reading the table of contents of the published
+    16.0.0 Linux sidecar, which holds 365 dist-info entries and none of
+    them opencv's. The LGPL section below says what we do about that.
+
+    The Linux wheel, which is what the container image installs, carries
+    ten more libraries beside the codecs: libvpx, libaom, libavif,
+    libdrm, libpng, libopenblasp, libgfortran, libquadmath, libcrypto
+    and libssl. All of them are covered by that same third-party file.
+    Two are worth naming rather than counting. libgfortran and
+    libquadmath are GPL-3.0-or-later carrying the GCC Runtime Library
+    Exception, the permission that exists so that a program compiled by
+    GCC is not pulled under the GPL by its compiler's runtime. And the
+    OpenSSL here is 1.1.1k, which predates the move to Apache-2.0, so it
+    is under the older OpenSSL and SSLeay terms rather than the Apache
+    text committed above for the OpenSSL 3 and 4 copies.
+
+------------------------------------------------------------------------
+LGPL Components and How We Convey Them
+------------------------------------------------------------------------
+
+Several libraries under the GNU Lesser General Public License reach the
+software you download from us. LGPL is written to let software under
+other terms, including ours and including proprietary terms, use a
+library like this. It does that on conditions, and the conditions are
+about what the person who receives the software can do afterwards. This
+section states what we ship, what we owe you for it and how you get it.
+
+None of these libraries is modified by us. There is no fork, no patch
+and no vendored copy of any of them anywhere in this project. Each one
+is used as an unmodified library through its published interface, and
+each one remains a separate work from OpenConstructionERP rather than a
+part of it. Nothing in our licence, community or commercial, changes
+their terms, because they are not ours to relicense.
+
+The components:
+
+    psycopg2-binary, LGPL-3.0-or-later with an OpenSSL linking
+    exception. The PostgreSQL driver that SQLAlchemy loads when a
+    database URL names postgresql+psycopg2. It is a base dependency, so
+    it is in the Python package, in the container image and in every
+    desktop installer. Nothing in our code imports it by name; the
+    driver is resolved from the URL at connection time.
+
+    FFmpeg, LGPL-2.1-or-later, redistributed inside the
+    opencv-python-headless wheel. opencv-python-headless is also a base
+    dependency, so FFmpeg is in the same three places. Note that the
+    OpenCV package declares Apache-2.0 for itself, so an inventory built
+    from package metadata will show you Apache-2.0 and not the LGPL
+    underneath it. The entry above says where the codecs actually are.
+
+    GTK 3, WebKitGTK, glib, GnuTLS, GStreamer and the rest of the Linux
+    desktop stack, LGPL-2.1. The .deb and the .rpm declare these as
+    package dependencies and do not contain them, which is the ordinary
+    arrangement and puts the obligation on the distribution rather than
+    on us. The .AppImage is different: it contains them. The next
+    section lists what is in it.
+
+    python-bidi and crc32c, both LGPL, reached only through paddleocr in
+    the optional [cv] group. They are not in a default install.
+
+Qt 6 is a fifth surface, inside the Windows converter, and it has its
+own section below along with the notices that travel with it.
+
+Licence texts are committed at backend/app/core/licenses/LICENSE_LGPL_3_0,
+backend/app/core/licenses/LICENSE_LGPL_2_1 and
+backend/app/core/licenses/LICENSE_GPL_3_0. The third is there because
+LGPL-3.0 is written as a set of additional permissions on top of GPL-3.0
+and asks for both documents; the AGPL text we ship for our own code is a
+different licence and does not stand in for it.
+
+Telling you the library is there, and giving you its text.
+    In the Python package and the container image the licence arrives
+    with the library, because pip installs each package's own dist-info
+    beside its code. In the desktop installers it did not. The backend
+    is frozen into one executable and only what the build collects goes
+    in; the published 16.0.0 Linux sidecar carries the psycopg2
+    extension with fifteen native libraries beside it, the OpenCV
+    extension with fifteen more, and 365 dist-info directories of which
+    neither psycopg2's nor OpenCV's is one. The code arrived and the
+    licence did not. The three texts named above are committed inside
+    the backend package for that reason, on the same route that already
+    carries the HarfBuzz text, which the same measurement found present
+    in the same sidecar.
+
+Giving you the library's source.
+    We ship these libraries unmodified at pinned versions, and every
+    release carries an SBOM naming the exact version of each. The
+    upstream sources are public: psycopg2 at github.com/psycopg/psycopg2
+    and on PyPI, FFmpeg at ffmpeg.org along with the build recipe at
+    github.com/opencv/opencv-python, and the Linux desktop stack in the
+    source packages of the distribution the AppImage is built on.
+
+    That is where they are, and it is not by itself the offer the
+    licence asks for, so here it is. For three years from the date you
+    received any binary artefact of OpenConstructionERP, we will give
+    you the complete corresponding source of any LGPL component in it,
+    on a medium customarily used for software interchange, for a charge
+    no greater than our cost of performing the distribution. Write to
+    info@datadrivenconstruction.io naming the version you received. This
+    offer is open to anyone who holds a copy of the artefact, whether
+    they got it from us or from someone else, and it applies to the
+    community edition and the commercial edition alike.
+
+Letting you replace the library with your own build.
+    In the Python package and the container image each library is an
+    ordinary separate file. Install your own build of psycopg2 or of
+    OpenCV over ours and the application uses it, with nothing to
+    rebuild and nothing to ask us for.
+
+    In the desktop installers the backend is a single frozen executable
+    and you cannot swap a file inside it. What replaces that is the
+    route of rebuilding, and everything needed for it is already public:
+    the application is AGPL-3.0 with its full source, the build
+    specification is committed at desktop/pyinstaller.spec, and the
+    exact dependency versions are pinned at
+    backend/requirements-desktop.lock. Install your own build of the
+    library, run that specification, and you have a working replacement
+    executable. We believe that satisfies what LGPL-3.0 section 4 asks
+    for by way of its first option, and we say believe rather than state
+    because whether a frozen bundle of this shape needs more than that
+    is a question we have put to counsel rather than settled ourselves.
+
+    In the AppImage the LGPL libraries are separate shared objects
+    inside a read-only image, and the image opens with its own documented
+    flag: run it with --appimage-extract and you get a directory tree
+    whose AppRun starts the application. Replace a library in that tree
+    and run AppRun, and your build is what loads.
+
+The community edition and the commercial edition.
+    They are the same binaries. There is no separate commercial build,
+    no component held back from the open edition and none added to the
+    paid one. A commercial licence changes what you may do with
+    OpenConstructionERP's own code; it changes nothing about the
+    libraries in this section, which reach a commercial customer on
+    exactly the LGPL terms described above. If you redistribute the
+    software under a commercial licence, these same three obligations
+    become yours towards the people you give it to, and the offer of
+    source above is written so that you can point them at it.
+
+------------------------------------------------------------------------
+Bundled Libraries Inside the Linux AppImage
+------------------------------------------------------------------------
+
+The .deb and the .rpm depend on the distribution's copies of the Linux
+desktop libraries and contain none of them. The .AppImage is built to
+run on any distribution, which it does by carrying its own copies, and
+that makes us the party redistributing them.
+
+This was measured rather than assumed. The published 16.0.0 AppImage
+was unpacked and its contents listed. It holds roughly a hundred and
+seventy shared objects under usr/lib, and the LGPL ones among them
+include GTK 3 with libgtk-3 and libgdk-3, glib with libglib-2.0,
+libgio-2.0, libgobject-2.0 and libgmodule-2.0, the webview with
+libwebkit2gtk-4.1 and libjavascriptcoregtk-4.1, ATK, Pango, cairo,
+gdk-pixbuf, librsvg, libsoup 3, libsecret, libgcrypt, the GnuTLS stack
+with libgnutls, libnettle, libhogweed, libtasn1 and libp11-kit, and the
+GStreamer libraries the webview uses for media. Their upstreams are the
+GNOME, WebKit and GnuTLS projects and their sources are published there
+and in the source packages of the distribution the image is built on.
+
+The image also carries seventeen Debian copyright files under
+usr/share/doc, which is what the bundling tool collects on its own.
+They cover glib, Pango, gdk-pixbuf, librsvg and a handful of smaller
+libraries. They do not cover GTK 3 or WebKitGTK, the two largest LGPL
+components in the image. The offer of source in the section above is
+written to cover everything here, and the LGPL-2.1 text committed at
+backend/app/core/licenses/LICENSE_LGPL_2_1 is the licence they are
+under.
+
+The AppImage extracts with its own --appimage-extract flag into a
+directory tree that runs from AppRun, so a recipient who wants to run it
+against their own build of any of these libraries can replace the file
+and start it, without rebuilding the image and without asking us for
+anything.
 
 ------------------------------------------------------------------------
 Bundled Converter Inside the Windows Desktop Installer

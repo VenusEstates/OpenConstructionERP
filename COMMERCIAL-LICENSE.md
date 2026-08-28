@@ -68,9 +68,10 @@ The Software incorporates third-party open-source components listed in
 the [NOTICE](NOTICE) file. Licensee must continue to comply with those
 components' licences. The grant in §2 is a grant of Licensor's rights in
 Licensor's own code. It is not, and cannot be, a grant of rights in code
-Licensor does not own. One of those components is under a copyleft
-licence that a closed-source deployment has to deal with directly, and
-§4a says which one and what to do about it.
+Licensor does not own. Two kinds of copyleft component are in the
+Software and they are not the same problem. §4a covers the one a
+closed-source deployment has to deal with directly. §4b covers the LGPL
+libraries, which are routine but should be stated rather than assumed.
 
 ## 4a. AGPL components inside the Software
 
@@ -165,6 +166,65 @@ licences.
 
 Questions about this section, including the current state of the
 replacement work, go to `info@datadrivenconstruction.io`.
+
+## 4b. LGPL components inside the Software
+
+Unlike §4a, this one is routine. It is set out here so that a Licensee's
+counsel finds it stated rather than having to discover it.
+
+### What the position is
+
+The Software carries several libraries under the GNU Lesser General
+Public License. Two of them are in every artefact Licensor publishes:
+**psycopg2-binary** (LGPL-3.0-or-later), the PostgreSQL driver, and
+**FFmpeg** (LGPL-2.1-or-later), which is redistributed inside the
+opencv-python-headless package rather than declared as one. The Linux
+`.AppImage` additionally carries the GTK 3 and WebKitGTK desktop stack,
+also LGPL-2.1. [NOTICE](NOTICE) lists them, names the licence texts that
+ship with the code, and carries Licensor's offer of source.
+
+**The same components on the same terms apply in both editions.** There
+is no separate commercial build. A Licensee receives the identical
+binaries the community edition ships, with the identical libraries
+inside them, at the identical versions. This Agreement does not change
+those libraries' terms and could not, because they are separate works by
+other authors. Licensor modifies none of them and holds no fork or patch
+of any of them.
+
+### What it means for a Licensee
+
+The LGPL exists precisely so that software under other terms, closed
+source included, may use a library like this. Nothing in this section
+obliges a Licensee to publish its own code, to buy anything, or to give
+up a feature.
+
+**A Licensee that deploys the Software** has nothing to do. The
+libraries are used unmodified through their published interfaces, and
+their licence texts travel inside the artefact.
+
+**A Licensee that redistributes the Software** under §2(3) becomes a
+distributor of these libraries as well, and takes on three duties
+towards its own recipients. Tell them the libraries are there and pass
+on the licence texts, which happens by shipping the artefact unaltered.
+Make the corresponding source available, for which the Licensee may
+rely on and reproduce Licensor's offer in `NOTICE`, or make an offer of
+its own. And leave the recipient able to run a modified build of the
+library, which an unaltered artefact already allows by the routes
+`NOTICE` describes for each artefact.
+
+**A Licensee that modifies one of these libraries, or links one
+statically into its own closed code,** is outside everything above and
+should take its own advice. Licensor does neither.
+
+### What Licensor undertakes
+
+Licensor will supply the complete corresponding source of any LGPL
+component in a released artefact, on the terms of the offer in `NOTICE`,
+and will keep that offer alive for the period the offer states. Licensor
+will give notice in the release notes if the set of LGPL components in
+the shipped artefacts changes.
+
+Questions go to `info@datadrivenconstruction.io`.
 
 ## 5. Trademarks
 
