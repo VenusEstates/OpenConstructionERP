@@ -505,7 +505,7 @@ async def update_group(
     run = await _load_run(session, run_id, current_user_id)
     grp = await _load_group(session, run, group_id)
     service = AiEstimatorService(session)
-    grp = await service.update_group(grp, spec)
+    grp = await service.update_group(grp, spec, current_user_id)
     return service.group_to_detail(grp)
 
 

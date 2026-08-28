@@ -60,6 +60,21 @@ logger = logging.getLogger(__name__)
 CONFIDENCE_HIGH_THRESHOLD = 0.78
 CONFIDENCE_MEDIUM_THRESHOLD = 0.62
 
+# The two statuses that assert a human decided this group. They are what
+# ``apply()`` writes to a customer's BOQ and what ``build_preview`` reports to
+# validation as ``human_confirmed``, which makes the ai_estimator.low_confidence
+# rule pass whatever the score is. So they are a claim about a person, not a
+# workflow state: only the server may set them, and only on a path that records
+# who decided. Every reader of the set derives it from here so the guard on the
+# write side can never drift from the filter on the read side.
+HUMAN_DECISION_STATUSES: tuple[str, ...] = ("confirmed", "overridden")
+
+
+def is_human_decision(status: str | None) -> bool:
+    """True when *status* asserts that a person approved this group's rate."""
+    return status in HUMAN_DECISION_STATUSES
+
+
 # Pass-2 (unit/scale reconcile) demotion penalty. A candidate whose unit
 # dimension is incompatible with the group's chosen-unit dimension keeps its
 # real rate but has its score multiplied by this factor so the dimensionally
@@ -1681,12 +1696,19 @@ class AiEstimatorService:
 
     # ── Group edit / override / confirm ───────────────────────────────────
 
-    async def update_group(self, grp: AiEstimatorGroup, spec: schemas.GroupUpdate) -> AiEstimatorGroup:
+    async def update_group(
+        self, grp: AiEstimatorGroup, spec: schemas.GroupUpdate, user_id: uuid.UUID
+    ) -> AiEstimatorGroup:
         """Edit a group's stage-2 fields, or override its stage-3 candidate.
 
         A candidate override MUST reference an id already in the stored
         candidate list - the user (like the LLM) can never inject a fabricated
         code. Editing quantities/units invalidates the prior match.
+
+        Picking a candidate here IS a human decision, so it records *user_id*
+        as the deciding user exactly as ``confirm_group`` does. A caller may
+        not set a human-decision status directly: that would claim a person
+        approved the rate while recording nobody.
         """
         fields: dict[str, Any] = {}
         if spec.description is not None:
@@ -1721,8 +1743,18 @@ class AiEstimatorService:
                 match_method="manual",
                 resources=resources,
                 status="overridden",
+                confirmed_by=user_id,
+                confirmed_at=datetime.now(UTC),
             )
         if spec.status is not None:
+            if is_human_decision(spec.status):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"status '{spec.status}' asserts a human decision and cannot be set here. "
+                        "Confirm the group through its confirm endpoint, which records who decided."
+                    ),
+                )
             fields["status"] = spec.status
 
         await self.group_repo.update_fields(grp.id, **fields)
@@ -1998,7 +2030,7 @@ class AiEstimatorService:
                     "currency": currency or base_currency or "",
                     "confidence": confidence,
                     "confidence_band": grp.confidence_band,
-                    "human_confirmed": grp.status in ("confirmed", "overridden"),
+                    "human_confirmed": is_human_decision(grp.status),
                     "resources": grp.resources or [],
                     # The grounded CWICR row's standard classification so the
                     # MasterFormat / DIN rules validate against the real code.
@@ -2210,7 +2242,7 @@ class AiEstimatorService:
         max_ord = await self._count_positions(boq_id)
 
         target_ids = {gid for gid in spec.group_ids} if spec.group_ids else None
-        groups = await self.group_repo.list_for_run(run.id, statuses=["confirmed", "overridden"])
+        groups = await self.group_repo.list_for_run(run.id, statuses=list(HUMAN_DECISION_STATUSES))
         groups = groups[:_APPLY_BATCH_LIMIT]
 
         positions_created = 0

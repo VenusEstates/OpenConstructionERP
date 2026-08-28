@@ -27,9 +27,12 @@ Run:
 
 from __future__ import annotations
 
+import typing
+import uuid
 from decimal import Decimal
 
 import pytest
+from fastapi import HTTPException
 
 from app.modules.ai_estimator import schemas
 from app.modules.ai_estimator import service as svc
@@ -822,3 +825,75 @@ def test_group_to_detail_omits_trace_until_matched():
     detail = service.group_to_detail(_FakeGroup(metadata_={"source": "dialogue"}))
     assert detail.mapping_trace is None
     assert detail.source == "dialogue"
+
+
+# ── The human-decision guard ────────────────────────────────────────────────
+#
+# A group whose status is "confirmed" or "overridden" is what apply() writes to
+# a customer's BOQ, and build_preview reports it to validation as
+# human_confirmed, which makes the ai_estimator.low_confidence rule pass no
+# matter how weak the score is. So those two statuses are a claim that a person
+# decided, and the API must not let a caller make that claim for itself.
+
+
+def test_is_human_decision_covers_the_whole_status_vocabulary():
+    """Pin the apply-eligible set against every status the schema allows.
+
+    This is the drift test: adding a status to ``GroupStatus`` without deciding
+    whether it asserts a human decision should fail here rather than silently
+    widen (or narrow) what apply() writes and what validation trusts.
+    """
+    expected = {
+        "unmatched": False,
+        "suggested": False,
+        "confirmed": True,
+        "overridden": True,
+        "skipped": False,
+        "tbd": False,
+        "needs_human": False,
+        "applied": False,
+    }
+    declared = set(typing.get_args(schemas.GroupStatus))
+    assert declared == set(expected), "GroupStatus changed; decide the human-decision flag for the new value"
+    for status, is_decision in expected.items():
+        assert svc.is_human_decision(status) is is_decision, status
+    assert svc.is_human_decision(None) is False
+
+
+@pytest.mark.parametrize("forged", ["confirmed", "overridden"])
+async def test_update_group_refuses_to_forge_a_human_decision(forged):
+    """PATCH cannot stamp a human decision: it records no deciding user.
+
+    The confirm endpoint is the only path that may set these, because it is the
+    only one that writes confirmed_by / confirmed_at.
+    """
+    service = AiEstimatorService.__new__(AiEstimatorService)
+    grp = _FakeGroup()
+    spec = schemas.GroupUpdate(status=forged)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await service.update_group(grp, spec, uuid.uuid4())
+
+    assert excinfo.value.status_code == 400
+    assert "confirm" in str(excinfo.value.detail).lower()
+
+
+async def test_update_group_still_accepts_a_workflow_status():
+    """The guard is narrow: skipping a group is an ordinary edit, not a claim
+    that someone approved a rate, so it must keep working."""
+    service = AiEstimatorService.__new__(AiEstimatorService)
+    grp = _FakeGroup()
+    written = {}
+
+    class _Repo:
+        async def update_fields(self, _gid, **fields):
+            written.update(fields)
+
+        async def get_by_id(self, _gid):
+            return grp
+
+    service.group_repo = _Repo()
+    await service.update_group(grp, schemas.GroupUpdate(status="skipped"), uuid.uuid4())
+
+    assert written["status"] == "skipped"
+    assert "confirmed_by" not in written
