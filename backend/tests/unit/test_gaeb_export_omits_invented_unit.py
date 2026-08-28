@@ -10,8 +10,14 @@ our guess into somebody else's fact: a reader of the exported file cannot tell
 
 The exporter therefore consults the recorded original. The distinction is
 membership rather than truthiness, and one of the tests below exists only to
-hold that line: a row with no ``gaeb_unit_original`` key at all did not come
-from a GAEB import, and must keep its unit.
+hold that line: a row with no ``gaeb_unit_original`` key at all has no recorded
+silence to honour, and must keep its unit.
+
+Absence is not a statement about origin. It covers a row that never came from a
+GAEB import, and also a row that did and whose unit a person has since changed,
+because ``update_position`` retires the claim once the value it described is
+gone. Both must export their unit. The second shape is exercised end to end in
+``test_boq_unit_provenance_lifecycle.py``.
 """
 
 from __future__ import annotations
@@ -92,9 +98,12 @@ def test_a_stated_unit_is_still_written() -> None:
 
 
 def test_a_row_that_never_came_from_gaeb_keeps_its_unit() -> None:
-    """No key at all means manual entry, Excel or a pre-existing row.
+    """No key means no recorded silence to honour, so the unit is exported.
 
-    This is the regression guard for reading the metadata with ``.get()``,
+    Both rows here are the never-imported shape, a manual entry and a
+    spreadsheet import. Absence also covers a GAEB row whose unit a person
+    later changed, which ``test_boq_unit_provenance_lifecycle.py`` exercises.
+    This test is the regression guard for reading the metadata with ``.get()``,
     which cannot separate an absent key from an empty one and would strip the
     unit out of every hand-built BOQ the platform exports.
     """

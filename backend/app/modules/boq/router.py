@@ -4987,11 +4987,18 @@ def build_gaeb_xml(
         original was empty is exported with no ``QU`` at all, which is what
         the source actually said.
 
-        The distinction is membership, not truthiness. A key that is absent
-        means the row did not come from a GAEB import (manual entry, Excel,
-        an older row), and those keep the existing behaviour. Testing with
-        ``.get()`` would conflate absent with empty and start stripping the
-        unit from every hand-built BOQ we export.
+        The distinction is membership, not truthiness, and an absent key is
+        not a claim about where the row came from. It says only that no file
+        statement stands behind the unit this row carries now, which happens
+        two ways: nothing was ever imported (manual entry, Excel, an older
+        row), or a GAEB row was imported and somebody has since changed the
+        unit to a different one, at which point ``update_position`` retires
+        the recorded ``<QU>`` because it no longer describes the value being
+        exported. Re-submitting the same unit changes nothing and keeps the
+        claim. Both shapes export their unit, which is right for both, and
+        row origin is carried by ``Position.source`` rather than by this key.
+        Testing with ``.get()`` would conflate absent with empty and start
+        stripping the unit from every hand-built BOQ we export.
         """
         meta = getattr(pos, "metadata_", None)
         if not isinstance(meta, dict):
