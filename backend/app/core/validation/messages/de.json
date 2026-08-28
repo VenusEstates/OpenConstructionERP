@@ -586,5 +586,15 @@
     "escrow_not_found": "Treuhand-Transaktion nicht gefunden",
     "commission_accrual_not_found": "Provisions-Abgrenzung nicht gefunden",
     "baseline_not_found": "Baseline nicht gefunden"
+  },
+  "variations": {
+    "boq_lines_are_traced": {
+      "fail": "Position {line} im Nachtrags-LV hat keine Herkunft - weder eine Vertragsposition noch eine Kalkulationsposition",
+      "suggestion": "Benennen Sie die betroffene Vertragsposition oder die Kalkulationsposition, aus der der Leistungsumfang stammt"
+    },
+    "boq_total_matches_estimate": {
+      "fail": "Die Schätzung auf diesem Antrag lautet {estimate}, das kalkulierte LV ergibt jedoch {priced}",
+      "suggestion": "Übernehmen Sie die kalkulierte Summe auf den Antrag oder korrigieren Sie das LV, damit eine Zahl gilt"
+    }
   }
 }

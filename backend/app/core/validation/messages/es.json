@@ -241,5 +241,15 @@
       "fail": "Esta adjudicacion se apoya en {count} ofertas, menos de las {minimum} que exige una comparacion competitiva",
       "suggestion": "Justifique por escrito la adjudicacion directa, o invite a mas ofertantes"
     }
+  },
+  "variations": {
+    "boq_lines_are_traced": {
+      "fail": "La línea {line} del presupuesto de esta variación no tiene origen - ni línea de contrato ni posición de estimación",
+      "suggestion": "Indique la línea de contrato afectada o la posición de estimación de la que procede el alcance"
+    },
+    "boq_total_matches_estimate": {
+      "fail": "La estimación de esta solicitud es {estimate}, pero su presupuesto valorado suma {priced}",
+      "suggestion": "Adopte el total valorado en la solicitud o corrija el presupuesto para que quede una sola cifra"
+    }
   }
 }

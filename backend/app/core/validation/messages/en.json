@@ -586,5 +586,15 @@
     "escrow_not_found": "EscrowTransaction not found",
     "commission_accrual_not_found": "CommissionAccrual not found",
     "baseline_not_found": "Baseline not found"
+  },
+  "variations": {
+    "boq_lines_are_traced": {
+      "fail": "Line {line} in this variation's bill traces back to nothing - no schedule-of-values line and no estimating position",
+      "suggestion": "Name the contract line this change affects, or the estimate position the scope was taken from, so the figure can be defended"
+    },
+    "boq_total_matches_estimate": {
+      "fail": "The headline estimate on this request is {estimate}, but its priced bill totals {priced}",
+      "suggestion": "Adopt the priced total onto the request, or correct the bill, so one figure is the answer"
+    }
   }
 }
