@@ -480,6 +480,25 @@ class TestGAEBConformanceNoFalsePositives:
 
         # No legitimate 0.00 / optional position is flagged as a pricing error.
         price_results = [r for r in report.results if r.rule_id == "gaeb.einheitspreis_sanity"]
+        if fixture == _CONFORMANCE_X83:
+            # Every ordinary position of an unpriced phase carries a zero rate,
+            # so the rule has something to say about all of them. Assert that it
+            # ran: without this, the check below is true of an empty list.
+            assert price_results, "einheitspreis_sanity rule did not run"
+        else:
+            # In an X84 it reaches nothing at all, and that is a gap in the rule
+            # rather than a property of this file. The published schema does not
+            # allow QU on an X84 item - tgItem there is NotOffered, Qty, UP, IT
+            # and no unit - so the importer sees an empty unit, normalises it to
+            # a lump sum, and this rule skips lump sums by design. A negative
+            # Einheitspreis, the one case the rule blocks, is therefore
+            # unreachable on the phase that actually carries bidder prices. The
+            # file this fixture replaced behaved the same way, so nothing
+            # regressed here; the emptiness is pinned so it cannot go back to
+            # satisfying the check below by being empty. Closing it means
+            # teaching the rule to tell an absent unit from a stated lump sum,
+            # and handling NotOffered, so it is not a one-line change.
+            assert not price_results, "einheitspreis_sanity now reaches X84 positions, update this claim"
         assert all(r.passed for r in price_results), [
             (r.element_ref, r.severity.value) for r in price_results if not r.passed
         ]
