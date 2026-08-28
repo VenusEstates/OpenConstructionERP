@@ -6245,13 +6245,11 @@ async def import_boq_gaeb(
     files from different GAEB toolchains (any mainstream GAEB authoring
     tool) all import without pre-normalization.
 
-    Security: uses ``defusedxml`` to harden against XXE, billion-laughs,
-    and other XML-parser-level attacks on user-uploaded files.
+    Security: the upload is parsed by ``GAEBXMLImporter``, which reads it
+    through ``defusedxml`` to harden against XXE, billion-laughs and other
+    XML-parser-level attacks on user-uploaded files. Nothing in this module
+    parses the bytes any more, so grep for the hardening in the importer.
     """
-    import xml.etree.ElementTree as ET
-
-    from defusedxml.ElementTree import fromstring as _safe_fromstring
-
     # Epic I5: deprecation signal - clients should migrate to /import/auto/.
     response.headers["Deprecation"] = "true"
     response.headers["Link"] = '</api/v1/boq/boqs/{boq_id}/import/auto/>; rel="successor-version"'
@@ -6277,27 +6275,23 @@ async def import_boq_gaeb(
     # No upload size cap - per product policy.
 
     # ── Epic I5: this route runs the registered GAEB importer ──────────────
-    # Everything below this block is the original inline walker. It is now
-    # dead code - the return at the end of this block is unconditional. It is
-    # left in place deliberately so that removing it is a separate change a
-    # reviewer can read on its own, rather than noise inside a behaviour fix.
-    #
-    # The walker never worked on a conformant GAEB file. GAEB DA XML 3.3 puts
-    # an item's wording in Description/CompleteText/DetailTxt/Text/p/span, and
-    # every text helper below reads only an element's own ``.text``: it locates
-    # <Text>, reads the whitespace sitting between <Text> and its <p> child,
-    # finds nothing, then falls back to <OutlineText>.text, which is whitespace
-    # for the same reason. ``_extract_description`` therefore returns "" for
-    # every Item, and an Item with no description is skipped. Measured over
-    # every GAEB fixture in this repo, the walker imports 0 of 27 items from
-    # the X84, 0 of 27 from the X83 and 0 of 21 from the Frankfurt X83, and
-    # reports the whole file as skipped.
+    # It used to walk the XML inline instead, and that walker never worked on
+    # a conformant GAEB file. GAEB DA XML 3.3 puts an item's wording in
+    # Description/CompleteText/DetailTxt/Text/p/span, and every text helper it
+    # carried read only an element's own ``.text``: it located <Text>, read the
+    # whitespace sitting between <Text> and its <p> child, found nothing, then
+    # fell back to <OutlineText>.text, which was whitespace for the same
+    # reason. Its ``_extract_description`` therefore returned "" for every
+    # Item, and an Item with no description is skipped. Measured over every
+    # GAEB fixture in this repo, the walker imported 0 of 27 items from the
+    # X84, 0 of 27 from the X83 and 0 of 21 from the Frankfurt X83, and
+    # reported the whole file as skipped.
     #
     # The registered importer reads the nested text, threads each BoQCtgy as a
     # parent section row, keeps the real OZ as the ordinal instead of the
     # opaque Item/@ID handle, reconstructs an X84's quantity from IT/UP, and
     # surfaces the Zuschlagsposition as a native markup. It parses through the
-    # same defusedxml entry point, so the XXE protection below is not lost.
+    # same defusedxml entry point, so the XXE protection is not lost.
     from app.modules.boq.importers import ImporterParseError
     from app.modules.boq.importers.gaeb_xml import GAEBXMLImporter
 
@@ -6367,304 +6361,6 @@ async def import_boq_gaeb(
         "sections": sections_seen,
         "source_format": imported_boq.source_format,
         "currency": imported_boq.currency,
-        "validation_report": validation_report,
-    }
-
-    # ── DEAD CODE BELOW - the original inline walker, kept for one commit ──
-    # Parse XML defensively via defusedxml - blocks XXE, external-entity
-    # expansion, billion-laughs, and DTD-based attacks on user input.
-    try:
-        root = _safe_fromstring(content)
-    except ET.ParseError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to parse GAEB XML: {exc}",
-        ) from exc
-    except Exception as exc:  # defusedxml raises its own subclasses for attacks
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"GAEB XML rejected by security parser: {exc}",
-        ) from exc
-
-    def _local(tag: str) -> str:
-        """Strip namespace from an element tag."""
-        return tag.split("}", 1)[1] if "}" in tag else tag
-
-    def _find_child(parent: ET.Element, name: str) -> ET.Element | None:
-        """Namespace-agnostic single-child lookup by local name."""
-        for child in parent:
-            if _local(child.tag) == name:
-                return child
-        return None
-
-    def _find_all_descendants(parent: ET.Element, name: str) -> list[ET.Element]:
-        """Walk the entire subtree, collect elements whose local name matches."""
-        found: list[ET.Element] = []
-        for el in parent.iter():
-            if _local(el.tag) == name:
-                found.append(el)
-        return found
-
-    def _text_of(parent: ET.Element, name: str) -> str:
-        child = _find_child(parent, name)
-        return (child.text or "").strip() if child is not None else ""
-
-    def _extract_description(item: ET.Element) -> str:
-        """Pull human-readable text out of GAEB's nested Description/CompleteText/DetailTxt/Text."""
-        # Take the first non-empty <Text> we find anywhere in the item's
-        # subtree - description structures vary wildly between exporters.
-        for text_el in _find_all_descendants(item, "Text"):
-            if text_el.text and text_el.text.strip():
-                return text_el.text.strip()
-        # Fall back to OutlineText / Outline / LblTx
-        for name in ("OutlineText", "OutlTxt", "LblTx"):
-            val = _text_of(item, name)
-            if val:
-                return val
-        return ""
-
-    # Build reverse map from the export lexicon so GAEB unit codes round-trip
-    # back to our internal tokens (BUG-175 - "Stk" → "pcs", "psch" → "lsum").
-    _GAEB_TO_INTERNAL: dict[str, str] = {
-        "stk": "pcs",
-        "st": "pcs",
-        "psch": "lsum",
-        "jahr": "year",
-        "mo": "month",
-    }
-
-    def _normalize_unit(unit: str) -> str:
-        key = (unit or "").strip().lower()
-        return _GAEB_TO_INTERNAL.get(key, unit.strip()) if key else ""
-
-    # Locate the *top-level* BoQBody - the one directly inside <BoQ>.
-    # A GAEB tree nests BoQBody recursively under each BoQCtgy, so
-    # traversing ``_find_all_descendants`` would double-visit every Item.
-    top_body: ET.Element | None = None
-    for el in root.iter():
-        if _local(el.tag) == "BoQ":
-            top_body = _find_child(el, "BoQBody")
-            if top_body is not None:
-                break
-    if top_body is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No <BoQBody> element found. Is this a valid GAEB DA XML?",
-        )
-    boq_bodies = [top_body]
-
-    imported = 0
-    skipped = 0
-    errors: list[dict[str, Any]] = []
-    sections_seen: list[dict[str, str]] = []
-
-    # Capture currency for round-trip metadata. Empty when the source
-    # GAEB doesn't carry <Cur> - preferable to a EUR fallback that
-    # mis-stamps non-Eurozone tenders. Downstream code that needs a
-    # currency falls back to project.currency at the consumer side.
-    award = None
-    for el in root.iter():
-        if _local(el.tag) == "Award":
-            award = el
-            break
-    currency = (_text_of(award, "Cur") if award is not None else "") or ""
-
-    def _process_category(ctgy: ET.Element, parent_ordinal: str = "") -> None:
-        nonlocal imported, skipped
-        ord_ = (ctgy.get("ID") or "").strip() or parent_ordinal
-        label = _text_of(ctgy, "LblTx") or "Section"
-        sections_seen.append({"ordinal": ord_, "label": label})
-
-        # Each BoQCtgy has its own BoQBody containing Itemlist/Item.
-        inner_body = _find_child(ctgy, "BoQBody")
-        if inner_body is not None:
-            # Nested categories (recursion for multi-level hierarchies).
-            for child in inner_body:
-                local = _local(child.tag)
-                if local == "BoQCtgy":
-                    _process_category(child, parent_ordinal=ord_)
-                elif local == "Itemlist":
-                    for item in child:
-                        if _local(item.tag) == "Item":
-                            _import_item(item, section_ordinal=ord_)
-
-    def _import_item(item: ET.Element, *, section_ordinal: str = "") -> None:
-        nonlocal imported, skipped
-        try:
-            pos_ordinal = (item.get("ID") or "").strip() or str(imported + 1)
-            description = _extract_description(item)
-            if not description:
-                skipped += 1
-                return None
-
-            unit_raw = _text_of(item, "QU")
-            unit = _normalize_unit(unit_raw) or "pcs"
-            quantity = _safe_float(_text_of(item, "Qty"), default=0.0)
-            unit_rate = _safe_float(_text_of(item, "UP"), default=0.0)
-
-            if not (0 <= quantity <= 1e9):
-                errors.append(
-                    {
-                        "ordinal": pos_ordinal,
-                        "error": f"Quantity out of range: {quantity}",
-                    }
-                )
-                return None
-            if not (0 <= unit_rate <= 1e8):
-                errors.append(
-                    {
-                        "ordinal": pos_ordinal,
-                        "error": f"Unit rate out of range: {unit_rate}",
-                    }
-                )
-                return None
-
-            position_data = PositionCreate(
-                boq_id=boq_id,
-                ordinal=pos_ordinal,
-                description=description,
-                unit=unit,
-                quantity=quantity,
-                unit_rate=unit_rate,
-                classification={"gaeb_section": section_ordinal} if section_ordinal else {},
-                source="gaeb_import",
-                metadata={
-                    "import_source": file.filename or "gaeb",
-                    "gaeb_ordinal": pos_ordinal,
-                    "gaeb_section": section_ordinal,
-                    "gaeb_unit_original": unit_raw,
-                    "gaeb_currency": currency,
-                },
-            )
-            # add_position is async - run it via await below.
-            return position_data
-        except Exception as exc:  # noqa: BLE001 - narrow at caller
-            errors.append({"error": str(exc), "ordinal": ""})
-            return None
-
-    # Walk the top-level BoQBody: may contain direct Item elements OR BoQCtgy.
-    for body in boq_bodies:
-        for child in body:
-            local = _local(child.tag)
-            if local == "BoQCtgy":
-                # The original _process_category helper builds positions but
-                # can't await - so refactor: collect items, then insert.
-                pass
-
-    # Second, simpler pass: collect every Item anywhere in the tree, attribute
-    # it to the nearest ancestor BoQCtgy's ID for section ordinal.
-    def _ancestor_ctgy_id(el: ET.Element, ancestors: list[ET.Element]) -> str:
-        for anc in reversed(ancestors):
-            if _local(anc.tag) == "BoQCtgy":
-                return (anc.get("ID") or "").strip()
-        return ""
-
-    def _walk_and_collect(el: ET.Element, ancestors: list[ET.Element]) -> list[tuple[ET.Element, str]]:
-        found: list[tuple[ET.Element, str]] = []
-        for child in el:
-            if _local(child.tag) == "Item":
-                found.append((child, _ancestor_ctgy_id(child, ancestors + [el])))
-            else:
-                found.extend(_walk_and_collect(child, ancestors + [el]))
-        return found
-
-    collected: list[tuple[ET.Element, str]] = []
-    for body in boq_bodies:
-        collected.extend(_walk_and_collect(body, []))
-
-    auto_counter = 0
-    for item, section_ordinal in collected:
-        auto_counter += 1
-        try:
-            pos_ordinal = (item.get("ID") or "").strip() or str(auto_counter)
-            description = _extract_description(item)
-            if not description:
-                skipped += 1
-                continue
-
-            unit_raw = _text_of(item, "QU")
-            unit = _normalize_unit(unit_raw) or "pcs"
-            quantity = _safe_float(_text_of(item, "Qty"), default=0.0)
-            unit_rate = _safe_float(_text_of(item, "UP"), default=0.0)
-
-            if not (0 <= quantity <= 1e9):
-                errors.append({"ordinal": pos_ordinal, "error": f"Quantity out of range: {quantity}"})
-                continue
-            if not (0 <= unit_rate <= 1e8):
-                errors.append({"ordinal": pos_ordinal, "error": f"Unit rate out of range: {unit_rate}"})
-                continue
-
-            classification: dict[str, Any] = {}
-            if section_ordinal:
-                classification["gaeb_section"] = section_ordinal
-
-            position_data = PositionCreate(
-                boq_id=boq_id,
-                ordinal=pos_ordinal,
-                description=description,
-                unit=unit,
-                quantity=quantity,
-                unit_rate=unit_rate,
-                classification=classification,
-                source="gaeb_import",
-                metadata={
-                    "import_source": file.filename or "gaeb",
-                    "gaeb_ordinal": pos_ordinal,
-                    "gaeb_section": section_ordinal,
-                    "gaeb_unit_original": unit_raw,
-                    "gaeb_currency": currency,
-                },
-            )
-            await service.add_position(position_data)
-            imported += 1
-        except Exception as exc:
-            errors.append({"ordinal": item.get("ID") or "", "error": str(exc)})
-            logger.warning("GAEB import error for BOQ %s: %s", boq_id, exc)
-
-    # Persist lightweight import metadata at the BOQ level.
-    if imported > 0:
-        try:
-            boq_obj = await service.get_boq(boq_id)
-            meta = dict(boq_obj.metadata_) if isinstance(boq_obj.metadata_, dict) else {}
-            meta["last_import"] = {
-                "source_filename": file.filename,
-                "source_format": "gaeb",
-                "gaeb_currency": currency,
-                "total_imported": imported,
-                "total_sections": len(sections_seen),
-                "import_date": datetime.now(UTC).isoformat(),
-            }
-            boq_obj.metadata_ = meta
-            await service.session.flush()
-            await service.session.commit()
-        except Exception:
-            logger.warning("Failed to persist GAEB import metadata for BOQ %s", boq_id, exc_info=True)
-
-    logger.info(
-        "GAEB import complete for %s: imported=%d, skipped=%d, errors=%d, sections=%d",
-        boq_id,
-        imported,
-        skipped,
-        len(errors),
-        len(sections_seen),
-    )
-
-    # Run validation inline against the freshly-imported GAEB BOQ so
-    # DIN276 / GAEB / boq_quality rule packs fire AT import time, not
-    # later via the standalone /validate/ endpoint. For DACH GAEB files
-    # the project region is almost always DE/AT/CH so _build_rule_sets
-    # selects the gaeb + din276 rule packs automatically.
-    validation_report = None
-    if imported > 0:
-        validation_report = await _run_import_validation(boq_id, service, service.session)
-
-    return {
-        "imported": imported,
-        "skipped": skipped,
-        "errors": errors,
-        "sections": sections_seen,
-        "source_format": "gaeb",
-        "currency": currency,
         "validation_report": validation_report,
     }
 
