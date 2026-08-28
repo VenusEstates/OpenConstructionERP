@@ -42,6 +42,7 @@ const ACTIVE_PACK: PartnerPackResponse = {
     default_currency: 'EUR',
     default_tax_template: null,
     validation_rule_packs: [],
+    validation_rule_sets: [],
     default_modules: [],
     hidden_modules: [],
     branding: {

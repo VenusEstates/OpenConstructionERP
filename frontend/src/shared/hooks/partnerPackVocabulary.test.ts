@@ -58,6 +58,7 @@ function manifest(overrides: Partial<PartnerPackManifest> = {}): PartnerPackMani
     default_currency: 'CAD',
     default_tax_template: null,
     validation_rule_packs: [],
+    validation_rule_sets: [],
     default_modules: [],
     hidden_modules: [],
     branding: {
