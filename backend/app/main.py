@@ -3149,6 +3149,18 @@ def create_app() -> FastAPI:
 
             from app import modules as _modules_pkg
             from app.core import audit as _audit_core  # noqa: F401
+            from app.core.postgres_version import validate_postgres_version
+            from app.database import Base, engine
+
+            # Validate PostgreSQL version before any schema operations. The
+            # call logs the version it read, so nothing is bound here; what
+            # this site wants from it is the refusal, which the re-raise
+            # carries out of `_startup_impl` and stops the server coming up.
+            try:
+                await validate_postgres_version(engine)
+            except Exception as exc:
+                logger.error("PostgreSQL version validation failed: %s", exc)
+                raise
 
             # ``audit_log`` defines the ``oe_activity_log`` table used by the
             # FSM ``log_activity()`` helper (submittals/RFI/etc. status
@@ -3167,7 +3179,6 @@ def create_app() -> FastAPI:
             # lost on every install, which is the one failure this module was
             # written to stop having.
             from app.core import data_repairs as _data_repairs_core  # noqa: F401
-            from app.database import Base, engine
 
             # Register EVERY module's SQLAlchemy models before create_all so
             # a fresh PostgreSQL database gets all tables. This was

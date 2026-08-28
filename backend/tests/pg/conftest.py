@@ -56,6 +56,11 @@ def _register_all_models() -> None:
     """Import every module's ORM models + the JSONB/index hooks (mirror app startup)."""
     import app.core.audit  # noqa: F401
     import app.core.audit_log  # noqa: F401
+
+    # ``oe_data_repair_ledger``. Declared in app.core, so the app.modules loop
+    # below never reaches it - the same explicit-import case as audit_log, and
+    # ``app/main.py`` carries the same import beside its own for the same reason.
+    import app.core.data_repairs  # noqa: F401
     import app.core.pg_optimizations  # noqa: F401
 
     # The translation cache declares its table on Base.metadata at import time,

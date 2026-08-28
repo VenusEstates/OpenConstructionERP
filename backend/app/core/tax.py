@@ -65,6 +65,12 @@ Sources (cited in commit message, summarised here for reference):
   (DIAN Colombia 2026)
 - PE: TUO IGV SUNAT - standard 18 % (IGV 16 % + IPM 2 %)
   (SUNAT Peru 2026)
+- RO: TVA - standard 21 %, reduced 11 %, zero 0 %, effective 1 Aug 2025. The
+  reform raised the standard rate from 19 % and replaced the former 5 % and
+  9 % reduced rates with the single 11 % band. Construction services and
+  building materials are standard-rated; the 11 % band does not cover them.
+  (PwC Worldwide Tax Summaries - Romania, and European Commission "Your
+  Europe" VAT rules and rates, both read 2026-08-26)
 - RU: НК РФ ст. 164 - standard 20 %, reduced 10 %, zero 0 %
   (FNS Russia 2026)
 - ZA: Value-Added Tax Act 89 of 1991 - standard 15 %, zero-rated 0 %
@@ -143,6 +149,19 @@ _RAW: dict[str, dict[str, str]] = {
     "PE": {"standard": "0.18", "zero": "0.00"},
     # BR uses a fragmented indirect tax system (ISS, ICMS, PIS/COFINS)
     # not equivalent to a simple VAT rate - raises VATNotApplicable
+    # ── Eastern Europe ────────────────────────────────────────────────────
+    # Reformed on 2025-08-01: standard 19 → 21, and the 5 % / 9 % reduced pair
+    # replaced by a single 11 % band. This table carries only what is in force
+    # now - it has no date axis at all - so the pre-reform rates are not here.
+    # ``oe_i18n_tax_config`` is the dated one; ask it for a past date.
+    #
+    # RO is the first entry in this table with no regional pack behind it -
+    # there is no ``ro_pack``, and ``get_vat_rate`` is called in production only
+    # by ``mexico_pack`` (MX) and ``sa_pack`` (ZA). So these figures have no
+    # consumer today: they are here for the table's completeness, not because
+    # something prices from them. Do not read the entry's presence as evidence
+    # that a Romanian pack exists or that Romanian VAT flows through here.
+    "RO": {"standard": "0.21", "reduced": "0.11", "zero": "0.00"},
     # ── Russia / CIS ──────────────────────────────────────────────────────
     "RU": {"standard": "0.20", "reduced": "0.10", "zero": "0.00"},
     # ── Africa ────────────────────────────────────────────────────────────

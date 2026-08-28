@@ -534,6 +534,68 @@ async def test_a_database_whose_seed_cannot_be_dated_is_given_nothing(repair_fac
     assert await _count(repair_factory) == 1
 
 
+async def test_one_rate_re_entered_by_hand_does_not_freeze_the_seed_date(repair_factory) -> None:
+    """The seed date is the OLDEST shipped row on file, and this is the cohort that shows why.
+
+    Every other fixture here writes its whole cohort at one instant, which is
+    what a real seed transaction does, so oldest and newest are the same number
+    and neither is under test. This install is the one where they differ: the
+    customer removed a shipped rate and put it back, which the product lets
+    them do, and one shipped rate line now carries today's date.
+
+    Reading the newest would take that one row for the seed, date this install
+    to today, and conclude that every rate added since is absent because
+    somebody removed it. The install would be refused all eight of the rates it
+    is owed, for good, on the evidence of a row that has nothing to do with any
+    of them. The oldest surviving shipped row is the seeder's own and it still
+    says June.
+    """
+    await _install(repair_factory, pre_v15_5_0(), "2026-06-01")
+
+    now = datetime.now(UTC)
+    async with repair_factory() as session:
+        row = (
+            await session.execute(
+                select(TaxConfiguration).where(
+                    TaxConfiguration.country_code == "DE", TaxConfiguration.tax_code == "VAT"
+                )
+            )
+        ).scalar_one()
+        carried = {field: getattr(row, field) for field in _FIELDS}
+        carried["combination"] = row.combination
+        await session.delete(row)
+        await session.flush()
+        session.add(
+            TaxConfiguration(
+                tax_name="Re-entered by the customer",
+                subdivision_code=None,
+                metadata_={},
+                created_at=now,
+                updated_at=now,
+                **carried,
+            )
+        )
+        await session.commit()
+
+    async with repair_factory() as session:
+        stamps = (
+            (await session.execute(select(TaxConfiguration.created_at).where(TaxConfiguration.tax_code == "VAT")))
+            .scalars()
+            .all()
+        )
+    assert max(stamps) > min(stamps), (
+        "the fixture did not move a shipped row's timestamp, so oldest and newest are still the "
+        "same number here and this test cannot tell the two readings apart"
+    )
+
+    report = await run_data_repairs(repair_factory)
+
+    assert _outcome(report, REPAIR_ID).rows_changed == 8, (
+        "one shipped rate re-entered by hand withheld every rate this install was owed"
+    )
+    assert await _deliveries(repair_factory) == _EXPECTED_DELIVERY
+
+
 async def test_a_country_that_typed_in_its_own_rate_is_not_given_a_second_one(repair_factory) -> None:
     """The failure that is worse than the defect: a country that stops pricing.
 
@@ -565,15 +627,19 @@ async def test_a_country_that_typed_in_its_own_rate_is_not_given_a_second_one(re
 
     report = await run_data_repairs(repair_factory)
 
+    # The harm first, deliberately. A membership assertion above these would
+    # fail before they ran, and this test would then be evidence that a row
+    # stayed out of a table rather than evidence that a country can still
+    # price - which is the claim being made.
+    after = await _resolve_in(repair_factory, "NG")
+    assert after.resolved, f"the repair left Nigeria unable to price at all ({after.status}: {after.reason})"
+    assert after.combined_rate_pct == "5", "Nigeria is charging something other than the rate its owner entered"
+
     assert "NG/VAT" not in await _deliveries(repair_factory), (
         "the shipped Nigerian rate was recorded as delivered, so it will never be reconsidered "
         "even if the customer removes the rate it collided with"
     )
     assert ("NG", "VAT") not in await _lines(repair_factory)
-
-    after = await _resolve_in(repair_factory, "NG")
-    assert after.resolved, f"the repair left Nigeria unable to price at all ({after.status}: {after.reason})"
-    assert after.combined_rate_pct == "5", "Nigeria is charging something other than the rate its owner entered"
 
     assert _outcome(report, REPAIR_ID).rows_changed == 7, (
         "one country holding its own rate must not withhold the other seven rate lines"
@@ -602,14 +668,15 @@ async def test_a_province_that_has_a_hand_entered_rate_is_not_charged_twice(repa
 
     report = await run_data_repairs(repair_factory)
 
-    assert "CA/PST_BC" not in await _deliveries(repair_factory)
-    assert ("CA", "PST_BC") not in await _lines(repair_factory)
-
+    # The rate before the membership, for the reason given in the test above.
     bc = await _resolve_in(repair_factory, "CA", "CA-BC")
     assert bc.combined_rate_pct == "12", (
         f"British Columbia resolves at {bc.combined_rate_pct}% rather than 12%, so the shipped "
         "provincial rate was charged on top of the one already on file"
     )
+
+    assert "CA/PST_BC" not in await _deliveries(repair_factory)
+    assert ("CA", "PST_BC") not in await _lines(repair_factory)
 
     quebec = await _resolve_in(repair_factory, "CA", "CA-QC")
     assert quebec.combined_rate_pct == "14.975", "one province holding its own rate withheld the others"
