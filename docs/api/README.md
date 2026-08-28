@@ -65,9 +65,9 @@ It returns a small JSON document you can poll from a load balancer or uptime mon
 ```json
 {
   "status": "healthy",
-  "version": "10.10.0",
+  "version": "16.2.0",
   "env": "development",
-  "modules_loaded": 161,
+  "modules_loaded": 190,
   "database": "ok",
   "alembic_head_matches": true,
   "uptime_seconds": 42
