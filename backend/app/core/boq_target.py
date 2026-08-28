@@ -130,6 +130,13 @@ async def list_project_boqs(
     from app.modules.boq.models import BOQ
 
     stmt = select(BOQ).where(BOQ.project_id == project_id)
+    # A bill raised for one variation request is not a bill of the project at
+    # large, so it is never a candidate for an operation that asked the
+    # project which bill it means. Without this a single variation bill turns
+    # every previously unambiguous project into ``ambiguous_boq``, which is a
+    # refusal where there used to be an answer. Every bill written before
+    # Issue #435 has NULL here, so this predicate removes nothing that exists.
+    stmt = stmt.where(BOQ.variation_request_id.is_(None))
     if writable:
         stmt = stmt.where(BOQ.is_locked.is_(False))
     stmt = stmt.order_by(BOQ.created_at).limit(limit)

@@ -485,10 +485,17 @@ def _str_to_float(value: str | None) -> float:
     return f
 
 
+#: The spellings a section header's ``unit`` is stored with. The demo seeders
+#: write ``""``; ``create_section`` and every file importer write ``"section"``.
+#: One concept written two ways, so both readers of it below take their
+#: vocabulary from here rather than each carrying a literal of its own.
+SECTION_UNITS: tuple[str, ...] = ("", "section")
+
+
 def _is_section(position: Position) -> bool:
     """Determine whether a position is a section/sub-section header.
 
-    A section is any position whose unit is empty or ``"section"``
+    A section is any position whose unit is one of :data:`SECTION_UNITS`
     and whose quantity and unit_rate are both zero.
     Sections can exist at any depth (top-level or nested under another section).
     This enables multi-level BOQ hierarchies (3-4+ levels).
@@ -496,7 +503,7 @@ def _is_section(position: Position) -> bool:
     unit = (position.unit or "").strip().lower()
     qty = _str_to_float(position.quantity)
     rate = _str_to_float(position.unit_rate)
-    return unit in ("", "section") and qty == 0.0 and rate == 0.0
+    return unit in SECTION_UNITS and qty == 0.0 and rate == 0.0
 
 
 def _stamp_resource_breakdown(metadata: dict[str, Any]) -> None:
@@ -2395,6 +2402,38 @@ class BOQService:
     ) -> tuple[list[BOQ], int]:
         """List BOQs for a given project with pagination."""
         return await self.boq_repo.list_for_project(project_id, offset=offset, limit=limit)
+
+    async def count_line_items(self, boq_ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
+        """Count the priced line items of each BOQ, excluding section headers.
+
+        This is the figure a bill's card shows in the list. It has to be the
+        same figure ``get_boq_with_positions`` reports for the same bill, and
+        that endpoint counts by calling ``_is_section`` on every loaded row.
+        A list of bills must not load every row of every bill to answer, so
+        the exclusion is pushed into SQL here rather than being open-coded by
+        each caller that needs it.
+
+        Args:
+            boq_ids: BOQs to count. An empty list returns an empty mapping.
+
+        Returns:
+            ``{boq_id: line_item_count}``. A BOQ with no line items is absent
+            from the mapping rather than present with a zero.
+        """
+        if not boq_ids:
+            return {}
+
+        from sqlalchemy import func
+
+        rows = (
+            await self.session.execute(
+                select(Position.boq_id, func.count())
+                .where(Position.boq_id.in_(boq_ids))
+                .where(Position.unit.notin_(SECTION_UNITS))
+                .group_by(Position.boq_id)
+            )
+        ).all()
+        return {boq_id: count for boq_id, count in rows}
 
     async def compute_boq_totals(
         self,
@@ -5587,6 +5626,16 @@ class BOQService:
         source_name = source_boq.name
         source_description = source_boq.description
         source_metadata = dict(source_boq.metadata_) if source_boq.metadata_ else {}
+        # Issue #435: a revision or scenario of a variation request's bill is
+        # still that request's bill. Dropping the link here would quietly turn
+        # the copy into a bill of the project at large - it would appear in the
+        # project's bill register and become a candidate for the change-order
+        # writeback, which is the laundering this column exists to prevent. It
+        # is NULL on every project bill, so the copy of one is unaffected.
+        # Plain attribute access, not getattr with a default: a silent None is
+        # exactly the laundering described above, and it is what a rename or a
+        # dropped column would produce. Let it raise instead.
+        source_variation_request_id = source_boq.variation_request_id
 
         # Create the new BOQ shell
         new_boq = BOQ(
@@ -5594,6 +5643,7 @@ class BOQService:
             name=f"{source_name} (Copy)",
             description=source_description,
             status="draft",
+            variation_request_id=source_variation_request_id,
             metadata_=source_metadata,
         )
         new_boq = await self.boq_repo.create(new_boq)
@@ -9253,7 +9303,7 @@ class BOQService:
             _select(Position)
             .join(BOQ, Position.boq_id == BOQ.id)
             .where(BOQ.project_id == project_id)
-            .where(Position.unit != "")
+            .where(Position.unit.notin_(SECTION_UNITS))
             .order_by(Position.sort_order, Position.ordinal)
             .limit(self._PI_POSITION_CAP)
             .options(_noload(Position.children), _noload(Position.parent))

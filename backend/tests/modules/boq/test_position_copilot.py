@@ -13,7 +13,9 @@ Coverage:
   (the HTTP layer maps this to 200) and still records the user turn;
 * a cross-tenant ``position_id`` is rejected (403) before any read/apply;
 * an ``add_resources`` action recomputes ``unit_rate`` from the resource
-  breakdown via the real ``update_position`` write path.
+  breakdown via the real ``update_position`` write path;
+* both write paths record who wrote the row: the unattended auto-apply and the
+  human accept stamp different ``source`` values and both store the confidence.
 
 Run:
     cd backend
@@ -368,3 +370,68 @@ async def test_apply_action_applies_a_reviewed_proposal(session: AsyncSession, m
 
     assert applied.status == "applied"
     assert Decimal(str(updated.quantity)) == Decimal("25")
+
+
+@pytest.mark.asyncio
+async def test_both_write_paths_record_copilot_provenance(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each write path stamps its own ``source``, and both store the confidence.
+
+    The two paths share one builder and one writer, so nothing on the row tells
+    them apart unless the caller says which it is. Until this was wired both
+    left ``source`` at ``manual``, which claimed a person had typed a number the
+    model wrote.
+    """
+    from app.modules.boq.models import Position
+
+    owner = uuid.uuid4()
+
+    # Auto-applied: the copilot wrote this one unattended, on its own confidence.
+    position = await _seed_position(session, owner_id=owner)
+    pid = position.id
+    assert position.source == "manual"
+
+    _patch_matcher(monkeypatch, results=[])
+    _patch_ai(
+        monkeypatch,
+        reply="Tightened the description.",
+        actions=[
+            {
+                "action_type": "update_description",
+                "payload": {"description": "RC wall C30/37, d=240mm"},
+                "confidence": 0.93,
+                "source_code": None,
+            }
+        ],
+    )
+
+    svc = BOQCopilotService(session)
+    resp = await svc.chat(session, pid, "tighten the description", _payload_for(owner), _FakeSettings())
+    assert resp.actions[0].status == "auto_applied"
+
+    refreshed = await session.get(Position, pid)
+    assert refreshed is not None
+    assert refreshed.source == "ai_copilot_auto"
+    # Position.confidence is a String(10) column even though both PositionUpdate
+    # and PositionResponse type it float, so it comes back as text here and is
+    # coerced to a number again on the way out through the API.
+    assert refreshed.confidence is not None
+    assert float(refreshed.confidence) == pytest.approx(0.93)
+
+    # Human accept: an estimator read the proposal and applied it themselves.
+    reviewed = await _seed_position(session, owner_id=owner, quantity=10.0)
+    action = CopilotActionProposal(
+        action_type="set_quantity",
+        payload={"quantity": 25.0},
+        before={"quantity": "10"},
+        confidence=0.7,
+        source=None,
+        status="needs_review",
+    )
+    updated, applied = await svc.apply_action(session, reviewed.id, action, _payload_for(owner))
+
+    assert applied.status == "applied"
+    assert updated.source == "ai_copilot_accepted"
+    assert updated.confidence is not None
+    assert float(updated.confidence) == pytest.approx(0.7)

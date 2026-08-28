@@ -59,8 +59,16 @@ class BOQRepository:
 
         Positions and markups are NOT eagerly loaded here - use
         ``grand_totals_for_boqs`` to compute totals via a single aggregate query.
+
+        Bills raised for a variation request (Issue #435) are excluded. This
+        is the project's bill register, and a variation's priced scope is not
+        part of the project estimate until the variation is agreed - listing
+        it here would add its money to a register the estimator reads as the
+        project's own. It is reached from the variation request that owns it,
+        and by id like any other bill. Rows written before that column existed
+        carry NULL, so nothing that is listed today stops being listed.
         """
-        base = select(BOQ).where(BOQ.project_id == project_id)
+        base = select(BOQ).where(BOQ.project_id == project_id, BOQ.variation_request_id.is_(None))
 
         # Count
         count_stmt = select(func.count()).select_from(base.subquery())

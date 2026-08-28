@@ -66,6 +66,16 @@ logger = logging.getLogger(__name__)
 AUTO_APPLY_THRESHOLD = 0.85
 REVIEW_THRESHOLD = 0.65
 
+# ``Position.source`` values written by the two copilot write paths. The caller
+# is the only thing that tells them apart, so the value has to be passed down
+# rather than derived from the action: the same proposal, on the same field,
+# reaches the same builder whether the copilot applied it unattended or an
+# estimator read it and pressed apply.
+#: Applied by the copilot alone, on the model's self-reported confidence.
+SOURCE_AUTO_APPLIED = "ai_copilot_auto"
+#: Proposed by the copilot, read and accepted by a person.
+SOURCE_HUMAN_ACCEPTED = "ai_copilot_accepted"
+
 # How many sibling positions to feed the model for context.
 _MAX_SIBLINGS = 6
 # How many catalogue candidates to ground against.
@@ -453,27 +463,38 @@ def _build_proposal(
     )
 
 
-def _position_update_for(action: CopilotActionProposal, position: Position) -> PositionUpdate:
+def _position_update_for(
+    action: CopilotActionProposal,
+    position: Position,
+    source: str,
+) -> PositionUpdate:
     """Map a proposal to the ``PositionUpdate`` the service write path expects.
 
     For ``add_resources`` we append to the EXISTING ``metadata.resources`` and
     pass the full ``metadata`` so ``update_position`` re-derives ``unit_rate``
     from the resource breakdown (its trigger is "resources list changed").
+
+    Every update carries ``source`` and ``confidence`` so the row records that
+    the copilot wrote it. ``source`` comes from the caller because that is the
+    only thing distinguishing the two write paths; ``confidence`` is the model's
+    own figure for this proposal, the same number the auto-apply gate compared
+    against.
     """
     at = action.action_type
     payload = action.payload
+    provenance: dict[str, Any] = {"source": source, "confidence": action.confidence}
 
     if at == "update_description":
-        return PositionUpdate(description=str(payload["description"]))
+        return PositionUpdate(description=str(payload["description"]), **provenance)
 
     if at == "set_quantity":
-        kwargs: dict[str, Any] = {"quantity": float(payload["quantity"])}
+        kwargs: dict[str, Any] = {"quantity": float(payload["quantity"]), **provenance}
         if "unit" in payload:
             kwargs["unit"] = str(payload["unit"])
         return PositionUpdate(**kwargs)
 
     if at == "set_unit_rate":
-        return PositionUpdate(unit_rate=Decimal(str(payload["unit_rate"])))
+        return PositionUpdate(unit_rate=Decimal(str(payload["unit_rate"])), **provenance)
 
     if at == "add_resources":
         existing_meta = dict(position.metadata_) if isinstance(position.metadata_, dict) else {}
@@ -481,7 +502,7 @@ def _position_update_for(action: CopilotActionProposal, position: Position) -> P
         existing_list = list(existing_resources) if isinstance(existing_resources, list) else []
         new_resources = payload.get("resources") or []
         existing_meta["resources"] = existing_list + list(new_resources)
-        return PositionUpdate(metadata=existing_meta)
+        return PositionUpdate(metadata=existing_meta, **provenance)
 
     # Unreachable: action_type is constrained by the schema Literal.
     msg = f"unsupported copilot action_type: {at}"
@@ -734,7 +755,7 @@ class BOQCopilotService:
             if proposal.confidence >= AUTO_APPLY_THRESHOLD:
                 # Auto-apply, wrapped so one failure never fails the whole chat.
                 try:
-                    await self._apply_via_service(position_id, proposal, user_id)
+                    await self._apply_via_service(position_id, proposal, user_id, source=SOURCE_AUTO_APPLIED)
                     proposal.status = "auto_applied"
                     # Refresh the in-memory position so a second action in the
                     # same turn sees the latest resources/quantity.
@@ -786,7 +807,7 @@ class BOQCopilotService:
         user_id = self._user_uuid(user)
 
         try:
-            updated = await self._apply_via_service(position_id, action, user_id)
+            updated = await self._apply_via_service(position_id, action, user_id, source=SOURCE_HUMAN_ACCEPTED)
             action.status = "applied"
             action.error = ""
             await self._persist(
@@ -821,15 +842,20 @@ class BOQCopilotService:
         position_id: uuid.UUID,
         action: CopilotActionProposal,
         user_id: uuid.UUID | None,
+        source: str,
     ) -> Position:
-        """Translate a proposal to a ``PositionUpdate`` and run the write path."""
+        """Translate a proposal to a ``PositionUpdate`` and run the write path.
+
+        ``source`` says which path is writing: both the unattended auto-apply and
+        the human accept land here, and the row cannot tell them apart otherwise.
+        """
         from app.modules.boq.models import Position
         from app.modules.boq.service import BOQService
 
         position = await self.session.get(Position, position_id)
         if position is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position not found")
-        update = _position_update_for(action, position)
+        update = _position_update_for(action, position, source)
         service = BOQService(self.session)
         return await service.update_position(position_id, update, actor_id=user_id)
 

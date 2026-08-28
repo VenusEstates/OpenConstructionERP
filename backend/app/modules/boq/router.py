@@ -198,7 +198,7 @@ from app.modules.boq.schemas import (
     SustainabilityResponse,
     TemplateInfo,
 )
-from app.modules.boq.service import MAX_NESTING_DEPTH, BOQService, resource_fx_factor
+from app.modules.boq.service import MAX_NESTING_DEPTH, SECTION_UNITS, BOQService, resource_fx_factor
 from app.modules.boq.units import to_gaeb_unit_code
 from app.modules.costs.repository import CostItemRepository
 
@@ -535,23 +535,11 @@ async def list_boqs(
     # mixed-currency BOQ no longer reports a blended, meaningless grand total.
     breakdown = await service.compute_boq_totals(boq_ids)
 
-    # Position counts per BOQ
-    from sqlalchemy import func, select
-
-    from app.modules.boq.models import Position
-
-    pos_counts: dict[uuid.UUID, int] = {}
-    if boq_ids:
-        rows = (
-            await session.execute(
-                select(Position.boq_id, func.count())
-                .where(Position.boq_id.in_(boq_ids))
-                .where(Position.unit != "")  # Exclude section headers
-                .group_by(Position.boq_id)
-            )
-        ).all()
-        for bid, cnt in rows:
-            pos_counts[bid] = cnt
+    # Position counts per BOQ. The service owns the definition of a section
+    # header; this endpoint used to open-code it as ``unit != ""`` and so
+    # counted the headers of every imported bill, which spell it "section",
+    # as priced lines.
+    pos_counts = await service.count_line_items(boq_ids)
 
     results: list[BOQListItem] = []
     for b in boqs:
@@ -1630,12 +1618,14 @@ async def create_budget_from_boq(
     # Group positions: by wbs_id if set, otherwise by parent_id (section), else "ungrouped"
     groups: dict[str, Decimal] = {}
     for pos in positions:
-        # Skip section headers (quantity=0, unit="")
+        # Skip section headers, which carry no money and would otherwise open a
+        # budget group of their own. Both spellings of the sentinel unit, or an
+        # imported bill's headers become zero-value budget lines.
         try:
             total = Decimal(str(pos.total))
         except Exception:
             total = Decimal("0")
-        if total == 0 and pos.unit == "":
+        if total == 0 and (pos.unit or "").strip().lower() in SECTION_UNITS:
             continue
 
         group_key = pos.wbs_id or (str(pos.parent_id) if pos.parent_id else "ungrouped")
@@ -9110,13 +9100,15 @@ async def renumber_positions(
     positions = list(boq_data.positions)
 
     def _is_section(pos: object) -> bool:
-        """Mirror the canonical frontend isSection check (api.ts:136).
+        """Classify by unit alone, unlike the service predicate of the same name.
 
-        Sections are stored with EITHER unit="" (demo seed convention) OR
-        unit="section" (create_section endpoint convention) - handle both.
+        Renumbering runs over response objects, so it takes the spellings from
+        ``SECTION_UNITS`` rather than repeating them, but it deliberately drops
+        the zero quantity and zero rate the service predicate also requires: a
+        header someone typed a quantity into still has to be renumbered as one.
         """
         u = (getattr(pos, "unit", "") or "").strip().lower()
-        return u == "" or u == "section"
+        return u in SECTION_UNITS
 
     # Build hierarchy by parent_id. Top-level positions have parent_id=None.
     by_parent: dict[str | None, list] = {}

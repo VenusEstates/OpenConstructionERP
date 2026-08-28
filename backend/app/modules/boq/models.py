@@ -47,6 +47,33 @@ class BOQ(Base):
     approved_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     base_date: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
+    # ── Issue #435: the variation request this bill was raised for ───────
+    # NULL is the whole existing world: a bill of the project at large, the
+    # only kind that existed before this column, and the only kind the
+    # project's bill register lists or the "which bill does this land in"
+    # resolver will consider. A value means the bill prices exactly one
+    # variation request's scope and belongs to that request rather than to
+    # the project's estimate.
+    #
+    # The link is deliberately stored HERE and not as a ``boq_id`` on the
+    # variation request. A column on the owning record cannot be filtered
+    # out of ``SELECT ... FROM oe_boq_boq WHERE project_id = ?`` without a
+    # subquery from ``oe_boq`` into the owning module, which inverts the
+    # dependency ``app/core/boq_target.py`` exists to avoid. That shape is
+    # not hypothetical: ``DesignOption.boq_id`` is exactly it, and design
+    # option bills consequently land, unannounced, in every project-wide
+    # money aggregate in the tree.
+    #
+    # A plain GUID rather than a ForeignKey, the same convention as
+    # ``MoCEntry.variation_request_id`` and ``Position.contract_id``: the
+    # BOQ module must keep working when the variations module is not
+    # installed, so it may not carry a DB-level dependency on its tables.
+    #
+    # NOT unique. A revision of a variation bill is still that request's
+    # bill (see ``BOQService.duplicate_boq``), and the revision chain hangs
+    # off ``parent_estimate_id`` exactly as it does for a project bill.
+    variation_request_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True, index=True)
+
     metadata_: Mapped[dict] = mapped_column(  # type: ignore[assignment]
         "metadata",
         JSON,

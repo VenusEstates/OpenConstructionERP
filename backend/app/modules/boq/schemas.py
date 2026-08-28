@@ -186,6 +186,10 @@ class BOQResponse(BaseModel):
     parent_estimate_id: UUID | None = None
     approved_by: str | None = None
     approved_at: str | None = None
+    #: Issue #435 - set when this bill prices one variation request's scope
+    #: instead of the project at large. NULL on every bill that existed
+    #: before the column, and on every bill created through ``POST /boqs/``.
+    variation_request_id: UUID | None = None
 
     # BUG-MATH04: defence-in-depth strip of any residual HTML on output.
     # Input validators only block the *dangerous* subset; legacy rows
@@ -425,7 +429,7 @@ class PositionUpdate(BaseModel):
     classification: dict[str, Any] | None = None
     source: str | None = Field(
         default=None,
-        pattern=r"^(manual|cad_import|ai_takeoff|gaeb_import|excel_import|takeoff|smart_import|smart_import_ai|cad_import_ai|cost_database|assembly|cwicr|enriched|ai_match|formwork)$",
+        pattern=r"^(manual|cad_import|ai_takeoff|gaeb_import|excel_import|takeoff|smart_import|smart_import_ai|cad_import_ai|cost_database|assembly|cwicr|enriched|ai_match|formwork|ai_estimate|ai_estimate_cwicr|ai_precise_estimate|ai_plan_read|ai_copilot_auto|ai_copilot_accepted)$",
     )
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     cad_element_ids: list[str] | None = None
