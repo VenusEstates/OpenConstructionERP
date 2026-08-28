@@ -71,6 +71,17 @@ the ``prompt`` argument, which carries user data by design. Somebody who smuggle
 instructions to the model inside a data field walks straight past this. It guards
 the shape of the instruction slot, not the meaning of what arrives in it.
 
+How to find a call site this file's anchors would miss, which is a real risk
+because an anchor only ever finds the calls that go through it. The audio path
+above was found by accident after a sweep organised by module name and module
+docstring had already reported clean, and a module whose self-description
+understates what it does defeats any sweep that reads prose. The search that
+does not have that weakness is an intersection: take the modules that accept an
+``UploadFile`` and intersect them with the modules that import ``ai_client``.
+Neither half requires an opinion about what a module is for, and the result is
+by construction every place a file a human uploaded meets a model. Run that
+before trusting this file's list of anchors.
+
 Exit codes: 0 clean, 1 findings, 2 the scan could not run and concluded nothing.
 """
 
