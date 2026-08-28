@@ -200,9 +200,14 @@ function startListening(): void {
  *
  * A no-op when no pack is active, when the pack ships nothing for this
  * language, or when that overlay is already in place. Every failure path is
- * non-fatal and leaves the base locale untouched: china-gbt50500 declares
- * ``locales/zh.json`` and does not ship the file, so the endpoint genuinely
- * 404s in the tree as it stands today.
+ * non-fatal and leaves the base locale untouched. That mattered concretely
+ * while china-gbt50500 declared ``locales/zh.json`` without shipping it and
+ * the endpoint genuinely 404d; the declaration is gone and
+ * backend/tests/unit/test_community_packs_ship.py now refuses to let a pack in
+ * this repository name a file it does not carry. The catch below stays,
+ * because that gate only covers the packs we ship: a pack dropped into the
+ * data directory or installed from PyPI by somebody else can still declare a
+ * locale file that is not there, and it must not take the language down.
  *
  * Swapping packs is handled here rather than in the apply flow, because
  * applying a pack does not reload the app: the previous pack's overlay is

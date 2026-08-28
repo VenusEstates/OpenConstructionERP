@@ -22,14 +22,14 @@ describe('normalizePackLocale', () => {
     // strings, which is the one thing the locale exists to prevent.
     expect(normalizePackLocale('en-US')).toBe('en-US'); // commercial-denver, us-costdata
     expect(normalizePackLocale('es-MX')).toBe('es-MX');
-    expect(normalizePackLocale('pt-BR')).toBe('pt-BR');
+    expect(normalizePackLocale('pt-BR')).toBe('pt-BR'); // brazil-sinapi
     expect(normalizePackLocale('es-CL')).toBe('es-CL');
     expect(normalizePackLocale('es-CO')).toBe('es-CO');
   });
 
   it('passes through base codes the UI ships', () => {
     expect(normalizePackLocale('de')).toBe('de'); // bimhessen-de, doker-formwork
-    expect(normalizePackLocale('pt')).toBe('pt'); // brazil-sinapi
+    expect(normalizePackLocale('pt')).toBe('pt'); // Portugal, no pack of its own
     expect(normalizePackLocale('ar')).toBe('ar'); // saudi-vision2030 (RTL)
     expect(normalizePackLocale('en')).toBe('en'); // india-cpwd, modular-prefab
   });
