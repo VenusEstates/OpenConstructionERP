@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "app-window",
+  "description": "What the application itself may call once the launcher has handed the window over to it. The launcher serves the application from the backend it started, at http://127.0.0.1:<port>/, and picks that port at runtime: 8732 when it is free and an arbitrary free port otherwise. Tauri classifies any such address as a REMOTE origin, because a local origin is only the Tauri protocol or a configured frontendDist URL, and this build's frontendDist is a directory. Without this file the application window is a remote origin with no capability naming it, so every command it invokes is refused by the access control list and the outbound links in the user interface do nothing at all. The grant is one command, opening a link, and it is deliberately not the launcher-shell set.",
+  "windows": ["main"],
+  "local": false,
+  "remote": {
+    "urls": ["http://127.0.0.1:*"]
+  },
+  "permissions": ["allow-open-external-url"]
+}

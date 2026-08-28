@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capabilities for the OpenConstructionERP desktop app",
+  "description": "Default capabilities for the OpenConstructionERP desktop app. Local origin only, which here means the documents the launcher serves itself over the Tauri protocol: the splash screen, the startup failure screen and the update notice. The application itself is served over loopback and is a REMOTE origin as far as the access control list is concerned, so nothing in this file reaches it. See app-window.json for what the application window is allowed to do.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -14,6 +14,7 @@
     "shell:allow-spawn",
     "shell:allow-execute",
     "shell:default",
-    "process:default"
+    "process:default",
+    "launcher-shell"
   ]
 }

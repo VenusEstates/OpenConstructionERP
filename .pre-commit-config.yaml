@@ -408,3 +408,23 @@ repos:
         # catching it at commit time is the whole reason this exists as a hook
         # rather than only as a release-time generator.
         files: ^(.*\.(ttf|otf|ttc|woff2?)|backend/app/core/fonts/.*|frontend/public/assets/vendor/fonts/.*|NOTICE|backend/pyproject\.toml|scripts/check_bundled_font_licences\.py)$
+
+      # The desktop launcher navigates its webview to http://127.0.0.1:<port>/,
+      # which Tauri classifies as a REMOTE origin, so the access control list
+      # decides every command the application window invokes. With no
+      # permissions declared and no capability naming that origin, the answer
+      # was no to all of them, and the shape that took on screen was that every
+      # outbound link in the shipped product - docs, repository, marketing site,
+      # contact mail - did nothing at all when clicked. Nothing failed loudly:
+      # the click was swallowed, the command was refused, and the rejection was
+      # dropped. This resolves the permission for real rather than grepping for
+      # the loopback pattern, because renaming the permission leaves that string
+      # in place and severs the grant. It also fails on a registered command
+      # that no capability grants, since declaring an application ACL turns the
+      # same check on for the launcher's own splash and failure screens too.
+      - id: desktop-link-acl
+        name: Check the desktop app window can still open a link
+        entry: python scripts/check_desktop_link_acl.py
+        language: system
+        pass_filenames: false
+        files: ^(desktop/src-tauri/(permissions|capabilities)/.*\.json|desktop/src-tauri/src/main\.rs|scripts/check_desktop_link_acl\.py)$

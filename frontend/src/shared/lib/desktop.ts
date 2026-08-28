@@ -12,6 +12,12 @@
  * exists, so importing this in a non-browser context (vitest, build tooling)
  * is harmless.
  */
+import i18next from 'i18next';
+
+import { useToastStore } from '@/stores/useToastStore';
+
+import { copyToClipboard } from './browser';
+
 export const isTauri =
   typeof window !== 'undefined' &&
   Boolean((window as { __TAURI__?: unknown }).__TAURI__);
@@ -115,18 +121,68 @@ export async function openAppInBrowser(path?: string): Promise<OpenInBrowserResu
  * `@tauri-apps/plugin-shell`: that package is not part of the bundle, so a
  * runtime import of it in the built webview just throws and every outbound link
  * silently dies. Returns true when an open was attempted, false otherwise.
+ *
+ * A false is also put on screen, see `reportLinkNotOpened`. The command can be
+ * refused before it runs at all: the application is served from a loopback
+ * address, which Tauri treats as a remote origin, so the access control list
+ * decides whether the page may call this, and a refusal arrives here as a
+ * rejected promise. Returning false quietly was what made that refusal
+ * indistinguishable from a dead link.
  */
 export async function openExternalUrl(url: string): Promise<boolean> {
   if (!isTauri || !url) return false;
   const invoke = getTauriInvoke();
-  if (!invoke) return false;
+  if (!invoke) {
+    reportLinkNotOpened(url);
+    return false;
+  }
   try {
     await invoke('open_external_url', { url });
     return true;
   } catch (err) {
     console.warn('open_external_url failed:', err);
+    reportLinkNotOpened(url);
     return false;
   }
+}
+
+/**
+ * Put a link that did not open in front of the user, with the address.
+ *
+ * Every failure this reports used to be silent, and silent here is the worst
+ * possible outcome: the click is swallowed by the capture-phase handler in
+ * `installDesktopExternalLinks`, the webview never navigates, and the person is
+ * left looking at a link that behaves like a picture of a link. A console
+ * warning is not a message to a user.
+ *
+ * This lives in `openExternalUrl` rather than in `openLink` on purpose. Both
+ * outbound paths, the explicit `openLink` call and the global anchor handler,
+ * end here, so reporting at this one point covers both and cannot drift apart.
+ *
+ * The toast carries the address itself rather than an explanation of why the
+ * shell said no, because the address is the part the user can act on: the
+ * action copies it, and pasting it into a browser is the whole of the recovery.
+ * The technical reason stays on the console for whoever is reading one.
+ */
+function reportLinkNotOpened(url: string): void {
+  useToastStore.getState().addToast(
+    {
+      type: 'warning',
+      title: i18next.t('desktop.open_in_browser_failed', {
+        defaultValue: 'Could not open your browser',
+      }),
+      message: url,
+      action: {
+        label: i18next.t('common.copy', { defaultValue: 'Copy' }),
+        onClick: () => {
+          void copyToClipboard(url);
+        },
+      },
+    },
+    // Longer than the 4s default: this one asks the user to do something, and
+    // an address is slower to read than a confirmation.
+    { duration: 12_000 },
+  );
 }
 
 /**

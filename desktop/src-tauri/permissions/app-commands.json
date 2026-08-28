@@ -1,0 +1,48 @@
+{
+  "permission": [
+    {
+      "identifier": "allow-open-external-url",
+      "description": "Hand an http, https or mailto link to the operating system's default handler. The command refuses every other scheme, so this cannot name a local program to launch. It opens a link and returns nothing: it reads no file, runs no chosen executable and tells the caller nothing about the machine.",
+      "commands": { "allow": ["open_external_url"] }
+    },
+    {
+      "identifier": "allow-open-app-in-browser",
+      "description": "Open this application's own address in the default browser. The launcher supplies the address; a caller may only add a path within the app, and anything that is not a clean local path is dropped in favour of the home page, so this cannot send anybody off the local origin.",
+      "commands": { "allow": ["open_app_in_browser"] }
+    },
+    {
+      "identifier": "allow-open-log-file",
+      "description": "Open the launcher's own diagnostic log in the default handler. The path is resolved by the launcher and cannot be supplied by the caller.",
+      "commands": { "allow": ["open_log_file"] }
+    },
+    {
+      "identifier": "allow-get-app-url",
+      "description": "Read the local address the application is being served on, which is the address of the page asking for it.",
+      "commands": { "allow": ["get_app_url"] }
+    },
+    {
+      "identifier": "allow-set-update-check-enabled",
+      "description": "Turn the update check on or off, which is the choice offered by the update notice.",
+      "commands": { "allow": ["set_update_check_enabled"] }
+    },
+    {
+      "identifier": "allow-decline-update-version",
+      "description": "Record that the user does not want to be told about one particular version again.",
+      "commands": { "allow": ["decline_update_version"] }
+    }
+  ],
+  "set": [
+    {
+      "identifier": "launcher-shell",
+      "description": "Everything the launcher's own documents may call: the splash screen, the startup failure screen and the update notice. These documents are served by the launcher itself over the Tauri protocol, so this set is granted to the local origin only. It is the full command list on purpose, because that is exactly what the local origin could already reach before the application declared any permissions at all, and this file must not quietly take something away while it is adding the declaration.",
+      "permissions": [
+        "allow-open-external-url",
+        "allow-open-app-in-browser",
+        "allow-open-log-file",
+        "allow-get-app-url",
+        "allow-set-update-check-enabled",
+        "allow-decline-update-version"
+      ]
+    }
+  ]
+}
