@@ -14,7 +14,10 @@ manifest = ModuleManifest(
     ),
     author="OpenConstructionERP Core Team",
     category="business",
-    depends=["oe_users", "oe_projects"],
+    # oe_boq: a variation request may own a dedicated bill of quantities
+    # (Issue #435), created through BOQService and stamped with the
+    # request it belongs to.
+    depends=["oe_users", "oe_projects", "oe_boq"],
     auto_install=True,
     enabled=True,
 )

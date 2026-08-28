@@ -23,6 +23,7 @@ from app.modules.variations.models import (
     FinalAccount,
     Notice,
     SiteMeasurement,
+    VariationBOQTrace,
     VariationCostImpact,
     VariationOrder,
     VariationRequest,
@@ -183,6 +184,39 @@ class VariationRequestRepository(_BaseRepo):
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+
+class VariationBOQTraceRepository(_BaseRepo):
+    """Provenance rows for the lines of a variation request's own bill."""
+
+    model = VariationBOQTrace
+    project_field = None
+
+    async def bulk_create(self, rows: list[VariationBOQTrace]) -> list[VariationBOQTrace]:
+        """Insert a batch of trace rows in one flush."""
+        if not rows:
+            return []
+        self.session.add_all(rows)
+        await self.session.flush()
+        return rows
+
+    async def list_for_request(self, variation_request_id: uuid.UUID) -> list[VariationBOQTrace]:
+        """Every trace row of a request, oldest first."""
+        stmt = (
+            select(VariationBOQTrace)
+            .where(VariationBOQTrace.variation_request_id == variation_request_id)
+            .order_by(VariationBOQTrace.created_at, VariationBOQTrace.id)
+        )
+        return list((await self.session.execute(stmt)).scalars().all())
+
+    async def list_for_boq(self, boq_id: uuid.UUID) -> list[VariationBOQTrace]:
+        """Every trace row belonging to one bill, oldest first."""
+        stmt = (
+            select(VariationBOQTrace)
+            .where(VariationBOQTrace.boq_id == boq_id)
+            .order_by(VariationBOQTrace.created_at, VariationBOQTrace.id)
+        )
+        return list((await self.session.execute(stmt)).scalars().all())
 
 
 class VariationOrderRepository(_BaseRepo):

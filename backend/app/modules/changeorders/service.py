@@ -1484,6 +1484,14 @@ class ChangeOrderService:
         from app.modules.boq.models import BOQ
 
         stmt = select(BOQ).where(BOQ.project_id == project_id)
+        # The docstring above already predicted this: a bill per variation
+        # request is another unlocked bill on the same project, and counting
+        # them here would turn every single-bill project into ``ambiguous_boq``
+        # the moment somebody priced a variation. A variation bill belongs to
+        # its request, never to a change order, so it is not a candidate.
+        # Mirrors ``app/core/boq_target.py::list_project_boqs``; the two copies
+        # of this query still have to be kept in step by hand.
+        stmt = stmt.where(BOQ.variation_request_id.is_(None))
         if writable:
             stmt = stmt.where(BOQ.is_locked.is_(False))
         return list((await self.session.execute(stmt.order_by(BOQ.created_at).limit(limit))).scalars().all())

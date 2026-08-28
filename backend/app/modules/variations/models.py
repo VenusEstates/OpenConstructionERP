@@ -5,6 +5,7 @@
 Tables (all prefixed ``oe_variations_``):
     notice                  -- early-warning notice of variation
     variation_request       -- formal request for a variation (pre-issue)
+    boq_trace               -- provenance of one line in a request's own bill
     variation_order         -- issued variation order (post-agreement)
     cost_impact             -- VO cost-impact line
     schedule_impact         -- VO schedule-impact line
@@ -19,7 +20,7 @@ Tables (all prefixed ``oe_variations_``):
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db_types import MoneyType
@@ -121,6 +122,70 @@ class VariationRequest(Base):
 
     def __repr__(self) -> str:
         return f"<VariationRequest {self.code} ({self.status})>"
+
+
+class VariationBOQTrace(Base):
+    """Where one line of a variation request's own bill came from.
+
+    A variation request may own a dedicated bill of quantities holding only
+    the scope that variation changes (Issue #435). The bill itself is an
+    ordinary ``oe_boq_boq`` row carrying ``variation_request_id``, so it gets
+    the whole BOQ module - positions, assemblies, markups, calculation,
+    revisions, snapshots, exports - without any of it being reimplemented
+    here. What the BOQ module has no place for is *why* a line is in that
+    bill, and this table is that answer: one row per line, naming the
+    contract schedule-of-values line the change affects and the estimating
+    BOQ position the scope was taken from.
+
+    Both references are optional and independent. A line that adds scope
+    nobody contracted for has no SoV line; a line invented for the variation
+    has no originating position; a line that re-measures a contracted item
+    has both. A line that has neither is a hand-entered addition, recorded
+    with ``origin='manual'`` rather than left without a row, so the trace
+    covers the bill rather than only the parts of it that were derived.
+
+    Every cross-module reference is a plain GUID, not a ForeignKey, the same
+    convention ``VariationOrder.affected_contract_id`` and
+    ``SiteMeasurement.contract_line_id`` already follow: the variations
+    module must not put a DB-level dependency on the BOQ or contracts
+    tables. Only ``variation_request_id`` is a real FK, because that row is
+    in this module and deleting a request must take its trace with it.
+    """
+
+    __tablename__ = "oe_variations_boq_trace"
+    __table_args__ = (
+        # One trace row per priced line. The line is the thing whose
+        # provenance is being recorded, so two rows about it would be two
+        # answers to one question.
+        UniqueConstraint("position_id", name="uq_oe_variations_boq_trace_position"),
+        # "Show me this request's trace" is the only read this table has.
+        Index("ix_oe_variations_boq_trace_request_boq", "variation_request_id", "boq_id"),
+    )
+
+    variation_request_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(),
+        ForeignKey("oe_variations_request.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    #: The variation bill this line lives in (``oe_boq_boq.id``).
+    boq_id: Mapped[uuid.UUID] = mapped_column(GUID(), nullable=False, index=True)
+    #: The line itself (``oe_boq_position.id``).
+    position_id: Mapped[uuid.UUID] = mapped_column(GUID(), nullable=False)
+    #: How the line got here: ``boq_position`` (copied from the estimating
+    #: bill), ``contract_line`` (taken from the contract schedule of values)
+    #: or ``manual`` (entered for this variation and derived from nothing).
+    origin: Mapped[str] = mapped_column(String(20), nullable=False, default="manual", server_default="manual")
+    #: The estimating bill and position the scope was taken from.
+    source_boq_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True)
+    source_position_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True, index=True)
+    #: The contract and schedule-of-values line the change affects.
+    contract_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True)
+    contract_line_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True, index=True)
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+
+    def __repr__(self) -> str:
+        return f"<VariationBOQTrace {self.origin} pos={self.position_id}>"
 
 
 class VariationOrder(Base):

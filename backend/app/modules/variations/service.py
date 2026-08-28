@@ -33,6 +33,7 @@ from app.modules.variations.models import (
     FinalAccount,
     Notice,
     SiteMeasurement,
+    VariationBOQTrace,
     VariationCostImpact,
     VariationOrder,
     VariationRequest,
@@ -46,6 +47,7 @@ from app.modules.variations.repository import (
     FinalAccountRepository,
     NoticeRepository,
     SiteMeasurementRepository,
+    VariationBOQTraceRepository,
     VariationCostImpactRepository,
     VariationOrderRepository,
     VariationRequestRepository,
@@ -66,6 +68,7 @@ from app.modules.variations.schemas import (
     NoticeUpdate,
     SiteMeasurementCreate,
     SiteMeasurementUpdate,
+    VariationBOQCreate,
     VariationCostImpactCreate,
     VariationCostImpactUpdate,
     VariationOrderCreate,
@@ -260,6 +263,24 @@ def _convert_money_buckets(
             # currency instead of mis-stamping it as base currency.
             unconverted[code] = unconverted.get(code, Decimal("0")) + amount
     return total, unconverted
+
+
+#: Two money figures closer than this are the same number. Both sides are
+#: rounded to cents before they meet, so a sub-cent gap is rounding.
+_MONEY_EPSILON = Decimal("0.01")
+
+
+def _money(value: Any) -> Decimal:
+    """Coerce a computed money figure to an exact Decimal rounded to cents.
+
+    ``BOQService.compute_boq_totals`` reports floats, which is the historical
+    shape of that API and not something to change from here. Routing through
+    ``str`` keeps 0.1 from arriving as 0.10000000000000000555, and quantizing
+    at the boundary means a comparison against a stored ``MoneyType`` figure
+    is a comparison of two cent-rounded numbers rather than of a float and a
+    decimal.
+    """
+    return _to_decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def _money_str_map(by_currency: dict[str, Decimal]) -> dict[str, str]:
@@ -1265,6 +1286,7 @@ class VariationsService:
         self.disruption_repo = DisruptionClaimRepository(session)
         self.eot_repo = ExtensionOfTimeClaimRepository(session)
         self.final_account_repo = FinalAccountRepository(session)
+        self.boq_trace_repo = VariationBOQTraceRepository(session)
 
     # ── Notice ────────────────────────────────────────────────────────────
 
@@ -1545,6 +1567,590 @@ class VariationsService:
     async def delete_request(self, vr_id: uuid.UUID) -> None:
         await self.get_request(vr_id)
         await self.vr_repo.delete(vr_id)
+
+    # ── Variation request BOQ (Issue #435) ────────────────────────────────
+    #
+    # A variation request may own a dedicated bill of quantities holding only
+    # the scope that variation changes. Nothing here re-implements a bill: the
+    # row is an ordinary ``oe_boq_boq`` created through ``BOQService``, so
+    # positions, assemblies, resource costing, markups, calculation, the
+    # revision chain, snapshots and every export come with it. What lives here
+    # is the two things the BOQ module has no place for - which request a bill
+    # belongs to, and what each of its lines traces back to.
+    #
+    # Every request that has no bill is untouched by all of it. The headline
+    # ``estimated_cost_impact`` remains the only figure such a request has,
+    # which is exactly how it behaved before.
+
+    async def resolve_request_boq(self, vr_id: uuid.UUID) -> tuple[Any | None, str | None]:
+        """Which bill a variation request's priced scope currently lives in.
+
+        Returns ``(boq, None)`` when the answer is unambiguous and
+        ``(None, reason)`` when it is not, where ``reason`` is a key of
+        :data:`app.core.boq_target.BOQ_TARGET_REFUSALS`. Exactly one of the
+        two is ever set.
+
+        A request may own more than one bill, because revising a bill copies
+        it (``BOQService.duplicate_boq``) and the copy is still that request's
+        bill. The current one is the head of the revision chain: the bill no
+        other bill of this request names as its ``parent_estimate_id``. One
+        head is the answer. Two heads means the chain forked, and a fork is a
+        question - answered by naming the bill, not by guessing between them.
+        This is the rule ``app/core/boq_target.py`` states for projects,
+        applied to the smaller scope; the refusal vocabulary is shared so a
+        client that learned these codes on one endpoint reads them here too.
+        """
+        from sqlalchemy import select
+
+        from app.modules.boq.models import BOQ
+
+        rows = list(
+            (await self.session.execute(select(BOQ).where(BOQ.variation_request_id == vr_id).order_by(BOQ.created_at)))
+            .scalars()
+            .all()
+        )
+        if not rows:
+            return None, "no_active_boq"
+        superseded = {row.parent_estimate_id for row in rows if row.parent_estimate_id is not None}
+        heads = [row for row in rows if row.id not in superseded]
+        if len(heads) == 1:
+            return heads[0], None
+        logger.warning(
+            "Variation request %s owns %d bills with %d chain heads - the current one cannot be named",
+            vr_id,
+            len(rows),
+            len(heads),
+        )
+        return None, "ambiguous_boq"
+
+    @staticmethod
+    def _request_boq_refusal(reason: str | None) -> HTTPException:
+        """The refusal that names why a request's bill could not be resolved.
+
+        Built rather than raised so a caller that already holds the reason can
+        raise it without resolving a second time. ``resolve_request_boq``
+        hands back the reason with the answer, and asking the database again
+        to rediscover it is both a wasted round trip and a chance for the two
+        reads to disagree.
+        """
+        if reason == "no_active_boq":
+            return HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "no_variation_boq",
+                    "message": "This variation request has no bill of quantities yet.",
+                },
+            )
+        from app.core.boq_target import BOQ_TARGET_REFUSALS
+
+        code = reason or "ambiguous_boq"
+        return HTTPException(
+            status_code=http_status.HTTP_409_CONFLICT,
+            detail={"error": code, "message": BOQ_TARGET_REFUSALS.get(code, "")},
+        )
+
+    async def _require_request_boq(self, vr_id: uuid.UUID) -> Any:
+        """The request's current bill, or an HTTP refusal naming why not."""
+        boq, reason = await self.resolve_request_boq(vr_id)
+        if boq is None:
+            raise self._request_boq_refusal(reason)
+        return boq
+
+    async def _load_source_positions(
+        self,
+        project_id: uuid.UUID,
+        position_ids: list[uuid.UUID],
+    ) -> dict[uuid.UUID, Any]:
+        """Estimating positions the variation takes scope from, by id.
+
+        Every id must resolve to a position on a bill of *this* project. A
+        request that names a position from somewhere else is refused rather
+        than silently skipped: seeding a bill with fewer lines than were asked
+        for, and saying nothing, is how a variation ends up understated.
+        """
+        if not position_ids:
+            return {}
+        from sqlalchemy import select
+
+        from app.modules.boq.models import BOQ, Position
+
+        rows = list(
+            (
+                await self.session.execute(
+                    select(Position)
+                    .join(BOQ, BOQ.id == Position.boq_id)
+                    .where(Position.id.in_(position_ids), BOQ.project_id == project_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        found = {row.id: row for row in rows}
+        missing = [str(pid) for pid in position_ids if pid not in found]
+        if missing:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "source_position_not_in_project",
+                    "message": (
+                        "These positions are not on any bill of this project, so a variation on "
+                        "this project cannot take scope from them."
+                    ),
+                    "position_ids": missing,
+                },
+            )
+        return found
+
+    async def _load_source_contract_lines(
+        self,
+        project_id: uuid.UUID,
+        line_ids: list[uuid.UUID],
+    ) -> dict[uuid.UUID, Any]:
+        """Schedule-of-values lines the variation affects, by id.
+
+        Same project guard as the positions. A missing contracts module is a
+        different fact from a wrong id and is answered as such - the caller
+        asked for something the installation cannot provide.
+        """
+        if not line_ids:
+            return {}
+        from sqlalchemy import select
+
+        try:
+            from app.modules.contracts.models import Contract, ContractLine
+        except ImportError as exc:  # pragma: no cover - depends on install set
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail={
+                    "error": "contracts_module_unavailable",
+                    "message": "Contract schedule-of-values lines cannot be read - the contracts module is not installed.",
+                },
+            ) from exc
+
+        rows = list(
+            (
+                await self.session.execute(
+                    select(ContractLine)
+                    .join(Contract, Contract.id == ContractLine.contract_id)
+                    .where(ContractLine.id.in_(line_ids), Contract.project_id == project_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        found = {row.id: row for row in rows}
+        missing = [str(lid) for lid in line_ids if lid not in found]
+        if missing:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "contract_line_not_in_project",
+                    "message": (
+                        "These schedule-of-values lines belong to no contract on this project, so a "
+                        "variation on this project cannot be raised against them."
+                    ),
+                    "contract_line_ids": missing,
+                },
+            )
+        return found
+
+    async def create_request_boq(
+        self,
+        vr_id: uuid.UUID,
+        data: VariationBOQCreate,
+        user_id: str | None = None,
+    ) -> Any:
+        """Open a dedicated bill for a variation request and seed its scope.
+
+        The bill is created through ``BOQService.create_boq`` so it is the
+        same kind of row as every other bill, then stamped with the request
+        it belongs to. Seeding copies the named estimating positions and
+        schedule-of-values lines into it and records where each line came
+        from, so the priced figure can be defended line by line.
+
+        A request may own only one bill at a time. Wanting a second one is
+        wanting a revision, and the BOQ module already has that
+        (``POST /boqs/{id}/create-revision/``), with a chain that says which
+        of the two supersedes the other. Two unrelated bills would say
+        nothing, and the priced total would stop having an answer.
+        """
+        from app.modules.boq.schemas import BOQCreate
+        from app.modules.boq.service import BOQService
+
+        vr = await self.get_request(vr_id)
+        existing, reason = await self.resolve_request_boq(vr_id)
+        if existing is not None or reason != "no_active_boq":
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail={
+                    "error": "variation_boq_exists",
+                    "message": (
+                        "This variation request already has a bill of quantities. Revise that bill "
+                        "instead of opening a second one."
+                    ),
+                    "boq_id": str(existing.id) if existing is not None else None,
+                },
+            )
+
+        position_ids = [item.position_id for item in data.source_positions]
+        line_ids = [item.contract_line_id for item in data.source_contract_lines]
+        sources = await self._load_source_positions(vr.project_id, position_ids)
+        contract_lines = await self._load_source_contract_lines(vr.project_id, line_ids)
+
+        title = (vr.title or "").strip()
+        default_name = f"{vr.code} - {title}" if title else f"{vr.code} variation bill"
+        boq_service = BOQService(self.session)
+        boq = await boq_service.create_boq(
+            BOQCreate(
+                project_id=vr.project_id,
+                name=(data.name or default_name)[:255],
+                description=(
+                    data.description
+                    or f"Priced scope of variation request {vr.code}. Separate from the project estimate."
+                ),
+                # The house discriminator for "what kind of bill is this",
+                # alongside the link that actually carries the filtering.
+                estimate_type="variation",
+                base_date=data.base_date,
+            )
+        )
+        boq_id = boq.id
+        await boq_service.boq_repo.update_fields(boq_id, variation_request_id=vr_id)
+
+        traces = await self._seed_variation_boq(
+            vr=vr,
+            boq_id=boq_id,
+            data=data,
+            sources=sources,
+            contract_lines=contract_lines,
+        )
+
+        _safe_publish(
+            "variations.request.boq_opened",
+            {
+                "project_id": str(vr.project_id),
+                "variation_request_id": str(vr_id),
+                "code": vr.code,
+                "boq_id": str(boq_id),
+                "lines_seeded": len(traces),
+                "actor_id": user_id or "",
+            },
+        )
+        logger.info(
+            "Variation request %s opened bill %s with %d seeded line(s)",
+            vr.code,
+            boq_id,
+            len(traces),
+        )
+        return await boq_service.get_boq(boq_id)
+
+    async def _seed_variation_boq(
+        self,
+        *,
+        vr: VariationRequest,
+        boq_id: uuid.UUID,
+        data: VariationBOQCreate,
+        sources: dict[uuid.UUID, Any],
+        contract_lines: dict[uuid.UUID, Any],
+    ) -> list[VariationBOQTrace]:
+        """Write the seeded lines and their provenance rows.
+
+        Ordinals are ``0010``, ``0020``, … in the order the caller named the
+        sources, so the bill reads in the order the estimator described the
+        change rather than in whatever order the database returned.
+        """
+        from app.modules.boq.models import Position
+
+        positions: list[Any] = []
+        pending: list[dict[str, Any]] = []
+        index = 0
+
+        for item in data.source_positions:
+            source = sources[item.position_id]
+            quantity = _to_decimal(item.quantity) if item.quantity is not None else _to_decimal(source.quantity)
+            rate = _to_decimal(source.unit_rate)
+            index += 1
+            positions.append(
+                Position(
+                    boq_id=boq_id,
+                    ordinal=f"{index * 10:04d}",
+                    description=source.description,
+                    unit=source.unit,
+                    quantity=format(quantity, "f"),
+                    unit_rate=format(rate, "f"),
+                    total=format(quantity * rate, "f"),
+                    classification=dict(source.classification or {}),
+                    source="manual",
+                    cad_element_ids=[],
+                    sort_order=index,
+                )
+            )
+            pending.append(
+                {
+                    "origin": "boq_position",
+                    "source_boq_id": source.boq_id,
+                    "source_position_id": source.id,
+                    "contract_id": None,
+                    "contract_line_id": None,
+                    "note": item.note,
+                }
+            )
+
+        for item in data.source_contract_lines:
+            line = contract_lines[item.contract_line_id]
+            quantity = _to_decimal(item.quantity) if item.quantity is not None else _to_decimal(line.quantity)
+            rate = _to_decimal(line.unit_rate)
+            index += 1
+            positions.append(
+                Position(
+                    boq_id=boq_id,
+                    ordinal=f"{index * 10:04d}",
+                    description=line.description or line.code or "",
+                    unit=line.unit or "",
+                    quantity=format(quantity, "f"),
+                    unit_rate=format(rate, "f"),
+                    total=format(quantity * rate, "f"),
+                    classification={},
+                    source="manual",
+                    cad_element_ids=[],
+                    sort_order=index,
+                )
+            )
+            pending.append(
+                {
+                    "origin": "contract_line",
+                    "source_boq_id": None,
+                    "source_position_id": None,
+                    "contract_id": line.contract_id,
+                    "contract_line_id": line.id,
+                    "note": item.note,
+                }
+            )
+
+        if not positions:
+            return []
+
+        self.session.add_all(positions)
+        await self.session.flush()
+
+        traces = [
+            VariationBOQTrace(
+                variation_request_id=vr.id,
+                boq_id=boq_id,
+                position_id=position.id,
+                origin=str(fields["origin"]),
+                source_boq_id=fields["source_boq_id"],
+                source_position_id=fields["source_position_id"],
+                contract_id=fields["contract_id"],
+                contract_line_id=fields["contract_line_id"],
+                note=str(fields["note"] or ""),
+            )
+            for position, fields in zip(positions, pending, strict=True)
+        ]
+        return await self.boq_trace_repo.bulk_create(traces)
+
+    async def get_request_boq_view(self, vr_id: uuid.UUID) -> dict[str, Any]:
+        """Everything the request's bill says, priced and traced.
+
+        A request with no bill answers ``has_boq`` false with its headline
+        estimate and nothing else - the shape a request has always had. A
+        request with a bill answers with the bill's own FX-correct totals,
+        taken from ``BOQService.compute_boq_totals`` rather than summed here,
+        so the figure is the same one the BOQ list, detail and export paths
+        report.
+        """
+        vr = await self.get_request(vr_id)
+        headline = _to_decimal(vr.estimated_cost_impact)
+        boq, reason = await self.resolve_request_boq(vr_id)
+        if boq is None:
+            if reason == "no_active_boq":
+                return {
+                    "variation_request_id": vr_id,
+                    "has_boq": False,
+                    "estimated_cost_impact": headline,
+                }
+            # The revision chain forked. The reason came back with the answer,
+            # so raise it here rather than resolving again to rediscover it.
+            raise self._request_boq_refusal(reason)
+
+        from sqlalchemy import select
+
+        from app.modules.boq.models import Position
+        from app.modules.boq.service import BOQService
+
+        boq_id = boq.id
+        breakdown = (await BOQService(self.session).compute_boq_totals([boq_id])).get(boq_id, {})
+        rows = list(
+            (
+                await self.session.execute(
+                    select(Position).where(Position.boq_id == boq_id).order_by(Position.sort_order)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        traces = await self.boq_trace_repo.list_for_boq(boq_id)
+        by_position = {trace.position_id: trace for trace in traces}
+
+        grand_total = _money(breakdown.get("grand_total"))
+        payload: dict[str, Any] = {
+            "variation_request_id": vr_id,
+            "has_boq": True,
+            "boq_id": boq_id,
+            "name": boq.name,
+            "status": boq.status,
+            "is_locked": bool(boq.is_locked),
+            "parent_estimate_id": boq.parent_estimate_id,
+            "position_count": sum(1 for row in rows if (row.unit or "") not in ("", "section")),
+            "base_currency": str(breakdown.get("base_currency") or ""),
+            "direct_cost": _money(breakdown.get("direct_cost")),
+            "markups_total": _money(breakdown.get("markups_total")),
+            "grand_total": grand_total,
+            "is_mixed_currency": bool(breakdown.get("is_mixed_currency")),
+            "estimated_cost_impact": headline,
+            "estimate_matches_boq": abs(headline - grand_total) < _MONEY_EPSILON,
+            "traces": traces,
+        }
+        payload["checks"] = await self._run_variation_boq_rules(payload, rows, by_position)
+        return payload
+
+    async def _run_variation_boq_rules(
+        self,
+        payload: dict[str, Any],
+        rows: list[Any],
+        by_position: dict[uuid.UUID, VariationBOQTrace],
+    ) -> list[dict[str, Any]]:
+        """Run the variation rule set over the bill and flatten the report.
+
+        Validation is part of reading the bill, not a screen somebody has to
+        know to open. A failure to validate is never allowed to take the
+        priced figure down with it - the rules explain the number, they do not
+        produce it - so a broken engine comes back as an empty list.
+        """
+        try:
+            from app.core.validation.engine import ValidationEngine, rule_registry
+            from app.modules.variations.validators import (
+                VARIATIONS_RULE_SET,
+                register_variations_rules,
+            )
+
+            register_variations_rules()
+            report = await ValidationEngine(rule_registry).validate(
+                data={
+                    "variation_request_id": str(payload["variation_request_id"]),
+                    "grand_total": payload["grand_total"],
+                    "estimated_cost_impact": payload["estimated_cost_impact"],
+                    "is_mixed_currency": payload["is_mixed_currency"],
+                    "lines": [
+                        {
+                            "id": str(row.id),
+                            "ordinal": row.ordinal,
+                            "unit": row.unit,
+                            "source_position_id": (
+                                str(by_position[row.id].source_position_id)
+                                if row.id in by_position and by_position[row.id].source_position_id
+                                else None
+                            ),
+                            "contract_line_id": (
+                                str(by_position[row.id].contract_line_id)
+                                if row.id in by_position and by_position[row.id].contract_line_id
+                                else None
+                            ),
+                        }
+                        for row in rows
+                    ],
+                },
+                rule_sets=[VARIATIONS_RULE_SET],
+                target_type="boq",
+                target_id=str(payload.get("boq_id") or ""),
+                metadata={"locale": get_locale()},
+            )
+        except Exception:
+            logger.warning(
+                "Validation of the bill of variation request %s could not be run",
+                payload.get("variation_request_id"),
+                exc_info=True,
+            )
+            return []
+        return [
+            {
+                "rule_id": result.rule_id,
+                "severity": getattr(result.severity, "value", str(result.severity)),
+                "passed": bool(result.passed),
+                "message": result.message,
+            }
+            for result in report.results
+            if not result.passed
+        ]
+
+    async def adopt_request_boq_total(
+        self,
+        vr_id: uuid.UUID,
+        user_id: str | None = None,
+    ) -> VariationRequest:
+        """Make the bill's priced total the request's headline figure.
+
+        Deliberately an explicit act rather than a side effect of pricing.
+        The headline is what every other module reads off a request - the
+        approval threshold, the dashboards, the change-intelligence roll-up -
+        so moving it is a decision, and a bill that is still being worked on
+        would otherwise move it on every keystroke.
+
+        Refused on a decided request: the figure a decision was taken on has
+        to stay the figure that was decided on. Refused on a bill that blends
+        currencies, because the total is then a blend nobody agreed to a
+        rate for.
+        """
+        vr = await self.get_request(vr_id)
+        if vr.status in ("approved", "rejected", "converted_to_vo"):
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail={
+                    "error": "variation_request_decided",
+                    "message": (
+                        "This variation request has already been decided, so the figure it was "
+                        "decided on cannot be replaced."
+                    ),
+                },
+            )
+        boq = await self._require_request_boq(vr_id)
+
+        from app.modules.boq.service import BOQService
+
+        breakdown = (await BOQService(self.session).compute_boq_totals([boq.id])).get(boq.id, {})
+        if bool(breakdown.get("is_mixed_currency")):
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail={
+                    "error": "mixed_currency_boq",
+                    "message": (
+                        "This bill blends currencies, so its total is not a figure the request can "
+                        "carry. Settle the lines on one currency first."
+                    ),
+                },
+            )
+        priced = _money(breakdown.get("grand_total"))
+        fields: dict[str, Any] = {"estimated_cost_impact": priced}
+        base_currency = str(breakdown.get("base_currency") or "")
+        if not (vr.currency or "").strip() and base_currency:
+            # Only ever fills a blank. A currency somebody chose is theirs.
+            fields["currency"] = base_currency[:10]
+        await self.vr_repo.update_fields(vr_id, **fields)
+        await self.session.refresh(vr)
+
+        _safe_publish(
+            "variations.request.boq_adopted",
+            {
+                "project_id": str(vr.project_id),
+                "variation_request_id": str(vr_id),
+                "code": vr.code,
+                "boq_id": str(boq.id),
+                "estimated_cost_impact": str(priced),
+                "currency": vr.currency or "",
+                "actor_id": user_id or "",
+            },
+        )
+        return vr
 
     # ── VariationOrder ────────────────────────────────────────────────────
 

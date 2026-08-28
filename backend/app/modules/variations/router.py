@@ -19,6 +19,7 @@ from app.dependencies import (
     SessionDep,
     verify_project_access,
 )
+from app.modules.boq.schemas import BOQResponse
 from app.modules.variations.schemas import (
     DayworkSheetCreate,
     DayworkSheetLineCreate,
@@ -48,6 +49,8 @@ from app.modules.variations.schemas import (
     SiteMeasurementListResponse,
     SiteMeasurementResponse,
     SiteMeasurementUpdate,
+    VariationBOQCreate,
+    VariationBOQResponse,
     VariationCostImpactCreate,
     VariationCostImpactResponse,
     VariationCostImpactUpdate,
@@ -434,6 +437,91 @@ async def convert_vr_to_vo(
     )
     vo = await service.convert_vr_to_vo(vr_id, payload, user_id=user_id)
     return VariationOrderResponse.model_validate(vo)
+
+
+# ── Variation request BOQ (Issue #435) ────────────────────────
+#
+# A variation request may own a dedicated bill of quantities holding only the
+# scope that variation changes. The bill itself is served by the BOQ module -
+# everything at /api/v1/boq/boqs/{boq_id}/... works on it unchanged, which is
+# the point of making it an ordinary bill. These three routes cover only what
+# the BOQ module cannot answer: open one for a request, read it back with its
+# provenance, and let the priced total become the request's headline figure.
+
+
+@router.post(
+    "/variation-requests/{vr_id}/boq/",
+    response_model=BOQResponse,
+    status_code=201,
+    summary="Open a dedicated bill for a variation request",
+)
+async def create_variation_request_boq(
+    vr_id: uuid.UUID,
+    session: SessionDep,
+    user_id: CurrentUserId,
+    body: VariationBOQCreate = Body(default=VariationBOQCreate()),
+    _perm: None = Depends(RequirePermission("variations.create")),
+    service: VariationsService = Depends(_get_service),
+) -> BOQResponse:
+    """Open the request's own bill, optionally seeded from existing scope.
+
+    ``source_positions`` names positions on the project's estimating bills and
+    ``source_contract_lines`` names schedule-of-values lines of the project's
+    contracts; each seeded line records where it came from. Both are optional,
+    and an empty body opens an empty bill.
+    """
+    vr = await service.get_request(vr_id)
+    await verify_project_access(vr.project_id, str(user_id), session)
+    boq = await service.create_request_boq(vr_id, body, user_id=str(user_id) if user_id else None)
+    return BOQResponse.model_validate(boq)
+
+
+@router.get(
+    "/variation-requests/{vr_id}/boq/",
+    response_model=VariationBOQResponse,
+    summary="The request's bill, priced and traced",
+)
+async def get_variation_request_boq(
+    vr_id: uuid.UUID,
+    session: SessionDep,
+    user_id: CurrentUserId = None,  # type: ignore[assignment]
+    _perm: None = Depends(RequirePermission("variations.read")),
+    service: VariationsService = Depends(_get_service),
+) -> VariationBOQResponse:
+    """Read the request's bill with its totals, provenance and checks.
+
+    A request that has no bill answers ``has_boq`` false with its headline
+    estimate and no money fields - the state every request was in before this
+    existed, and still the state of most of them.
+    """
+    vr = await service.get_request(vr_id)
+    await verify_project_access(vr.project_id, str(user_id), session)
+    view = await service.get_request_boq_view(vr_id)
+    return VariationBOQResponse.model_validate(view)
+
+
+@router.post(
+    "/variation-requests/{vr_id}/boq/adopt",
+    response_model=VariationRequestResponse,
+    summary="Adopt the bill's priced total as the request's estimate",
+)
+async def adopt_variation_request_boq(
+    vr_id: uuid.UUID,
+    session: SessionDep,
+    user_id: CurrentUserId,
+    _perm: None = Depends(RequirePermission("variations.update")),
+    service: VariationsService = Depends(_get_service),
+) -> VariationRequestResponse:
+    """Replace the headline estimate with what the bill actually prices.
+
+    Deliberately explicit. Every other module reads the headline off the
+    request, so moving it is a decision somebody takes rather than something
+    that happens while a bill is still being edited.
+    """
+    vr = await service.get_request(vr_id)
+    await verify_project_access(vr.project_id, str(user_id), session)
+    updated = await service.adopt_request_boq_total(vr_id, user_id=str(user_id) if user_id else None)
+    return VariationRequestResponse.model_validate(updated)
 
 
 # ── Variation orders ───────────────────────────────────────────────────────

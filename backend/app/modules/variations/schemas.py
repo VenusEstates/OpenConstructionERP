@@ -195,6 +195,126 @@ class VariationRequestResponse(BaseModel):
         return _serialize_money_string(v) or "0"
 
 
+# ── Variation request BOQ (Issue #435) ────────────────────────────────────
+#
+# A variation request may own a dedicated bill of quantities holding only the
+# scope that variation changes. The bill is an ordinary BOQ row, so these
+# schemas describe the two things the BOQ module has no place for: how the
+# bill is seeded from what already exists, and what each of its lines traces
+# back to.
+
+
+class VariationBOQSourcePosition(BaseModel):
+    """An estimating-BOQ position the variation scope is taken from."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    position_id: UUID
+    #: The quantity this variation changes, which is rarely the contracted
+    #: one - a variation usually re-measures part of a line. Omit to carry
+    #: the source position's quantity across unchanged.
+    quantity: Decimal | None = None
+    note: str = Field(default="", max_length=2000)
+
+
+class VariationBOQSourceContractLine(BaseModel):
+    """A contract schedule-of-values line the variation affects."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    contract_line_id: UUID
+    quantity: Decimal | None = None
+    note: str = Field(default="", max_length=2000)
+
+
+class VariationBOQCreate(BaseModel):
+    """Open a dedicated bill for a variation request.
+
+    Both source lists are optional and may be combined. An empty request
+    opens an empty bill, which is the right answer for a variation that
+    prices scope nobody has estimated or contracted yet.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(default="", max_length=255)
+    description: str = Field(default="", max_length=5000)
+    base_date: str | None = Field(default=None, max_length=20)
+    source_positions: list[VariationBOQSourcePosition] = Field(default_factory=list, max_length=500)
+    source_contract_lines: list[VariationBOQSourceContractLine] = Field(default_factory=list, max_length=500)
+
+
+class VariationBOQTraceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: UUID
+    variation_request_id: UUID
+    boq_id: UUID
+    position_id: UUID
+    origin: str = "manual"
+    source_boq_id: UUID | None = None
+    source_position_id: UUID | None = None
+    contract_id: UUID | None = None
+    contract_line_id: UUID | None = None
+    note: str = ""
+    created_at: datetime
+
+
+class VariationBOQCheck(BaseModel):
+    """One validation result about a variation request's bill."""
+
+    rule_id: str
+    severity: str = "warning"
+    passed: bool = True
+    message: str = ""
+
+
+class VariationBOQResponse(BaseModel):
+    """A variation request's dedicated bill, priced, with its provenance.
+
+    ``has_boq`` false is the answer for every request that predates this
+    feature and every request whose author never opened a bill: the headline
+    ``estimated_cost_impact`` is then the only figure there is, which is
+    exactly how the request behaved before. The money fields are ``None``
+    rather than zero in that case, because a request with no bill has no
+    priced total, and nil is not the same statement as "priced at nothing".
+    """
+
+    variation_request_id: UUID
+    has_boq: bool = False
+    boq_id: UUID | None = None
+    name: str = ""
+    status: str = ""
+    is_locked: bool = False
+    parent_estimate_id: UUID | None = None
+    position_count: int = 0
+    base_currency: str = ""
+    direct_cost: Decimal | None = None
+    markups_total: Decimal | None = None
+    grand_total: Decimal | None = None
+    #: True when the bill blends currencies, so ``grand_total`` is a number
+    #: the reader must not treat as final. Carried through from
+    #: ``BOQService.compute_boq_totals`` rather than recomputed.
+    is_mixed_currency: bool = False
+    #: The request's own headline figure, unchanged by the presence of a bill.
+    estimated_cost_impact: Decimal = Decimal("0")
+    #: True when the headline already equals the bill's grand total, i.e. the
+    #: priced figure has been adopted and the two do not disagree.
+    estimate_matches_boq: bool = False
+    traces: list[VariationBOQTraceResponse] = Field(default_factory=list)
+    checks: list[VariationBOQCheck] = Field(default_factory=list)
+
+    @field_serializer("direct_cost", "markups_total", "grand_total", when_used="json")
+    @classmethod
+    def _ser_optional_money(cls, v: Decimal | None) -> str | None:
+        return _serialize_money_string(v)
+
+    @field_serializer("estimated_cost_impact", when_used="json")
+    @classmethod
+    def _ser_money(cls, v: Decimal) -> str:
+        return _serialize_money_string(v) or "0"
+
+
 # ── VariationOrder ────────────────────────────────────────────────────────
 
 

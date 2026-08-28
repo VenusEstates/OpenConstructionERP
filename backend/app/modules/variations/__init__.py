@@ -18,7 +18,9 @@ link (plain UUID, no DB-level FK to keep the two modules independent).
 
 
 async def on_startup() -> None:
-    """Module startup hook -- register permissions."""
+    """Module startup hook -- register permissions and validation rules."""
     from app.modules.variations.permissions import register_variations_permissions
+    from app.modules.variations.validators import register_variations_rules
 
     register_variations_permissions()
+    register_variations_rules()
