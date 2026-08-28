@@ -105,12 +105,83 @@ fn spawn_os_opener(target: &str) -> std::io::Result<std::process::Child> {
     /// page.
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
+    // cmd.exe re-parses the command line it is handed, and Rust quotes an
+    // argument only when it contains a space or a tab. A target with neither,
+    // such as https://example.invalid/&calc, therefore arrives unquoted and
+    // cmd reads the & as a command separator: the second half runs as a
+    // program. The caller's scheme check does not stop it, because the string
+    // does begin with https://. So the target is quoted here, at the one place
+    // that builds the command line, rather than trusted to arrive safe.
+    //
+    // raw_arg rather than arg: Rust's own escaping would turn the quotes into
+    // \" for a program that parses its command line the C way, and cmd does
+    // not, so the quotes have to be written literally.
+    //
     // The empty "" is start's title argument; without it a quoted target is
     // mis-parsed as the window title and nothing opens.
-    std::process::Command::new("cmd")
-        .args(["/c", "start", "", target])
-        .creation_flags(CREATE_NO_WINDOW)
-        .spawn()
+    if !target_is_safe_for_cmd(target) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "The link contains characters that cannot be passed to the shell safely",
+        ));
+    }
+
+    let mut command = std::process::Command::new("cmd");
+    for piece in cmd_open_args(target) {
+        command.raw_arg(piece);
+    }
+    command.creation_flags(CREATE_NO_WINDOW).spawn()
+}
+
+/// The literal command-line pieces handed to cmd.exe to open one target.
+///
+/// Split out from the spawn so the quoting can be asserted rather than trusted.
+/// A test that only exercises `target_is_safe_for_cmd` would stay green if the
+/// quotes came back off, because refusing a quote character and quoting the
+/// target are two different halves of one guard and only the first has an
+/// obvious unit to test.
+///
+/// Args:
+///     target: A URL or path that `target_is_safe_for_cmd` has already accepted.
+///
+/// Returns:
+///     The four pieces, each written verbatim onto the command line.
+#[cfg(target_os = "windows")]
+fn cmd_open_args(target: &str) -> [String; 4] {
+    [
+        "/c".to_string(),
+        "start".to_string(),
+        // start's title argument. Without it a quoted target is read as the
+        // window title and nothing opens.
+        "\"\"".to_string(),
+        format!("\"{target}\""),
+    ]
+}
+
+/// Whether a target may be placed inside double quotes on a cmd.exe line.
+///
+/// Quoting neutralises the separators (`&`, `|`, `<`, `>`) and the escape
+/// character (`^`), so the only characters that still matter are the ones that
+/// can break out of the quoting itself: a double quote closes it, and a
+/// carriage return or newline ends the line. None of the three can appear in a
+/// URL that reached us honestly (they are percent-encoded there) or in a
+/// Windows path, where the double quote is not a legal filename character, so
+/// refusing them costs nothing a real caller wanted.
+///
+/// Deliberately NOT refused: `%`. cmd expands `%NAME%` even inside quotes, so a
+/// URL carrying a defined variable name between percent signs would open the
+/// wrong address. That is a wrong-link bug and not a way to run a program, and
+/// percent signs are how every encoded character in a URL is spelled, so
+/// refusing them would break far more links than it could protect.
+///
+/// Args:
+///     target: The URL or path about to be handed to the opener.
+///
+/// Returns:
+///     True when the target can be quoted safely.
+#[cfg(target_os = "windows")]
+fn target_is_safe_for_cmd(target: &str) -> bool {
+    !target.contains('"') && !target.contains('\r') && !target.contains('\n')
 }
 
 #[cfg(target_os = "macos")]
@@ -192,8 +263,16 @@ fn open_app_in_browser(app: tauri::AppHandle, path: Option<String>) -> Result<()
 /// The in-app UI carries many outbound links - the docs, the GitHub repo, the
 /// marketing site, contact mail. Inside the webview a `target="_blank"` anchor is
 /// swallowed and nothing opens, so the frontend routes every external-link click
-/// here. Only web and mail schemes are honoured, so a stray or crafted href can
-/// never launch an arbitrary local program through the opener.
+/// here. Only web and mail schemes are honoured, so a stray or crafted href
+/// cannot name a local program for the opener to launch.
+///
+/// That scheme test is not on its own what makes this safe, and it used to be
+/// described as though it were. It bounds what the opener is asked to open; it
+/// says nothing about how the string survives the shell on the way there, and
+/// on Windows the opener goes through cmd.exe. https://example.invalid/&calc
+/// passes this check in full. The quoting in `spawn_os_opener` is what stops
+/// the tail of that string being run as a second command, and the two together
+/// are the guard.
 #[tauri::command]
 fn open_external_url(url: String) -> Result<(), String> {
     let target = url.trim();
@@ -2280,6 +2359,91 @@ fn show_startup_failure_dialog(_message: &str) {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The separators cmd.exe honours outside quotes must survive as text.
+    ///
+    /// These are the strings that pass `open_external_url`'s scheme test in
+    /// full, so nothing upstream of the opener refuses them. Each one is a URL
+    /// by every rule that function applies, and each one used to reach the
+    /// command line unquoted, because Rust adds quotes only around an argument
+    /// carrying a space or a tab and none of these carries either.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn a_shell_separator_in_a_link_is_still_only_a_link() {
+        for target in [
+            "https://example.invalid/&calc",
+            "https://example.invalid/|calc",
+            "https://example.invalid/&&calc",
+            "http://example.invalid/?a=1&b=2",
+            "https://example.invalid/^calc",
+            "mailto:info@datadrivenconstruction.io?subject=a&body=b",
+        ] {
+            assert!(
+                target_is_safe_for_cmd(target),
+                "{target} is quotable and must not be refused: the ampersand in a \
+                 query string is ordinary, and quoting is what makes it harmless"
+            );
+        }
+    }
+
+    /// Only what can break out of the quoting is refused.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn a_target_that_could_close_the_quote_is_refused() {
+        for target in [
+            "https://example.invalid/\"&calc",
+            "https://example.invalid/\r\ncalc",
+            "https://example.invalid/\ncalc",
+        ] {
+            assert!(
+                !target_is_safe_for_cmd(target),
+                "{target:?} carries a quote or a line break and must be refused"
+            );
+        }
+    }
+
+    /// The target reaches the command line inside quotes, which is the fix.
+    ///
+    /// This is the half `target_is_safe_for_cmd` cannot speak for. That
+    /// predicate would go on returning true for an ampersand URL even if the
+    /// quotes were removed tomorrow, and an ampersand URL reaching cmd.exe
+    /// unquoted is the whole defect. So the assertion is on the text actually
+    /// written onto the line.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn the_target_is_written_onto_the_command_line_quoted() {
+        let target = "https://example.invalid/&calc";
+        let args = cmd_open_args(target);
+
+        assert_eq!(args[0], "/c");
+        assert_eq!(args[1], "start");
+        assert_eq!(
+            args[2], "\"\"",
+            "start still needs its empty title argument"
+        );
+        // Written out in full rather than rebuilt with the same format! the
+        // implementation uses. Mirroring the expression would make the two
+        // sides move together, and an assertion that cannot disagree with the
+        // code it checks is not checking it.
+        assert_eq!(
+            args[3], "\"https://example.invalid/&calc\"",
+            "the target must be wrapped in quotes: unquoted, cmd reads the & as a \
+             separator and runs the rest as a program"
+        );
+    }
+
+    /// Percent signs stay allowed, and the reason is written down.
+    ///
+    /// Every encoded character in a URL is spelled with one, so refusing them
+    /// would break far more links than it could protect. This pins the decision
+    /// so a later tightening has to argue with it rather than pass silently.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn a_percent_encoded_link_is_not_refused() {
+        assert!(target_is_safe_for_cmd(
+            "https://example.invalid/a%20b?q=%D0%BC%D0%B5%D1%82%D1%80"
+        ));
+    }
 
     /// Parse a health body the way both judgements do, for the tests below.
     fn body(json: &str) -> serde_json::Value {
