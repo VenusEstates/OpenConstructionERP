@@ -194,7 +194,17 @@ jobs:
     # passed. Keeps a single "Backend CI" check for branch protection and
     # at-a-glance status while the work is fanned across the shard matrix above.
     needs: [backend]
-    if: always()
+    # Not always(). always() runs this job when the run was CANCELLED too, and
+    # the step below reads needs.backend.result, which is then "cancelled"
+    # rather than "success", so the gate exits 1 and the one check branch
+    # protection watches goes red for a run nobody let finish. Measured rather
+    # than reasoned: of the cancelled runs that reached this gate, 33047173405
+    # had all six shards conclude cancelled with not one of them failed, and
+    # "Backend CI" still reported failure. Skipping is the honest answer there,
+    # because a cancelled run earned no verdict either way. Leaving always() and
+    # teaching the script to pass on "cancelled" would be worse still: it would
+    # report the backend green when nothing ran.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: Require all backend shards to pass
