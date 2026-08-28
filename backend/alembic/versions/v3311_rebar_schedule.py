@@ -24,7 +24,7 @@ whose tables ``env.py`` already built through ``Base.metadata.create_all``
 reaches this revision and does nothing.
 
 Revision ID: v3311_rebar_schedule
-Revises: v3310_variation_request_boq
+Revises: v3309_bi_kpi_definition_spec
 Create Date: 2026-08-28
 """
 
@@ -38,7 +38,7 @@ from alembic import op
 from app.database import GUID
 
 revision: str = "v3311_rebar_schedule"
-down_revision: Union[str, Sequence[str], None] = "v3310_variation_request_boq"
+down_revision: Union[str, Sequence[str], None] = "v3309_bi_kpi_definition_spec"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
