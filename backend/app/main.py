@@ -3335,13 +3335,22 @@ def create_app() -> FastAPI:
                 app.state.schema_divergent_columns = _divergent
                 app.state.schema_matches_models = not _divergent
                 if _divergent:
+                    # Every name, not the first few. This line used to print
+                    # ``_divergent[:5]``, which made a nine-column divergence
+                    # read as five everywhere an operator could see it, and
+                    # made an independent probe that had also stopped at five
+                    # look like corroboration rather than the same truncation
+                    # arrived at twice. Two readings that agree because one was
+                    # cut to the length of the other is the most convincing
+                    # wrong answer available. A count that disagrees with the
+                    # list printed beside it is the one thing this must not do.
                     logger.warning(
                         "Schema divergence: %d column(s) the models declare NOT NULL accept NULL in this "
-                        "database, beginning with %s. Nothing on the boot path will tighten them; each needs "
-                        "a backfill and an ALTER. /api/health reports schema_matches_models=false, and the "
-                        "names are here rather than there because that endpoint is unauthenticated.",
+                        "database: %s. Nothing on the boot path will tighten them; each needs a backfill "
+                        "and an ALTER. /api/health reports schema_matches_models=false, and the names are "
+                        "here rather than there because that endpoint is unauthenticated.",
                         len(_divergent),
-                        ", ".join(_divergent[:5]),
+                        ", ".join(_divergent),
                     )
             except Exception as exc:  # noqa: BLE001
                 # A diagnostic must never be able to stop a boot. Leaving the
