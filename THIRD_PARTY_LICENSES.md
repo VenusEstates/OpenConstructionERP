@@ -89,3 +89,56 @@ source. Read that rather than inferring the position from the table
 above. It also states, because it is the question people ask, that the
 same components on the same terms are in the community edition and the
 commercial edition alike.
+
+
+## What a resolution finds that a declared list does not
+
+The section above reasons from what packages declare. The paragraph below
+reasons from a resolution, which is a different instrument and disagrees
+with the declared list in one place that matters.
+
+Resolving the base dependencies with no extras gives 79 packages on Linux
+and macOS and 78 on Windows. Four of them declare something other than a
+permissive licence: `certifi` (MPL-2.0), `orjson` (MPL-2.0 AND (Apache-2.0
+OR MIT)), `psycopg2-binary` (LGPL with exceptions) and `pymupdf` (AGPL-3.0
+or an Artifex commercial licence). So copyleft, LGPL included, reaches a
+default install with no extra selected. Nothing else in the base closure
+declares copyleft.
+
+Every optional group was then resolved and subtracted from that base. The
+only copyleft package any group adds is `tqdm`, MPL-2.0 AND MIT, and six
+of the eleven groups add it rather than one. On the declared axis no group
+adds LGPL at all.
+
+`python-bidi` and `crc32c` resolve in no closure, base or otherwise, on any
+of the three platforms. `paddleocr` 2.10.0 declares nineteen requirements
+and neither is among them.
+
+What `[cv]` does add is harder to see and larger. paddleocr declares
+`opencv-python` and `opencv-contrib-python`, which are the non-headless
+builds of the package the base install already has in its headless form.
+Both wheels bundle Qt 5.15.19 (`libQt5Core`, `libQt5Gui`, `libQt5Widgets`,
+`libQt5Test`, `libQt5XcbQpa` and the `libqxcb` platform plugin), and both
+bundle two FFmpeg libraries the headless wheel does not carry,
+`libavdevice` and `libavfilter`. OpenCV's own `cv2/LICENSE-3RD-PARTY.txt`
+states it plainly: "Qt 5 is redistributed within non-headless
+opencv-python Linux and macOS packages", followed by the LGPL-3.0 text,
+and "FFmpeg is redistributed within all opencv-python packages", followed
+by the LGPL-2.1 text. Both wheels declare Apache-2.0 in their metadata, so
+no generated inventory shows any of it.
+
+None of that reaches an artefact we publish. The container image resolves
+`server` and `semantic-clients`, and `backend/requirements-desktop.lock`
+pins `opencv-python-headless` alone, so Qt 5 is in neither. A user who
+installs the `[cv]` extra receives it, which is the case this file exists
+to describe.
+
+One more thing that no notice we have seen mentions. All three OpenCV
+wheels carry `libgfortran` and `libquadmath`, which are GPL-3.0-or-later
+with the GCC Runtime Library Exception, and OpenCV's own third-party
+notice does not name either of them.
+
+These numbers come from `uv pip compile` against `backend/pyproject.toml`
+for Python 3.12 on each platform, and from reading the wheels themselves.
+Version drift is normal here: a fresh resolution gives
+`opencv-python-headless` 5.0.0.93 while the desktop lock pins 4.13.0.92.
