@@ -3382,6 +3382,48 @@ class BOQService:
         if "metadata" in fields:
             fields["metadata_"] = fields.pop("metadata")
 
+        # ── Unit provenance dies with the value it described ──────────────
+        # A GAEB import records the source file's own <QU> in
+        # ``metadata['gaeb_unit_original']``, writing the empty string when the
+        # file stated no unit (an X84 item cannot carry one). The importer then
+        # guesses a unit so the row can be stored, and the empty key is what
+        # marks that stored unit as ours rather than the file's.
+        #
+        # The key is therefore making two claims at once: what the source said,
+        # and whether the current value is still our guess. They agree at import
+        # and come apart the moment a person edits the row. An estimator who
+        # corrects an invented "lsum" to "m3" has stated a unit; leaving the key
+        # empty would keep asserting nobody did, and every reader of the claim -
+        # the GAEB export among them - would go on discarding a value a human
+        # deliberately supplied, on exactly the rows somebody cared enough to
+        # fix. So a real change to the unit retires the claim.
+        #
+        # The claim is dropped rather than rewritten. It says this unit came
+        # from our fallback because the file could not state one, and once a
+        # person types "m3" that is not superseded, it is false. Storing the new
+        # unit under the same key would keep a slot alive that reads as
+        # provenance and no longer is, for the next person to interpret or write
+        # into. Absence is the honest form of "we have no claim about where this
+        # value came from", and every reader already handles it: an absent key
+        # means the row is not one we guessed for, which is exactly true.
+        #
+        # Only a change counts. Re-submitting the identical unit is not a person
+        # stating anything - it is a form round-tripping, a bulk update touching
+        # every row, an import re-running - and if those cleared the claim the
+        # provenance would evaporate on any workflow that rewrites rows
+        # wholesale, invisibly.
+        if "unit" in fields:
+            _new_unit = str(fields["unit"] or "").strip()
+            _old_unit = str(position.unit or "").strip()
+            if _new_unit and _new_unit.casefold() != _old_unit.casefold():
+                _meta_now = fields.get("metadata_")
+                if not isinstance(_meta_now, dict):
+                    _stored_meta = position.metadata_ if isinstance(position.metadata_, dict) else {}
+                    _meta_now = dict(_stored_meta)
+                if "gaeb_unit_original" in _meta_now:
+                    _meta_now.pop("gaeb_unit_original", None)
+                    fields["metadata_"] = _meta_now
+
         # If metadata contains resources, derive unit_rate from resource totals.
         #
         # IMPORTANT: only re-derive when this update was *triggered by* a change
