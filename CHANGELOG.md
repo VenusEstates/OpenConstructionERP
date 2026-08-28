@@ -49,6 +49,28 @@ fault, which is what that field was for. If you have been looking at degraded
 since your last upgrade and could not work out what to do about it, this is
 why, and the answer was usually nothing.
 
+A KPI can be defined by someone who cannot ship Python. The definition is data
+rather than code: one entity, one aggregation, one field and a list of filters,
+and every one of those is a lookup into a published vocabulary, so nothing a
+caller writes is concatenated into SQL or evaluated. The definition is checked
+when it is created, not when it is computed, and a rejection names the part that
+failed and what that part would have accepted. That ordering is the point. A KPI
+validated at compute time reads zero forever and looks exactly like a
+measurement. One definition then works in a tile, in a chart, in an alert rule,
+in a report and in a drill-down without any of those being taught about it.
+Creating one takes the manager permission and goes through the API for now, there
+is no form for it in the interface, but it shows up in the KPI library and in the
+widget and alert pickers as soon as it exists.
+
+Creating a production norm works again. A request that carried no materials came
+back as a server error and rolled the transaction back, so nothing was saved and
+the norm you had just created was not there. Separately, sending an explicit null
+for a field you meant to leave alone reached the column and failed there, because
+an optional field marks what was not supplied and a null cannot be told apart
+from an omission after the fact. Omit a field to leave it unchanged. An explicit
+null is now refused with an explanation instead of a server error, and the
+numeric fields take zero if what you wanted was to clear them.
+
 A report exported as CSV now carries readable column headings, and if you have a
 script reading that export this is the line to read. Where a column used to be
 titled with the raw internal key, kpi_code, it is now titled KPI code. The
