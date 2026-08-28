@@ -1,0 +1,47 @@
+{
+  "bvbs_abs": {
+    "checksum_valid": {
+      "fail": "Línea {line}: el bloque de suma de control indica {declared}, que no coincide con los caracteres del registro",
+      "suggestion": "Vuelva a exportar el archivo desde el sistema CAD; una suma de control incorrecta significa que la linea se alteró o se truncó en tránsito"
+    },
+    "header_field_order": {
+      "fail": "Línea {line}: el bloque de cabecera no es conforme - {problem}",
+      "suggestion": "Escriba todos los campos de cabecera que exige el supergrupo, en el orden que fija la norma, con el identificador presente aunque el valor esté vacío",
+      "missing": "campos ausentes: {fields}",
+      "missing_block": "el registro no lleva bloque de cabecera",
+      "order": "los campos no siguen el orden que fija la norma",
+      "unknown": "campos desconocidos: {fields}"
+    },
+    "geometry_excludes_spacer": {
+      "fail": "Línea {line}: el registro lleva un bloque de geometría y un bloque de separadores, que no pueden coexistir en una linea",
+      "suggestion": "Divida la forma en un registro con la geometría y otro con las posiciones de los separadores"
+    },
+    "ascii_only": {
+      "fail": "Línea {line}: el registro contiene caracteres fuera de ASCII ({characters})",
+      "suggestion": "Sustituya los caracteres acentuados en los campos de texto libre; ABS es un formato ASCII y cualquier otro byte rompe la suma de control"
+    },
+    "record_within_length_budget": {
+      "fail": "Línea {line}: el registro tiene {length} caracteres, por encima del límite de {budget} por forma de doblado",
+      "suggestion": "Divida la forma o saque los datos internos del proyecto del bloque privado"
+    },
+    "geometry_angle_terminated": {
+      "fail": "Línea {line}: los tramos {legs} no llevan ángulo de doblado",
+      "suggestion": "Haga seguir a cada tramo su ángulo y cierre con un w0 explicito una barra que termina recta"
+    },
+    "bend_radius_over_roller": {
+      "fail": "Línea {line}: los tramos {legs} tienen un radio igual o inferior a la mitad del diámetro del mandril ({limit} mm)",
+      "suggestion": "Aumente el radio por encima de la mitad del diámetro del mandril indicado en la cabecera, o declare un mandril mayor"
+    },
+    "developed_length_matches_header": {
+      "fail": "Línea {line}: la geometría desarrolla {developed} mm pero la cabecera indica {stated} mm, una diferencia de {gap} mm",
+      "suggestion": "Corrija las longitudes de los tramos o el total de la cabecera; la máquina sigue la geometría, de modo que el despiece impreso y la barra cortada diferirían"
+    },
+    "mesh_coordinates_non_negative": {
+      "fail": "Línea {line}: la malla tiene coordenadas de barra negativas ({coordinates})",
+      "suggestion": "Desplace el origen de la malla para que el menor valor de x y el menor de y sean cero"
+    }
+  },
+  "common": {
+    "ok": "OK"
+  }
+}

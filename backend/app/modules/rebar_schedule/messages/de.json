@@ -1,0 +1,47 @@
+{
+  "bvbs_abs": {
+    "checksum_valid": {
+      "fail": "Zeile {line}: der Prüfsummenblock nennt {declared}, was nicht zu den Zeichen des Satzes passt",
+      "suggestion": "Datei aus dem CAD-System neu exportieren; eine falsche Prüfsumme bedeutet, dass die Zeile unterwegs verändert oder abgeschnitten wurde"
+    },
+    "header_field_order": {
+      "fail": "Zeile {line}: der Headerblock ist nicht konform - {problem}",
+      "suggestion": "Alle für die Obergruppe vorgeschriebenen Headerfelder in der festgelegten Reihenfolge schreiben; der Indikator gehört auch dann hin, wenn kein Wert vorliegt",
+      "missing": "fehlende Felder: {fields}",
+      "missing_block": "der Satz enthält keinen Headerblock",
+      "order": "die Felder stehen nicht in der festgelegten Reihenfolge",
+      "unknown": "unbekannte Felder: {fields}"
+    },
+    "geometry_excludes_spacer": {
+      "fail": "Zeile {line}: der Satz enthält einen Geometrieblock und einen Abstandhalterblock, die nicht zusammen in einer Zeile stehen dürfen",
+      "suggestion": "Die Position auf zwei Sätze aufteilen: einen mit der Geometrie, einen mit den Abstandhalterpositionen"
+    },
+    "ascii_only": {
+      "fail": "Zeile {line}: der Satz enthält Zeichen außerhalb von ASCII ({characters})",
+      "suggestion": "Umlaute und Akzente in Freitextfeldern ersetzen; ABS ist ein ASCII-Format, jedes andere Byte zerstört die Prüfsumme"
+    },
+    "record_within_length_budget": {
+      "fail": "Zeile {line}: der Satz hat {length} Zeichen und liegt über der Vorgabe von {budget} je Biegeform",
+      "suggestion": "Die Biegeform aufteilen oder projektinterne Daten aus dem Privatblock entfernen"
+    },
+    "geometry_angle_terminated": {
+      "fail": "Zeile {line}: die Schenkel {legs} tragen keinen Biegewinkel",
+      "suggestion": "Auf jeden Schenkel den Winkel folgen lassen und einen gerade endenden Stab mit einem ausdrücklichen w0 abschließen"
+    },
+    "bend_radius_over_roller": {
+      "fail": "Zeile {line}: die Schenkel {legs} haben einen Radius kleiner oder gleich dem halben Biegerollendurchmesser ({limit} mm)",
+      "suggestion": "Den Radius größer als den halben Biegerollendurchmesser aus dem Headerblock wählen oder eine größere Biegerolle angeben"
+    },
+    "developed_length_matches_header": {
+      "fail": "Zeile {line}: die Geometrie ergibt {developed} mm, der Header nennt {stated} mm, Abweichung {gap} mm",
+      "suggestion": "Schenkellängen oder Gesamtlänge korrigieren; die Maschine folgt der Geometrie, damit würden gedruckte Biegeliste und geschnittener Stab auseinanderlaufen"
+    },
+    "mesh_coordinates_non_negative": {
+      "fail": "Zeile {line}: die Matte hat negative Stabkoordinaten ({coordinates})",
+      "suggestion": "Den Mattenursprung so legen, dass der kleinste x-Wert und der kleinste y-Wert null sind"
+    }
+  },
+  "common": {
+    "ok": "OK"
+  }
+}

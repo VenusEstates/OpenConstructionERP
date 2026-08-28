@@ -1,0 +1,47 @@
+{
+  "bvbs_abs": {
+    "checksum_valid": {
+      "fail": "Line {line}: the record's checksum block says {declared}, which does not match the record's characters",
+      "suggestion": "Re-export the file from the CAD system; a checksum mismatch means the line was altered or truncated in transit"
+    },
+    "header_field_order": {
+      "fail": "Line {line}: header block is not conform - {problem}",
+      "suggestion": "Write every header field the super-group requires, in the order the standard fixes, with the identifier present even when the value is empty",
+      "missing": "missing fields: {fields}",
+      "missing_block": "the record carries no header block",
+      "order": "fields are not in the order the standard fixes",
+      "unknown": "unknown fields: {fields}"
+    },
+    "geometry_excludes_spacer": {
+      "fail": "Line {line}: the record carries a geometry block and a spacer block, which cannot both appear on one line",
+      "suggestion": "Split the shape into one record carrying the geometry and one carrying the spacer positions"
+    },
+    "ascii_only": {
+      "fail": "Line {line}: the record holds characters outside ASCII ({characters})",
+      "suggestion": "Replace accented characters in free-text fields; ABS is an ASCII format and any other byte breaks the checksum"
+    },
+    "record_within_length_budget": {
+      "fail": "Line {line}: the record is {length} characters, over the standard's budget of {budget} per bending shape",
+      "suggestion": "Split the shape, or move project-internal data out of the private block"
+    },
+    "geometry_angle_terminated": {
+      "fail": "Line {line}: legs {legs} carry no bend angle",
+      "suggestion": "Follow every leg with its angle, and close a bar that ends straight with an explicit w0 so a machine can tell 'no bend' from 'angle not stated'"
+    },
+    "bend_radius_over_roller": {
+      "fail": "Line {line}: legs {legs} have a radius at or below half the bending-roller diameter ({limit} mm)",
+      "suggestion": "Raise the radius above half the roller diameter given in the header, or state a larger roller"
+    },
+    "developed_length_matches_header": {
+      "fail": "Line {line}: the geometry develops to {developed} mm but the header states {stated} mm, a difference of {gap} mm",
+      "suggestion": "Correct the leg lengths or the header total; the machine follows the geometry, so the printed schedule and the cut bar would differ"
+    },
+    "mesh_coordinates_non_negative": {
+      "fail": "Line {line}: the mesh has negative bar coordinates ({coordinates})",
+      "suggestion": "Move the mesh origin so the smallest x and the smallest y are zero"
+    }
+  },
+  "common": {
+    "ok": "OK"
+  }
+}
