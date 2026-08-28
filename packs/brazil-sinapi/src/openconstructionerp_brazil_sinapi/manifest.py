@@ -50,9 +50,18 @@ MANIFEST = PartnerPackManifest(
         "NBR 9050 accessibility, NBR 5419 lightning protection, Lei 14.133/2021 "
         "public procurement, RPS/NFS-e PDF generation, municipal ISS taxation."
     ),
-    default_locale="pt",
+    # Brazilian Portuguese, not European Portuguese. The frontend ships both
+    # as separate bundles and "pt" is Portugal's, so declaring the base code
+    # moved every user who applied this pack from pt-BR.ts to pt.ts and
+    # renamed their own dialect out from under them.
+    default_locale="pt-BR",
     additional_locales={
-        "pt": "locales/pt-BR.json",
+        # The key is the code ``GET /api/v1/partner-pack/locale/{code}`` answers
+        # to, and the frontend asks for the code that normalises to the UI
+        # language now on screen. Under "pt" it asked for pt-BR and got a 404,
+        # so the file below - which has always been Brazilian - went unread the
+        # moment default_locale started resolving to pt-BR.
+        "pt-BR": "locales/pt-BR.json",
     },
     cwicr_regions=[
         # Only one Brazilian CWICR region is published in the marketplace
