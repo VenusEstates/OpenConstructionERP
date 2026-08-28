@@ -29,7 +29,9 @@
 //      AND the tile provider, because ODbL asks for the data credit and
 //      courtesy asks for the host. The relief credit must NOT name OSM: those
 //      tiles carry no OSM data at all, and crediting a source that is not in
-//      the picture is its own kind of false statement.
+//      the picture is its own kind of false statement. Rule 5 imports the two
+//      constants; the surface rules above read source text, because what they
+//      ask about is how a component is written and not what a value holds.
 //
 // WHY THE INDIRECTION. The credit used to be pasted literally into three
 // components. That is what rules 1 and 3 were originally written against, and
@@ -58,6 +60,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { RELIEF_ATTRIBUTION, TILE_ATTRIBUTION_HTML } from '../shared/ui/ProjectMap/basemap';
+
 const SRC = resolve(__dirname, '..');
 
 /** The single module that owns every attribution string. */
@@ -84,9 +88,6 @@ const RELIEF_CREDIT_CONST = 'RELIEF_ATTRIBUTION';
  * it survives renaming.
  */
 const RETIRED_PROVIDERS = ['cartocdn.com', 'carto.com'];
-
-/** Read the credit module once; several assertions below interrogate it. */
-const creditModule = readFileSync(resolve(SRC, CREDIT_MODULE), 'utf-8');
 
 /** Turning the library's own control off. */
 const DISABLES_BUILTIN = 'attributionControl={false}';
@@ -159,33 +160,51 @@ describe('every map surface credits OpenStreetMap', () => {
     }
   });
 
-  // Slices to the end of the STATEMENT, not to the first semicolon: the
-  // value is HTML and `&copy;` carries one, so a naive slice reads back
-  // the four characters `&copy` and every assertion below it goes green
-  // against a string that is not the credit.
+  // The two credits arrive by import, not by slicing them out of the module's
+  // source. A value read through the module system is the constant it is named
+  // after, whatever the file looks like on disk, and that is the whole point
+  // here: this pair used to isolate each constant by searching for the next
+  // `';\n'` after its declaration. Nothing forces LF on a .ts checkout and the
+  // Windows runner takes the default, so on that machine the terminator is
+  // `';\r\n'`, the search returned -1, and `slice(start, -1)` ran to the end of
+  // the file. The relief assertion then read TILE_ATTRIBUTION_HTML, which
+  // credits OpenStreetMap and is right to, and went red while saying nothing
+  // about the relief credit. The vector assertion overran its constant too and
+  // stayed green only because nothing is declared after it, which is the same
+  // defect pointing the other way: an assertion about whichever constant is
+  // last in the file, not about the one it names.
+  //
+  // The typeof guards are load-bearing rather than decorative. A constant that
+  // was renamed away arrives as `undefined`, and `/openstreetmap/i.test`
+  // stringifies that to "undefined" and answers false, so the relief rule
+  // would pass on a module that no longer has a relief credit at all.
   it('the vector credit names both the data and the tile provider', () => {
-    const start = creditModule.indexOf(`export const ${VECTOR_CREDIT_CONST}`);
-    expect(start, `${CREDIT_MODULE} does not export ${VECTOR_CREDIT_CONST}`).toBeGreaterThan(-1);
-    const value = creditModule.slice(start, creditModule.indexOf(';\n', start));
-    expect(value, 'the vector credit must link the OSM copyright page').toContain(OSM_CREDIT);
     expect(
-      /openfreemap|openmaptiles/i.test(value),
+      typeof TILE_ATTRIBUTION_HTML,
+      `${CREDIT_MODULE} does not export ${VECTOR_CREDIT_CONST}`,
+    ).toBe('string');
+    expect(TILE_ATTRIBUTION_HTML, 'the vector credit must link the OSM copyright page').toContain(
+      OSM_CREDIT,
+    );
+    expect(
+      /openfreemap|openmaptiles/i.test(TILE_ATTRIBUTION_HTML),
       'the vector credit must also name whoever serves the tiles, not just OSM',
     ).toBe(true);
     for (const host of RETIRED_PROVIDERS) {
-      expect(value, `the vector credit still names ${host}`).not.toContain(host);
+      expect(TILE_ATTRIBUTION_HTML, `the vector credit still names ${host}`).not.toContain(host);
     }
   });
 
   it('the relief credit does not claim OpenStreetMap data', () => {
-    const start = creditModule.indexOf(`export const ${RELIEF_CREDIT_CONST}`);
-    expect(start, `${CREDIT_MODULE} does not export ${RELIEF_CREDIT_CONST}`).toBeGreaterThan(-1);
-    const value = creditModule.slice(start, creditModule.indexOf(';\n', start));
     expect(
-      /openstreetmap/i.test(value),
+      typeof RELIEF_ATTRIBUTION,
+      `${CREDIT_MODULE} does not export ${RELIEF_CREDIT_CONST}`,
+    ).toBe('string');
+    expect(
+      /openstreetmap/i.test(RELIEF_ATTRIBUTION),
       'the relief tiles carry no OSM data. Crediting OSM there is a false ' +
         'licence statement, the same defect as a stale credit, mirrored.',
     ).toBe(false);
-    expect(value.toLowerCase()).toContain('natural earth');
+    expect(RELIEF_ATTRIBUTION.toLowerCase()).toContain('natural earth');
   });
 });
