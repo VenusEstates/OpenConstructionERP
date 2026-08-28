@@ -17,8 +17,8 @@ was that every outbound link in the product - the docs, the repository, the
 marketing site, contact mail - did nothing at all when clicked. No error, no
 browser, nothing, because the frontend swallowed the rejection.
 
-Three things have to stay true for that to stay fixed, and this gate checks all
-three.
+Four things have to stay true for that to stay fixed, and this gate checks all
+four.
 
 Everything the application page invokes has to be reachable from it
 -------------------------------------------------------------------
@@ -52,10 +52,41 @@ application than the one that runs. What makes that worth a check rather than a
 note is that the reassuring version of it - we do not call it - is exactly the
 kind of statement that gets written down once and quietly stops being true.
 
+Nothing may hand a link to something that re-parses it
+------------------------------------------------------
+Opening a link on Windows used to run ``cmd /c start "" "<target>"``, so the
+address became part of a command line that cmd.exe re-parsed. Quoting held off
+the separators, but cmd expands ``%NAME%`` inside double quotes as readily as
+outside. Measured: ``%USERNAME%`` became the account name and ``%CD%`` became
+the full path of the working directory, both sent to whatever host the link
+named. It is now ``ShellExecuteW`` with the target as one argument.
+
+This check is deliberately NOT "have the three helpers that used to do the
+quoting come back". They are deleted, so the compiler already refuses calls to
+them, but the compiler has nothing to say about a fresh ``Command::new("cmd")``
+written under a fourth name, and a guard keyed to a helper stops protecting the
+moment somebody adds a second caller. So the question asked here is a property
+of the path instead: does anything in the Windows link-opening path construct a
+process at all, and does anything anywhere in the crate start a program that
+re-parses what it is given.
+
+It reads the source rather than the call graph, so it cannot follow a process
+construction into a helper the opener calls. What it can do, and does, is fail
+when the set of opener functions it knows about stops matching what is in the
+file, which is the moment its own scope has gone stale.
+
 The pattern matcher below is a deliberately narrow subset of the URLPattern
 standard that Tauri actually uses, so it self-tests before every scan against
 cases measured against the real ``tauri_utils::acl::RemoteUrlPattern``. A
 matcher that quietly stopped matching would make this gate vacuously green.
+
+The same reasoning applies to every check here and is worth stating once. A
+proof that plants a defect has to check the defect actually landed, or its
+silence is indistinguishable from its success. The proof for the opener change
+first reported "found 0 sites to plant" because ``main.rs`` is a CRLF file and
+the planted literals were not; had it asserted only that the tests went red it
+would have said nothing while looking like it ran. Every scan below therefore
+asserts on what it found before drawing a conclusion from what it did not.
 """
 
 from __future__ import annotations
@@ -101,6 +132,25 @@ APP_WINDOW_COMMANDS = (
     "open_app_in_browser",
     "set_update_check_enabled",
     "decline_update_version",
+)
+
+# The functions the Windows link-opening path is made of. Named rather than
+# discovered, because a scope that grows by itself cannot go stale and therefore
+# cannot tell you it has. If one of these is renamed or split, this gate fails
+# saying it can no longer find the path, which is the correct thing to say.
+OPENER_FUNCTIONS = ("open_with_os_default", "shell_target", "shell_execute")
+
+# Ways to get a child process in this crate. `raw_arg` is here because it is not
+# a way to start one at all: it exists to write a command line without escaping,
+# which is precisely what handed cmd.exe an address to re-parse.
+PROCESS_BUILDER_RE = re.compile(r"Command::new|\.raw_arg\b|CreateProcess[AW]?\b|ShellExecuteEx[AW]?\b")
+
+# Programs that take a string and interpret it before doing anything with it.
+# The launcher legitimately starts `open`, `xdg-open`, `kill`, `taskkill` and
+# `node`, and none of those re-parses its arguments; these do.
+SHELL_PROGRAM_RE = re.compile(
+    r"""Command::new\(\s*"(?:[^"]*[/\\])?(cmd|cmd\.exe|command\.com|powershell"""
+    r"""|powershell\.exe|pwsh|pwsh\.exe|sh|bash|zsh|dash)"\s*\)"""
 )
 
 DEFAULT_PORTS = {"http": 80, "https": 443}
@@ -283,6 +333,96 @@ def runtime_acl_call_sites() -> list[str]:
     return found
 
 
+def windows_opener_bodies(source: str) -> list[tuple[str, list[tuple[int, str]]]]:
+    """Pull out the Windows arms of the link-opening functions, with line numbers.
+
+    A top level Rust function ends at the next ``}`` in the first column, which
+    is enough structure for this and needs no parser. Only arms carrying a
+    ``target_os = "windows"`` attribute are returned: the other arms of
+    ``open_with_os_default`` spawn ``open`` and ``xdg-open`` quite legitimately,
+    and a check that flagged them would be describing the wrong platform.
+
+    ``not(...)`` is stripped before that attribute is read, and this is not
+    hypothetical tidiness. ``#[cfg(not(target_os = "windows"))]`` contains the
+    string ``target_os = "windows"``, so matching on the substring alone
+    collected the arm that means the exact opposite. Two arms share a name, and
+    the negated one is written second, so it quietly displaced the arm that was
+    supposed to be under inspection. A test asserting the non-Windows arm is
+    ignored is what caught it.
+
+    Returned as a list of pairs rather than a mapping for the same reason: two
+    bodies under one name must both be scanned, not silently reduced to one.
+
+    Args:
+        source: The whole text of one Rust file.
+
+    Returns:
+        One (name, lines) pair per Windows arm, each line as (number, text).
+    """
+    lines = source.splitlines()
+    found: list[tuple[str, list[tuple[int, str]]]] = []
+
+    for index, line in enumerate(lines):
+        match = re.match(r"(?:pub\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)", line)
+        if not match or match.group(1) not in OPENER_FUNCTIONS:
+            continue
+
+        # Attributes sit above the signature, one per line, until something
+        # that is neither an attribute nor a doc comment.
+        windows_only = False
+        back = index - 1
+        while back >= 0:
+            above = lines[back].strip()
+            if above.startswith("#["):
+                positive = re.sub(r"not\s*\([^)]*\)", "", above)
+                windows_only = windows_only or 'target_os = "windows"' in positive
+            elif not above.startswith("///") and above:
+                break
+            back -= 1
+        if not windows_only:
+            continue
+
+        body: list[tuple[int, str]] = []
+        for number in range(index, len(lines)):
+            body.append((number + 1, lines[number]))
+            if number > index and lines[number].startswith("}"):
+                break
+        found.append((match.group(1), body))
+
+    return found
+
+
+def opener_shell_sites() -> tuple[list[str], list[str]]:
+    """Find any process construction in the opener, or any shell in the crate.
+
+    Returns:
+        Two lists of ``path:line: text`` strings. The first is process
+        construction inside the Windows link-opening path, where there should be
+        none at all. The second is a program that re-parses its arguments,
+        anywhere in the crate.
+    """
+    in_opener: list[str] = []
+    shells: list[str] = []
+
+    for path in sorted(SOURCE_DIR.rglob("*.rs")):
+        source = path.read_text(encoding="utf-8")
+        relative = path.relative_to(ROOT)
+
+        for name, body in windows_opener_bodies(source):
+            for number, line in body:
+                stripped = line.strip()
+                if stripped.startswith("//") or not PROCESS_BUILDER_RE.search(line):
+                    continue
+                in_opener.append(f"{relative}:{number}: in {name}(): {stripped[:90]}")
+
+        for number, line in enumerate(source.splitlines(), 1):
+            stripped = line.strip()
+            if not stripped.startswith("//") and SHELL_PROGRAM_RE.search(line):
+                shells.append(f"{relative}:{number}: {stripped[:90]}")
+
+    return in_opener, shells
+
+
 def main() -> int:
     problems = self_test_matcher()
     if problems:
@@ -310,6 +450,51 @@ def main() -> int:
             "\nDeclare the grant in a capability file instead. If a runtime grant is genuinely\n"
             "needed, that is a decision to make deliberately and record here, not one to let\n"
             "through on the strength of the code compiling."
+        )
+        return 1
+
+    # What the scan found, asserted before anything is concluded from what it
+    # did not find. A scope that has gone stale reports nothing and looks
+    # exactly like a clean tree.
+    opener_bodies = windows_opener_bodies(LAUNCHER.read_text(encoding="utf-8"))
+    opener_names = [name for name, _ in opener_bodies]
+    missing = [name for name in OPENER_FUNCTIONS if name not in opener_names]
+    if missing:
+        print("This gate can no longer find the Windows link-opening path: " + ", ".join(missing))
+        print(
+            f"\nIt looks for {', '.join(OPENER_FUNCTIONS)} in "
+            f'{LAUNCHER.relative_to(ROOT)}, each carrying a target_os = "windows"\n'
+            "attribute. One of them has been renamed, split, moved to another file or had its\n"
+            "attribute changed, so the check below is now reading nothing and would pass\n"
+            "whatever the opener does.\n"
+            "\nPoint OPENER_FUNCTIONS at whatever the path is called now. Do not delete the\n"
+            "check: an empty scope is the one failure it cannot report on its own, which is\n"
+            "why it is reported here instead."
+        )
+        return 1
+
+    in_opener, shells = opener_shell_sites()
+    if in_opener or shells:
+        if in_opener:
+            print("The link-opening path constructs a process:")
+            for site in in_opener:
+                print(f"  {site}")
+        if shells:
+            print("A program that re-parses its arguments is started here:")
+            for site in shells:
+                print(f"  {site}")
+        print(
+            '\nOpening a link on Windows used to run cmd /c start "" "<target>", which made the\n'
+            "address part of a command line cmd.exe then re-parsed. Quoting stopped the command\n"
+            "separators and did nothing about percent expansion: cmd substitutes %NAME% inside\n"
+            "double quotes as readily as outside, so %USERNAME% in a link became the account\n"
+            "name and %CD% became the full path of the working directory, both sent to whatever\n"
+            "host the link named. Six of seven names measured expanded, and only one of those\n"
+            "was in the process environment block, so no denylist was ever going to close it.\n"
+            "\nThe opener hands the target to ShellExecuteW as a single argument, and the whole\n"
+            "point is that nothing between the caller and the operating system parses it. Use\n"
+            "open_with_os_default rather than starting a process, and if a process is genuinely\n"
+            "needed, pass the target as an argument rather than building a command line."
         )
         return 1
 
@@ -421,7 +606,9 @@ def main() -> int:
         f"{len(commands)} permission(s) and {len(sets)} set(s); "
         f"all {len(handlers)} registered command(s) are granted; "
         f"all {len(APP_WINDOW_COMMANDS)} command(s) the application page invokes "
-        f"({', '.join(APP_WINDOW_COMMANDS)}) reach it through {names}."
+        f"({', '.join(APP_WINDOW_COMMANDS)}) reach it through {names}; "
+        f"the {len(opener_bodies)} function(s) of the Windows link-opening path "
+        f"start no process and the crate starts no shell."
     )
     return 0
 
