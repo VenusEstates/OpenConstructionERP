@@ -52,6 +52,12 @@ DENY_PATTERNS = [
     r"(^|/)qa-screenshots/",
     r"(^|/)scripts/[^/]*_report\.(json|txt)$",
     r"(^|/)[^/]*__audit_report\.md$",
+    # Screen-flow mockups for a feature that has not been built. They are a
+    # design-review artefact with no reader once the feature ships, they sit
+    # next to shippable code rather than under docs/, and the first one of
+    # these was neither ignored nor matched by any pattern here, so a pathless
+    # add would have published it.
+    r"(^|/)[^/]*UI_FLOWS\.html$",
     # Underscore-prefixed markdown / text working notes co-located next to
     # source (agent handoffs, audit residue, a11y sweeps, planning notes,
     # per-issue reply drafts) are local-only per constraint #9 - never tracked,

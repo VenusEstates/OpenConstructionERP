@@ -153,6 +153,7 @@ frontend/debug-bim/
 /scripts/*_report.json
 /scripts/i18n_coverage_report.txt
 **/__audit_report.md
+**/*UI_FLOWS.html
 .playwright-mcp/
 
 # TS incremental build cache
