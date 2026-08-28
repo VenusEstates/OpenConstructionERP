@@ -46,6 +46,7 @@ For developers extending or building on OpenConstructionERP.
 
 - [Platform and builder guide](./platform/README.md) - the developer story: the module loader, manifests, auto-discovery, events, hooks, and the first-module tutorial.
 - [Module development quickstart](./module-development/quickstart.md) - zero to a running module in about ten minutes.
+- [Frontend module development guide](../frontend/src/modules/MODULE_DEVELOPMENT_GUIDE.md) - the other half of the job. The quickstart above builds the Python package that serves the data; this one builds the React screen that shows it, covering the `manifest.ts` that declares routes, nav rows and bundled translations, registering it in the module registry, and the shared conventions for fetching from the API, toasts, UI components and vitest tests. One caveat while reading it: its translation steps still describe editing per-language blocks inside `frontend/src/app/i18n.ts`, which is no longer where the strings live. Each language now has its own file under `frontend/src/app/locales/`.
 - [BOQ importer plugin walkthrough](./module-development/boq-importer-plugin.md) - a worked example that builds a real import module.
 - Live API reference: a running instance publishes an interactive OpenAPI reference at `/docs`, and every module mounts its endpoints under `/api/v1/<module>/`.
 

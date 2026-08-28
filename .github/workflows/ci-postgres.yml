@@ -4,11 +4,14 @@ name: CI (PostgreSQL)
 # PostgreSQL 16 cluster booted in-process from the pixeltable-pgserver wheel
 # (bundled PG binaries, NO Docker service container). This is the gate that
 # stops PostgreSQL-only regressions (jsonb[] / dialect DDL, JSONB @> operators,
-# case-sensitive LIKE vs ILIKE, UUID round-trips) from shipping untested while
-# SQLite is still the default runtime. The legacy SQLite suite (149 self-built
-# per-file engine fixtures) is NOT yet ported to PG — that is the documented
-# Phase-2 stretch (template-database clone-per-test).
-# See docs/postgres-migration/MASTER_PLAN_pg_embedded.md.
+# case-sensitive LIKE vs ILIKE, UUID round-trips) from shipping untested. The
+# comment here used to say SQLite was still the default runtime; it stopped
+# being true in 6.6.0, when SQLite support was removed and PostgreSQL became
+# the only supported database. The legacy per-file engine fixtures the old
+# suite used are still not ported, which is the documented Phase 2 stretch
+# (template-database clone-per-test).
+# The migration plan behind this job is kept in the maintainers' internal notes
+# rather than in the repository.
 
 on:
   push:

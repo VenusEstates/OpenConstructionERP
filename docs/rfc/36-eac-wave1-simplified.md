@@ -174,7 +174,8 @@ naturally on top of W1.2.
   unzip, validate against BCF 3.0 schema, assert one topic per failing
   rule.
 - Open exported BCF in any BCF-compatible tool (manual smoke
-  test, documented in `docs/qa/bcf-validation.md`).
+  test, recorded in the maintainers' internal QA notes rather than in
+  this repository).
 
 ### W1.5 — Classification engine, rule-based tier → v2.6.4
 
@@ -343,7 +344,7 @@ data/classifications/din276-allowed.json
 data/classifications/nrm-allowed.json
 data/classifications/masterformat-allowed.json
 docs/user-guide/ids-roundtrip.md
-docs/qa/bcf-validation.md
+(BCF manual-validation notes)             # internal QA record, not in this repo
 ```
 
 Modified (Wave 1):

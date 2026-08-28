@@ -7,6 +7,17 @@ new module, not editing the platform.
 
 This guide takes you from zero to a running module in about 10 minutes.
 
+It covers the backend only: the Python package, its manifest, and the API it
+serves. When your module also needs a screen, read the
+[frontend module development guide](../../frontend/src/modules/MODULE_DEVELOPMENT_GUIDE.md)
+next. It covers the part that has no equivalent here, the TypeScript `manifest.ts`
+that declares routes, sidebar rows and bundled translations, registering it in the
+frontend module registry, and the shared conventions for calling the API, raising
+toasts, using the design-system components and writing vitest tests. One caveat while
+reading it: its translation steps still describe editing per-language blocks inside
+`frontend/src/app/i18n.ts`, which is no longer where the strings live. Each language now
+has its own file under `frontend/src/app/locales/`.
+
 ## The plugin model
 
 A module is a Python package that:

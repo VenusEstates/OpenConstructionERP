@@ -169,8 +169,8 @@ back to the env-var / first-installed precedence when absent.
   `pip install openconstructionerp openconstructionerp-batimatech-ca` →
   alembic v3148 head, backend boots with `"Partner pack active:
   batimatech-ca"` log line, 5/5 API endpoints pass, 5/5 browser
-  screenshots pass. Screenshots committed at
-  `docs/qa/v6-partner-pack-verification/`.
+  screenshots pass. The screenshots were captured and retained with the
+  maintainers' internal verification records, not in this repository.
 - 10 reference packs under `packs/` exercise the full manifest surface
   (locales, favicon, multiple rule-pack slugs, optional fields).
 

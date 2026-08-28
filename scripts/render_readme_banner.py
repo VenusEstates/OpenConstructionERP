@@ -332,14 +332,19 @@ def render() -> None:
     y = draw_legend(pen, data, top_pad + comb.height + legend_gap, WIDTH - 2 * MARGIN)
 
     busiest = ", ".join(ident for ident, _ in data.degree.most_common(3))
+    # A module is a package the loader can find, which means one carrying a
+    # manifest. The rest of the cells are the shared libraries that sit in the
+    # same directory and are imported by name, so the headline counts modules
+    # and the line under it accounts for the difference rather than hiding it.
+    modules = sum(1 for m in data.modules if m.manifest_name)
+    libraries = len(data.modules) - modules
     lead = (
-        f"{len(data.modules)} backend modules  ·  {len(data.declared)} dependencies declared in their "
+        f"{modules} backend modules  ·  {len(data.declared)} dependencies declared in their "
         f"manifests  ·  {len(data.imports)} imports between them"
     )
     note = (
-        f"Depth of colour is how many other modules each one is wired to. "
-        f"{sum(1 for m in data.modules if data.degree[m.ident])} of {len(data.modules)} are wired to "
-        f"at least one; the deepest are {busiest}."
+        f"{libraries} of the cells are shared libraries, not modules. Colour depth is how many "
+        f"others each is wired to, deepest at {busiest}."
     )
     pen.text((MARGIN, y + caption_gap), lead, font=lead_font, fill=INK)
     pen.text((MARGIN, y + caption_gap + 33 + line_gap), note, font=note_font, fill=MUTED)

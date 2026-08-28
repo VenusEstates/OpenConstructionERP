@@ -5,7 +5,10 @@ construction management, published by DataDrivenConstruction under AGPL-3.0 with
 commercial option for enterprises. This page is the entry point to the architecture
 docs. It explains how the codebase fits together: the monorepo layout, the module
 system, the validation pipeline, the canonical data format, the data stores, and the
-split between the backend and the frontend. This document tracks version 10.10.0.
+split between the backend and the frontend. It describes the platform at the version
+declared in `backend/pyproject.toml`, which read 16.2.0 when this page was last checked.
+That file is the one authority on the version, so read it there rather than trusting the
+number here.
 
 ## Design principles
 
@@ -13,8 +16,12 @@ A few ideas shape every part of the code:
 
 - **Lightweight and simple.** One required dependency, PostgreSQL. The core runs on a
   small VPS or on a laptop.
-- **Modules are plugins.** Every feature is a self-contained package that the loader
-  discovers and mounts automatically. The platform ships 161 of them.
+- **Modules are plugins.** Every backend feature is a self-contained package that the
+  loader discovers and mounts automatically. A module is a directory under
+  `backend/app/modules/` carrying a `manifest.py`, and there were 189 of them at the last
+  count: `ls backend/app/modules/*/manifest.py | wc -l`. A handful of further directories
+  sit alongside them as plain helper packages that other modules import, so counting
+  directories rather than manifests overcounts.
 - **Validation is not optional.** Imported and edited data passes through a rule-based
   validation step that is part of the core workflow, not an afterthought.
 - **CAD and BIM through conversion.** All drawing and model formats convert into one
@@ -43,7 +50,7 @@ A few ideas shape every part of the code:
 
 | Path | What lives here |
 |------|-----------------|
-| `backend/` | The FastAPI application: app factory, settings, the core framework, and all 161 business modules |
+| `backend/` | The FastAPI application: app factory, settings, the core framework, and every business module |
 | `frontend/` | The React single-page application |
 | `packages/oe-sdk/` | Python SDK for building modules outside the main tree |
 | `modules/` | Community and example modules, including the module template |
@@ -67,11 +74,13 @@ engine, the RBAC permission engine, storage, vector search, and i18n. Business f
 live in `core/`'s sibling, `modules/`.
 
 The **frontend** is a React single-page application under `frontend/src/`. `app/`
-holds the shell, routing, layout, and i18n setup. `features/` holds roughly 150 feature
-folders that mirror the backend modules. `shared/` holds the design-system UI
+holds the shell, routing, layout, and i18n setup. `features/` holds the feature folders
+that mirror the backend modules, 180 of them at the last count
+(`ls -d frontend/src/features/*/ | wc -l`). `shared/` holds the design-system UI
 components, hooks, utilities, the generated API client, and auth helpers. `stores/`
-holds the Zustand stores. `modules/` holds an in-app module registry so optional modules
-register their routes, sidebar entries, and search from a single manifest. Heavy pages
+holds the Zustand stores. `modules/` holds an in-app registry for the optional plugin
+modules, which declare their routes from a single manifest; see "Adding a screen to the
+frontend" below for what that registry does and does not do for you. Heavy pages
 (the BOQ grid, the 3D and BIM views, the takeoff viewer) are code-split and loaded on
 demand.
 
@@ -95,11 +104,47 @@ flowchart TD
 A module's router auto-mounts at `/api/v1/<module>/` (kebab-case is the canonical URL,
 with the underscore form kept as a legacy alias). Its models auto-register so database
 migrations pick them up. Its hooks, events, and validators load automatically if the
-files exist. Core modules are always on. Modules in the other categories (integration,
-regional, community) can be enabled or disabled at runtime, and the choice is persisted,
-so a workspace only carries what it needs. The frontend mirrors this contract: a module
-registry under `frontend/src/modules/` wires routes, sidebar, and search from a
-per-module manifest, so adding a module is a matter of dropping in a folder.
+files exist. Core modules are always on: the loader refuses to disable a manifest whose
+`category` is `core`, and that was 119 of the 189 manifests at the last count. Everything
+else, among them the business, regional, extension, controls and enterprise categories,
+can be enabled or disabled at runtime, and the choice is persisted, so a workspace only
+carries what it needs. To see the current split, run
+`grep -rhoE 'category="[a-z_]+"' backend/app/modules/*/manifest.py | sort | uniq -c`.
+
+## Adding a screen to the frontend
+
+The backend story above is genuinely drop-in: put the package in place, restart, and the
+loader finds it. The frontend is not one system but two, and they differ in how much they
+register for you. Reading only the backend paragraph and assuming it carries over is the
+usual way to lose an afternoon here.
+
+**Feature folders** under `frontend/src/features/` are the large majority of the product,
+180 directories at the last count. Nothing discovers them. Each one is wired by hand in
+`frontend/src/app/App.tsx`, which imports the page, usually through a `lazy()` call, and
+gives it an explicit `<Route path=...>` entry. There were 280 of those entries at the last
+count: `grep -c '<Route path=' frontend/src/app/App.tsx`. The sidebar row is maintained
+separately again, in the screen catalogue at `frontend/src/app/layout/navCatalog.ts`,
+which carried 142 rows: `grep -cE "^ +\{ .*to: '" frontend/src/app/layout/navCatalog.ts`.
+Adding a feature therefore means a folder, plus an import, plus a route, plus a nav row.
+
+**Plugin modules** under `frontend/src/modules/` are the smaller, opt-in set: 17 of them,
+one `manifest.ts` each, listed in `frontend/src/modules/_registry.ts`. The other directory
+there, `_shared/`, holds helpers rather than a module. These come closer to drop-in but do
+not reach it. A new one needs its folder and two hand-written lines in `_registry.ts`, an
+import of the manifest and an entry in the `MODULE_REGISTRY` array. Once it is in that
+array its routes really are automatic: `useModuleRouteElements` walks the registry and
+mounts a route for every enabled module without anyone naming it. Its sidebar row is not.
+The registry still exposes `getModuleNavItems`, and the sidebar still calls it for a group
+that asks for one, but the shipped manifests have moved away from it. Fifteen of the 17
+declare `navItems: []`, and the two that do declare a row name groups that
+`navCatalog.ts` deliberately no longer uses, so those two screens are listed in the
+catalogue by hand like any feature. Treat the sidebar as hand-maintained in both systems
+and you will not be surprised.
+
+So the rule of thumb is this. On the backend, a folder is enough. On the frontend, a
+plugin module gets its routes for free after two lines in the registry, a feature folder
+gets nothing for free, and neither gets a sidebar entry without an edit to
+`navCatalog.ts`.
 
 ## Events and hooks
 
@@ -118,7 +163,9 @@ part of the data path; actions log and swallow errors because they are side effe
 Validation is a first-class citizen, not an add-on. The engine lives in
 `core/validation/`. A `ValidationRule` declares an id, the standard it belongs to, a
 severity (error, warning, or info), and a category (structure, completeness,
-consistency, compliance, quality, or custom). Rules are grouped into named rule sets
+consistency, compliance, quality, custom, or diagnostic, the last being an engine or
+infrastructure failure rather than a compliance finding). Rules are grouped into named
+rule sets
 such as `din276`, `gaeb`, `nrm`, `masterformat`, `boq_quality`, `bim_compliance`, and
 `project_completeness`, plus regional sets. The engine runs the selected rule sets over
 the data and returns a `ValidationReport` with an overall status, a severity-weighted
