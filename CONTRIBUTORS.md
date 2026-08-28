@@ -176,6 +176,11 @@ implementation is our own.
 - **dizconnectz** ([@dizconnectz](https://github.com/dizconnectz)): reported through a private
   security advisory a cross-tenant access gap where a project handover document bundle could be
   read by another tenant. We closed it with an ownership check on the handover chain.
+- **sa05e60** ([@sa05e60](https://github.com/sa05e60)): reported through a private security
+  advisory that one user's own self-hosted AI provider setting could outlive the request that
+  set it and then apply to other people served by the same process, so a second user's project
+  data could be sent to a host they never chose. Our own fix keeps that setting to a single
+  request.
 
 - **buzzy84** ([@buzzy84](https://github.com/buzzy84)): asked for a client Excel round-trip
   that returns a completed bill in the original workbook with its sheets, styles and formulas
