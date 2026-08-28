@@ -1699,6 +1699,15 @@ def create_app() -> FastAPI:
 
     app.include_router(branding_router, prefix="/api/v1")
 
+    # The third-party licence texts that ship inside every artefact. Public for
+    # the same reason branding's GET is: they are published documents that say
+    # nothing about this workspace. They travelled with the product for its
+    # whole life with nothing able to read them, which on an offline desktop
+    # install left the About panel's gnu.org link pointing at nothing.
+    from app.core.license_router import router as license_router
+
+    app.include_router(license_router, prefix="/api/v1")
+
     # Module management API (list / enable / disable)
     from app.core.module_router import router as module_mgmt_router
 
