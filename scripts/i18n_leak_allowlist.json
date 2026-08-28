@@ -4,6 +4,11 @@
     "note": "book/product title, identical in en/ru/kk (kk locale addition)",
     "reason_category": "product_name"
   },
+  "about.third_party_size": {
+    "en_value": "{{kb}} kB",
+    "note": "unit abbreviation (kilobytes) beside a bundled licence text's size, the same shape as the settled sibling bim.converter_panel_size ({{size}} MB); the only literal is kB, written the same way in every locale we ship including the Cyrillic and Arabic-script ones, and en-US is a spelling overlay that does not carry the key at all",
+    "reason_category": "abbreviation"
+  },
   "accommodation.bim_link.label": {
     "en_value": "BIM",
     "note": "named open data / interchange standard or format code (CLAUDE.md: not translated)",

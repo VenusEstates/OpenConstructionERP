@@ -104,16 +104,79 @@ export function getLanguageByCode(code: string): (typeof SUPPORTED_LANGUAGES)[nu
  * language that has no strings.
  */
 export function normalizePackLocale(locale: string | null | undefined): string {
-  if (!locale) return 'en';
-  const trimmed = locale.trim();
-  // Match how i18next writes a two-part code, so 'en-us' and 'EN-us' both find
-  // the 'en-US' we ship rather than falling through to the base language.
-  const parts = trimmed.split('-');
-  const regional =
-    parts.length === 2 ? `${parts[0]!.toLowerCase()}-${parts[1]!.toUpperCase()}` : trimmed;
-  if (SUPPORTED_LANGUAGES.some((l) => l.code === regional)) return regional;
+  return matchSupportedLanguage(locale) ?? 'en';
+}
+
+/**
+ * The language code we ship that best answers a BCP-47 tag, or ``null`` when
+ * we ship nothing for it.
+ *
+ * Region first, then the base language, spelled the way i18next spells a
+ * two-part code so that 'pt-br' and 'PT-BR' both find the 'pt-BR' bundle we
+ * actually registered. A three-part tag such as zh-Hans-CN finds no
+ * 'zh-HANS' and falls to 'zh', which is the right answer for it.
+ *
+ * One function because there is one rule, and it is asked in three places:
+ * a pack manifest's default_locale, the browser's language at first run, and
+ * the language card the onboarding wizard pre-selects. Those were three
+ * copies, two of which stripped the region unconditionally, which is how a
+ * Brazilian first run opened in European Portuguese with pt-BR.ts sitting
+ * unused a few lines away.
+ */
+export function matchSupportedLanguage(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const parts = raw.trim().split('-');
+  if (parts.length >= 2 && parts[1]) {
+    const regional = `${parts[0]!.toLowerCase()}-${parts[1]!.toUpperCase()}`;
+    if (SUPPORTED_LANGUAGES.some((l) => l.code === regional)) return regional;
+  }
   const base = parts[0]!.toLowerCase();
-  return SUPPORTED_LANGUAGES.some((l) => l.code === base) ? base : 'en';
+  return SUPPORTED_LANGUAGES.some((l) => l.code === base) ? base : null;
+}
+
+/**
+ * The country this browser is most likely sitting in, lower-case ISO 3166-1
+ * alpha-2, or ``null`` when nothing says.
+ *
+ * Two sources, and both are needed. The region subtag of
+ * ``navigator.language`` is the better one wherever it exists, and it is the
+ * ONLY one that can reach Australia, New Zealand or South Africa, because no
+ * language we offer names those countries -- ``en`` names Great Britain. But
+ * a German, French, Polish or Russian browser commonly sends a bare ``de``,
+ * ``fr``, ``pl`` or ``ru`` with no region at all, so a region-only reading
+ * returns nothing for most of Europe, which is where most of our cases are.
+ * Falling back to the country named by the resolved language covers those,
+ * and every one of the SUPPORTED_LANGUAGES entries carries that field.
+ *
+ * ``en`` maps to ``gb``, so a browser sending a bare ``en`` is read as United
+ * Kingdom rather than United States. That is chosen, not overlooked:
+ * ``en-US`` is its own entry with its own country, so a reader who wants
+ * American English has a browser that already says so, and guessing the
+ * larger market from silence would be guessing.
+ *
+ * This is a hint used to OFFER something, never a gate. Nothing may become
+ * unreachable because the guess was wrong, and a wrong guess must always be
+ * one click away from the right answer.
+ *
+ * @param uiLanguage Language to read the fallback country from. Defaults to
+ *   the live ``i18n.language``; pass it explicitly when the caller already
+ *   knows which language it is rendering in, or when a test needs the
+ *   fallback half to be deterministic.
+ */
+export function detectCountry(uiLanguage?: string): string | null {
+  const raw = typeof navigator !== 'undefined' ? navigator.language || '' : '';
+  // Scan past the language subtag rather than reading parts[1], so a script
+  // subtag does not hide the region: zh-Hans-CN has to answer 'cn'. A UN M49
+  // region such as es-419 is deliberately not matched here and falls through
+  // to the language's own country.
+  for (const part of raw.trim().split('-').slice(1)) {
+    if (/^[A-Za-z]{2}$/.test(part)) return part.toLowerCase();
+  }
+  const code = uiLanguage || i18n.language || 'en';
+  const entry =
+    SUPPORTED_LANGUAGES.find((l) => l.code === code) ??
+    SUPPORTED_LANGUAGES.find((l) => l.code === code.split('-')[0]);
+  return entry?.country ?? null;
 }
 
 // Re-export useTranslation for convenience
@@ -225,7 +288,7 @@ export function applyModuleTranslations(
  * SSR-safe: every ``window`` / ``localStorage`` / ``navigator`` access is
  * guarded so the function returns ``'en'`` when called outside a browser.
  */
-function resolveInitialLanguage(): string {
+export function resolveInitialLanguage(): string {
   const supported = SUPPORTED_LANGUAGES.map((l) => l.code);
   const isValid = (code: string | null | undefined): code is string =>
     !!code && supported.includes(code);
@@ -255,9 +318,15 @@ function resolveInitialLanguage(): string {
     // localStorage unavailable — fall through.
   }
 
-  // 3. Browser locale (strip region: "de-CH" → "de").
-  const browserLang = (navigator.language || 'en').split('-')[0];
-  if (isValid(browserLang)) return browserLang;
+  // 3. Browser locale. Asks for the full code BEFORE stripping the region,
+  //    because for five of the languages we ship the region is the whole
+  //    point: pt-BR and pt are different files and plain "pt" is European
+  //    Portuguese. Stripping first meant every Brazilian first run opened in
+  //    Portugal's Portuguese and every Mexican one in Spain's Spanish, with
+  //    the regional file sitting right there unused. "de-CH" still resolves
+  //    to "de", because we ship no de-CH.
+  const browserMatch = matchSupportedLanguage(navigator.language);
+  if (browserMatch) return browserMatch;
 
   // 4. Final fallback.
   return 'en';
