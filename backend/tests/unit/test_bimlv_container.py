@@ -281,3 +281,123 @@ async def test_embedded_lv_is_importable_by_platform_gaeb_importer() -> None:
         assert src.ordinal in got, f"ordinal {src.ordinal} lost on GAEB import"
         assert got[src.ordinal].unit == src.unit
         assert Decimal(str(got[src.ordinal].quantity)) == src.quantity
+
+
+# ── GAEB unit codes in the LV member ─────────────────────────────────────────
+
+# The unit codes GAEB DA XML 3.3 defines for <QU> (Appendix B short forms,
+# German market lexicon). Deliberately written out here rather than imported
+# from the mapping the writer uses: a test that reads the same table as the
+# code under test would accept whatever that table happened to say, including
+# "lsum". This is the format's vocabulary, checked independently.
+_GAEB_QU_VOCABULARY: frozenset[str] = frozenset(
+    {
+        "m", "cm", "mm", "km",
+        "m2", "m3", "l",
+        "kg", "g", "t",
+        "Stk", "psch",
+        "h", "d", "Mo", "Jahr",
+        "m3/h",
+    }
+)  # fmt: skip
+
+# Internal tokens that are NOT GAEB codes. These are the platform's own
+# vocabulary and appear in no GAEB file; the writer used to emit them raw.
+_INTERNAL_ONLY_TOKENS: frozenset[str] = frozenset({"lsum", "pcs", "ls", "lump", "ea", "sqm", "cbm"})
+
+
+def _qu_values(data: bytes) -> list[str]:
+    """Every <QU> text in the container's LV member, namespace-agnostic."""
+    from xml.etree import ElementTree as _ET
+
+    parsed = read_container(data)
+    root = _ET.fromstring(parsed.lv_gaeb_bytes.decode("utf-8"))
+    return [(el.text or "").strip() for el in root.iter() if el.tag.split("}", 1)[-1] == "QU"]
+
+
+def test_lv_member_emits_only_codes_the_format_defines() -> None:
+    """A lump sum and a piece must leave as GAEB codes, not internal tokens.
+
+    Asserted against the format's vocabulary rather than an expected string,
+    so the test still means something if the mapping is retuned. The previous
+    writer put pos.unit into <QU> verbatim, which sent "lsum" and "pcs" into
+    an exchange file where neither is defined.
+    """
+    positions = [
+        ContainerPosition(
+            ordinal="01.001",
+            description="Site set-up, all-inclusive",
+            unit="lsum",
+            quantity=Decimal("1.000"),
+            unit_rate=Decimal("8500.00"),
+        ),
+        ContainerPosition(
+            ordinal="01.002",
+            description="Precast lintel",
+            unit="pcs",
+            quantity=Decimal("12.000"),
+            unit_rate=Decimal("94.50"),
+        ),
+    ]
+    data = write_container(positions, {"01.001": ["1abc"], "01.002": ["2def"]}, _sample_model_ref())
+
+    values = _qu_values(data)
+    assert len(values) == 2
+    for qu in values:
+        assert qu in _GAEB_QU_VOCABULARY, f"<QU>{qu}</QU> is not a unit code GAEB defines"
+        assert qu.lower() not in _INTERNAL_ONLY_TOKENS, f"internal token {qu!r} leaked into the LV"
+
+
+def test_sample_positions_stay_within_the_format_vocabulary() -> None:
+    """The units the other tests use must also be codes, not just round-trip."""
+    data = write_container(_sample_positions(), _sample_mapping(), _sample_model_ref())
+    for qu in _qu_values(data):
+        assert qu in _GAEB_QU_VOCABULARY
+
+
+def test_qu_never_exceeds_the_length_the_profile_allows() -> None:
+    """Our own X8x profile caps UnitOfMeasure at 10 characters."""
+    positions = [
+        ContainerPosition(
+            ordinal="01.001",
+            description="Locale-specific unit label",
+            unit="a-very-long-unit-label",
+            quantity=Decimal("1.000"),
+            unit_rate=Decimal("1.00"),
+        )
+    ]
+    data = write_container(positions, {"01.001": ["1abc"]}, _sample_model_ref())
+    for qu in _qu_values(data):
+        assert len(qu) <= 10, f"<QU>{qu}</QU> is {len(qu)} chars, profile allows 10"
+
+
+@pytest.mark.asyncio
+async def test_lump_sum_survives_the_round_trip_as_a_lump_sum() -> None:
+    """Mapping out and back must not change what the unit means.
+
+    "lsum" leaves as "psch" and the platform importer maps "psch" back to
+    "lsum". Emitting a real code must not cost the container its lossless
+    round-trip, which is the property the whole module exists for.
+    """
+    try:
+        from app.modules.boq.importers.gaeb_xml import GAEBXMLImporter
+    except Exception:  # pragma: no cover - importer deps unavailable in this env
+        pytest.skip("GAEB importer not importable in this environment")
+
+    positions = [
+        ContainerPosition(
+            ordinal="01.001",
+            description="Site set-up, all-inclusive",
+            unit="lsum",
+            quantity=Decimal("1.000"),
+            unit_rate=Decimal("8500.00"),
+        )
+    ]
+    data = write_container(positions, {"01.001": ["1abc"]}, _sample_model_ref())
+    parsed = read_container(data)
+
+    imported = await GAEBXMLImporter.parse(parsed.lv_gaeb_bytes)
+    got = {p.ordinal: p for p in imported.positions}
+    assert got["01.001"].unit == "lsum"
+    # And the file itself carried the GAEB code, not the internal token.
+    assert got["01.001"].metadata["gaeb_unit_original"] == "psch"

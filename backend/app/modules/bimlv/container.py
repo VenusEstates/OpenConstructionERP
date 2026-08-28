@@ -51,6 +51,8 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from xml.etree import ElementTree as ET  # noqa: N817 - input is DOCTYPE-guarded below
 
+from app.modules.boq.units import to_gaeb_unit_code
+
 # ── Container constants ──────────────────────────────────────────────────────
 
 CONTAINER_VERSION = "1.0"
@@ -283,7 +285,12 @@ def _build_lv_gaeb_xml(
         ordinal = (pos.ordinal or "").strip()
         item = ET.SubElement(itemlist, "Item", ID="oeItem", RNoPart=ordinal or "0")
         ET.SubElement(item, "Qty").text = _fmt_num(_coerce_decimal(pos.quantity))
-        ET.SubElement(item, "QU").text = (pos.unit or "")[:20]
+        # Translate to the GAEB code. Writing the internal token verbatim put
+        # strings GAEB does not define ("lsum", "pcs") into the LV member, so a
+        # reader outside this platform saw a unit the lexicon has no entry for.
+        qu = to_gaeb_unit_code(pos.unit)
+        if qu:
+            ET.SubElement(item, "QU").text = qu
         rate = _coerce_decimal(pos.unit_rate)
         if rate != 0:
             ET.SubElement(item, "UP").text = _fmt_num(rate)

@@ -299,3 +299,89 @@ def is_approved_unit(unit: str | None) -> bool:
     specific spellings round-trip without 422 errors.
     """
     return normalise_unit(unit) is not None
+
+
+# ── Internal unit token → GAEB ``<QU>`` code ──────────────────────────────
+#
+# GAEB carries the unit as a short code from the market lexicon (GAEB 3.3
+# Appendix B): ``Stk`` for a piece, ``psch`` for a lump sum, ``Mo`` for a
+# month.  Our internal tokens are not those codes - ``pcs`` and ``lsum``
+# in particular appear in no GAEB file - so every writer that emits ``<QU>``
+# has to translate, and a writer that skips the translation puts a string
+# into the exchange format that the format does not define.
+#
+# The inverse direction lives in ``importers/gaeb_xml._GAEB_TO_INTERNAL``.
+# Keep the two in step: a code added here that maps back to a different
+# token there will silently rewrite units on a round-trip.
+GAEB_UNIT_CODES: Final[dict[str, str]] = {
+    # length
+    "m": "m",
+    "cm": "cm",
+    "mm": "mm",
+    "km": "km",
+    # area
+    "m2": "m2",
+    "m²": "m2",
+    "sqm": "m2",
+    # volume
+    "m3": "m3",
+    "m³": "m3",
+    "cbm": "m3",
+    "l": "l",
+    "liter": "l",
+    # mass
+    "kg": "kg",
+    "t": "t",
+    "g": "g",
+    "ton": "t",
+    # count
+    "pcs": "Stk",
+    "piece": "Stk",
+    "stk": "Stk",
+    "stck": "Stk",
+    "st": "Stk",
+    "ea": "Stk",
+    # lump sum
+    "lsum": "psch",
+    "psch": "psch",
+    "lump": "psch",
+    "ls": "psch",
+    # time
+    "h": "h",
+    "hour": "h",
+    "d": "d",
+    "day": "d",
+    "month": "Mo",
+    "mo": "Mo",
+    "year": "Jahr",
+    "a": "Jahr",
+    # volume flow
+    "m3/h": "m3/h",
+}
+
+# GAEB DA XML 3.3 carries the unit as a short code; our own profile schemas
+# (``boq/gaeb_profile/oce-gaeb-3.3-x8*.xsd``) cap it at 10 characters.
+GAEB_UNIT_MAX_CHARS: Final[int] = 10
+
+
+def to_gaeb_unit_code(unit: str | None) -> str:
+    """Return the GAEB ``<QU>`` code for an internal unit token.
+
+    Falls back to the input, stripped and length-capped, when the token has
+    no entry in :data:`GAEB_UNIT_CODES` - a locale-specific label is better
+    carried through imperfectly than dropped, and the container/export
+    formats accept a free-form short string there. Returns ``""`` for an
+    empty input so the caller can omit the element entirely rather than
+    write an empty one.
+
+    Args:
+        unit: Internal unit token (``"m3"``, ``"lsum"``, ``"pcs"`` ...).
+
+    Returns:
+        The GAEB code, or ``""`` when there is nothing to write.
+    """
+    text = (unit or "").strip()
+    if not text:
+        return ""
+    mapped = GAEB_UNIT_CODES.get(text.lower())
+    return (mapped or text)[:GAEB_UNIT_MAX_CHARS]
