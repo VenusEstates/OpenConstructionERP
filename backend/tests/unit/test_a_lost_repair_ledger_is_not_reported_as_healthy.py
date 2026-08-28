@@ -36,8 +36,32 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 if TYPE_CHECKING:
     from fastapi import FastAPI
+
+
+@pytest.fixture(autouse=True)
+def _pin_the_frontend_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Leave ``status`` a function of the ledger, which is what this file is about.
+
+    ``/api/health`` folds a frontend-build probe into the same ``status``
+    field every test here reads, and that probe degrades whenever no
+    ``index.html`` is on disk. The backend CI lane creates ``frontend/dist``
+    holding nothing but a ``.gitkeep``, so the probe answers False for the
+    whole lane, and it broke this file in both directions at once: the
+    "healthy" case could not pass there whatever the ledger said, and each
+    "degraded" case passed there whatever the ledger said, on a verdict the
+    field under test took no part in. A test whose subject cannot change its
+    result is the same defect either way round.
+
+    Pinning the probe is not a claim that a build exists. It says only that
+    whether one does is somebody else's question, asked in its own test.
+    """
+    from app import cli_static
+
+    monkeypatch.setattr(cli_static, "mounted_frontend_intact", lambda: True)
 
 
 def _fresh_app() -> FastAPI:
@@ -93,6 +117,12 @@ def test_a_deployment_that_never_ran_the_repairs_reports_unknown() -> None:
     payload = _health(_fresh_app())
 
     assert payload["data_repair_ledger_failed"] is None
+    # The two other probes a freshly built application can degrade on, named
+    # so that a red run says which one moved instead of pointing at the
+    # ledger. The first is the one the fixture pins; the second is the test
+    # database, without which nothing in this suite means anything anyway.
+    assert payload["frontend_dist_present"] is True
+    assert payload["database"] == "ok"
     assert payload["status"] == "healthy", "never having run is not a fault"
 
 
