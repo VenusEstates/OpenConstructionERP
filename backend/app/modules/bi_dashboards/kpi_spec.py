@@ -206,7 +206,9 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "One priced line of a Bill of Quantities. ``amount`` is the "
             "derived quantity x unit_rate; ``confidence`` is the 0..1 "
             "estimator confidence and may be unset, in which case the row "
-            "is left out of averages instead of being read as zero."
+            "is left out of averages instead of being read as zero. "
+            "``boq_name`` is the parent document's name, so a breakdown "
+            "per bid can be read by a person rather than by id."
         ),
         fields={
             "quantity": KIND_NUMERIC,
@@ -215,6 +217,7 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "amount": KIND_NUMERIC,
             "confidence": KIND_NUMERIC,
             "boq_id": KIND_UUID,
+            "boq_name": KIND_TEXT,
             "parent_id": KIND_UUID,
             "ordinal": KIND_TEXT,
             "description": KIND_TEXT,
@@ -299,6 +302,9 @@ def _bind_boq_position() -> BoundEntity:
                 nullable_source=Position.confidence,
             ),
             "boq_id": BoundField(Position.boq_id, KIND_UUID),
+            # Free: the join to BOQ is already there for the project
+            # scoping, and the column is NOT NULL, so no null source.
+            "boq_name": BoundField(BOQ.name, KIND_TEXT),
             "parent_id": BoundField(Position.parent_id, KIND_UUID, nullable_source=Position.parent_id),
             "ordinal": BoundField(Position.ordinal, KIND_TEXT),
             "description": BoundField(Position.description, KIND_TEXT),
@@ -487,6 +493,22 @@ def _check_value_kind(kind: str, name: str, value: Any, path: str) -> Any:
                 f"field '{name}' is numeric, so its filter value must be a number.",
                 value=value,
             )
+        # Being a number is not enough - it has to be one arithmetic can
+        # use. ``Decimal`` parses ``NaN``, ``sNaN`` and ``Infinity``, and
+        # ``json.loads`` accepts all three as bare tokens, so each one
+        # walks through the acceptance above and then fails silently:
+        # a comparison against NaN is never true, so the filter keeps no
+        # row and the tile reads zero forever; an infinity does the same
+        # from the other end; ``sNaN`` raises inside the compute path,
+        # which catches everything and returns an empty computation. Three
+        # spellings, one symptom, and it is the symptom validation at
+        # creation time exists to prevent.
+        if not _is_finite(value):
+            raise KPISpecError(
+                path,
+                f"field '{name}' is numeric, so its filter value must be a finite number.",
+                value=value,
+            )
         return value
     if kind == KIND_BOOL:
         if not isinstance(value, bool):
@@ -525,6 +547,14 @@ def _looks_numeric(value: Any) -> bool:
     except Exception:
         return False
     return True
+
+
+def _is_finite(value: Any) -> bool:
+    """True when ``value`` is a number the compute path can compare against."""
+    try:
+        return Decimal(str(value)).is_finite()
+    except Exception:
+        return False
 
 
 def validate_spec(raw: Any) -> dict[str, Any]:
@@ -607,24 +637,6 @@ def validate_spec(raw: Any) -> dict[str, Any]:
             value=weight,
         )
 
-    label = raw.get("label_field")
-    if label is not None:
-        if aggregation != "top_by":
-            raise KPISpecError(
-                "spec.label_field",
-                f"aggregation '{aggregation}' takes no label field.",
-                value=label,
-            )
-        label = _lookup_field(entry, label, "spec.label_field")
-        if entry.fields[label] == KIND_NUMERIC:
-            raise KPISpecError(
-                "spec.label_field",
-                f"field '{label}' is numeric, and a label must be something a reader can name a row by.",
-                value=label,
-                allowed=entry.groupable_fields(),
-            )
-        normalised["label_field"] = label
-
     group_by = raw.get("group_by")
     if group_by is not None:
         group_by = _lookup_field(entry, group_by, "spec.group_by")
@@ -636,6 +648,30 @@ def validate_spec(raw: Any) -> dict[str, Any]:
                 allowed=entry.groupable_fields(),
             )
         normalised["group_by"] = group_by
+
+    # Read after ``group_by``, because what decides whether a label makes
+    # sense is whether the spec produces rows to label. It used to be
+    # decided by the aggregation alone, which refused a label to every
+    # breakdown that was not ``top_by``: an amount per bid came back keyed
+    # by a raw ``boq_id``, and the one thing that would have made those
+    # keys readable was the thing being refused.
+    label = raw.get("label_field")
+    if label is not None:
+        if aggregation != "top_by" and "group_by" not in normalised:
+            raise KPISpecError(
+                "spec.label_field",
+                "a label names the rows of a breakdown, so it needs 'group_by' or the 'top_by' aggregation.",
+                value=label,
+            )
+        label = _lookup_field(entry, label, "spec.label_field")
+        if entry.fields[label] == KIND_NUMERIC:
+            raise KPISpecError(
+                "spec.label_field",
+                f"field '{label}' is numeric, and a label must be something a reader can name a row by.",
+                value=label,
+                allowed=entry.groupable_fields(),
+            )
+        normalised["label_field"] = label
 
     raw_filters = raw.get("filters") or []
     if not isinstance(raw_filters, list):
@@ -914,7 +950,15 @@ async def evaluate_spec(
     group_name = spec.get("group_by")
     if group_name:
         group_expr = bound.fields[group_name].expr
-        grouped = select(group_expr.label("grp"), *measures).select_from(bound.model)
+        # The label is aggregated rather than added to GROUP BY. Grouping
+        # by both would split one group into a row per distinct label, and
+        # both rows assign into ``breakdown[key]`` - the later write wins
+        # and a group disappears, the same silent loss ``NULL_GROUP_KEY``
+        # was introduced for. ``min`` keeps exactly one row per group and
+        # picks the same label every run.
+        label_name = spec.get("label_field")
+        label_measures = [func.min(bound.fields[label_name].expr).label("lbl")] if label_name else []
+        grouped = select(group_expr.label("grp"), *label_measures, *measures).select_from(bound.model)
         grouped = _base_predicates(
             grouped,
             bound,
@@ -930,7 +974,16 @@ async def evaluate_spec(
         for grow in (await session.execute(grouped)).all():
             parts = list(grow)
             key = _group_key(parts.pop(0))
-            result.breakdown[key] = str(_fold(aggregation, parts))
+            # With a label the group becomes the same ``{label, value}``
+            # record ``top_by`` returns, so one consumer reads both. Without
+            # one it stays a bare value string, because changing that shape
+            # for every existing breakdown would be a silent contract break
+            # for the widgets already reading them.
+            if label_name:
+                label_value = _group_key(parts.pop(0))
+                result.breakdown[key] = {"label": label_value, "value": str(_fold(aggregation, parts))}
+            else:
+                result.breakdown[key] = str(_fold(aggregation, parts))
     return result
 
 

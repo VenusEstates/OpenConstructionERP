@@ -306,6 +306,53 @@ def test_weighted_avg_without_a_weight_is_rejected() -> None:
     assert exc_info.value.path == "spec.weight_field"
 
 
+@pytest.mark.parametrize(
+    ("aggregation", "extra"),
+    [
+        ("sum", {}),
+        ("avg", {}),
+        ("weighted_avg", {"weight_field": "amount"}),
+        ("top_by", {}),
+    ],
+)
+def test_a_breakdown_can_be_labelled_whatever_the_aggregation(
+    aggregation: str,
+    extra: dict[str, Any],
+) -> None:
+    """A grouped breakdown gets to say what each group is called.
+
+    ``label_field`` used to be the private property of ``top_by``, so the
+    reporter's amount-weighted confidence per bid came back keyed by raw
+    ``boq_id`` values with the one field that would have named them
+    refused. What decides now is whether there are rows to label.
+    """
+    spec = kpi_spec.validate_spec(
+        {
+            "entity": "boq_position",
+            "aggregation": aggregation,
+            "field": "amount" if aggregation != "weighted_avg" else "confidence",
+            "group_by": "boq_id",
+            "label_field": "boq_name",
+            **extra,
+        },
+    )
+    assert spec["label_field"] == "boq_name"
+
+
+def test_a_label_field_needs_something_to_label() -> None:
+    """The counterweight: a headline number has no rows to name."""
+    with pytest.raises(kpi_spec.KPISpecError) as exc_info:
+        kpi_spec.validate_spec(
+            {
+                "entity": "boq_position",
+                "aggregation": "sum",
+                "field": "amount",
+                "label_field": "boq_name",
+            },
+        )
+    assert exc_info.value.path == "spec.label_field"
+
+
 def test_validation_drops_keys_it_does_not_understand() -> None:
     """What is stored is what validation looked at, and nothing else."""
     normalised = kpi_spec.validate_spec(
@@ -416,6 +463,77 @@ async def test_top_position_by_amount_per_bid(session: AsyncSession) -> None:
         Decimal("3000"),
         abs=Decimal("0.01"),
     )
+
+
+@pytest.mark.asyncio
+async def test_a_grouped_breakdown_names_each_group_it_returns(session: AsyncSession) -> None:
+    """The reporter's KPI, with its ids turned into names.
+
+    Two halves had to meet for this to work. The label was refused for
+    every aggregation but ``top_by``, and the entity had no field holding
+    the parent document's name, so even an accepted label had nothing
+    readable to point at. The label resolves through the join
+    ``boq_position`` already carries for project scoping, and it is
+    aggregated rather than grouped by, so one group stays one row.
+
+    Without a label the breakdown keeps its plain ``{key: value}`` shape -
+    see :func:`test_weighted_confidence_computes_per_bid` - because
+    changing it for everything already reading one would be the silent
+    contract break this module exists to avoid.
+    """
+    project_id, bid_a, bid_b = await _seed_two_bids(session)
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(
+        KPIDefinitionCreate(
+            code="bid_confidence_named",
+            name="Amount-weighted bid confidence, per bid",
+            unit="ratio",
+            category="quality",
+            spec={
+                "entity": "boq_position",
+                "aggregation": "weighted_avg",
+                "field": "confidence",
+                "weight_field": "amount",
+                "group_by": "boq_id",
+                "label_field": "boq_name",
+            },
+        ),
+    )
+
+    result = await kpis.compute("bid_confidence_named", session, project_id=project_id)
+
+    assert result.breakdown[str(bid_a)]["label"] == "Bid A"
+    assert result.breakdown[str(bid_b)]["label"] == "Bid B"
+    assert Decimal(result.breakdown[str(bid_a)]["value"]) == pytest.approx(
+        Decimal("0.5"),
+        abs=Decimal("0.0001"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_breakdown_can_be_keyed_by_the_document_name(session: AsyncSession) -> None:
+    """The other way to read a bid: group by the name itself."""
+    project_id, _a, _b = await _seed_two_bids(session)
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(
+        KPIDefinitionCreate(
+            code="amount_per_bid_name",
+            name="Amount per bid",
+            unit="currency",
+            category="financial",
+            spec={
+                "entity": "boq_position",
+                "aggregation": "sum",
+                "field": "amount",
+                "group_by": "boq_name",
+            },
+        ),
+    )
+
+    result = await kpis.compute("amount_per_bid_name", session, project_id=project_id)
+
+    assert Decimal(result.breakdown["Bid A"]) == pytest.approx(Decimal("5000"), abs=Decimal("0.01"))
+    assert Decimal(result.breakdown["Bid B"]) == pytest.approx(Decimal("4000"), abs=Decimal("0.01"))
 
 
 @pytest.mark.asyncio
@@ -997,6 +1115,47 @@ def test_a_filter_value_outside_its_field_kind_is_refused(
         )
     assert exc_info.value.path == expected_path
     assert exc_info.value.value == filter_item["value"]
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["NaN", "nan", "sNaN", "Infinity", "-Infinity", float("nan"), float("inf")],
+)
+def test_a_numeric_filter_value_that_is_not_finite_is_refused(value: Any) -> None:
+    """A number arithmetic cannot use is worse than one that is not a number.
+
+    ``Decimal`` parses every spelling below, and ``json.loads`` accepts
+    the bare ``NaN`` and ``Infinity`` tokens, so all of them walked
+    through the numeric check. Each then failed in a way nothing reports:
+    a comparison against NaN is never true and the filter keeps no row, an
+    infinity empties it from the other end, and ``sNaN`` raises inside the
+    compute path, which catches everything and returns an empty
+    computation. Three spellings, one symptom - a tile reading zero
+    forever, indistinguishable from a real measurement of nothing.
+    """
+    with pytest.raises(kpi_spec.KPISpecError) as exc_info:
+        kpi_spec.validate_spec(
+            {
+                "entity": "boq_position",
+                "aggregation": "count",
+                "filters": [{"field": "quantity", "op": "gt", "value": value}],
+            },
+        )
+    assert exc_info.value.path == "spec.filters[0].value"
+    assert "finite" in str(exc_info.value)
+
+
+def test_an_in_list_cannot_smuggle_a_non_finite_number() -> None:
+    """A list is not a way past the finiteness check either."""
+    with pytest.raises(kpi_spec.KPISpecError) as exc_info:
+        kpi_spec.validate_spec(
+            {
+                "entity": "boq_position",
+                "aggregation": "count",
+                "filters": [{"field": "quantity", "op": "in", "value": [1, "Infinity"]}],
+            },
+        )
+    assert exc_info.value.path == "spec.filters[0].value[1]"
 
 
 def test_an_in_list_is_type_checked_member_by_member() -> None:
