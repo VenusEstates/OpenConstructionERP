@@ -233,6 +233,27 @@ class BuildAssemblyRequest(BaseModel):
         default=None,
         description="Rate template used as the equipment rate to price machine-hours.",
     )
+    # Zero is refused rather than accepted: a rate of 0 prices the line, so the
+    # hours would come back priced at nothing with full confidence and the
+    # assembly would still call its total complete. "This costs nothing" and
+    # "nobody has priced this yet" must not render as the same line, and the
+    # second one is what omitting the field already says.
+    labor_rate: Decimal | None = Field(
+        default=None,
+        gt=0,
+        le=_NUM_MAX,
+        description=(
+            "An explicit all-in labour rate per hour. Takes precedence over "
+            "labor_rate_template_id. With neither, labour is left explicitly "
+            "unpriced - no rate is ever synthesised."
+        ),
+    )
+    machine_rate: Decimal | None = Field(
+        default=None,
+        gt=0,
+        le=_NUM_MAX,
+        description=("An explicit equipment rate per machine-hour. Takes precedence over machine_rate_template_id."),
+    )
     project_id: UUID | None = Field(
         default=None,
         description="Scope the built assembly to this project (omit for a library recipe).",
@@ -261,6 +282,18 @@ class PricedComponentResponse(BaseModel):
     ``net_qty`` + ``waste_pct`` gives ``gross_qty``, and ``total`` is priced on
     the gross. They are ``None`` for labour / equipment (no waste applies).
     Every numeric field is emitted as a decimal string.
+
+    The provenance block answers "what priced this line, and how sure are we":
+    ``price_source`` is a stable token (``cost_item_exact`` for an exact
+    normalized name match against the cost items, ``cost_item_fuzzy`` for a
+    lexical proposal, ``explicit_rate`` / ``labor_rate_template`` for hours, and
+    ``unpriced`` when nothing could price it), ``matched_description`` /
+    ``matched_code`` / ``matched_source`` say what was matched and which
+    catalogue it came from, ``price_as_of`` dates that rate, and
+    ``match_confidence`` is 0..1 (``1`` for an identity match, the lexical score
+    for a fuzzy one, ``None`` when unpriced). ``needs_review`` is ``True`` when a
+    heuristic put the money there, so it reads as a proposal awaiting
+    confirmation rather than a settled price.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -278,12 +311,19 @@ class PricedComponentResponse(BaseModel):
     waste_pct: Decimal | None = None
     gross_qty: Decimal | None = None
     waste_matched: bool | None = None
+    price_source: str = ""
+    match_confidence: Decimal | None = None
+    matched_description: str = ""
+    matched_code: str = ""
+    matched_source: str = ""
+    price_as_of: str = ""
+    needs_review: bool = False
 
     @field_serializer("quantity", "unit_cost", "total")
     def _ser_amounts(self, v: Decimal) -> str:
         return _serialise_decimal(v)  # type: ignore[return-value]
 
-    @field_serializer("net_qty", "waste_pct", "gross_qty")
+    @field_serializer("net_qty", "waste_pct", "gross_qty", "match_confidence")
     def _ser_waste(self, v: Decimal | None) -> str | None:
         return _serialise_decimal(v)
 
@@ -293,7 +333,12 @@ class BuildAssemblyResponse(BaseModel):
 
     ``total_rate`` is the built-up unit rate (the sum of the component totals).
     ``unpriced`` lists the descriptions of any line that could not be priced so
-    the UI can flag them for the estimator to resolve. ``waste_applied`` echoes
+    the UI can flag them for the estimator to resolve, and
+    ``total_rate_complete`` is ``False`` whenever that list is non-empty - a
+    total that omits a cost line must say so, because a number that looks
+    finished is worse than one that refuses. ``needs_review`` lists the lines a
+    heuristic (fuzzy) match priced: they DO count towards ``total_rate``, but a
+    human still has to confirm them. ``waste_applied`` echoes
     whether the waste-factor library was used, and ``waste_unmatched`` lists the
     materials that were grossed up at pass-through (no library factor) so the
     estimator can add a factor for them.
@@ -311,6 +356,12 @@ class BuildAssemblyResponse(BaseModel):
     work_key: str
     components: list[PricedComponentResponse] = Field(default_factory=list)
     unpriced: list[str] = Field(default_factory=list)
+    total_rate_complete: bool = True
+    unpriced_count: int = 0
+    needs_review: list[str] = Field(default_factory=list)
+    needs_review_count: int = 0
+    labor_rate_source: str = ""
+    machine_rate_source: str = ""
     waste_applied: bool = True
     waste_unmatched: list[str] = Field(default_factory=list)
 

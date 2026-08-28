@@ -288,9 +288,12 @@ def _build_assembly_response(assembly: Any) -> BuildAssemblyResponse:
     metadata = assembly.metadata_ or {}
     components: list[PricedComponentResponse] = []
     unpriced: list[str] = []
+    needs_review: list[str] = []
     for comp in assembly.components:
         comp_meta = comp.metadata_ or {}
         priced = bool(comp_meta.get("priced", True))
+        component_needs_review = bool(comp_meta.get("needs_review", False))
+        raw_confidence = comp_meta.get("match_confidence")
         # Waste fields are written only onto material components; leave them
         # None for labour / equipment so the response reflects "no waste here".
         has_waste = "waste_pct" in comp_meta
@@ -309,10 +312,21 @@ def _build_assembly_response(assembly: Any) -> BuildAssemblyResponse:
                 waste_pct=_dec(comp_meta["waste_pct"]) if has_waste else None,
                 gross_qty=_dec(comp_meta["gross_qty"]) if "gross_qty" in comp_meta else None,
                 waste_matched=bool(comp_meta.get("waste_matched")) if has_waste else None,
+                price_source=str(comp_meta.get("price_source", "") or ""),
+                # Confidence stays None for an unpriced line: a zero would read
+                # as "priced, with no confidence" rather than "not priced".
+                match_confidence=(None if raw_confidence in (None, "") else _dec(raw_confidence)),
+                matched_description=str(comp_meta.get("matched_description", "") or ""),
+                matched_code=str(comp_meta.get("matched_code", "") or ""),
+                matched_source=str(comp_meta.get("matched_source", "") or ""),
+                price_as_of=str(comp_meta.get("price_as_of", "") or ""),
+                needs_review=component_needs_review,
             )
         )
         if not priced:
             unpriced.append(comp.description)
+        elif component_needs_review:
+            needs_review.append(comp.description)
 
     raw_unmatched = metadata.get("waste_unmatched", [])
     waste_unmatched = [str(x) for x in raw_unmatched] if isinstance(raw_unmatched, list) else []
@@ -330,6 +344,14 @@ def _build_assembly_response(assembly: Any) -> BuildAssemblyResponse:
         work_key=str(metadata.get("work_key", "") or ""),
         components=components,
         unpriced=unpriced,
+        # Derived from the components actually persisted, not from the metadata
+        # list, so the verdict can never disagree with the lines it describes.
+        total_rate_complete=not unpriced,
+        unpriced_count=len(unpriced),
+        needs_review=needs_review,
+        needs_review_count=len(needs_review),
+        labor_rate_source=str(metadata.get("labor_rate_source", "") or ""),
+        machine_rate_source=str(metadata.get("machine_rate_source", "") or ""),
         waste_applied=bool(metadata.get("waste_applied", True)),
         waste_unmatched=waste_unmatched,
     )
@@ -357,9 +379,19 @@ async def build_assembly(
     ``apply_waste`` is set (the default) each material's net (installed) quantity
     is grossed up to its purchased quantity via the waste-factor library, and the
     per-material waste plus any unmatched materials are surfaced on the response.
-    Any line that could not be priced is created at a zero unit cost and flagged
-    so the estimator can resolve it. Requires both ``norm_expansion.read`` (to
-    read the norm) and ``assemblies.create`` (the output is a new assembly).
+
+    Each material is priced from an exact normalized name match against the cost
+    items where one exists, and only otherwise from a fuzzy catalogue match; every
+    component reports which of the two priced it, what it matched and with what
+    confidence, and a fuzzy match is flagged ``needs_review`` because a heuristic
+    that puts money on a line is a proposal, not a settled price. Labour and
+    machine hours are priced from an explicit rate on the request or from a rate
+    template, never from an invented number.
+
+    Any line that could not be priced is created at a zero unit cost and flagged,
+    and ``total_rate_complete`` then says the built-up rate is missing a cost line
+    rather than finished. Requires both ``norm_expansion.read`` (to read the norm)
+    and ``assemblies.create`` (the output is a new assembly).
     """
     try:
         assembly = await build_assembly_from_norm(
@@ -367,6 +399,8 @@ async def build_assembly(
             norm_id,
             labor_rate_template_id=data.labor_rate_template_id,
             machine_rate_template_id=data.machine_rate_template_id,
+            labor_rate=data.labor_rate,
+            machine_rate=data.machine_rate,
             project_id=data.project_id,
             owner_id=user_id,
             region=data.region,

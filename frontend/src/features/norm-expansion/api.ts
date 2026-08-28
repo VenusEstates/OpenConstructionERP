@@ -282,6 +282,40 @@ export function buildBuildAssemblyPayload(input: BuildAssemblyFormInput): BuildA
   return payload;
 }
 
+/** What the build-assembly run is gated on. */
+export interface BuildAssemblyGateInput {
+  /** A work item is selected. */
+  normSelected: boolean;
+  /** The chosen labour-rate template, empty when the user picked none. */
+  laborRateTemplateId: string;
+  /** The template list came back from the server and is empty. */
+  noTemplates: boolean;
+  /** A build is already in flight. */
+  pending: boolean;
+}
+
+/**
+ * Whether the build-assembly run may start.
+ *
+ * A work item is the only hard requirement. A labour rate is normally required
+ * too, because pricing labour hours is the point of the run, but that
+ * requirement is lifted when the account has no labour-rate templates at all.
+ *
+ * The reason is that labour-rate templates ship with no seed data, so the
+ * picker is empty on a fresh install and a gate on it is not a choice, it is a
+ * wall: the run could never start and the feature was reachable only through
+ * the API. The backend has always accepted the request without one - the
+ * `BuildAssemblyRequest` docstring says "with no labour-rate template the
+ * labour line is created unpriced and flagged (the estimator supplies a rate
+ * later)" - and the result panel already shows those unpriced lines in red. So
+ * the user gets an honest partial assembly instead of a dead control, and the
+ * nudge to create a template stays on screen next to the button.
+ */
+export function canRunBuildAssembly(input: BuildAssemblyGateInput): boolean {
+  if (!input.normSelected || input.pending) return false;
+  return input.laborRateTemplateId.trim() !== '' || input.noTemplates;
+}
+
 /** The canonical resource kinds a priced line can carry. */
 export type ResourceKind = 'labor' | 'equipment' | 'material' | 'other';
 

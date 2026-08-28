@@ -5,6 +5,7 @@ import {
   buildExpandBatchPayload,
   isValidQuantity,
   buildBuildAssemblyPayload,
+  canRunBuildAssembly,
   resourceBadge,
   withCurrency,
 } from './api';
@@ -104,6 +105,42 @@ describe('buildBuildAssemblyPayload', () => {
         applyWaste: true,
       }),
     ).toEqual({ apply_waste: true, labor_rate_template_id: 'lab-1' });
+  });
+});
+
+describe('canRunBuildAssembly', () => {
+  const ready = {
+    normSelected: true,
+    laborRateTemplateId: 'lab-1',
+    noTemplates: false,
+    pending: false,
+  };
+
+  it('runs once a work item and a labour rate are chosen', () => {
+    expect(canRunBuildAssembly(ready)).toBe(true);
+  });
+
+  it('never runs without a work item, or while a build is in flight', () => {
+    expect(canRunBuildAssembly({ ...ready, normSelected: false })).toBe(false);
+    expect(canRunBuildAssembly({ ...ready, pending: true })).toBe(false);
+    // An empty template list does not excuse a missing work item.
+    expect(canRunBuildAssembly({ ...ready, normSelected: false, noTemplates: true })).toBe(false);
+  });
+
+  it('runs with no labour rate when there is no template to pick', () => {
+    // Labour-rate templates ship unseeded, so the picker is empty on a fresh
+    // install and gating the run on it disabled the button for good, leaving
+    // the API as the only way in. The backend accepts the run and returns the
+    // labour line unpriced and flagged, which the result panel already shows.
+    expect(canRunBuildAssembly({ ...ready, laborRateTemplateId: '', noTemplates: true })).toBe(
+      true,
+    );
+  });
+
+  it('still asks for a labour rate once templates exist', () => {
+    expect(canRunBuildAssembly({ ...ready, laborRateTemplateId: '' })).toBe(false);
+    // Whitespace is not a selection.
+    expect(canRunBuildAssembly({ ...ready, laborRateTemplateId: '   ' })).toBe(false);
   });
 });
 

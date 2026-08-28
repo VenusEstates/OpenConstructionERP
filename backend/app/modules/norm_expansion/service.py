@@ -13,7 +13,7 @@ unit-testable without a database.
 from __future__ import annotations
 
 import uuid
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -273,29 +273,83 @@ def _assembly_code(work_key: str) -> str:
     return f"{prefix}-{suffix}"
 
 
-async def _resolve_labor_rate(
-    session: AsyncSession,
-    template_id: uuid.UUID | None,
-) -> tuple[Decimal | None, str]:
-    """Resolve an all-in labour rate per hour from a labour-rate template.
+@dataclass(frozen=True)
+class _RateResolution:
+    """An hourly rate together with where it came from.
 
-    Returns ``(rate, currency)``. When no template id is given, or the template
-    does not exist, the rate is ``None`` so the caller prices labour to zero and
-    flags the line unpriced.
+    Attributes:
+        rate: The resolved rate per hour, or ``None`` when none was available -
+            the line is then priced as explicitly unpriced, never as zero.
+        currency: The currency the rate is expressed in (``""`` for a
+            caller-supplied bare number, which carries no currency of its own).
+        source: Provenance token - ``explicit_rate``, ``labor_rate_template`` or
+            ``unpriced``.
+        label: What the rate was read from, for audit (the template's name).
+        note: Why the rate is missing, when it is.
     """
-    if template_id is None:
-        return None, ""
+
+    rate: Decimal | None
+    currency: str
+    source: str
+    label: str = ""
+    note: str = ""
+
+
+async def _resolve_hourly_rate(
+    session: AsyncSession,
+    *,
+    explicit_rate: Decimal | None,
+    template_id: uuid.UUID | None,
+    kind: str,
+) -> _RateResolution:
+    """Resolve an hourly rate, caller-supplied value first, then a template.
+
+    Resolution order, and nothing beyond it: an explicit rate the caller passed,
+    then the all-in rate built by the labour-rates module from the named
+    template. No rate is ever synthesised - when neither source can supply one
+    the result carries ``None`` and the caller flags the line unpriced, so the
+    assembly total is visibly incomplete rather than quietly missing a cost line.
+
+    Args:
+        session: Active async DB session.
+        explicit_rate: A rate per hour supplied directly on the request.
+        template_id: A labour-rate template to build the all-in rate from.
+        kind: ``labour`` or ``equipment``, used only in the unpriced reason.
+
+    Returns:
+        The rate and its provenance.
+    """
     from app.modules.labor_rates import rate_math
     from app.modules.labor_rates.service import LaborRateService
+    from app.modules.norm_expansion.price_math import EXPLICIT_RATE, LABOR_RATE_TEMPLATE, UNPRICED
 
+    if explicit_rate is not None:
+        return _RateResolution(rate=explicit_rate, currency="", source=EXPLICIT_RATE)
+    if template_id is None:
+        return _RateResolution(
+            rate=None,
+            currency="",
+            source=UNPRICED,
+            note=f"no {kind} rate given and no rate template named",
+        )
     template = await LaborRateService(session).get_template(template_id)
     if template is None:
-        return None, ""
+        return _RateResolution(
+            rate=None,
+            currency="",
+            source=UNPRICED,
+            note=f"{kind} rate template not found: {template_id}",
+        )
     rate = rate_math.all_in_rate(
         template.base_wage,
         [rate_math.OnCost(label=c.label, kind=c.kind, value=c.value) for c in template.components],
     )
-    return rate, (template.currency or "")
+    return _RateResolution(
+        rate=rate,
+        currency=(template.currency or ""),
+        source=LABOR_RATE_TEMPLATE,
+        label=template.name or "",
+    )
 
 
 async def _resolve_material_price(
@@ -305,33 +359,50 @@ async def _resolve_material_price(
     *,
     region: str | None,
 ) -> tuple[object, str]:
-    """Find a cost item for a material and return its price plus currency.
+    """Find a cost item for a material and return its price plus provenance.
 
-    Runs the shared lexical cost matcher, takes the best match above the score
-    floor, then reads that cost item's exact Decimal ``rate`` (not the matcher's
-    lossy float). Returns a :class:`price_math.MaterialPrice` and the matched
-    item's currency (empty string when unpriced).
+    Resolution is ordered, not scored: an exact normalized name match against
+    the cost items is taken before any fuzzy catalogue match, because an
+    identity match is a fact while a lexical score is a guess. The ordering is
+    what removes the wrong-product class of defect - tightening the fuzzy
+    threshold would only move which wrong product appears. See
+    :mod:`app.modules.norm_expansion.material_match`.
+
+    Whatever tier resolved it, the exact Decimal ``rate`` is read off the cost
+    item itself (never the matcher's lossy float), and the returned
+    :class:`price_math.MaterialPrice` carries the tier, the confidence, the
+    matched description / code / catalogue source and the row's price date so
+    the caller can audit what priced the line and why.
+
+    Returns:
+        The material price and the matched item's currency (``""`` when
+        unpriced).
     """
-    from app.modules.costs.matcher import match_cwicr_items
-    from app.modules.costs.models import CostItem
-    from app.modules.norm_expansion.price_math import MaterialPrice
+    from app.modules.costs.router import _resolve_currency
+    from app.modules.norm_expansion.material_match import resolve_material_cost_item
+    from app.modules.norm_expansion.price_math import UNPRICED, MaterialPrice
 
-    matches = await match_cwicr_items(
+    match = await resolve_material_cost_item(
         session,
         name,
         unit=unit or None,
-        top_k=1,
-        source=None,
+        region=region,
+        min_fuzzy_score=_MATERIAL_MATCH_MIN_SCORE,
     )
-    if not matches or matches[0].score < _MATERIAL_MATCH_MIN_SCORE:
-        return MaterialPrice(unit_cost=None), ""
+    if match is None:
+        return MaterialPrice(unit_cost=None, match_method=UNPRICED), ""
 
-    best = matches[0]
-    item = await session.get(CostItem, uuid.UUID(best.cost_item_id))
-    if item is None:
-        return MaterialPrice(unit_cost=None), ""
+    item = match.item
+    currency = _resolve_currency(item.currency, getattr(item, "region", None))
+    price_as_of = item.price_as_of.isoformat() if item.price_as_of is not None else ""
+    provenance: dict[str, Any] = {
+        "cost_item_id": str(item.id),
+        "matched_description": item.description or "",
+        "matched_code": item.code or "",
+        "matched_source": item.source or "",
+        "price_as_of": price_as_of,
+    }
 
-    currency = item.currency or best.currency or ""
     try:
         rate = Decimal(str(item.rate))
     except (InvalidOperation, ValueError):
@@ -339,19 +410,14 @@ async def _resolve_material_price(
     if not rate.is_finite() or rate < 0:
         # Matched a row but its stored rate is unusable: link it for audit but
         # leave the line unpriced so a bad rate never silently prices the build.
-        return (
-            MaterialPrice(
-                unit_cost=None,
-                cost_item_id=best.cost_item_id,
-                matched_description=best.description,
-            ),
-            currency,
-        )
+        return MaterialPrice(unit_cost=None, match_method=UNPRICED, **provenance), currency
     return (
         MaterialPrice(
             unit_cost=rate,
-            cost_item_id=best.cost_item_id,
-            matched_description=best.description,
+            match_method=match.method,
+            match_confidence=match.confidence,
+            needs_review=match.needs_review,
+            **provenance,
         ),
         currency,
     )
@@ -363,6 +429,8 @@ async def build_assembly_from_norm(
     *,
     labor_rate_template_id: uuid.UUID | None = None,
     machine_rate_template_id: uuid.UUID | None = None,
+    labor_rate: Decimal | None = None,
+    machine_rate: Decimal | None = None,
     project_id: uuid.UUID | None = None,
     owner_id: str | None = None,
     region: str | None = None,
@@ -392,10 +460,21 @@ async def build_assembly_from_norm(
     no library entry stays at net == gross and is collected under the assembly's
     ``metadata['waste_unmatched']``.
 
+    Every component records how it was priced: ``metadata['price_source']`` is
+    one of ``cost_item_exact`` (an exact normalized name match against the cost
+    items), ``cost_item_fuzzy`` (a lexical proposal), ``explicit_rate``,
+    ``labor_rate_template`` or ``unpriced``, alongside the matched description /
+    code / catalogue source, the matched row's price date and a 0..1
+    ``match_confidence``. A fuzzy match carries ``needs_review`` so a heuristic
+    never reads as a confirmed price.
+
     Lines with no resolved rate / cost are still created, at a zero unit cost and
     flagged ``priced=False`` in their metadata (and collected under the
     assembly's ``metadata['unpriced']``), so the UI can surface them for the
-    estimator to resolve rather than hiding a gap.
+    estimator to resolve rather than hiding a gap. When that happens the
+    assembly's ``metadata['total_rate_complete']`` is ``False``: the built-up
+    rate is then a partial sum, and a caller reading only ``total_rate`` must be
+    able to tell that a cost line is missing rather than zero.
 
     Args:
         session: Active async DB session.
@@ -405,6 +484,11 @@ async def build_assembly_from_norm(
         machine_rate_template_id: Labour-rate template used as the equipment
             rate to price machine-hours; when absent, machine time is left
             unpriced and flagged.
+        labor_rate: An explicit all-in labour rate per hour. Takes precedence
+            over ``labor_rate_template_id``; no rate is ever synthesised when
+            both are absent.
+        machine_rate: An explicit equipment rate per machine-hour, with the same
+            precedence over ``machine_rate_template_id``.
         project_id: When given, the assembly is scoped to that project.
         owner_id: The creating user id (for per-tenant ownership).
         region: Optional region hint biasing the material cost match.
@@ -433,8 +517,18 @@ async def build_assembly_from_norm(
 
     coefficients = norm_to_coefficients(norm)
 
-    labor_rate, labor_currency = await _resolve_labor_rate(session, labor_rate_template_id)
-    machine_rate, machine_currency = await _resolve_labor_rate(session, machine_rate_template_id)
+    labor = await _resolve_hourly_rate(
+        session,
+        explicit_rate=labor_rate,
+        template_id=labor_rate_template_id,
+        kind="labour",
+    )
+    machine = await _resolve_hourly_rate(
+        session,
+        explicit_rate=machine_rate,
+        template_id=machine_rate_template_id,
+        kind="equipment",
+    )
 
     # Resolve the waste-factor library once. The factor for a material is keyed
     # by the material's ``name`` (there is no per-material category column) and
@@ -466,18 +560,24 @@ async def build_assembly_from_norm(
 
     resolved_currency = (
         (currency or "").strip()
-        or labor_currency
-        or machine_currency
+        or labor.currency
+        or machine.currency
         or (material_currencies[0] if material_currencies else "")
         or _DEFAULT_ASSEMBLY_CURRENCY
     )
 
     build = price_build_up(
         coefficients,
-        labor_rate=labor_rate,
-        machine_rate=machine_rate,
+        labor_rate=labor.rate,
+        machine_rate=machine.rate,
         material_prices=material_prices,
         currency=resolved_currency,
+        labor_rate_source=labor.source,
+        labor_rate_label=labor.label,
+        labor_unpriced_note=labor.note or "no labour rate resolved",
+        machine_rate_source=machine.source,
+        machine_rate_label=machine.label,
+        machine_unpriced_note=machine.note or "no equipment rate resolved",
     )
 
     assembly_unit = (norm.unit or "").strip() or _DEFAULT_ASSEMBLY_UNIT
@@ -502,6 +602,16 @@ async def build_assembly_from_norm(
                 "machine_rate_template_id": (str(machine_rate_template_id) if machine_rate_template_id else None),
                 "built_up_unit_rate": format(build.unit_rate, "f"),
                 "unpriced": list(build.unpriced),
+                # The assembly outlives this response: a later read through the
+                # assemblies module sees only ``total_rate``, so the
+                # completeness verdict is persisted next to it rather than
+                # computed once for the wire.
+                "total_rate_complete": build.complete,
+                "unpriced_count": len(build.unpriced),
+                "needs_review": list(build.needs_review),
+                "needs_review_count": len(build.needs_review),
+                "labor_rate_source": labor.source,
+                "machine_rate_source": machine.source,
                 "waste_applied": apply_waste,
                 "waste_unmatched": waste_unmatched,
             },
@@ -518,6 +628,16 @@ async def build_assembly_from_norm(
             "resource_kind": line.kind,
             "kind_i18n_key": line.kind_i18n_key,
             "unpriced_reason": line.note,
+            # Per-component provenance: which source priced this line, what it
+            # matched and how sure that match is. A caller can audit the whole
+            # build-up from these alone.
+            "price_source": line.price_source,
+            "match_confidence": (None if line.match_confidence is None else format(line.match_confidence, "f")),
+            "matched_description": line.matched_description,
+            "matched_code": line.matched_code,
+            "matched_source": line.matched_source,
+            "price_as_of": line.price_as_of,
+            "needs_review": line.needs_review,
         }
         if line.resource_type == MATERIAL:
             # The component ``quantity`` stays the NET (installed) coefficient;

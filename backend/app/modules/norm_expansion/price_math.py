@@ -60,6 +60,16 @@ LABOR = "labor"
 EQUIPMENT = "equipment"
 MATERIAL = "material"
 
+# Canonical provenance tokens for ``PricedLine.price_source``. They are stable
+# API values (a UI maps them to i18n keys), so they carry no prose and are
+# defined here - in the pure module - so the DB layer and the wire contract can
+# never drift apart on spelling.
+COST_ITEM_EXACT = "cost_item_exact"
+COST_ITEM_FUZZY = "cost_item_fuzzy"
+LABOR_RATE_TEMPLATE = "labor_rate_template"
+EXPLICIT_RATE = "explicit_rate"
+UNPRICED = "unpriced"
+
 
 def _to_decimal(value: Decimal | int | str) -> Decimal:
     """Coerce a rate / quantity to a finite :class:`Decimal`.
@@ -123,6 +133,18 @@ class MaterialPrice:
             this material, ``False`` when the pass-through factor was used.
             Carried through (like ``cost_item_id``) for the caller to record;
             the pure math does not compute it.
+        match_method: Provenance token for how the cost item was found
+            (``cost_item_exact`` / ``cost_item_fuzzy`` / ``unpriced``).
+        match_confidence: ``1`` for an exact normalized identity match, the
+            lexical matcher's 0..1 score for a fuzzy one, ``None`` when nothing
+            matched.
+        matched_code: The matched cost item's code, for audit.
+        matched_source: The matched cost item's ``source`` (which catalogue or
+            import the price came from).
+        price_as_of: ISO date the matched rate was last set or verified, or
+            ``""`` when the row carries no price date.
+        needs_review: ``True`` when the price came from a heuristic (fuzzy)
+            match, so a human confirms it rather than it being applied silently.
     """
 
     unit_cost: Decimal | int | str | None
@@ -130,6 +152,12 @@ class MaterialPrice:
     matched_description: str = ""
     waste_factor: Decimal | int | str = Decimal("1")
     waste_matched: bool = False
+    match_method: str = ""
+    match_confidence: Decimal | None = None
+    matched_code: str = ""
+    matched_source: str = ""
+    price_as_of: str = ""
+    needs_review: bool = False
 
 
 @dataclass(frozen=True)
@@ -162,6 +190,18 @@ class PricedLine:
             this line.
         cost_item_id: The linked cost item id for a priced material line.
         note: A short reason string when the line is unpriced.
+        price_source: What put a price on this line - ``cost_item_exact``,
+            ``cost_item_fuzzy``, ``labor_rate_template``, ``explicit_rate`` or
+            ``unpriced``. A caller can audit every line's origin from this alone.
+        match_confidence: 0..1 confidence in that source, or ``None`` when the
+            line is unpriced.
+        matched_description: What the line actually matched (the cost item's
+            description, or the labour-rate template's name).
+        matched_code: The matched cost item's code, when there is one.
+        matched_source: The matched cost item's ``source`` catalogue.
+        price_as_of: ISO date the matched rate was last verified, or ``""``.
+        needs_review: ``True`` when the price came from a heuristic match and a
+            human has to confirm it.
     """
 
     resource_type: str
@@ -179,6 +219,13 @@ class PricedLine:
     waste_pct: Decimal = Decimal("0")
     gross_qty: Decimal = Decimal("0")
     waste_matched: bool = False
+    price_source: str = ""
+    match_confidence: Decimal | None = None
+    matched_description: str = ""
+    matched_code: str = ""
+    matched_source: str = ""
+    price_as_of: str = ""
+    needs_review: bool = False
 
 
 @dataclass(frozen=True)
@@ -196,6 +243,8 @@ class PricedBuildUp:
             caller; the pure math does not convert across currencies).
         unpriced: Descriptions of the lines that could not be priced, so a UI
             can flag them for the estimator to resolve.
+        needs_review: Descriptions of the lines a heuristic priced, which a
+            human still has to confirm.
     """
 
     lines: tuple[PricedLine, ...]
@@ -205,6 +254,17 @@ class PricedBuildUp:
     unit_rate: Decimal
     currency: str = ""
     unpriced: tuple[str, ...] = field(default_factory=tuple)
+    needs_review: tuple[str, ...] = field(default_factory=tuple)
+
+    @property
+    def complete(self) -> bool:
+        """``False`` when at least one line carries no price.
+
+        A ``unit_rate`` built with an unpriced line is a partial sum, and a
+        caller reading only the number cannot tell. This is the flag that says
+        the total is missing a cost line rather than being finished.
+        """
+        return not self.unpriced
 
     def as_dict(self) -> dict[str, object]:
         """Render the build-up as plain Decimal-as-string JSON primitives.
@@ -220,6 +280,8 @@ class PricedBuildUp:
             "material_cost": format(self.material_cost, "f"),
             "unit_rate": format(self.unit_rate, "f"),
             "unpriced": list(self.unpriced),
+            "needs_review": list(self.needs_review),
+            "complete": self.complete,
             "lines": [
                 {
                     "resource_type": line.resource_type,
@@ -237,6 +299,13 @@ class PricedBuildUp:
                     "waste_matched": line.waste_matched,
                     "cost_item_id": line.cost_item_id,
                     "note": line.note,
+                    "price_source": line.price_source,
+                    "match_confidence": (None if line.match_confidence is None else format(line.match_confidence, "f")),
+                    "matched_description": line.matched_description,
+                    "matched_code": line.matched_code,
+                    "matched_source": line.matched_source,
+                    "price_as_of": line.price_as_of,
+                    "needs_review": line.needs_review,
                 }
                 for line in self.lines
             ],
@@ -254,6 +323,13 @@ def _price_line(
     unpriced_note: str,
     waste_factor: Decimal | int | str = Decimal("1"),
     waste_matched: bool = False,
+    price_source: str = "",
+    match_confidence: Decimal | None = None,
+    matched_description: str = "",
+    matched_code: str = "",
+    matched_source: str = "",
+    price_as_of: str = "",
+    needs_review: bool = False,
 ) -> PricedLine:
     """Build one priced line, folding in the waste gross-up and unpriced fallback.
 
@@ -265,7 +341,9 @@ def _price_line(
 
     A ``None`` rate yields a zero-cost line flagged ``priced=False`` with
     ``note=unpriced_note`` so the demand is still visible and the caller can
-    surface the missing price rather than silently dropping the line.
+    surface the missing price rather than silently dropping the line. Such a
+    line always reports ``price_source="unpriced"`` and no confidence: an
+    unpriced line must never read as a line that was priced at zero.
 
     Raises:
         TypeError: If ``waste_factor`` is a float.
@@ -295,6 +373,13 @@ def _price_line(
             waste_pct=waste_pct,
             gross_qty=gross,
             waste_matched=waste_matched,
+            price_source=UNPRICED,
+            match_confidence=None,
+            matched_description=matched_description,
+            matched_code=matched_code,
+            matched_source=matched_source,
+            price_as_of=price_as_of,
+            needs_review=False,
         )
     unit_cost = _q4(_to_decimal(rate))
     return PricedLine(
@@ -313,6 +398,13 @@ def _price_line(
         waste_pct=waste_pct,
         gross_qty=gross,
         waste_matched=waste_matched,
+        price_source=price_source,
+        match_confidence=match_confidence,
+        matched_description=matched_description,
+        matched_code=matched_code,
+        matched_source=matched_source,
+        price_as_of=price_as_of,
+        needs_review=needs_review,
     )
 
 
@@ -327,6 +419,12 @@ def price_build_up(
     machine_description: str = "Machine / equipment",
     machine_unit: str = "h",
     currency: str = "",
+    labor_rate_source: str = "",
+    labor_rate_label: str = "",
+    labor_unpriced_note: str = "no labour rate resolved",
+    machine_rate_source: str = "",
+    machine_rate_label: str = "",
+    machine_unpriced_note: str = "no equipment rate resolved",
 ) -> PricedBuildUp:
     """Price a norm's per-unit coefficients into a unit-rate build-up.
 
@@ -360,6 +458,15 @@ def price_build_up(
         machine_unit: Unit for the machine line (hours).
         currency: The currency the rates are expressed in (echoed onto the
             result; no cross-currency conversion is done here).
+        labor_rate_source: Provenance token for the labour rate (which of the
+            caller's rate sources supplied it).
+        labor_rate_label: What the labour rate was read from, for audit.
+        labor_unpriced_note: The reason recorded on the labour line when no
+            labour rate was available.
+        machine_rate_source: Provenance token for the equipment rate.
+        machine_rate_label: What the equipment rate was read from, for audit.
+        machine_unpriced_note: The reason recorded on the machine line when no
+            equipment rate was available.
 
     Returns:
         A :class:`PricedBuildUp` with the ordered priced lines, the per-kind
@@ -378,6 +485,7 @@ def price_build_up(
 
     lines: list[PricedLine] = []
     unpriced: list[str] = []
+    needs_review: list[str] = []
 
     labor_qty = _to_decimal(norm.labor_hours_per_unit)
     if labor_qty > 0:
@@ -387,7 +495,10 @@ def price_build_up(
             unit=labor_unit,
             quantity=labor_qty,
             rate=labor_rate,
-            unpriced_note="no labour rate resolved",
+            unpriced_note=labor_unpriced_note,
+            price_source=labor_rate_source,
+            match_confidence=None if labor_rate is None else Decimal("1"),
+            matched_description=labor_rate_label,
         )
         lines.append(line)
         if not line.priced:
@@ -401,7 +512,10 @@ def price_build_up(
             unit=machine_unit,
             quantity=machine_qty,
             rate=machine_rate,
-            unpriced_note="no equipment rate resolved",
+            unpriced_note=machine_unpriced_note,
+            price_source=machine_rate_source,
+            match_confidence=None if machine_rate is None else Decimal("1"),
+            matched_description=machine_rate_label,
         )
         lines.append(line)
         if not line.priced:
@@ -418,10 +532,19 @@ def price_build_up(
             unpriced_note="no matching cost item",
             waste_factor=price.waste_factor,
             waste_matched=price.waste_matched,
+            price_source=price.match_method,
+            match_confidence=price.match_confidence,
+            matched_description=price.matched_description,
+            matched_code=price.matched_code,
+            matched_source=price.matched_source,
+            price_as_of=price.price_as_of,
+            needs_review=price.needs_review,
         )
         lines.append(line)
         if not line.priced:
             unpriced.append(line.description)
+        elif line.needs_review:
+            needs_review.append(line.description)
 
     labor_cost = _q4(sum((ln.total for ln in lines if ln.resource_type == LABOR), Decimal("0")))
     machine_cost = _q4(sum((ln.total for ln in lines if ln.resource_type == EQUIPMENT), Decimal("0")))
@@ -436,4 +559,5 @@ def price_build_up(
         unit_rate=unit_rate,
         currency=currency,
         unpriced=tuple(unpriced),
+        needs_review=tuple(needs_review),
     )
