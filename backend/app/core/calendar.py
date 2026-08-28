@@ -927,10 +927,21 @@ def _holidays_bg(year: int) -> set[date]:
     return days
 
 
-# ── Working-week definitions (ISO weekday: 0=Mon, 6=Sun) ─────────────────────
+# ── Working-week definitions (date.weekday(): 0=Mon, 6=Sun) ──────────────────
 #
 # Standard Mon–Fri work week: {0, 1, 2, 3, 4}
 # GCC Sun–Thu work week: {6, 0, 1, 2, 3}
+#
+# This is not the ISO numbering, which starts at Monday = 1. The platform holds
+# both conventions at once: i18n_foundation's ``WorkCalendar.work_days`` counts
+# Monday = 1 through Sunday = 7, and this table counts Monday = 0 through
+# Sunday = 6, because ``is_working_day`` below asks ``date.weekday()``. Reaching
+# for ``isoweekday()`` against this table shifts every day by one and pushes
+# Sunday out of the set entirely. Calling both of them ISO is the one word that
+# makes the two tables look interchangeable when they are not, and a Saudi row
+# written under the wrong one has already shipped a four-day week once.
+# ``tests/unit/test_work_calendar_weekdays_are_mon0.py`` guards the data. This
+# comment guards the reader.
 
 _WORKING_WEEK: dict[str, frozenset[int]] = {
     "DE": frozenset({0, 1, 2, 3, 4}),
@@ -1423,7 +1434,7 @@ def is_working_day(d: date, country_code: str) -> bool:
     """Return True if ``d`` is a working day for the given country.
 
     A day is non-working when:
-    * Its ISO weekday (0=Mon, 6=Sun) is not in the country's working week, OR
+    * Its ``date.weekday()`` (0=Mon, 6=Sun, not ISO) is not in the country's working week, OR
     * It falls on a public holiday.
 
     Args:
