@@ -62,8 +62,10 @@ jobs:
       # PyInstaller's symbols stubbed out and stats what the spec declares, so
       # it runs anywhere the suite is collected and never builds anything.
       - name: Run the desktop sidecar hidden-import guard
+        if: always()
         run: pytest tests/unit/test_desktop_hidden_imports_resolve.py -q -p no:cacheprovider
       - name: Run dedicated PostgreSQL dialect suite (embedded PG, no Docker)
+        if: always()
         # A per-test ceiling so a lock that never gets released names the test
         # that hung instead of killing the job anonymously at the wall clock.
         # thread method because signal based timeouts are Unix-only and this
@@ -126,6 +128,7 @@ jobs:
       # asserts a floor on the population it swept, because the failure this
       # class produces is a smaller population rather than a red test.
       - name: Run demo seed and import consistency tests
+        if: always()
         run: >-
           pytest tests/unit/test_demo_contact_types.py
           tests/unit/test_demo_variations_vocabulary.py
@@ -158,6 +161,7 @@ jobs:
       # name, and it asserts the read and write paths share one table object rather
       # than two copies kept in step by a comment. No database, about eight seconds.
       - name: Run cost region currency table tests
+        if: always()
         run: pytest tests/unit/costs/test_region_currency_fallback.py -q -p no:cacheprovider
       # The AI rate limit on the compliance NL builder. Attached for the same
       # reason as the suites around it, and for a sharper one: the guard it
@@ -172,6 +176,7 @@ jobs:
       # Depends line on either one turns the override unreachable and the call
       # returns 200 instead. Needs the conftest database, about twenty seconds.
       - name: Run compliance NL rate-limit tests
+        if: always()
         run: pytest tests/unit/test_compliance_ai.py -q -p no:cacheprovider
       # Cases: authored scenarios and the pins that used to live in
       # localStorage. Three things here fail silently rather than loudly if
@@ -183,6 +188,7 @@ jobs:
       # two id spaces with no foreign key, so deleting a case has to clear its
       # own pins or the strip renders rows that resolve to nothing.
       - name: Run cases module tests
+        if: always()
         run: pytest tests/unit/test_cases_module.py -q -p no:cacheprovider
       # Government clearance for electronic invoices. Three regimes that look
       # alike from the outside and are not: under clearance the authority's
@@ -198,6 +204,7 @@ jobs:
       # revision, and nothing else in the tree notices when the two stop
       # building the same table. About thirty seconds, most of it fixtures.
       - name: Run e-invoice clearance module tests
+        if: always()
         run: pytest tests/unit/test_einvoice_clearance_module.py -q -p no:cacheprovider
       # Statutory withholding. Two rules here decide real money and neither is
       # visible from a passing import. The taxable base excludes materials
@@ -209,6 +216,7 @@ jobs:
       # as a fresh create_all install, which nothing else in the tree would
       # notice. About thirty seconds.
       - name: Run tax withholding module tests
+        if: always()
         run: pytest tests/unit/test_tax_withholding_module.py -q -p no:cacheprovider
       # Security-of-payment deadlines. The module is a date engine, and a date
       # engine tested only against itself proves it is consistent rather than
@@ -222,6 +230,7 @@ jobs:
       # module would go admin-only in production with every
       # admin-authenticated test still green. About thirty seconds.
       - name: Run payment clock module tests
+        if: always()
         run: pytest tests/unit/test_payment_clock_module.py -q -p no:cacheprovider
       # Documents that declare what language they are written in. The defect
       # class is a header stating something the bytes contradict, which is worse
@@ -259,6 +268,7 @@ jobs:
       # less here than the three minutes it takes locally, where most of the
       # time is a PostgreSQL cluster this job does not have to start.
       - name: Run document language declaration tests
+        if: always()
         run: |
           set -o pipefail
           pytest tests/unit/test_document_locale.py \
@@ -283,6 +293,7 @@ jobs:
       # under fifteen seconds. The second one asserts the check still has a
       # translated name to compare against, so it cannot go quiet without failing.
       - name: Run unit vocabulary period tests
+        if: always()
         run: |
           set -o pipefail
           pytest tests/unit/test_a_unit_label_must_not_claim_a_period_the_value_does_not_carry.py \
@@ -320,6 +331,7 @@ jobs:
       # downloading again. Synthetic PE headers and a stubbed transport, no
       # network and no database, about two seconds.
       - name: Run DWG parser and CAD converter health tests
+        if: always()
         run: >-
           pytest tests/unit/test_ddc_dwg_parser_scaling.py
           tests/unit/test_ddc_dwg_parser_fidelity.py
@@ -340,6 +352,7 @@ jobs:
       # repair here is an output scrubber and a scrubber can eat a real answer.
       # No database, about two seconds.
       - name: Run erp_chat no-tool provider tests
+        if: always()
         run: pytest tests/unit/test_erp_chat_fallback_provider.py -q -p no:cacheprovider
       # A cross-tenant read, so it is attached here rather than left to the
       # sharded Backend CI job. The rating provenance record carries a raw
@@ -745,7 +758,7 @@ jobs:
       # is broken, which is not when you need it. The condition costs nothing
       # when the job is green and makes the position harmless when it is not.
       - name: Run country coverage instrument tests
-        if: ${{ !cancelled() }}
+        if: always()
         run: >-
           pytest tests/unit/test_country_coverage.py
           -q -p no:cacheprovider --timeout=300 --timeout-method=thread
@@ -765,7 +778,7 @@ jobs:
       # disagree, which is how a standard the engine returns ended up absent
       # from the control that selects it.
       - name: Run contract standard registry and notice engine guards
-        if: ${{ !cancelled() }}
+        if: always()
         run: >-
           pytest tests/unit/test_contract_standard_registration.py
           tests/unit/test_contract_standard_matching_hazard.py
@@ -789,7 +802,7 @@ jobs:
       # interpreter, so the step is unaffected by what the rest of the job has
       # imported, and it needs no database.
       - name: Run partner pack rule set guards
-        if: ${{ !cancelled() }}
+        if: always()
         run: >-
           pytest tests/unit/test_partner_pack_rule_slugs.py
           -q -p no:cacheprovider --timeout=300 --timeout-method=thread
@@ -802,7 +815,7 @@ jobs:
       # was invisible from inside either one. These tests read the UI language
       # list and both server paths, and they need no database.
       - name: Run locale resolution guards
-        if: ${{ !cancelled() }}
+        if: always()
         run: >-
           pytest tests/unit/test_backend_locale_falls_back_to_base_language.py
           tests/unit/test_backend_locale_catalogue.py
@@ -824,7 +837,7 @@ jobs:
       # as the locale guards above so that a failure earlier in the job cannot
       # take the page checks down with it and leave the pages unread.
       - name: Run the generated document page checks
-        if: ${{ !cancelled() }}
+        if: always()
         run: >-
           pytest tests/unit/test_pdf_header_text_is_readable_on_its_fill.py
           tests/unit/test_pdf_table_cells_stay_in_their_column.py
