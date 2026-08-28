@@ -100,8 +100,11 @@ carry the package named.
   * [semantic] FlagEmbedding (BGE-M3) ... MIT
   * [semantic] polars ................... MIT
   * [cv]      paddleocr ................. Apache-2.0
-  * [cv]      python-bidi ............... LGPL, pulled in by paddleocr
-  * [cv]      crc32c .................... LGPL v2 or later, pulled in by paddleocr
+  * [cv]      opencv-python ............. Apache-2.0 declared. The wheel
+                                          bundles Qt 5 under LGPL-3.0 and
+                                          FFmpeg under LGPL-2.1
+  * [cv]      opencv-contrib-python ..... the same, and paddleocr declares
+                                          both of them
   * [s3]      aioboto3 .................. Apache-2.0
   * [pointcloud] pye57 .................. MIT
   * [geo]     pyproj .................... MIT
@@ -109,8 +112,24 @@ carry the package named.
 Two things about that list are worth stating rather than leaving to be
 inferred. Pillow is not confined to an extra; it arrives in every install
 through reportlab, which is why it is in the base list above as well.
-And [cv] is the one group that adds copyleft the base install does not
-already have: paddleocr pulls python-bidi and crc32c, both LGPL.
+And two rows that stood here until now, python-bidi and crc32c, named
+packages that are not in this project at all. Neither resolves in any
+closure, base or extra, on Linux, macOS or Windows, and paddleocr 2.10.0
+declares nineteen requirements with neither among them. They were
+inherited rather than measured, and the sentence they supported, that
+[cv] is the one group adding copyleft the base install does not already
+carry, was wrong twice. It was wrong about the base, which carries LGPL
+through psycopg2-binary and AGPL through PyMuPDF with no extra selected
+at all. And it was wrong about the groups, because on declared licences
+the only copyleft any extra adds is tqdm, and six of the eleven add it.
+What [cv] really adds is larger than what those two rows named and no
+package metadata shows it. paddleocr declares opencv-python and
+opencv-contrib-python, the non-headless builds of the package the base
+install already has in headless form, and both of those wheels bundle
+Qt 5.15.19 under LGPL-3.0 together with two FFmpeg libraries the
+headless wheel does not carry. OpenCV's own cv2/LICENSE-3RD-PARTY.txt
+states it in those words and prints the licence text under it, while the
+wheel's metadata declares Apache-2.0.
 
 On Linux, [semantic] and [semantic-encoder] resolve torch, and a default
 resolution of torch pulls roughly fifteen NVIDIA CUDA runtime packages that
@@ -259,9 +278,15 @@ rather than read off this file's own lists:
     also carries an MPL-2.0 text for code it vendors. A base dependency.
   * tqdm -- MPL-2.0 and MIT. Reached only through an optional group, and
     through every one of them that adds a model or a vector store.
-  * python-bidi and crc32c -- both LGPL, reached only through paddleocr in
-    the optional [cv] group. They are the only copyleft an extra adds that
-    the base install does not already carry.
+  * Qt 5 -- LGPL-3.0. Not a package and not in any inventory: it is
+    redistributed inside the opencv-python and opencv-contrib-python
+    wheels, the non-headless OpenCV builds paddleocr declares, so it
+    arrives for someone who installs the [cv] extra and for nobody else.
+    No artefact we publish carries it. The container image resolves
+    [server] and [semantic-clients], and backend/requirements-desktop.lock
+    pins opencv-python-headless on its own. A bullet here used to name
+    python-bidi and crc32c instead, and neither of those packages is in
+    this project on any platform.
   * FFmpeg -- LGPL-2.1-or-later. Not a package and not in any inventory:
     it is a set of libraries redistributed inside the
     opencv-python-headless wheel, which is a base dependency, so it is in
@@ -738,20 +763,24 @@ FFmpeg and Intel IPP, inside opencv-python-headless
     There the backend is frozen into a single executable, the codecs are
     packed inside it, and opencv's notice file is not packed with them.
     That was measured by reading the table of contents of the published
-    16.0.0 Linux sidecar, which holds 365 dist-info entries and none of
-    them opencv's. The LGPL section below says what we do about that.
+    16.0.0 Linux and macOS sidecars. Neither holds a dist-info for
+    opencv, and the name LICENSE-3RD-PARTY.txt does not appear in either
+    one. The LGPL section below says what we do about that.
 
     The Linux wheel, which is what the container image installs, carries
     ten more libraries beside the codecs: libvpx, libaom, libavif,
     libdrm, libpng, libopenblasp, libgfortran, libquadmath, libcrypto
-    and libssl. All of them are covered by that same third-party file.
-    Two are worth naming rather than counting. libgfortran and
+    and libssl. Most of them are covered by that same third-party file,
+    and three are worth naming rather than counting. libgfortran and
     libquadmath are GPL-3.0-or-later carrying the GCC Runtime Library
     Exception, the permission that exists so that a program compiled by
-    GCC is not pulled under the GPL by its compiler's runtime. And the
-    OpenSSL here is 1.1.1k, which predates the move to Apache-2.0, so it
-    is under the older OpenSSL and SSLeay terms rather than the Apache
-    text committed above for the OpenSSL 3 and 4 copies.
+    GCC is not pulled under the GPL by its compiler's runtime, and they
+    are the two the third-party file does not mention at all, so the
+    coverage sentence above stops short of them. And the OpenSSL here is
+    a 1.1 series build, the soname reads libcrypto.so.1.1, which
+    predates the move to Apache-2.0; opencv's own file puts it under the
+    OpenSSL and SSLeay double licence rather than the Apache text
+    committed above for the OpenSSL 3 and 4 copies.
 
 ------------------------------------------------------------------------
 LGPL Components and How We Convey Them
@@ -794,11 +823,18 @@ The components:
     on us. The .AppImage is different: it contains them. The next
     section lists what is in it.
 
-    python-bidi and crc32c, both LGPL, reached only through paddleocr in
-    the optional [cv] group. They are not in a default install.
+    Qt 5, LGPL-3.0, inside the non-headless OpenCV wheels. paddleocr
+    declares opencv-python and opencv-contrib-python, and both bundle
+    Qt 5.15.19 and the libqxcb platform plugin. They reach a user who
+    installs the optional [cv] group and no artefact we publish, because
+    the container resolves [server] and [semantic-clients] and the
+    desktop lock pins the headless build. It is named here because that
+    user receives Qt 5 through us, and because both wheels declare
+    Apache-2.0, so nothing generated from metadata will tell them.
 
-Qt 6 is a fifth surface, inside the Windows converter, and it has its
-own section below along with the notices that travel with it.
+Qt 6 is a fifth surface and a different thing from the Qt 5 above. It
+sits inside the Windows converter and has its own section below, along
+with the notices that travel with it.
 
 Licence texts are committed at backend/app/core/licenses/LICENSE_LGPL_3_0,
 backend/app/core/licenses/LICENSE_LGPL_2_1 and
@@ -810,16 +846,22 @@ different licence and does not stand in for it.
 Telling you the library is there, and giving you its text.
     In the Python package and the container image the licence arrives
     with the library, because pip installs each package's own dist-info
-    beside its code. In the desktop installers it did not. The backend
-    is frozen into one executable and only what the build collects goes
-    in; the published 16.0.0 Linux sidecar carries the psycopg2
-    extension with fifteen native libraries beside it, the OpenCV
-    extension with fifteen more, and 365 dist-info entries of which
-    neither psycopg2's nor OpenCV's is one. The code arrived and the
+    beside its code, and OpenCV adds its own third-party notice at
+    cv2/LICENSE-3RD-PARTY.txt, which names FFmpeg and prints the
+    LGPL-2.1 text. In the desktop installers none of that arrived. The
+    backend is frozen into one executable and only what the build
+    collects goes in. The published 16.0.0 Linux sidecar carries the
+    psycopg2 extension with fifteen native libraries beside it, the
+    OpenCV extension with fifteen more, and 365 dist-info entries of
+    which neither psycopg2's nor OpenCV's is one. The published 16.0.0
+    macOS sidecar carries _psycopg.cpython-312-darwin.so, cv2 and seven
+    FFmpeg dylibs, and 38 dist-info directories holding 371 entries,
+    again with neither of those two among them. In both of them the name
+    LICENSE-3RD-PARTY.txt does not occur once. The code arrived and the
     licence did not. The three texts named above are committed inside
     the backend package for that reason, on the same route that already
-    carries the HarfBuzz text, which the same measurement found present
-    in the same sidecar.
+    carries the HarfBuzz text, which both measurements found present in
+    both sidecars.
 
 Giving you the library's source.
     We ship these libraries unmodified at pinned versions, and every
