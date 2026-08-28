@@ -782,16 +782,30 @@ FFmpeg and Intel IPP, inside opencv-python-headless
     ten more libraries beside the codecs: libvpx, libaom, libavif,
     libdrm, libpng, libopenblasp, libgfortran, libquadmath, libcrypto
     and libssl. Most of them are covered by that same third-party file,
-    and three are worth naming rather than counting. libgfortran and
-    libquadmath are GPL-3.0-or-later carrying the GCC Runtime Library
-    Exception, the permission that exists so that a program compiled by
-    GCC is not pulled under the GPL by its compiler's runtime, and they
-    are the two the third-party file does not mention at all, so the
-    coverage sentence above stops short of them. And the OpenSSL here is
-    a 1.1 series build, the soname reads libcrypto.so.1.1, which
-    predates the move to Apache-2.0; opencv's own file puts it under the
-    OpenSSL and SSLeay double licence rather than the Apache text
-    committed above for the OpenSSL 3 and 4 copies.
+    and three are worth naming rather than counting.
+
+    libgfortran and libquadmath are GPL-3.0-or-later. Anyone who greps a
+    dependency tree for GPL-3.0 will find those two and stop reading, so
+    here is the rest of it. Both carry the GCC Runtime Library
+    Exception, an additional permission the GCC authors attach to the
+    runtime libraries their compiler links into whatever it compiles.
+    Without it every program built with GCC would inherit the GPL from
+    its compiler's runtime, which nobody intended and which the
+    exception exists to prevent. Its condition is that the compilation
+    used a compiler that is itself free software with no proprietary
+    code-generation plugin, and that is how these wheels are built, with
+    stock GCC in the manylinux images. So these two files place no
+    obligation on us or on you beyond the notice you are reading now.
+    They are also the two that opencv's own third-party file does not
+    mention at all, which is why they are named here rather than left to
+    be counted.
+
+    And the OpenSSL here is a 1.1 series build, the soname reads
+    libcrypto.so.1.1, which predates the move to Apache-2.0. Opencv's
+    own file puts it under the OpenSSL and SSLeay double licence, so the
+    Apache text committed above for the OpenSSL 3 and 4 copies is not
+    the licence of this one. The older text is committed alongside it at
+    backend/app/core/licenses/LICENSE_OPENSSL_SSLEAY.
 
 ------------------------------------------------------------------------
 LGPL Components and How We Convey Them
@@ -843,9 +857,17 @@ The components:
     user receives Qt 5 through us, and because both wheels declare
     Apache-2.0, so nothing generated from metadata will tell them.
 
-Qt 6 is a fifth surface and a different thing from the Qt 5 above. It
-sits inside the Windows converter and has its own section below, along
-with the notices that travel with it.
+    Qt 6 Core, LGPL-3.0, inside the Windows desktop installer. This one
+    is different from the Qt 5 above in every respect except the name:
+    a different version, a different delivery path, and we are the party
+    redistributing it. The command line IFC exporter imports it directly
+    and cannot start without it, so Qt6Core.dll is in every Windows
+    installer, about ten megabytes of it. Installers up to and including
+    16.1.0 also carried Qt 6 Gui and Qt 6 Widgets and the platforms and
+    styles plugin folders, which existed only for a graphical converter
+    we never start; those are gone from later builds. The section below
+    on the bundled converter says what is in the installer and what
+    notices travel with it.
 
 Licence texts are committed at backend/app/core/licenses/LICENSE_LGPL_3_0,
 backend/app/core/licenses/LICENSE_LGPL_2_1 and
@@ -879,8 +901,15 @@ Giving you the library's source.
     release carries an SBOM naming the exact version of each. The
     upstream sources are public: psycopg2 at github.com/psycopg/psycopg2
     and on PyPI, FFmpeg at ffmpeg.org along with the build recipe at
-    github.com/opencv/opencv-python, and the Linux desktop stack in the
+    github.com/opencv/opencv-python, Qt at code.qt.io and download.qt.io
+    for both the 5 and 6 series, and the Linux desktop stack in the
     source packages of the distribution the AppImage is built on.
+
+    Two of these travel with the release rather than waiting to be
+    asked for. Each release carries LGPL-SOURCES.md, which lists the
+    source archives attached to it and, just as importantly, names the
+    components for which no archive was attached and why. Read that
+    first; the offer below covers everything it does not.
 
     That is where they are, and it is not by itself the offer the
     licence asks for, so here it is. For three years from the date you
@@ -898,6 +927,13 @@ Letting you replace the library with your own build.
     ordinary separate file. Install your own build of psycopg2 or of
     OpenCV over ours and the application uses it, with nothing to
     rebuild and nothing to ask us for.
+
+    Qt 6 Core in the Windows installer is the simplest case here and
+    the one the licence describes most directly. It is an ordinary DLL
+    beside the converter that loads it, resolved by name through the
+    import table, so putting your own build of Qt 6 Core in its place is
+    a file copy. Nothing needs rebuilding and nothing needs asking us
+    for.
 
     In the desktop installers the backend is a single frozen executable
     and you cannot swap a file inside it. What replaces that is the
