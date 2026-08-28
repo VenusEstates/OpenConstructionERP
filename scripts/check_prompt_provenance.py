@@ -36,10 +36,13 @@ in the same file, then to a module-level constant, then to a constant imported
 from another module. Four outcomes:
 
 ``constant``
-    A string literal, an f-string, a concatenation or ``.format()`` over one.
-    Interpolating data into a constant template is normal and necessary here: a
-    BOQ description has to reach the model somehow. The template is the
-    instruction and the template is in the source.
+    A string literal, a concatenation, ``.format()`` over one, or an f-string
+    every hole of which is itself constant. Interpolating data into a constant
+    template is normal and necessary here, since a BOQ description has to reach
+    the model somehow, but the hole is checked rather than assumed: a hole can
+    hold another prompt, and then the hole is the instruction and the template
+    says nothing about it. Two slots in this tree are raised by that rule and
+    both are written down below.
 
 ``builder``
     The argument is a call to a helper that composes the text. The helper is not
@@ -57,6 +60,26 @@ from another module. Four outcomes:
     The scan could not decide. This fails like a violation and says so, because
     a guard that reports nothing when it understood nothing is worse than no
     guard: it reads as a pass.
+
+It also reads the text behind every slot it settled, and checks that text
+against a closed list of affective vocabulary: emotion, sentiment, mood, morale,
+attitude, temperament, trustworthiness, and the protected characteristics
+alongside them. That is a tripwire, not a classifier. It cannot tell what a
+prompt means. Its value is that a new shipped prompt containing one of those
+words fails until somebody writes down why it is not what it looks like, which
+is cheap to ask when the prompt is written and expensive to reconstruct later.
+Measured the day it was written: 43 terms against 26 prompts, and the only term
+present is "tone", twice, both times the phrase "no marketing tone" constraining
+how the model writes its own summary.
+
+What this file deliberately does not check is prompt text a customer wrote.
+Custom agents store a system prompt per row and that is a feature, not an
+oversight. A denylist over somebody else's instruction text would be trivial to
+route around, and running one would imply a guarantee about their prompts that
+we are in no position to give. Articles 25 and 26 put that consequence on the
+deployer, which is where it belongs. We ship nothing affective; we ship the
+ability to write it. Those are different products with different owners, and
+the distinction is the answer rather than a gap in it.
 
 It also checks the transcription path, which does not go through ``call_ai`` at
 all. ``phonelog.transcription`` posts audio straight to a provider's REST audio
@@ -91,6 +114,7 @@ import argparse
 import ast
 import io
 import pathlib
+import re
 import sys
 from dataclasses import dataclass, field
 
@@ -122,6 +146,64 @@ TRANSCRIPTION_INSTRUCTION_FIELDS = frozenset({"prompt"})
 
 #: Below this many call sites the anchor has drifted and the run proves nothing.
 MIN_EXPECTED_CALL_SITES = 20
+
+#: Vocabulary that would appear in a prompt asking a model about a person's
+#: inner state or protected characteristics. A trailing ``*`` matches a stem.
+#:
+#: This is a tripwire over a closed list, not a classifier. It cannot tell what
+#: a prompt means and it makes no attempt to. Its whole value is that a shipped
+#: prompt containing one of these words fails until somebody writes down why it
+#: is not what it looks like, which is a cheap thing to ask of the person adding
+#: the prompt and an expensive thing to reconstruct a year later.
+#:
+#: Measured against the shipped set the day it was written: 16713 characters of
+#: prompt text across 28 slots, and exactly one of these terms appears in it.
+#: Terms scoring zero are not padding, they are the guard.
+AFFECTIVE_TERMS: tuple[str, ...] = (
+    "emotion",
+    "emotions",
+    "emotional",
+    "sentiment",
+    "mood",
+    "affective",
+    "feelings",
+    "morale",
+    "attitude",
+    "temperament",
+    "personality",
+    "demeanour",
+    "demeanor",
+    "anger",
+    "angry",
+    "anxiety",
+    "anxious",
+    "frustrat*",
+    "stress",
+    "enthusiasm",
+    "empathy",
+    "sincerity",
+    "credibility",
+    "trustworth*",
+    "honesty",
+    "dishonest",
+    "deceptive",
+    "deception",
+    "tone",
+    "biometric",
+    "facial",
+    "gait",
+    "voiceprint",
+    "ethnicity",
+    "ethnic",
+    "religion",
+    "religious",
+    "political opinion",
+    "sexual orientation",
+    "disability",
+    "disabilities",
+    "mental health",
+    "psycholog*",
+)
 
 
 # -- Acknowledgement lists ---------------------------------------------------
@@ -160,6 +242,17 @@ CLEARED_BY_READING: dict[tuple[str, str, str], str] = {
     ): (
         "Picks one of the structuring module's constant templates by note type and appends the "
         "target language. Both inputs are enum-like; neither carries caller text."
+    ),
+    (
+        "backend/app/modules/ai/router.py",
+        "advisor_chat",
+        "system_prompt",
+    ): (
+        "The text is literal in this function. Its only interpolation is lang_name, which is "
+        '_LOCALE_NAMES.get(locale, "English"), a lookup in a module-level table of language '
+        "display names with a default, so the hole can only ever hold one of that closed set. "
+        "Raised by the f-string rule rather than by anything about this call: the rule refuses "
+        "to decide for itself which holes are harmless, and this is what that costs."
     ),
     (
         "backend/app/modules/compliance/router.py",
@@ -213,6 +306,31 @@ RUNTIME_BY_DESIGN: dict[tuple[str, str, str], str] = {
 }
 
 
+#: Terms found in a shipped prompt that a person read and cleared. Keyed by
+#: (path, enclosing function, the term). The term is part of the key on purpose:
+#: clearing "tone" in a prompt says nothing about "sentiment" appearing in the
+#: same prompt next month, and an entry that covered the whole prompt would
+#: quietly become a blanket exemption for the file.
+AFFECT_CLEARED_BY_READING: dict[tuple[str, str, str], str] = {
+    (
+        "backend/app/modules/ai_estimator/intake.py",
+        "_extract_ai",
+        "tone",
+    ): (
+        "The phrase is 'one plain factual sentence (no marketing tone)'. It constrains how the "
+        "model writes its own summary. It asks for nothing about the person who wrote the input."
+    ),
+    (
+        "backend/app/modules/ai_estimator/service.py",
+        "_classify_source",
+        "tone",
+    ): (
+        "The same phrase, 'one plain sentence describing the source (no marketing tone)', and the "
+        "same reading: a constraint on the model's prose, not a question about anybody."
+    ),
+}
+
+
 @dataclass
 class Origin:
     """Where a piece of instruction text came from.
@@ -238,7 +356,7 @@ class Finding:
 
 
 @dataclass
-class Module:
+class SourceFile:
     """A parsed source file and the names it binds."""
 
     path: pathlib.Path
@@ -282,7 +400,7 @@ class Tree:
     def __init__(self, root: pathlib.Path) -> None:
         self.root = root
         self.paths: dict[str, pathlib.Path] = {}
-        self.cache: dict[str, Module | None] = {}
+        self.cache: dict[str, SourceFile | None] = {}
         self.base = root.parent
         for path in iter_source_files(root):
             self.paths[dotted_name(path, root)] = path
@@ -313,7 +431,7 @@ class Tree:
                 out.append(path)
         return sorted(out)
 
-    def get(self, dotted: str) -> Module | None:
+    def get(self, dotted: str) -> SourceFile | None:
         """Parse and index a module by dotted name, or ``None`` when we have no such file."""
         if dotted in self.cache:
             return self.cache[dotted]
@@ -327,20 +445,20 @@ class Tree:
             self.cache[dotted] = None
             return None
 
-    def load(self, path: pathlib.Path) -> Module:
+    def load(self, path: pathlib.Path) -> SourceFile:
         """Parse one file and record the names it binds."""
         dotted = dotted_name(path, self.root)
         try:
             tree = ast.parse(io.open(path, encoding="utf-8").read())
         except (SyntaxError, UnicodeDecodeError) as exc:
             raise ParseFailure(f"{self.relative(path)}: {exc}") from exc
-        mod = Module(path=path, rel=self.relative(path), dotted=dotted, tree=tree)
+        mod = SourceFile(path=path, rel=self.relative(path), dotted=dotted, tree=tree)
         collect_module_names(mod)
         self.cache[dotted] = mod
         return mod
 
 
-def collect_module_names(mod: Module) -> None:
+def collect_module_names(mod: SourceFile) -> None:
     """Record module-level assignments and every ``from ... import`` binding.
 
     Assignments are read at module level only, because that is what a constant
@@ -390,7 +508,11 @@ def is_literal_text(node: ast.expr) -> bool:
     if isinstance(node, ast.Constant):
         return isinstance(node.value, str)
     if isinstance(node, ast.JoinedStr):
-        # An f-string's literal parts are the template; the holes are payload.
+        # The literal parts are text a reader can read. Whether the holes carry
+        # payload or more instruction is a separate question, and it is answered
+        # by Resolver.template_origin rather than here, because every caller of
+        # this function wants the narrow question and only the instruction slot
+        # wants the wide one.
         return True
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
         return is_literal_text(node.left) and is_literal_text(node.right)
@@ -402,7 +524,12 @@ def is_literal_text(node: ast.expr) -> bool:
     return False
 
 
-def enclosing_functions(mod: Module) -> dict[int, ast.AST]:
+def joined_str_holes(node: ast.JoinedStr) -> list[ast.expr]:
+    """Every expression interpolated into an f-string."""
+    return [v.value for v in node.values if isinstance(v, ast.FormattedValue)]
+
+
+def enclosing_functions(mod: SourceFile) -> dict[int, ast.AST]:
     """Map every node in the module to its innermost enclosing function.
 
     One descent, cached. The obvious version walks the subtree of every function
@@ -438,7 +565,7 @@ def called_name(node: ast.Call) -> str | None:
     return None
 
 
-def calls_by_name(mod: Module) -> dict[str, list[ast.Call]]:
+def calls_by_name(mod: SourceFile) -> dict[str, list[ast.Call]]:
     """Every call in the module, indexed by the bare name being called."""
     if mod.calls is not None:
         return mod.calls
@@ -505,6 +632,23 @@ class Resolver:
             return None
         if name in mod.consts:
             value = mod.consts[name]
+            if isinstance(value, ast.JoinedStr):
+                # Resolved here rather than through classify so the depth
+                # counter keeps counting: two module constants written as
+                # f-strings that name each other would otherwise walk forever.
+                for hole in joined_str_holes(value):
+                    if isinstance(hole, ast.Constant) and isinstance(hole.value, str):
+                        continue
+                    if isinstance(hole, ast.Name):
+                        inner = self.module_constant(dotted, hole.id, depth + 1)
+                        if inner is not None and inner.kind == "constant":
+                            continue
+                    return Origin(
+                        "runtime",
+                        f"module constant {dotted}.{name} interpolates "
+                        f"{ast.unparse(hole)}",
+                    )
+                return Origin("constant", f"module constant {dotted}.{name}")
             if is_literal_text(value):
                 return Origin("constant", f"module constant {dotted}.{name}")
             if isinstance(value, ast.Name):
@@ -517,14 +661,103 @@ class Resolver:
             return self.module_constant(src_mod, src_name, depth + 1)
         return None
 
+    def template_origin(
+        self,
+        node: ast.JoinedStr,
+        mod: SourceFile,
+        func: ast.AST | None,
+        seen: frozenset[tuple[str, str, str]],
+    ) -> Origin:
+        """Classify an f-string that fills an instruction slot.
+
+        The literal parts are the template and a reader can read them. The holes
+        are the question, and the tempting answer is that a hole holds payload:
+        a BOQ description has to reach the model somehow, and the template still
+        carries the instruction. That answer is right often enough to be
+        dangerous. Where a hole holds another prompt, the hole IS instruction
+        text and the template says nothing about what it asks for.
+
+        This scan cannot tell those apart by looking, so it does not guess. A
+        hole that is not itself constant makes the slot as runtime as the hole,
+        and a person writes down which kind it is in an acknowledgement list.
+        Being wrong in this direction costs an entry; being wrong in the other
+        direction is how the one genuinely runtime prompt in this platform was
+        cleared as a constant and reported with confidence.
+        """
+        for hole in joined_str_holes(node):
+            origin = self.classify(hole, mod, func, seen)
+            if origin.kind != "constant":
+                return Origin(
+                    origin.kind,
+                    f"f-string interpolating {ast.unparse(hole)}, which is "
+                    f"{origin.detail}",
+                )
+        return Origin("constant", "f-string whose holes are all constant")
+
+    def text_of(
+        self,
+        node: ast.expr,
+        mod: SourceFile,
+        func: ast.AST | None,
+        depth: int = 0,
+    ) -> str | None:
+        """The readable text behind an expression, or None where it cannot say.
+
+        Only the parts a reader can read. An f-string's holes come back as a
+        gap rather than a guess, because what arrives in a hole is not text this
+        project ships, and what this project ships is the entire question.
+        """
+        if depth > 6:
+            return None
+        if isinstance(node, ast.Constant):
+            return node.value if isinstance(node.value, str) else None
+        if isinstance(node, ast.JoinedStr):
+            return "".join(
+                v.value
+                if isinstance(v, ast.Constant) and isinstance(v.value, str)
+                else " ... "
+                for v in node.values
+            )
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            left = self.text_of(node.left, mod, func, depth + 1)
+            right = self.text_of(node.right, mod, func, depth + 1)
+            return None if left is None or right is None else left + right
+        if isinstance(node, ast.IfExp):
+            # Both branches ship, so both branches are read.
+            sides = [
+                self.text_of(node.body, mod, func, depth + 1),
+                self.text_of(node.orelse, mod, func, depth + 1),
+            ]
+            got = [side for side in sides if side is not None]
+            return "\n".join(got) if got else None
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr in {"format", "join", "strip", "lstrip", "rstrip"}:
+                return self.text_of(node.func.value, mod, func, depth + 1)
+            return None
+        if isinstance(node, ast.Name):
+            if func is not None:
+                local = last_local_assignment(func, node.id)
+                if local is not None:
+                    return self.text_of(local, mod, func, depth + 1)
+            if node.id in mod.consts:
+                return self.text_of(mod.consts[node.id], mod, None, depth + 1)
+            if node.id in mod.imports:
+                src_mod, src_name = mod.imports[node.id]
+                other = self.tree.get(src_mod)
+                if other is not None and src_name in other.consts:
+                    return self.text_of(other.consts[src_name], other, None, depth + 1)
+        return None
+
     def classify(
         self,
         node: ast.expr,
-        mod: Module,
+        mod: SourceFile,
         func: ast.AST | None,
         seen: frozenset[tuple[str, str, str]] = frozenset(),
     ) -> Origin:
         """Classify the expression filling an instruction slot."""
+        if isinstance(node, ast.JoinedStr):
+            return self.template_origin(node, mod, func, seen)
         if is_literal_text(node):
             return Origin("constant", "literal in the call")
         if isinstance(node, ast.Name):
@@ -562,7 +795,7 @@ class Resolver:
     def classify_name(
         self,
         name: str,
-        mod: Module,
+        mod: SourceFile,
         func: ast.AST | None,
         seen: frozenset[tuple[str, str, str]] = frozenset(),
     ) -> Origin:
@@ -577,6 +810,8 @@ class Resolver:
                 )
             local = last_local_assignment(func, name)
             if local is not None:
+                if isinstance(local, ast.JoinedStr):
+                    return self.template_origin(local, mod, func, seen)
                 if is_literal_text(local):
                     return Origin("constant", f"local {name} built from literal text")
                 if isinstance(local, ast.Name):
@@ -599,7 +834,7 @@ class Resolver:
 
     def from_local_callers(
         self,
-        mod: Module,
+        mod: SourceFile,
         func: ast.AST,
         param: str,
         seen: frozenset[tuple[str, str, str]],
@@ -675,7 +910,9 @@ def instruction_argument(node: ast.Call) -> ast.expr | None:
     return None
 
 
-def model_call_sites(mod: Module) -> list[tuple[ast.Call, ast.expr, ast.AST | None]]:
+def model_call_sites(
+    mod: SourceFile,
+) -> list[tuple[ast.Call, ast.expr, ast.AST | None]]:
     """Every ``call_ai`` use in the module, with its instruction argument."""
     owners = enclosing_functions(mod)
     out = []
@@ -688,16 +925,24 @@ def model_call_sites(mod: Module) -> list[tuple[ast.Call, ast.expr, ast.AST | No
     return out
 
 
-def site_key(mod: Module, arg: ast.expr, func: ast.AST | None) -> tuple[str, str, str]:
+def site_key(
+    mod: SourceFile, arg: ast.expr, func: ast.AST | None
+) -> tuple[str, str, str]:
     """The acknowledgement key for one call site."""
     return (mod.rel, str(getattr(func, "name", "?")), ast.unparse(arg))
 
 
 def scan_model_calls(
-    modules: list[Module], resolver: Resolver
-) -> tuple[list[Finding], int]:
-    """Classify the instruction argument at every model call site."""
+    modules: list[SourceFile], resolver: Resolver
+) -> tuple[list[Finding], int, set[tuple[str, str, str]]]:
+    """Classify the instruction argument at every model call site.
+
+    Returns the findings, the number of sites scanned, and the acknowledgement
+    keys that were actually looked up, because an entry nothing consulted is a
+    different problem from an entry that matches nothing.
+    """
     findings: list[Finding] = []
+    used: set[tuple[str, str, str]] = set()
     total = 0
     for mod in modules:
         for node, arg, func in model_call_sites(mod):
@@ -710,9 +955,79 @@ def scan_model_calls(
             # record what a person found, and a person can resolve a slot the
             # scan called unresolved just as well as one it called a builder.
             if key in CLEARED_BY_READING or key in RUNTIME_BY_DESIGN:
+                used.add(key)
                 continue
             findings.append(Finding(mod.rel, node.lineno, key[1], key[2], origin))
-    return findings, total
+    return findings, total, used
+
+
+def shipped_prompt_texts(
+    modules: list[SourceFile], resolver: Resolver
+) -> dict[tuple[str, int, str], str]:
+    """The text of every instruction slot this project fills from its own source.
+
+    A slot counts as ours when the scan settled it as constant, and also when a
+    person recorded in CLEARED_BY_READING that they followed it to a constant,
+    because the second kind is just as much our text and dropping it would make
+    the stricter provenance rule quietly shrink what gets read. Slots in
+    RUNTIME_BY_DESIGN are excluded, and that exclusion is the boundary rather
+    than a gap: text a customer wrote is not in here because it is not ours.
+    """
+    out: dict[tuple[str, int, str], str] = {}
+    for mod in modules:
+        for node, arg, func in model_call_sites(mod):
+            key = site_key(mod, arg, func)
+            if key in RUNTIME_BY_DESIGN:
+                continue
+            if (
+                resolver.classify(arg, mod, func).kind != "constant"
+                and key not in CLEARED_BY_READING
+            ):
+                continue
+            text = resolver.text_of(arg, mod, func)
+            if text is not None:
+                out[(mod.rel, node.lineno, str(getattr(func, "name", "?")))] = text
+    return out
+
+
+def affective_terms_in(text: str) -> list[str]:
+    """Every tripwire term appearing in a piece of prompt text."""
+    found = []
+    for term in AFFECTIVE_TERMS:
+        stem = term.endswith("*")
+        core = term[:-1] if stem else term
+        pattern = r"\b" + re.escape(core) + ("" if stem else r"\b")
+        if re.search(pattern, text, re.IGNORECASE):
+            found.append(term)
+    return found
+
+
+def scan_affective_text(texts: dict[tuple[str, int, str], str]) -> list[Finding]:
+    """Check the prompts this project ships for affective vocabulary.
+
+    This is the half of the question we are answerable for. What a customer
+    writes into an agent prompt is deliberately not checked anywhere in this
+    file: Articles 25 and 26 put that consequence on the deployer, a denylist
+    over their text would be trivial to route around, and running one would
+    imply a guarantee about their prompts that we are in no position to give.
+    We ship nothing affective. We ship the ability to write it. Those are
+    different products with different owners.
+    """
+    findings: list[Finding] = []
+    for (rel, lineno, func), text in sorted(texts.items()):
+        for term in affective_terms_in(text):
+            if (rel, func, term) in AFFECT_CLEARED_BY_READING:
+                continue
+            findings.append(
+                Finding(
+                    rel,
+                    lineno,
+                    func,
+                    term,
+                    Origin("affective", f"the shipped prompt text contains {term!r}"),
+                )
+            )
+    return findings
 
 
 def form_keys(node: ast.expr, func: ast.AST | None) -> set[str]:
@@ -730,7 +1045,7 @@ def form_keys(node: ast.expr, func: ast.AST | None) -> set[str]:
     }
 
 
-def scan_transcription_posts(modules: list[Module]) -> list[Finding]:
+def scan_transcription_posts(modules: list[SourceFile]) -> list[Finding]:
     """Refuse an instruction field on a speech-to-text multipart form.
 
     The audio path does not go through ``call_ai``, so the slot it would grow is
@@ -775,23 +1090,35 @@ def scan_transcription_posts(modules: list[Module]) -> list[Finding]:
     return findings
 
 
-def stale_acknowledgements(modules: list[Module]) -> list[str]:
-    """Acknowledgement entries that no longer match a real call site.
+def unused_acknowledgements(
+    modules: list[SourceFile], used: set[tuple[str, str, str]]
+) -> list[str]:
+    """Acknowledgement entries nothing consulted on this run.
 
-    An entry left behind after the code moved is not harmless. It reads as a
-    reviewed exception and is really a note about a call site that no longer
-    exists, so the list quietly stops describing the platform.
+    An entry reads as a reviewed exception. There are two ways it can stop being
+    one, and both look identical from outside. The call site moved or went away,
+    which is the obvious way. Or the site is still there and the scan settled it
+    without ever looking the entry up, which is the quiet way.
+
+    The quiet way is why this check exists. This file shipped green with an
+    entry describing the single genuinely runtime prompt in the platform, while
+    the scan was clearing that same slot as a constant and never reading the
+    entry. Nothing was wrong with the entry. Nothing was wrong with the count.
+    The gate agreed with itself and was not measuring the thing it named.
     """
     live = {
         site_key(mod, arg, func)
         for mod in modules
         for _, arg, func in model_call_sites(mod)
     }
-    return [
-        f"{k[0]} :: {k[1]} :: {k[2]}"
-        for k in [*CLEARED_BY_READING, *RUNTIME_BY_DESIGN]
-        if k not in live
-    ]
+    out = []
+    for key in [*CLEARED_BY_READING, *RUNTIME_BY_DESIGN]:
+        where = f"{key[0]} :: {key[1]} :: {key[2]}"
+        if key not in live:
+            out.append(f"no call site matches it: {where}")
+        elif key not in used:
+            out.append(f"the scan cleared the slot without consulting it: {where}")
+    return out
 
 
 def interpreter_is_current() -> bool:
@@ -864,6 +1191,31 @@ _FIXTURES: dict[str, dict[str, str]] = {
             "        return await self._ask('u', SYSTEM, text)\n"
         ),
     },
+    # Green: an f-string is still ordinary when everything it interpolates is
+    # a constant. The rule has to permit this or every prompt that appends a
+    # language line would need an entry.
+    "f-string over a module constant": {
+        "modules/x/service.py": (
+            'ROLE = "You are a cost estimator."\n'
+            "async def run(text):\n"
+            "    from app.modules.ai.ai_client import call_ai\n"
+            "    system = f'{ROLE} Answer in JSON.'\n"
+            "    return await call_ai('openai', 'k', system=system, prompt=text)\n"
+        ),
+    },
+    # Red, and the reason this rule exists. The template is a constant and a
+    # reader can read all of it, so the old rule called the slot constant. The
+    # first hole is another prompt, which makes the hole the instruction and
+    # the template a wrapper around text this file never sees. This is the
+    # exact shape of ai_agents/llm.py, where it shipped green.
+    "f-string interpolating a parameter": {
+        "modules/x/service.py": (
+            "async def run(system_prompt, text):\n"
+            "    from app.modules.ai.ai_client import call_ai\n"
+            "    full = f'{system_prompt}\\n\\nAnswer in JSON.'\n"
+            "    return await call_ai('openai', 'k', system=full, prompt=text)\n"
+        ),
+    },
     # Red: the thing this guard exists for. Instruction text off a database row.
     "instruction text from a row": {
         "modules/x/service.py": (
@@ -887,7 +1239,11 @@ _FIXTURES: dict[str, dict[str, str]] = {
 
 #: Fixtures the scan is required to refuse. Everything else must come back clean.
 _RED_FIXTURES = frozenset(
-    {"instruction text from a row", "row attribute through a private wrapper"}
+    {
+        "f-string interpolating a parameter",
+        "instruction text from a row",
+        "row attribute through a private wrapper",
+    }
 )
 
 _TRANSCRIPTION_CLEAN = (
@@ -922,7 +1278,7 @@ def self_test() -> int:
         for name, files in _FIXTURES.items():
             tree = _fixture_tree(base / name.replace(" ", "_"), files)
             modules = [tree.load(path) for path in tree.candidates()]
-            found, total = scan_model_calls(modules, Resolver(tree))
+            found, total, _used = scan_model_calls(modules, Resolver(tree))
             if total != 1:
                 failures.append(f"{name}: expected 1 call site, scanned {total}")
                 continue
@@ -945,6 +1301,62 @@ def self_test() -> int:
             if got != expected:
                 failures.append(f"{name}: expected {expected} finding(s), got {got}")
 
+        for name, prompt_text, expected in (
+            ("shipped prompt with nothing affective", "You are a cost estimator.", 0),
+            ("shipped prompt asking about a mood", "Rate the caller's mood.", 1),
+        ):
+            source = (
+                f'SYSTEM = "{prompt_text}"\n'
+                "async def run(text):\n"
+                "    from app.modules.ai.ai_client import call_ai\n"
+                "    return await call_ai('openai', 'k', system=SYSTEM, prompt=text)\n"
+            )
+            tree = _fixture_tree(
+                base / name.replace(" ", "_"), {"modules/x/service.py": source}
+            )
+            modules = [tree.load(path) for path in tree.candidates()]
+            texts = shipped_prompt_texts(modules, Resolver(tree))
+            got = len(scan_affective_text(texts))
+            if got != expected:
+                failures.append(f"{name}: expected {expected} finding(s), got {got}")
+
+        # An acknowledgement entry that matches a live call site the scan
+        # settles on its own. Nothing reads the entry, and before this check
+        # nothing said so. Injected rather than written into the real list,
+        # because the failure being reproduced is about a list that agrees with
+        # itself, and a permanent entry would be the same bug again.
+        name = "acknowledgement nothing consulted"
+        source = (
+            'SYSTEM = "You are a scheduler."\n'
+            "async def run(text):\n"
+            "    from app.modules.ai.ai_client import call_ai\n"
+            "    return await call_ai('openai', 'k', system=SYSTEM, prompt=text)\n"
+        )
+        tree = _fixture_tree(
+            base / name.replace(" ", "_"), {"modules/x/service.py": source}
+        )
+        modules = [tree.load(path) for path in tree.candidates()]
+        _f, _t, used = scan_model_calls(modules, Resolver(tree))
+        # Taken from the fixture rather than written out, because a fixture
+        # tree lives in a temp directory and its recorded path is absolute.
+        live = [
+            site_key(mod, arg, func)
+            for mod in modules
+            for _, arg, func in model_call_sites(mod)
+        ]
+        if len(live) != 1:
+            failures.append(f"{name}: expected 1 call site, found {len(live)}")
+        else:
+            CLEARED_BY_READING[live[0]] = "injected by the self-test"
+            try:
+                reported = unused_acknowledgements(modules, used)
+            finally:
+                del CLEARED_BY_READING[live[0]]
+            if not any("without consulting it" in line for line in reported):
+                failures.append(
+                    f"{name}: an entry the scan never looked up was not reported"
+                )
+
         empty = _fixture_tree(base / "empty", {"modules/x/service.py": "VALUE = 1\n"})
         if empty.candidates():
             failures.append(
@@ -961,7 +1373,8 @@ def self_test() -> int:
             print(f"SELF-TEST FAILED: {line}")
         return 1
     print(
-        f"self-test OK: {len(_FIXTURES)} classification fixtures, 2 transcription fixtures, 2 floors"
+        f"self-test OK: {len(_FIXTURES)} classification fixtures, 2 transcription "
+        f"fixtures, 2 affect fixtures, 1 unconsulted-entry fixture, 2 floors"
     )
     return 0
 
@@ -996,7 +1409,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     tree = Tree(APP_ROOT)
-    modules: list[Module] = []
+    modules: list[SourceFile] = []
     broken: list[str] = []
     try:
         candidates = tree.candidates()
@@ -1018,8 +1431,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     resolver = Resolver(tree)
-    findings, total = scan_model_calls(modules, resolver)
+    findings, total, used = scan_model_calls(modules, resolver)
     findings.extend(scan_transcription_posts(modules))
+    shipped = shipped_prompt_texts(modules, resolver)
+    affective = scan_affective_text(shipped)
 
     if total < MIN_EXPECTED_CALL_SITES:
         print(
@@ -1029,19 +1444,26 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    stale = stale_acknowledgements(modules)
+    stale = unused_acknowledgements(modules, used)
 
     if args.verbose:
         print(
             f"read {len(modules)} of {len(tree.paths)} app modules, {total} model call sites"
         )
         print(
-            f"acknowledged: {len(CLEARED_BY_READING)} cleared by reading, {len(RUNTIME_BY_DESIGN)} runtime by design"
+            f"acknowledged: {len(CLEARED_BY_READING)} cleared by reading, "
+            f"{len(RUNTIME_BY_DESIGN)} runtime by design, {len(used)} consulted"
+        )
+        print(
+            f"shipped prompt text: {len(shipped)} slots, "
+            f"{sum(len(t) for t in shipped.values())} characters, "
+            f"{len(AFFECTIVE_TERMS)} tripwire terms"
         )
 
-    if not findings and not stale:
+    if not findings and not stale and not affective:
         print(
-            f"prompt provenance OK: {total} model call sites, every instruction slot accounted for"
+            f"prompt provenance OK: {total} model call sites, every instruction slot "
+            f"accounted for, nothing affective in the {len(shipped)} prompts we ship"
         )
         return 0
 
@@ -1057,11 +1479,20 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "    Record it in CLEARED_BY_READING or RUNTIME_BY_DESIGN with the reading that clears it."
             )
+    for f in affective:
+        print(f"{f.path}:{f.lineno} in {f.func}()")
+        print(f"    a prompt this project ships contains {f.source!r}")
+        print(
+            "    Read it. If it is not about a person, record it in "
+            "AFFECT_CLEARED_BY_READING with what it really says."
+        )
     for entry in stale:
-        print(f"stale acknowledgement, no call site matches: {entry}")
+        print(f"acknowledgement out of date: {entry}")
 
     print(
-        f"\n{len(findings)} unaccounted instruction slot(s), {len(stale)} stale acknowledgement(s)"
+        f"\n{len(findings)} unaccounted instruction slot(s), "
+        f"{len(affective)} affective term(s) in shipped prompts, "
+        f"{len(stale)} acknowledgement(s) out of date"
     )
     return 1
 
