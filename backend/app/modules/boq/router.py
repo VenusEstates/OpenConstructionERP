@@ -6269,6 +6269,101 @@ async def import_boq_gaeb(
         )
     # No upload size cap - per product policy.
 
+    # ── Epic I5: this route runs the registered GAEB importer ──────────────
+    # Everything below this block is the original inline walker. It is now
+    # dead code - the return at the end of this block is unconditional. It is
+    # left in place deliberately so that removing it is a separate change a
+    # reviewer can read on its own, rather than noise inside a behaviour fix.
+    #
+    # The walker never worked on a conformant GAEB file. GAEB DA XML 3.3 puts
+    # an item's wording in Description/CompleteText/DetailTxt/Text/p/span, and
+    # every text helper below reads only an element's own ``.text``: it locates
+    # <Text>, reads the whitespace sitting between <Text> and its <p> child,
+    # finds nothing, then falls back to <OutlineText>.text, which is whitespace
+    # for the same reason. ``_extract_description`` therefore returns "" for
+    # every Item, and an Item with no description is skipped. Measured over
+    # every GAEB fixture in this repo, the walker imports 0 of 27 items from
+    # the X84, 0 of 27 from the X83 and 0 of 21 from the Frankfurt X83, and
+    # reports the whole file as skipped.
+    #
+    # The registered importer reads the nested text, threads each BoQCtgy as a
+    # parent section row, keeps the real OZ as the ordinal instead of the
+    # opaque Item/@ID handle, reconstructs an X84's quantity from IT/UP, and
+    # surfaces the Zuschlagsposition as a native markup. It parses through the
+    # same defusedxml entry point, so the XXE protection below is not lost.
+    from app.modules.boq.importers import ImporterParseError
+    from app.modules.boq.importers.gaeb_xml import GAEBXMLImporter
+
+    try:
+        imported_boq = await GAEBXMLImporter.parse(content, locale=get_locale())
+    except ImporterParseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to parse GAEB XML: {exc}",
+        ) from exc
+
+    apply_summary = await _persist_imported_boq(
+        boq_id,
+        imported_boq,
+        file_name=file.filename or "gaeb",
+        service=service,
+        actor_id=_user_id,
+    )
+
+    # ``imported`` keeps its historic meaning of line items only. The importer
+    # also emits one parent row per BoQCtgy and ``_persist_imported_boq``
+    # counts those in ``created`` - 39 rows for a 27-position LV. Returning
+    # ``created`` would keep the field name and silently change what it counts,
+    # so the section rows are subtracted here and reported under ``sections``,
+    # which is where this route has always reported them.
+    section_positions = [p for p in imported_boq.positions if p.is_section]
+    created = int(apply_summary["created"])
+    line_items_created = max(created - len(section_positions), 0)
+    sections_seen = [{"ordinal": p.ordinal or "", "label": p.description or ""} for p in section_positions]
+
+    # Persist lightweight import metadata at the BOQ level (unchanged keys).
+    if created > 0:
+        try:
+            boq_obj = await service.get_boq(boq_id)
+            meta = dict(boq_obj.metadata_) if isinstance(boq_obj.metadata_, dict) else {}
+            meta["last_import"] = {
+                "source_filename": file.filename,
+                "source_format": imported_boq.source_format,
+                "gaeb_currency": imported_boq.currency,
+                "total_imported": line_items_created,
+                "total_sections": len(sections_seen),
+                "import_date": datetime.now(UTC).isoformat(),
+            }
+            boq_obj.metadata_ = meta
+            await service.session.flush()
+            await service.session.commit()
+        except Exception:
+            logger.warning("Failed to persist GAEB import metadata for BOQ %s", boq_id, exc_info=True)
+
+    validation_report = None
+    if created > 0:
+        validation_report = await _run_import_validation(boq_id, service, service.session)
+
+    logger.info(
+        "GAEB import complete for %s: imported=%d, sections=%d, skipped=%d, errors=%d",
+        boq_id,
+        line_items_created,
+        len(sections_seen),
+        imported_boq.skipped,
+        len(imported_boq.errors) + len(apply_summary["apply_errors"]),
+    )
+
+    return {
+        "imported": line_items_created,
+        "skipped": imported_boq.skipped,
+        "errors": imported_boq.errors + apply_summary["apply_errors"],
+        "sections": sections_seen,
+        "source_format": imported_boq.source_format,
+        "currency": imported_boq.currency,
+        "validation_report": validation_report,
+    }
+
+    # ── DEAD CODE BELOW - the original inline walker, kept for one commit ──
     # Parse XML defensively via defusedxml - blocks XXE, external-entity
     # expansion, billion-laughs, and DTD-based attacks on user input.
     try:
