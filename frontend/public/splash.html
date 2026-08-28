@@ -100,6 +100,11 @@
       gap: 2px;
     }
 
+    /* The checklist is the one block on this screen that is deliberately
+       start-aligned rather than centred, so it has to follow the writing
+       direction instead of the left edge. */
+    :root[dir="rtl"] .checklist { text-align: right; }
+
     .step {
       display: flex;
       align-items: flex-start;
@@ -278,7 +283,7 @@
 </head>
 <body>
   <main class="stage">
-    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="OpenConstructionERP logo">
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" data-i18n-aria="logoAlt" aria-label="OpenConstructionERP logo">
       <defs>
         <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#0066ff"/>
@@ -300,29 +305,29 @@
     </svg>
 
     <h1 class="product">OpenConstructionERP</h1>
-    <p class="subtitle">by DataDrivenConstruction</p>
+    <p class="subtitle" data-i18n="by">by DataDrivenConstruction</p>
 
-    <p class="status" id="status">Starting the application</p>
+    <p class="status" id="status" data-i18n="status">Starting the application</p>
 
     <div class="checklist" id="checklist" aria-live="polite"></div>
 
-    <p class="hint" id="hint">First run sets up your local database. This can take a minute or two, please wait.</p>
+    <p class="hint" id="hint" data-i18n="hint">First run sets up your local database. This can take a minute or two, please wait.</p>
     <p class="logpath" id="appversion"></p>
     <p class="logpath" id="logpath"></p>
-    <button class="copybtn" id="copybtn" type="button">Copy details</button>
+    <button class="copybtn" id="copybtn" type="button" data-i18n="copy">Copy details</button>
 
     <!-- One-time launch choice: app window (default) or normal web browser. -->
     <section class="choice" id="choice" aria-live="polite">
-      <h2>How would you like to open OpenConstructionERP?</h2>
-      <p>You can use it as its own app window, or open it in the web browser you already use. You can switch any time later.</p>
+      <h2 data-i18n="cTitle">How would you like to open OpenConstructionERP?</h2>
+      <p data-i18n="cBody">You can use it as its own app window, or open it in the web browser you already use. You can switch any time later.</p>
       <div class="choice-buttons">
         <button class="choice-btn primary" id="choice-app" type="button">
-          Open as an app window
-          <small>Recommended. A dedicated window, no browser tabs.</small>
+          <span data-i18n="cApp">Open as an app window</span>
+          <small data-i18n="cAppNote">Recommended. A dedicated window, no browser tabs.</small>
         </button>
         <button class="choice-btn" id="choice-browser" type="button">
-          Open in my browser
-          <small>Use your normal web browser at the local address.</small>
+          <span data-i18n="cBrowser">Open in my browser</span>
+          <small data-i18n="cBrowserNote">Use your normal web browser at the local address.</small>
         </button>
       </div>
       <p class="choice-note" id="choice-note"></p>
@@ -330,19 +335,1255 @@
   </main>
 
   <script>
-    // Ordered boot checklist. Each entry: id -> label. The launcher drives state
-    // transitions by calling bootStage(id, status, detail). The same ids are
-    // emitted by the backend as "STAGE:<id>:<status>:<detail>" markers.
+    // --- Translations -----------------------------------------------------
+    //
+    // This screen is the first thing every desktop user sees, in every
+    // language, and it runs before the application bundle exists: the window
+    // is pointed at this file on the tauri:// origin, and the React app with
+    // its i18next stack only exists at http://127.0.0.1:<port>/, which is
+    // where we navigate once the backend is healthy. So none of the usual
+    // translation machinery is reachable from here, and the strings live in
+    // this file.
+    //
+    // The table is written as strict JSON on purpose - double quotes, no
+    // trailing commas - so frontend/tests/splash/splashI18n.test.ts can parse
+    // it out of this file and check every language against English. Keep it
+    // that way when adding a language.
+    //
+    // English is the source. A language that is missing a key falls back to
+    // its base language and then to English, so a partly translated table
+    // renders English words rather than a raw key. Regional variants of the
+    // offered languages (en-US, es-MX, es-CL, es-CO, pt-BR) have no table of
+    // their own and are answered by their base language, which is the right
+    // answer for a screen with two dozen strings on it.
+    //
+    // {n} is the one interpolation token used here, and it must survive
+    // translation. There is no plural machinery on this screen, so a language
+    // whose plural forms would disagree with a bare number gets a phrasing
+    // that reads correctly for any count, usually by abbreviating the unit.
+    // (i18n-table-start)
+    var SPLASH_I18N = {
+      "en": {
+        "status": "Starting the application",
+        "statusPg": "Setting up the local database, almost there",
+        "sLauncher": "Starting launcher",
+        "sSidecar": "Locating the backend",
+        "sPg": "Starting the local database",
+        "sMigrate": "Preparing the database",
+        "sServer": "Starting the application server",
+        "sOpen": "Opening the app",
+        "hint": "First run sets up your local database. This can take a minute or two, please wait.",
+        "version": "Version: {n}",
+        "logFile": "Log file: {n}",
+        "copy": "Copy details",
+        "copied": "Copied",
+        "errTitle": "Something went wrong",
+        "errGeneric": "Startup failed.",
+        "errLog": "A log was saved under your home folder as .openestimate/desktop-launcher.log.",
+        "dReady": "Ready",
+        "dFound": "Found a running backend",
+        "cTitle": "How would you like to open OpenConstructionERP?",
+        "cBody": "You can use it as its own app window, or open it in the web browser you already use. You can switch any time later.",
+        "cApp": "Open as an app window",
+        "cAppNote": "Recommended. A dedicated window, no browser tabs.",
+        "cBrowser": "Open in my browser",
+        "cBrowserNote": "Use your normal web browser at the local address.",
+        "cCountdown": "Opening as an app window in {n} seconds.",
+        "cOpening": "Opening in your browser...",
+        "logoAlt": "OpenConstructionERP logo",
+        "by": "by DataDrivenConstruction"
+      },
+      "de": {
+        "status": "Anwendung wird gestartet",
+        "statusPg": "Die lokale Datenbank wird eingerichtet, fast fertig",
+        "sLauncher": "Starter wird gestartet",
+        "sSidecar": "Backend wird gesucht",
+        "sPg": "Lokale Datenbank wird gestartet",
+        "sMigrate": "Datenbank wird vorbereitet",
+        "sServer": "Anwendungsserver wird gestartet",
+        "sOpen": "App wird geöffnet",
+        "hint": "Beim ersten Start wird Ihre lokale Datenbank eingerichtet. Das kann ein bis zwei Minuten dauern, bitte warten Sie.",
+        "version": "Version: {n}",
+        "logFile": "Protokolldatei: {n}",
+        "copy": "Details kopieren",
+        "copied": "Kopiert",
+        "errTitle": "Etwas ist schiefgelaufen",
+        "errGeneric": "Der Start ist fehlgeschlagen.",
+        "errLog": "Ein Protokoll wurde in Ihrem Benutzerordner unter .openestimate/desktop-launcher.log gespeichert.",
+        "dReady": "Bereit",
+        "dFound": "Laufendes Backend gefunden",
+        "cTitle": "Wie möchten Sie OpenConstructionERP öffnen?",
+        "cBody": "Sie können es als eigenes App-Fenster nutzen oder in dem Webbrowser öffnen, den Sie ohnehin verwenden. Sie können jederzeit wechseln.",
+        "cApp": "Als App-Fenster öffnen",
+        "cAppNote": "Empfohlen. Ein eigenes Fenster, keine Browser-Tabs.",
+        "cBrowser": "In meinem Browser öffnen",
+        "cBrowserNote": "Ihren gewohnten Webbrowser unter der lokalen Adresse verwenden.",
+        "cCountdown": "Wird in {n} Sekunden als App-Fenster geöffnet.",
+        "cOpening": "Wird in Ihrem Browser geöffnet...",
+        "logoAlt": "OpenConstructionERP Logo",
+        "by": "von DataDrivenConstruction"
+      },
+      "fr": {
+        "status": "Démarrage de l'application",
+        "statusPg": "Mise en place de la base de données locale, presque terminé",
+        "sLauncher": "Démarrage du lanceur",
+        "sSidecar": "Localisation du backend",
+        "sPg": "Démarrage de la base de données locale",
+        "sMigrate": "Préparation de la base de données",
+        "sServer": "Démarrage du serveur applicatif",
+        "sOpen": "Ouverture de l'application",
+        "hint": "Le premier démarrage met en place votre base de données locale. Cela peut prendre une ou deux minutes, merci de patienter.",
+        "version": "Version : {n}",
+        "logFile": "Fichier journal : {n}",
+        "copy": "Copier les détails",
+        "copied": "Copié",
+        "errTitle": "Un problème est survenu",
+        "errGeneric": "Le démarrage a échoué.",
+        "errLog": "Un journal a été enregistré dans votre dossier personnel sous .openestimate/desktop-launcher.log.",
+        "dReady": "Prêt",
+        "dFound": "Backend en cours d'exécution trouvé",
+        "cTitle": "Comment souhaitez-vous ouvrir OpenConstructionERP ?",
+        "cBody": "Vous pouvez l'utiliser dans sa propre fenêtre, ou l'ouvrir dans le navigateur web que vous utilisez déjà. Vous pourrez changer à tout moment.",
+        "cApp": "Ouvrir dans une fenêtre dédiée",
+        "cAppNote": "Recommandé. Une fenêtre dédiée, sans onglets de navigateur.",
+        "cBrowser": "Ouvrir dans mon navigateur",
+        "cBrowserNote": "Utiliser votre navigateur habituel à l'adresse locale.",
+        "cCountdown": "Ouverture dans une fenêtre dédiée dans {n} secondes.",
+        "cOpening": "Ouverture dans votre navigateur...",
+        "logoAlt": "Logo OpenConstructionERP",
+        "by": "par DataDrivenConstruction"
+      },
+      "es": {
+        "status": "Iniciando la aplicación",
+        "statusPg": "Configurando la base de datos local, casi listo",
+        "sLauncher": "Iniciando el lanzador",
+        "sSidecar": "Localizando el backend",
+        "sPg": "Iniciando la base de datos local",
+        "sMigrate": "Preparando la base de datos",
+        "sServer": "Iniciando el servidor de la aplicación",
+        "sOpen": "Abriendo la aplicación",
+        "hint": "El primer arranque configura su base de datos local. Puede tardar uno o dos minutos, espere por favor.",
+        "version": "Versión: {n}",
+        "logFile": "Archivo de registro: {n}",
+        "copy": "Copiar detalles",
+        "copied": "Copiado",
+        "errTitle": "Algo ha salido mal",
+        "errGeneric": "El arranque ha fallado.",
+        "errLog": "Se ha guardado un registro en su carpeta personal como .openestimate/desktop-launcher.log.",
+        "dReady": "Listo",
+        "dFound": "Se encontró un backend en ejecución",
+        "cTitle": "¿Cómo quiere abrir OpenConstructionERP?",
+        "cBody": "Puede usarlo en su propia ventana o abrirlo en el navegador web que ya utiliza. Puede cambiar en cualquier momento.",
+        "cApp": "Abrir como ventana propia",
+        "cAppNote": "Recomendado. Una ventana dedicada, sin pestañas del navegador.",
+        "cBrowser": "Abrir en mi navegador",
+        "cBrowserNote": "Usar su navegador habitual en la dirección local.",
+        "cCountdown": "Se abrirá como ventana propia en {n} segundos.",
+        "cOpening": "Abriendo en su navegador...",
+        "logoAlt": "Logotipo de OpenConstructionERP",
+        "by": "por DataDrivenConstruction"
+      },
+      "pt": {
+        "status": "A iniciar a aplicação",
+        "statusPg": "A configurar a base de dados local, quase pronto",
+        "sLauncher": "A iniciar o lançador",
+        "sSidecar": "A localizar o backend",
+        "sPg": "A iniciar a base de dados local",
+        "sMigrate": "A preparar a base de dados",
+        "sServer": "A iniciar o servidor da aplicação",
+        "sOpen": "A abrir a aplicação",
+        "hint": "O primeiro arranque configura a sua base de dados local. Pode demorar um ou dois minutos, aguarde por favor.",
+        "version": "Versão: {n}",
+        "logFile": "Ficheiro de registo: {n}",
+        "copy": "Copiar detalhes",
+        "copied": "Copiado",
+        "errTitle": "Algo correu mal",
+        "errGeneric": "O arranque falhou.",
+        "errLog": "Foi guardado um registo na sua pasta pessoal em .openestimate/desktop-launcher.log.",
+        "dReady": "Pronto",
+        "dFound": "Encontrado um backend em execução",
+        "cTitle": "Como pretende abrir o OpenConstructionERP?",
+        "cBody": "Pode usá-lo numa janela própria ou abri-lo no navegador que já utiliza. Pode mudar a qualquer momento.",
+        "cApp": "Abrir numa janela própria",
+        "cAppNote": "Recomendado. Uma janela dedicada, sem separadores do navegador.",
+        "cBrowser": "Abrir no meu navegador",
+        "cBrowserNote": "Usar o seu navegador habitual no endereço local.",
+        "cCountdown": "A abrir numa janela própria em {n} segundos.",
+        "cOpening": "A abrir no seu navegador...",
+        "logoAlt": "Logótipo do OpenConstructionERP",
+        "by": "por DataDrivenConstruction"
+      },
+      "ru": {
+        "status": "Запуск приложения",
+        "statusPg": "Настраиваем локальную базу данных, почти готово",
+        "sLauncher": "Запуск лаунчера",
+        "sSidecar": "Поиск бэкенда",
+        "sPg": "Запуск локальной базы данных",
+        "sMigrate": "Подготовка базы данных",
+        "sServer": "Запуск сервера приложения",
+        "sOpen": "Открытие приложения",
+        "hint": "При первом запуске настраивается локальная база данных. Это может занять минуту или две, подождите.",
+        "version": "Версия: {n}",
+        "logFile": "Файл журнала: {n}",
+        "copy": "Скопировать сведения",
+        "copied": "Скопировано",
+        "errTitle": "Что-то пошло не так",
+        "errGeneric": "Не удалось запустить приложение.",
+        "errLog": "Журнал сохранён в вашей домашней папке: .openestimate/desktop-launcher.log.",
+        "dReady": "Готово",
+        "dFound": "Найден работающий бэкенд",
+        "cTitle": "Как открыть OpenConstructionERP?",
+        "cBody": "Можно работать в отдельном окне приложения или открыть его в привычном веб-браузере. Переключиться можно в любой момент.",
+        "cApp": "Открыть в отдельном окне",
+        "cAppNote": "Рекомендуется. Отдельное окно, без вкладок браузера.",
+        "cBrowser": "Открыть в браузере",
+        "cBrowserNote": "Использовать привычный браузер по локальному адресу.",
+        "cCountdown": "Открытие в отдельном окне через {n} сек.",
+        "cOpening": "Открываем в вашем браузере...",
+        "logoAlt": "Логотип OpenConstructionERP",
+        "by": "от DataDrivenConstruction"
+      },
+      "zh": {
+        "status": "正在启动应用程序",
+        "statusPg": "正在设置本地数据库，即将完成",
+        "sLauncher": "正在启动启动器",
+        "sSidecar": "正在查找后端",
+        "sPg": "正在启动本地数据库",
+        "sMigrate": "正在准备数据库",
+        "sServer": "正在启动应用服务器",
+        "sOpen": "正在打开应用",
+        "hint": "首次运行会设置您的本地数据库，可能需要一两分钟，请稍候。",
+        "version": "版本：{n}",
+        "logFile": "日志文件：{n}",
+        "copy": "复制详细信息",
+        "copied": "已复制",
+        "errTitle": "出了点问题",
+        "errGeneric": "启动失败。",
+        "errLog": "日志已保存在您的用户目录下的 .openestimate/desktop-launcher.log。",
+        "dReady": "就绪",
+        "dFound": "已找到正在运行的后端",
+        "cTitle": "您想如何打开 OpenConstructionERP？",
+        "cBody": "您可以将它作为独立的应用窗口使用，也可以在您常用的浏览器中打开。随时可以切换。",
+        "cApp": "以应用窗口打开",
+        "cAppNote": "推荐。独立窗口，无需浏览器标签页。",
+        "cBrowser": "在我的浏览器中打开",
+        "cBrowserNote": "在本地地址使用您常用的浏览器。",
+        "cCountdown": "将在 {n} 秒后以应用窗口打开。",
+        "cOpening": "正在您的浏览器中打开...",
+        "logoAlt": "OpenConstructionERP 徽标",
+        "by": "由 DataDrivenConstruction 出品"
+      },
+      "ar": {
+        "status": "جارٍ تشغيل التطبيق",
+        "statusPg": "جارٍ إعداد قاعدة البيانات المحلية، أوشكنا على الانتهاء",
+        "sLauncher": "جارٍ تشغيل المشغّل",
+        "sSidecar": "جارٍ تحديد موقع الخادم الخلفي",
+        "sPg": "جارٍ تشغيل قاعدة البيانات المحلية",
+        "sMigrate": "جارٍ تجهيز قاعدة البيانات",
+        "sServer": "جارٍ تشغيل خادم التطبيق",
+        "sOpen": "جارٍ فتح التطبيق",
+        "hint": "يقوم التشغيل الأول بإعداد قاعدة بياناتك المحلية. قد يستغرق ذلك دقيقة أو دقيقتين، يرجى الانتظار.",
+        "version": "الإصدار: {n}",
+        "logFile": "ملف السجل: {n}",
+        "copy": "نسخ التفاصيل",
+        "copied": "تم النسخ",
+        "errTitle": "حدث خطأ ما",
+        "errGeneric": "فشل بدء التشغيل.",
+        "errLog": "تم حفظ سجل في مجلدك الشخصي باسم .openestimate/desktop-launcher.log.",
+        "dReady": "جاهز",
+        "dFound": "تم العثور على خادم خلفي قيد التشغيل",
+        "cTitle": "كيف تريد فتح OpenConstructionERP؟",
+        "cBody": "يمكنك استخدامه في نافذة تطبيق خاصة به، أو فتحه في متصفح الويب الذي تستخدمه بالفعل. يمكنك التبديل في أي وقت.",
+        "cApp": "فتح كنافذة تطبيق",
+        "cAppNote": "موصى به. نافذة مخصصة، بلا علامات تبويب.",
+        "cBrowser": "فتح في متصفحي",
+        "cBrowserNote": "استخدام متصفحك المعتاد على العنوان المحلي.",
+        "cCountdown": "سيُفتح كنافذة تطبيق خلال {n} ثانية.",
+        "cOpening": "جارٍ الفتح في متصفحك...",
+        "logoAlt": "شعار OpenConstructionERP",
+        "by": "من DataDrivenConstruction"
+      },
+      "hi": {
+        "status": "एप्लिकेशन शुरू हो रहा है",
+        "statusPg": "स्थानीय डेटाबेस सेट किया जा रहा है, लगभग तैयार",
+        "sLauncher": "लॉन्चर शुरू हो रहा है",
+        "sSidecar": "बैकएंड खोजा जा रहा है",
+        "sPg": "स्थानीय डेटाबेस शुरू हो रहा है",
+        "sMigrate": "डेटाबेस तैयार किया जा रहा है",
+        "sServer": "एप्लिकेशन सर्वर शुरू हो रहा है",
+        "sOpen": "ऐप खोला जा रहा है",
+        "hint": "पहली बार चलाने पर आपका स्थानीय डेटाबेस सेट किया जाता है। इसमें एक या दो मिनट लग सकते हैं, कृपया प्रतीक्षा करें।",
+        "version": "संस्करण: {n}",
+        "logFile": "लॉग फ़ाइल: {n}",
+        "copy": "विवरण कॉपी करें",
+        "copied": "कॉपी किया गया",
+        "errTitle": "कुछ गड़बड़ हो गई",
+        "errGeneric": "शुरू करने में विफल।",
+        "errLog": "आपके होम फ़ोल्डर में .openestimate/desktop-launcher.log के रूप में एक लॉग सहेजा गया है।",
+        "dReady": "तैयार",
+        "dFound": "चालू बैकएंड मिला",
+        "cTitle": "आप OpenConstructionERP को कैसे खोलना चाहेंगे?",
+        "cBody": "आप इसे अपनी अलग ऐप विंडो में इस्तेमाल कर सकते हैं, या उसी वेब ब्राउज़र में खोल सकते हैं जिसे आप पहले से उपयोग करते हैं। आप कभी भी बदल सकते हैं।",
+        "cApp": "ऐप विंडो के रूप में खोलें",
+        "cAppNote": "अनुशंसित। एक समर्पित विंडो, कोई ब्राउज़र टैब नहीं।",
+        "cBrowser": "मेरे ब्राउज़र में खोलें",
+        "cBrowserNote": "स्थानीय पते पर अपना सामान्य वेब ब्राउज़र उपयोग करें।",
+        "cCountdown": "{n} सेकंड में ऐप विंडो के रूप में खुलेगा।",
+        "cOpening": "आपके ब्राउज़र में खोला जा रहा है...",
+        "logoAlt": "OpenConstructionERP लोगो",
+        "by": "DataDrivenConstruction द्वारा"
+      },
+      "tr": {
+        "status": "Uygulama başlatılıyor",
+        "statusPg": "Yerel veritabanı kuruluyor, neredeyse bitti",
+        "sLauncher": "Başlatıcı çalıştırılıyor",
+        "sSidecar": "Arka uç bulunuyor",
+        "sPg": "Yerel veritabanı başlatılıyor",
+        "sMigrate": "Veritabanı hazırlanıyor",
+        "sServer": "Uygulama sunucusu başlatılıyor",
+        "sOpen": "Uygulama açılıyor",
+        "hint": "İlk çalıştırma yerel veritabanınızı kurar. Bu bir iki dakika sürebilir, lütfen bekleyin.",
+        "version": "Sürüm: {n}",
+        "logFile": "Günlük dosyası: {n}",
+        "copy": "Ayrıntıları kopyala",
+        "copied": "Kopyalandı",
+        "errTitle": "Bir şeyler ters gitti",
+        "errGeneric": "Başlatma başarısız oldu.",
+        "errLog": "Giriş klasörünüze .openestimate/desktop-launcher.log adıyla bir günlük kaydedildi.",
+        "dReady": "Hazır",
+        "dFound": "Çalışan bir arka uç bulundu",
+        "cTitle": "OpenConstructionERP'yi nasıl açmak istersiniz?",
+        "cBody": "Kendi uygulama penceresinde kullanabilir ya da zaten kullandığınız web tarayıcısında açabilirsiniz. İstediğiniz zaman değiştirebilirsiniz.",
+        "cApp": "Uygulama penceresi olarak aç",
+        "cAppNote": "Önerilir. Ayrı bir pencere, tarayıcı sekmesi yok.",
+        "cBrowser": "Tarayıcımda aç",
+        "cBrowserNote": "Yerel adreste her zamanki tarayıcınızı kullanın.",
+        "cCountdown": "{n} saniye içinde uygulama penceresi olarak açılacak.",
+        "cOpening": "Tarayıcınızda açılıyor...",
+        "logoAlt": "OpenConstructionERP logosu",
+        "by": "DataDrivenConstruction tarafından"
+      },
+      "it": {
+        "status": "Avvio dell'applicazione",
+        "statusPg": "Configurazione del database locale, quasi finito",
+        "sLauncher": "Avvio del launcher",
+        "sSidecar": "Individuazione del backend",
+        "sPg": "Avvio del database locale",
+        "sMigrate": "Preparazione del database",
+        "sServer": "Avvio del server applicativo",
+        "sOpen": "Apertura dell'app",
+        "hint": "Il primo avvio configura il database locale. Può richiedere uno o due minuti, attendere.",
+        "version": "Versione: {n}",
+        "logFile": "File di log: {n}",
+        "copy": "Copia dettagli",
+        "copied": "Copiato",
+        "errTitle": "Qualcosa è andato storto",
+        "errGeneric": "Avvio non riuscito.",
+        "errLog": "Un log è stato salvato nella cartella personale come .openestimate/desktop-launcher.log.",
+        "dReady": "Pronto",
+        "dFound": "Trovato un backend in esecuzione",
+        "cTitle": "Come vuoi aprire OpenConstructionERP?",
+        "cBody": "Puoi usarlo in una finestra dedicata oppure aprirlo nel browser web che usi già. Puoi cambiare in qualsiasi momento.",
+        "cApp": "Apri in una finestra dedicata",
+        "cAppNote": "Consigliato. Una finestra dedicata, senza schede del browser.",
+        "cBrowser": "Apri nel mio browser",
+        "cBrowserNote": "Usa il tuo browser abituale all'indirizzo locale.",
+        "cCountdown": "Si aprirà in una finestra dedicata tra {n} secondi.",
+        "cOpening": "Apertura nel browser...",
+        "logoAlt": "Logo OpenConstructionERP",
+        "by": "di DataDrivenConstruction"
+      },
+      "nl": {
+        "status": "De applicatie wordt gestart",
+        "statusPg": "De lokale database wordt ingericht, bijna klaar",
+        "sLauncher": "Starter wordt gestart",
+        "sSidecar": "Backend wordt gezocht",
+        "sPg": "Lokale database wordt gestart",
+        "sMigrate": "Database wordt voorbereid",
+        "sServer": "Applicatieserver wordt gestart",
+        "sOpen": "App wordt geopend",
+        "hint": "Bij de eerste start wordt uw lokale database ingericht. Dit kan een minuut of twee duren, even geduld.",
+        "version": "Versie: {n}",
+        "logFile": "Logbestand: {n}",
+        "copy": "Details kopiëren",
+        "copied": "Gekopieerd",
+        "errTitle": "Er is iets misgegaan",
+        "errGeneric": "Starten is mislukt.",
+        "errLog": "Er is een logbestand opgeslagen in uw persoonlijke map als .openestimate/desktop-launcher.log.",
+        "dReady": "Gereed",
+        "dFound": "Draaiende backend gevonden",
+        "cTitle": "Hoe wilt u OpenConstructionERP openen?",
+        "cBody": "U kunt het in een eigen appvenster gebruiken of openen in de webbrowser die u al gebruikt. U kunt altijd wisselen.",
+        "cApp": "Openen als appvenster",
+        "cAppNote": "Aanbevolen. Een eigen venster, geen browsertabbladen.",
+        "cBrowser": "Openen in mijn browser",
+        "cBrowserNote": "Uw gewone webbrowser gebruiken op het lokale adres.",
+        "cCountdown": "Wordt over {n} seconden als appvenster geopend.",
+        "cOpening": "Wordt geopend in uw browser...",
+        "logoAlt": "OpenConstructionERP-logo",
+        "by": "door DataDrivenConstruction"
+      },
+      "pl": {
+        "status": "Uruchamianie aplikacji",
+        "statusPg": "Konfigurowanie lokalnej bazy danych, już prawie",
+        "sLauncher": "Uruchamianie programu startowego",
+        "sSidecar": "Wyszukiwanie backendu",
+        "sPg": "Uruchamianie lokalnej bazy danych",
+        "sMigrate": "Przygotowywanie bazy danych",
+        "sServer": "Uruchamianie serwera aplikacji",
+        "sOpen": "Otwieranie aplikacji",
+        "hint": "Pierwsze uruchomienie konfiguruje lokalną bazę danych. Może to potrwać minutę lub dwie, proszę czekać.",
+        "version": "Wersja: {n}",
+        "logFile": "Plik dziennika: {n}",
+        "copy": "Kopiuj szczegóły",
+        "copied": "Skopiowano",
+        "errTitle": "Coś poszło nie tak",
+        "errGeneric": "Uruchomienie nie powiodło się.",
+        "errLog": "Dziennik został zapisany w folderze domowym jako .openestimate/desktop-launcher.log.",
+        "dReady": "Gotowe",
+        "dFound": "Znaleziono działający backend",
+        "cTitle": "Jak chcesz otworzyć OpenConstructionERP?",
+        "cBody": "Możesz korzystać z niego we własnym oknie aplikacji albo otworzyć go w przeglądarce, której już używasz. W każdej chwili możesz to zmienić.",
+        "cApp": "Otwórz jako okno aplikacji",
+        "cAppNote": "Zalecane. Osobne okno, bez kart przeglądarki.",
+        "cBrowser": "Otwórz w mojej przeglądarce",
+        "cBrowserNote": "Użyj swojej zwykłej przeglądarki pod adresem lokalnym.",
+        "cCountdown": "Otwarcie jako okno aplikacji za {n} s.",
+        "cOpening": "Otwieranie w przeglądarce...",
+        "logoAlt": "Logo OpenConstructionERP",
+        "by": "od DataDrivenConstruction"
+      },
+      "cs": {
+        "status": "Spouštění aplikace",
+        "statusPg": "Nastavuje se místní databáze, už to bude",
+        "sLauncher": "Spouštění spouštěče",
+        "sSidecar": "Hledání backendu",
+        "sPg": "Spouštění místní databáze",
+        "sMigrate": "Příprava databáze",
+        "sServer": "Spouštění aplikačního serveru",
+        "sOpen": "Otevírání aplikace",
+        "hint": "První spuštění nastaví vaši místní databázi. Může to trvat minutu až dvě, počkejte prosím.",
+        "version": "Verze: {n}",
+        "logFile": "Soubor protokolu: {n}",
+        "copy": "Kopírovat podrobnosti",
+        "copied": "Zkopírováno",
+        "errTitle": "Něco se pokazilo",
+        "errGeneric": "Spuštění se nezdařilo.",
+        "errLog": "Protokol byl uložen ve vaší domovské složce jako .openestimate/desktop-launcher.log.",
+        "dReady": "Připraveno",
+        "dFound": "Nalezen běžící backend",
+        "cTitle": "Jak chcete OpenConstructionERP otevřít?",
+        "cBody": "Můžete jej používat ve vlastním okně aplikace, nebo jej otevřít v prohlížeči, který už používáte. Kdykoli to můžete změnit.",
+        "cApp": "Otevřít jako okno aplikace",
+        "cAppNote": "Doporučeno. Vlastní okno, žádné panely prohlížeče.",
+        "cBrowser": "Otevřít v mém prohlížeči",
+        "cBrowserNote": "Použít váš obvyklý prohlížeč na místní adrese.",
+        "cCountdown": "Otevře se jako okno aplikace za {n} s.",
+        "cOpening": "Otevírání v prohlížeči...",
+        "logoAlt": "Logo OpenConstructionERP",
+        "by": "od DataDrivenConstruction"
+      },
+      "ja": {
+        "status": "アプリケーションを起動しています",
+        "statusPg": "ローカルデータベースを設定しています。もうすぐ完了します",
+        "sLauncher": "ランチャーを起動しています",
+        "sSidecar": "バックエンドを探しています",
+        "sPg": "ローカルデータベースを起動しています",
+        "sMigrate": "データベースを準備しています",
+        "sServer": "アプリケーションサーバーを起動しています",
+        "sOpen": "アプリを開いています",
+        "hint": "初回起動時にローカルデータベースを構築します。1、2分かかる場合がありますので、お待ちください。",
+        "version": "バージョン: {n}",
+        "logFile": "ログファイル: {n}",
+        "copy": "詳細をコピー",
+        "copied": "コピーしました",
+        "errTitle": "問題が発生しました",
+        "errGeneric": "起動に失敗しました。",
+        "errLog": "ログはホームフォルダーの .openestimate/desktop-launcher.log に保存されました。",
+        "dReady": "準備完了",
+        "dFound": "実行中のバックエンドが見つかりました",
+        "cTitle": "OpenConstructionERP をどのように開きますか？",
+        "cBody": "専用のアプリウィンドウとして使うことも、普段お使いのウェブブラウザーで開くこともできます。いつでも切り替えられます。",
+        "cApp": "アプリウィンドウで開く",
+        "cAppNote": "推奨。専用ウィンドウで、ブラウザーのタブは使いません。",
+        "cBrowser": "ブラウザーで開く",
+        "cBrowserNote": "ローカルアドレスを普段のウェブブラウザーで開きます。",
+        "cCountdown": "{n} 秒後にアプリウィンドウで開きます。",
+        "cOpening": "ブラウザーで開いています...",
+        "logoAlt": "OpenConstructionERP のロゴ",
+        "by": "提供 DataDrivenConstruction"
+      },
+      "ko": {
+        "status": "애플리케이션을 시작하는 중",
+        "statusPg": "로컬 데이터베이스를 설정하는 중입니다. 거의 다 됐습니다",
+        "sLauncher": "런처를 시작하는 중",
+        "sSidecar": "백엔드를 찾는 중",
+        "sPg": "로컬 데이터베이스를 시작하는 중",
+        "sMigrate": "데이터베이스를 준비하는 중",
+        "sServer": "애플리케이션 서버를 시작하는 중",
+        "sOpen": "앱을 여는 중",
+        "hint": "처음 실행할 때 로컬 데이터베이스를 설정합니다. 1~2분 정도 걸릴 수 있으니 잠시 기다려 주세요.",
+        "version": "버전: {n}",
+        "logFile": "로그 파일: {n}",
+        "copy": "세부 정보 복사",
+        "copied": "복사됨",
+        "errTitle": "문제가 발생했습니다",
+        "errGeneric": "시작하지 못했습니다.",
+        "errLog": "홈 폴더에 .openestimate/desktop-launcher.log 로 로그를 저장했습니다.",
+        "dReady": "준비됨",
+        "dFound": "실행 중인 백엔드를 찾았습니다",
+        "cTitle": "OpenConstructionERP를 어떻게 여시겠습니까?",
+        "cBody": "전용 앱 창에서 사용하거나, 이미 쓰고 계신 웹 브라우저에서 열 수 있습니다. 언제든지 바꿀 수 있습니다.",
+        "cApp": "앱 창으로 열기",
+        "cAppNote": "권장. 브라우저 탭 없이 전용 창으로 실행합니다.",
+        "cBrowser": "내 브라우저에서 열기",
+        "cBrowserNote": "평소 쓰는 웹 브라우저로 로컬 주소를 엽니다.",
+        "cCountdown": "{n}초 후에 앱 창으로 엽니다.",
+        "cOpening": "브라우저에서 여는 중...",
+        "logoAlt": "OpenConstructionERP 로고",
+        "by": "제작 DataDrivenConstruction"
+      },
+      "sv": {
+        "status": "Programmet startar",
+        "statusPg": "Den lokala databasen skapas, snart klart",
+        "sLauncher": "Startprogrammet startar",
+        "sSidecar": "Söker efter backend",
+        "sPg": "Startar den lokala databasen",
+        "sMigrate": "Förbereder databasen",
+        "sServer": "Startar applikationsservern",
+        "sOpen": "Öppnar appen",
+        "hint": "Vid första starten skapas din lokala databas. Det kan ta en eller två minuter, vänta gärna.",
+        "version": "Version: {n}",
+        "logFile": "Loggfil: {n}",
+        "copy": "Kopiera detaljer",
+        "copied": "Kopierat",
+        "errTitle": "Något gick fel",
+        "errGeneric": "Starten misslyckades.",
+        "errLog": "En logg sparades i din hemmapp som .openestimate/desktop-launcher.log.",
+        "dReady": "Klart",
+        "dFound": "Hittade en backend som redan körs",
+        "cTitle": "Hur vill du öppna OpenConstructionERP?",
+        "cBody": "Du kan använda det i ett eget appfönster eller öppna det i webbläsaren du redan använder. Du kan byta när som helst.",
+        "cApp": "Öppna som appfönster",
+        "cAppNote": "Rekommenderas. Ett eget fönster, inga webbläsarflikar.",
+        "cBrowser": "Öppna i min webbläsare",
+        "cBrowserNote": "Använd din vanliga webbläsare på den lokala adressen.",
+        "cCountdown": "Öppnas som appfönster om {n} sekunder.",
+        "cOpening": "Öppnar i din webbläsare...",
+        "logoAlt": "OpenConstructionERP-logotyp",
+        "by": "av DataDrivenConstruction"
+      },
+      "no": {
+        "status": "Starter programmet",
+        "statusPg": "Setter opp den lokale databasen, snart ferdig",
+        "sLauncher": "Starter oppstarteren",
+        "sSidecar": "Leter etter backend",
+        "sPg": "Starter den lokale databasen",
+        "sMigrate": "Forbereder databasen",
+        "sServer": "Starter applikasjonsserveren",
+        "sOpen": "Åpner appen",
+        "hint": "Første gangs oppstart setter opp den lokale databasen. Det kan ta ett eller to minutter, vent litt.",
+        "version": "Versjon: {n}",
+        "logFile": "Loggfil: {n}",
+        "copy": "Kopier detaljer",
+        "copied": "Kopiert",
+        "errTitle": "Noe gikk galt",
+        "errGeneric": "Oppstarten mislyktes.",
+        "errLog": "En logg ble lagret i hjemmemappen din som .openestimate/desktop-launcher.log.",
+        "dReady": "Klar",
+        "dFound": "Fant en backend som allerede kjører",
+        "cTitle": "Hvordan vil du åpne OpenConstructionERP?",
+        "cBody": "Du kan bruke det i et eget appvindu, eller åpne det i nettleseren du allerede bruker. Du kan bytte når som helst.",
+        "cApp": "Åpne som appvindu",
+        "cAppNote": "Anbefalt. Et eget vindu, ingen nettleserfaner.",
+        "cBrowser": "Åpne i nettleseren min",
+        "cBrowserNote": "Bruk din vanlige nettleser på den lokale adressen.",
+        "cCountdown": "Åpnes som appvindu om {n} sekunder.",
+        "cOpening": "Åpner i nettleseren din...",
+        "logoAlt": "OpenConstructionERP-logo",
+        "by": "av DataDrivenConstruction"
+      },
+      "da": {
+        "status": "Starter programmet",
+        "statusPg": "Opsætter den lokale database, næsten færdig",
+        "sLauncher": "Starter starteren",
+        "sSidecar": "Finder backend",
+        "sPg": "Starter den lokale database",
+        "sMigrate": "Forbereder databasen",
+        "sServer": "Starter applikationsserveren",
+        "sOpen": "Åbner appen",
+        "hint": "Første opstart opsætter din lokale database. Det kan tage et minut eller to, vent venligst.",
+        "version": "Version: {n}",
+        "logFile": "Logfil: {n}",
+        "copy": "Kopiér detaljer",
+        "copied": "Kopieret",
+        "errTitle": "Noget gik galt",
+        "errGeneric": "Opstarten mislykkedes.",
+        "errLog": "En log blev gemt i din hjemmemappe som .openestimate/desktop-launcher.log.",
+        "dReady": "Klar",
+        "dFound": "Fandt en kørende backend",
+        "cTitle": "Hvordan vil du åbne OpenConstructionERP?",
+        "cBody": "Du kan bruge det i sit eget appvindue eller åbne det i den browser, du allerede bruger. Du kan skifte når som helst.",
+        "cApp": "Åbn som appvindue",
+        "cAppNote": "Anbefales. Et dedikeret vindue, ingen browserfaner.",
+        "cBrowser": "Åbn i min browser",
+        "cBrowserNote": "Brug din sædvanlige browser på den lokale adresse.",
+        "cCountdown": "Åbnes som appvindue om {n} sekunder.",
+        "cOpening": "Åbner i din browser...",
+        "logoAlt": "OpenConstructionERP-logo",
+        "by": "af DataDrivenConstruction"
+      },
+      "fi": {
+        "status": "Sovellusta käynnistetään",
+        "statusPg": "Paikallista tietokantaa määritetään, melkein valmis",
+        "sLauncher": "Käynnistintä käynnistetään",
+        "sSidecar": "Taustapalvelua etsitään",
+        "sPg": "Paikallista tietokantaa käynnistetään",
+        "sMigrate": "Tietokantaa valmistellaan",
+        "sServer": "Sovelluspalvelinta käynnistetään",
+        "sOpen": "Sovellusta avataan",
+        "hint": "Ensimmäinen käynnistys luo paikallisen tietokannan. Tämä voi kestää minuutin tai kaksi, odota hetki.",
+        "version": "Versio: {n}",
+        "logFile": "Lokitiedosto: {n}",
+        "copy": "Kopioi tiedot",
+        "copied": "Kopioitu",
+        "errTitle": "Jokin meni pieleen",
+        "errGeneric": "Käynnistys epäonnistui.",
+        "errLog": "Loki tallennettiin kotikansioosi nimellä .openestimate/desktop-launcher.log.",
+        "dReady": "Valmis",
+        "dFound": "Käynnissä oleva taustapalvelu löytyi",
+        "cTitle": "Miten haluat avata OpenConstructionERP:n?",
+        "cBody": "Voit käyttää sitä omassa sovellusikkunassa tai avata sen selaimessa, jota jo käytät. Voit vaihtaa milloin tahansa.",
+        "cApp": "Avaa sovellusikkunana",
+        "cAppNote": "Suositus. Oma ikkuna, ei selaimen välilehtiä.",
+        "cBrowser": "Avaa selaimessani",
+        "cBrowserNote": "Käytä tavallista selaintasi paikallisessa osoitteessa.",
+        "cCountdown": "Avataan sovellusikkunana {n} sekunnin kuluttua.",
+        "cOpening": "Avataan selaimessasi...",
+        "logoAlt": "OpenConstructionERP-logo",
+        "by": "tekijä DataDrivenConstruction"
+      },
+      "bg": {
+        "status": "Приложението се стартира",
+        "statusPg": "Локалната база данни се настройва, почти готово",
+        "sLauncher": "Стартиране на програмата за пускане",
+        "sSidecar": "Търсене на бекенда",
+        "sPg": "Стартиране на локалната база данни",
+        "sMigrate": "Подготовка на базата данни",
+        "sServer": "Стартиране на сървъра на приложението",
+        "sOpen": "Отваряне на приложението",
+        "hint": "При първото стартиране се създава локалната ви база данни. Това може да отнеме минута или две, моля изчакайте.",
+        "version": "Версия: {n}",
+        "logFile": "Файл с дневник: {n}",
+        "copy": "Копиране на подробностите",
+        "copied": "Копирано",
+        "errTitle": "Нещо се обърка",
+        "errGeneric": "Стартирането не бе успешно.",
+        "errLog": "Дневникът е записан в личната ви папка като .openestimate/desktop-launcher.log.",
+        "dReady": "Готово",
+        "dFound": "Намерен е работещ бекенд",
+        "cTitle": "Как искате да отворите OpenConstructionERP?",
+        "cBody": "Можете да го използвате в собствен прозорец или да го отворите в браузъра, който вече ползвате. Можете да смените по всяко време.",
+        "cApp": "Отваряне като прозорец на приложението",
+        "cAppNote": "Препоръчително. Отделен прозорец, без раздели на браузъра.",
+        "cBrowser": "Отваряне в моя браузър",
+        "cBrowserNote": "Използвайте обичайния си браузър на локалния адрес.",
+        "cCountdown": "Отваряне като прозорец на приложението след {n} сек.",
+        "cOpening": "Отваряне във вашия браузър...",
+        "logoAlt": "Лого на OpenConstructionERP",
+        "by": "от DataDrivenConstruction"
+      },
+      "hr": {
+        "status": "Pokretanje aplikacije",
+        "statusPg": "Postavlja se lokalna baza podataka, još malo",
+        "sLauncher": "Pokretanje pokretača",
+        "sSidecar": "Traženje pozadinske usluge",
+        "sPg": "Pokretanje lokalne baze podataka",
+        "sMigrate": "Priprema baze podataka",
+        "sServer": "Pokretanje aplikacijskog poslužitelja",
+        "sOpen": "Otvaranje aplikacije",
+        "hint": "Prvo pokretanje postavlja vašu lokalnu bazu podataka. To može potrajati minutu ili dvije, pričekajte.",
+        "version": "Verzija: {n}",
+        "logFile": "Datoteka zapisnika: {n}",
+        "copy": "Kopiraj pojedinosti",
+        "copied": "Kopirano",
+        "errTitle": "Nešto je pošlo po zlu",
+        "errGeneric": "Pokretanje nije uspjelo.",
+        "errLog": "Zapisnik je spremljen u vašu osobnu mapu kao .openestimate/desktop-launcher.log.",
+        "dReady": "Spremno",
+        "dFound": "Pronađena je pokrenuta pozadinska usluga",
+        "cTitle": "Kako želite otvoriti OpenConstructionERP?",
+        "cBody": "Možete ga koristiti u vlastitom prozoru aplikacije ili ga otvoriti u pregledniku koji već koristite. Možete promijeniti u bilo kojem trenutku.",
+        "cApp": "Otvori kao prozor aplikacije",
+        "cAppNote": "Preporučeno. Zaseban prozor, bez kartica preglednika.",
+        "cBrowser": "Otvori u mom pregledniku",
+        "cBrowserNote": "Koristite svoj uobičajeni preglednik na lokalnoj adresi.",
+        "cCountdown": "Otvara se kao prozor aplikacije za {n} s.",
+        "cOpening": "Otvaranje u vašem pregledniku...",
+        "logoAlt": "Logotip OpenConstructionERP",
+        "by": "od DataDrivenConstruction"
+      },
+      "id": {
+        "status": "Memulai aplikasi",
+        "statusPg": "Menyiapkan basis data lokal, hampir selesai",
+        "sLauncher": "Memulai peluncur",
+        "sSidecar": "Mencari backend",
+        "sPg": "Memulai basis data lokal",
+        "sMigrate": "Menyiapkan basis data",
+        "sServer": "Memulai server aplikasi",
+        "sOpen": "Membuka aplikasi",
+        "hint": "Menjalankan pertama kali akan menyiapkan basis data lokal Anda. Ini bisa memakan waktu satu atau dua menit, mohon tunggu.",
+        "version": "Versi: {n}",
+        "logFile": "Berkas log: {n}",
+        "copy": "Salin detail",
+        "copied": "Tersalin",
+        "errTitle": "Terjadi kesalahan",
+        "errGeneric": "Gagal memulai.",
+        "errLog": "Log disimpan di folder beranda Anda sebagai .openestimate/desktop-launcher.log.",
+        "dReady": "Siap",
+        "dFound": "Menemukan backend yang sedang berjalan",
+        "cTitle": "Bagaimana Anda ingin membuka OpenConstructionERP?",
+        "cBody": "Anda dapat menggunakannya sebagai jendela aplikasi tersendiri, atau membukanya di peramban web yang sudah Anda pakai. Anda bisa beralih kapan saja.",
+        "cApp": "Buka sebagai jendela aplikasi",
+        "cAppNote": "Disarankan. Jendela tersendiri, tanpa tab peramban.",
+        "cBrowser": "Buka di peramban saya",
+        "cBrowserNote": "Gunakan peramban web biasa Anda pada alamat lokal.",
+        "cCountdown": "Akan dibuka sebagai jendela aplikasi dalam {n} detik.",
+        "cOpening": "Membuka di peramban Anda...",
+        "logoAlt": "Logo OpenConstructionERP",
+        "by": "oleh DataDrivenConstruction"
+      },
+      "ro": {
+        "status": "Se pornește aplicația",
+        "statusPg": "Se configurează baza de date locală, aproape gata",
+        "sLauncher": "Se pornește lansatorul",
+        "sSidecar": "Se caută backendul",
+        "sPg": "Se pornește baza de date locală",
+        "sMigrate": "Se pregătește baza de date",
+        "sServer": "Se pornește serverul aplicației",
+        "sOpen": "Se deschide aplicația",
+        "hint": "Prima rulare configurează baza de date locală. Poate dura un minut sau două, vă rugăm așteptați.",
+        "version": "Versiune: {n}",
+        "logFile": "Fișier jurnal: {n}",
+        "copy": "Copiază detaliile",
+        "copied": "Copiat",
+        "errTitle": "Ceva nu a mers bine",
+        "errGeneric": "Pornirea a eșuat.",
+        "errLog": "Un jurnal a fost salvat în folderul dumneavoastră personal ca .openestimate/desktop-launcher.log.",
+        "dReady": "Gata",
+        "dFound": "A fost găsit un backend care rulează",
+        "cTitle": "Cum doriți să deschideți OpenConstructionERP?",
+        "cBody": "Îl puteți folosi într-o fereastră proprie sau îl puteți deschide în browserul pe care îl folosiți deja. Puteți schimba oricând.",
+        "cApp": "Deschide ca fereastră de aplicație",
+        "cAppNote": "Recomandat. O fereastră dedicată, fără file de browser.",
+        "cBrowser": "Deschide în browserul meu",
+        "cBrowserNote": "Folosiți browserul obișnuit la adresa locală.",
+        "cCountdown": "Se deschide ca fereastră de aplicație în {n} s.",
+        "cOpening": "Se deschide în browserul dumneavoastră...",
+        "logoAlt": "Logo OpenConstructionERP",
+        "by": "de DataDrivenConstruction"
+      },
+      "th": {
+        "status": "กำลังเริ่มแอปพลิเคชัน",
+        "statusPg": "กำลังตั้งค่าฐานข้อมูลในเครื่อง ใกล้เสร็จแล้ว",
+        "sLauncher": "กำลังเริ่มตัวเรียกใช้",
+        "sSidecar": "กำลังค้นหาแบ็กเอนด์",
+        "sPg": "กำลังเริ่มฐานข้อมูลในเครื่อง",
+        "sMigrate": "กำลังเตรียมฐานข้อมูล",
+        "sServer": "กำลังเริ่มเซิร์ฟเวอร์แอปพลิเคชัน",
+        "sOpen": "กำลังเปิดแอป",
+        "hint": "การเริ่มใช้งานครั้งแรกจะตั้งค่าฐานข้อมูลในเครื่องของคุณ อาจใช้เวลาหนึ่งถึงสองนาที โปรดรอสักครู่",
+        "version": "เวอร์ชัน: {n}",
+        "logFile": "ไฟล์บันทึก: {n}",
+        "copy": "คัดลอกรายละเอียด",
+        "copied": "คัดลอกแล้ว",
+        "errTitle": "เกิดข้อผิดพลาด",
+        "errGeneric": "เริ่มต้นไม่สำเร็จ",
+        "errLog": "บันทึกถูกเก็บไว้ในโฟลเดอร์ผู้ใช้ของคุณที่ .openestimate/desktop-launcher.log",
+        "dReady": "พร้อม",
+        "dFound": "พบแบ็กเอนด์ที่กำลังทำงานอยู่",
+        "cTitle": "คุณต้องการเปิด OpenConstructionERP อย่างไร",
+        "cBody": "คุณสามารถใช้งานในหน้าต่างแอปของตัวเอง หรือเปิดในเว็บเบราว์เซอร์ที่คุณใช้อยู่แล้ว เปลี่ยนได้ทุกเมื่อ",
+        "cApp": "เปิดเป็นหน้าต่างแอป",
+        "cAppNote": "แนะนำ หน้าต่างเฉพาะ ไม่ต้องใช้แท็บเบราว์เซอร์",
+        "cBrowser": "เปิดในเบราว์เซอร์ของฉัน",
+        "cBrowserNote": "ใช้เว็บเบราว์เซอร์ปกติของคุณที่ที่อยู่ในเครื่อง",
+        "cCountdown": "จะเปิดเป็นหน้าต่างแอปใน {n} วินาที",
+        "cOpening": "กำลังเปิดในเบราว์เซอร์ของคุณ...",
+        "logoAlt": "โลโก้ OpenConstructionERP",
+        "by": "โดย DataDrivenConstruction"
+      },
+      "vi": {
+        "status": "Đang khởi động ứng dụng",
+        "statusPg": "Đang thiết lập cơ sở dữ liệu cục bộ, sắp xong",
+        "sLauncher": "Đang khởi động trình khởi chạy",
+        "sSidecar": "Đang tìm backend",
+        "sPg": "Đang khởi động cơ sở dữ liệu cục bộ",
+        "sMigrate": "Đang chuẩn bị cơ sở dữ liệu",
+        "sServer": "Đang khởi động máy chủ ứng dụng",
+        "sOpen": "Đang mở ứng dụng",
+        "hint": "Lần chạy đầu tiên sẽ thiết lập cơ sở dữ liệu cục bộ của bạn. Việc này có thể mất một đến hai phút, vui lòng đợi.",
+        "version": "Phiên bản: {n}",
+        "logFile": "Tệp nhật ký: {n}",
+        "copy": "Sao chép chi tiết",
+        "copied": "Đã sao chép",
+        "errTitle": "Đã xảy ra sự cố",
+        "errGeneric": "Khởi động thất bại.",
+        "errLog": "Nhật ký đã được lưu trong thư mục cá nhân của bạn tại .openestimate/desktop-launcher.log.",
+        "dReady": "Sẵn sàng",
+        "dFound": "Đã tìm thấy backend đang chạy",
+        "cTitle": "Bạn muốn mở OpenConstructionERP như thế nào?",
+        "cBody": "Bạn có thể dùng nó trong cửa sổ ứng dụng riêng, hoặc mở trong trình duyệt web bạn vẫn dùng. Bạn có thể đổi bất cứ lúc nào.",
+        "cApp": "Mở dưới dạng cửa sổ ứng dụng",
+        "cAppNote": "Khuyến nghị. Cửa sổ riêng, không cần thẻ trình duyệt.",
+        "cBrowser": "Mở trong trình duyệt của tôi",
+        "cBrowserNote": "Dùng trình duyệt quen thuộc của bạn tại địa chỉ cục bộ.",
+        "cCountdown": "Sẽ mở dưới dạng cửa sổ ứng dụng sau {n} giây.",
+        "cOpening": "Đang mở trong trình duyệt của bạn...",
+        "logoAlt": "Logo OpenConstructionERP",
+        "by": "bởi DataDrivenConstruction"
+      },
+      "ky": {
+        "status": "Колдонмо иштетилүүдө",
+        "statusPg": "Жергиликтүү маалымат базасы тууралануда, аз калды",
+        "sLauncher": "Иштеткич жүктөлүүдө",
+        "sSidecar": "Бэкенд изделүүдө",
+        "sPg": "Жергиликтүү маалымат базасы иштетилүүдө",
+        "sMigrate": "Маалымат базасы даярдалууда",
+        "sServer": "Колдонмо сервери иштетилүүдө",
+        "sOpen": "Колдонмо ачылууда",
+        "hint": "Биринчи жолу иштетүүдө жергиликтүү маалымат базаңыз түзүлөт. Бул бир-эки мүнөткө созулушу мүмкүн, күтө туруңуз.",
+        "version": "Версия: {n}",
+        "logFile": "Журнал файлы: {n}",
+        "copy": "Чоо-жайын көчүрүү",
+        "copied": "Көчүрүлдү",
+        "errTitle": "Бир нерсе туура эмес болду",
+        "errGeneric": "Иштетүү ишке ашкан жок.",
+        "errLog": "Журнал үй папкаңызда .openestimate/desktop-launcher.log деп сакталды.",
+        "dReady": "Даяр",
+        "dFound": "Иштеп жаткан бэкенд табылды",
+        "cTitle": "OpenConstructionERP кантип ачылсын?",
+        "cBody": "Аны өзүнчө колдонмо терезесинде колдонсоңуз болот же өзүңүз колдонгон браузерде ача аласыз. Каалаган убакта алмаштырсаңыз болот.",
+        "cApp": "Колдонмо терезеси катары ачуу",
+        "cAppNote": "Сунушталат. Өзүнчө терезе, браузер салмалары жок.",
+        "cBrowser": "Браузеримде ачуу",
+        "cBrowserNote": "Жергиликтүү дарек боюнча кадимки браузериңизди колдонуңуз.",
+        "cCountdown": "{n} сек. кийин колдонмо терезеси катары ачылат.",
+        "cOpening": "Браузериңизде ачылууда...",
+        "logoAlt": "OpenConstructionERP логотиби",
+        "by": "DataDrivenConstruction тарабынан"
+      },
+      "et": {
+        "status": "Rakenduse käivitamine",
+        "statusPg": "Kohalikku andmebaasi seadistatakse, peaaegu valmis",
+        "sLauncher": "Käivitaja käivitamine",
+        "sSidecar": "Taustateenuse otsimine",
+        "sPg": "Kohaliku andmebaasi käivitamine",
+        "sMigrate": "Andmebaasi ettevalmistamine",
+        "sServer": "Rakendusserveri käivitamine",
+        "sOpen": "Rakenduse avamine",
+        "hint": "Esimesel käivitamisel seadistatakse teie kohalik andmebaas. See võib võtta minuti või kaks, palun oodake.",
+        "version": "Versioon: {n}",
+        "logFile": "Logifail: {n}",
+        "copy": "Kopeeri üksikasjad",
+        "copied": "Kopeeritud",
+        "errTitle": "Midagi läks valesti",
+        "errGeneric": "Käivitamine ebaõnnestus.",
+        "errLog": "Logi salvestati teie kodukausta nimega .openestimate/desktop-launcher.log.",
+        "dReady": "Valmis",
+        "dFound": "Leiti töötav taustateenus",
+        "cTitle": "Kuidas soovite OpenConstructionERP avada?",
+        "cBody": "Saate seda kasutada eraldi rakenduseaknas või avada veebibrauseris, mida juba kasutate. Saate igal ajal vahetada.",
+        "cApp": "Ava rakenduseaknana",
+        "cAppNote": "Soovitatav. Eraldi aken, ilma brauseri kaartideta.",
+        "cBrowser": "Ava minu brauseris",
+        "cBrowserNote": "Kasutage kohalikul aadressil oma tavalist brauserit.",
+        "cCountdown": "Avaneb rakenduseaknana {n} sekundi pärast.",
+        "cOpening": "Avamine teie brauseris...",
+        "logoAlt": "OpenConstructionERP logo",
+        "by": "autor DataDrivenConstruction"
+      },
+      "bn": {
+        "status": "অ্যাপ্লিকেশন চালু হচ্ছে",
+        "statusPg": "স্থানীয় ডেটাবেস সেট করা হচ্ছে, প্রায় শেষ",
+        "sLauncher": "লঞ্চার চালু হচ্ছে",
+        "sSidecar": "ব্যাকএন্ড খোঁজা হচ্ছে",
+        "sPg": "স্থানীয় ডেটাবেস চালু হচ্ছে",
+        "sMigrate": "ডেটাবেস প্রস্তুত করা হচ্ছে",
+        "sServer": "অ্যাপ্লিকেশন সার্ভার চালু হচ্ছে",
+        "sOpen": "অ্যাপ খোলা হচ্ছে",
+        "hint": "প্রথমবার চালু করলে আপনার স্থানীয় ডেটাবেস তৈরি হয়। এতে এক থেকে দুই মিনিট লাগতে পারে, অনুগ্রহ করে অপেক্ষা করুন।",
+        "version": "সংস্করণ: {n}",
+        "logFile": "লগ ফাইল: {n}",
+        "copy": "বিবরণ কপি করুন",
+        "copied": "কপি হয়েছে",
+        "errTitle": "কিছু একটা ভুল হয়েছে",
+        "errGeneric": "চালু করা যায়নি।",
+        "errLog": "আপনার হোম ফোল্ডারে .openestimate/desktop-launcher.log নামে একটি লগ সংরক্ষণ করা হয়েছে।",
+        "dReady": "প্রস্তুত",
+        "dFound": "চলমান একটি ব্যাকএন্ড পাওয়া গেছে",
+        "cTitle": "আপনি OpenConstructionERP কীভাবে খুলতে চান?",
+        "cBody": "আপনি এটি নিজস্ব অ্যাপ উইন্ডোতে ব্যবহার করতে পারেন, অথবা আপনি যে ওয়েব ব্রাউজার ব্যবহার করেন সেখানে খুলতে পারেন। যেকোনো সময় বদলাতে পারবেন।",
+        "cApp": "অ্যাপ উইন্ডো হিসেবে খুলুন",
+        "cAppNote": "প্রস্তাবিত। আলাদা উইন্ডো, ব্রাউজার ট্যাব নয়।",
+        "cBrowser": "আমার ব্রাউজারে খুলুন",
+        "cBrowserNote": "স্থানীয় ঠিকানায় আপনার চেনা ব্রাউজার ব্যবহার করুন।",
+        "cCountdown": "{n} সেকেন্ড পরে অ্যাপ উইন্ডো হিসেবে খুলবে।",
+        "cOpening": "আপনার ব্রাউজারে খোলা হচ্ছে...",
+        "logoAlt": "OpenConstructionERP লোগো",
+        "by": "DataDrivenConstruction থেকে"
+      },
+      "kk": {
+        "status": "Қолданба іске қосылуда",
+        "statusPg": "Жергілікті дерекқор бапталуда, аз қалды",
+        "sLauncher": "Іске қосқыш жүктелуде",
+        "sSidecar": "Бэкенд ізделуде",
+        "sPg": "Жергілікті дерекқор іске қосылуда",
+        "sMigrate": "Дерекқор дайындалуда",
+        "sServer": "Қолданба сервері іске қосылуда",
+        "sOpen": "Қолданба ашылуда",
+        "hint": "Алғаш іске қосқанда жергілікті дерекқорыңыз орнатылады. Бұл бір-екі минутқа созылуы мүмкін, күте тұрыңыз.",
+        "version": "Нұсқа: {n}",
+        "logFile": "Журнал файлы: {n}",
+        "copy": "Мәліметтерді көшіру",
+        "copied": "Көшірілді",
+        "errTitle": "Бірдеңе дұрыс болмады",
+        "errGeneric": "Іске қосу сәтсіз аяқталды.",
+        "errLog": "Журнал үй қалтаңызда .openestimate/desktop-launcher.log деп сақталды.",
+        "dReady": "Дайын",
+        "dFound": "Жұмыс істеп тұрған бэкенд табылды",
+        "cTitle": "OpenConstructionERP қалай ашылсын?",
+        "cBody": "Оны бөлек қолданба терезесінде пайдалануға немесе өзіңіз қолданатын браузерде ашуға болады. Кез келген уақытта ауыстыруға болады.",
+        "cApp": "Қолданба терезесі ретінде ашу",
+        "cAppNote": "Ұсынылады. Бөлек терезе, браузер қойындылары жоқ.",
+        "cBrowser": "Браузерімде ашу",
+        "cBrowserNote": "Жергілікті мекенжайда әдеттегі браузеріңізді пайдаланыңыз.",
+        "cCountdown": "{n} сек. кейін қолданба терезесі ретінде ашылады.",
+        "cOpening": "Браузеріңізде ашылуда...",
+        "logoAlt": "OpenConstructionERP логотипі",
+        "by": "DataDrivenConstruction ұсынады"
+      },
+      "fil": {
+        "status": "Sinisimulan ang aplikasyon",
+        "statusPg": "Inihahanda ang lokal na database, malapit nang matapos",
+        "sLauncher": "Sinisimulan ang launcher",
+        "sSidecar": "Hinahanap ang backend",
+        "sPg": "Sinisimulan ang lokal na database",
+        "sMigrate": "Inihahanda ang database",
+        "sServer": "Sinisimulan ang application server",
+        "sOpen": "Binubuksan ang app",
+        "hint": "Sa unang pagpapatakbo ay ihahanda ang iyong lokal na database. Maaari itong tumagal ng isa o dalawang minuto, maghintay lamang.",
+        "version": "Bersyon: {n}",
+        "logFile": "Log file: {n}",
+        "copy": "Kopyahin ang detalye",
+        "copied": "Nakopya",
+        "errTitle": "May nangyaring mali",
+        "errGeneric": "Nabigo ang pagsisimula.",
+        "errLog": "May naitalang log sa iyong home folder bilang .openestimate/desktop-launcher.log.",
+        "dReady": "Handa na",
+        "dFound": "May nakitang tumatakbong backend",
+        "cTitle": "Paano mo gustong buksan ang OpenConstructionERP?",
+        "cBody": "Magagamit mo ito sa sarili nitong app window, o buksan sa web browser na ginagamit mo na. Puwede kang magpalit anumang oras.",
+        "cApp": "Buksan bilang app window",
+        "cAppNote": "Inirerekomenda. Sariling window, walang browser tab.",
+        "cBrowser": "Buksan sa aking browser",
+        "cBrowserNote": "Gamitin ang karaniwan mong browser sa lokal na address.",
+        "cCountdown": "Bubuksan bilang app window sa loob ng {n} segundo.",
+        "cOpening": "Binubuksan sa iyong browser...",
+        "logoAlt": "Logo ng OpenConstructionERP",
+        "by": "ng DataDrivenConstruction"
+      },
+      "ur": {
+        "status": "ایپلیکیشن شروع ہو رہی ہے",
+        "statusPg": "مقامی ڈیٹابیس ترتیب دیا جا رہا ہے، تقریباً مکمل",
+        "sLauncher": "لانچر شروع ہو رہا ہے",
+        "sSidecar": "بیک اینڈ تلاش کیا جا رہا ہے",
+        "sPg": "مقامی ڈیٹابیس شروع ہو رہا ہے",
+        "sMigrate": "ڈیٹابیس تیار کیا جا رہا ہے",
+        "sServer": "ایپلیکیشن سرور شروع ہو رہا ہے",
+        "sOpen": "ایپ کھولی جا رہی ہے",
+        "hint": "پہلی بار چلانے پر آپ کا مقامی ڈیٹابیس ترتیب دیا جاتا ہے۔ اس میں ایک یا دو منٹ لگ سکتے ہیں، براہ کرم انتظار کریں۔",
+        "version": "ورژن: {n}",
+        "logFile": "لاگ فائل: {n}",
+        "copy": "تفصیلات کاپی کریں",
+        "copied": "کاپی ہو گیا",
+        "errTitle": "کچھ غلط ہو گیا",
+        "errGeneric": "شروع کرنے میں ناکامی۔",
+        "errLog": "آپ کے ہوم فولڈر میں .openestimate/desktop-launcher.log کے نام سے ایک لاگ محفوظ کیا گیا ہے۔",
+        "dReady": "تیار",
+        "dFound": "چلتا ہوا بیک اینڈ مل گیا",
+        "cTitle": "آپ OpenConstructionERP کو کیسے کھولنا چاہیں گے؟",
+        "cBody": "آپ اسے اپنی الگ ایپ ونڈو میں استعمال کر سکتے ہیں، یا اسی ویب براؤزر میں کھول سکتے ہیں جو آپ پہلے سے استعمال کرتے ہیں۔ آپ کسی بھی وقت تبدیل کر سکتے ہیں۔",
+        "cApp": "ایپ ونڈو کے طور پر کھولیں",
+        "cAppNote": "تجویز کردہ۔ الگ ونڈو، کوئی براؤزر ٹیب نہیں۔",
+        "cBrowser": "میرے براؤزر میں کھولیں",
+        "cBrowserNote": "مقامی پتے پر اپنا معمول کا براؤزر استعمال کریں۔",
+        "cCountdown": "{n} سیکنڈ میں ایپ ونڈو کے طور پر کھلے گا۔",
+        "cOpening": "آپ کے براؤزر میں کھولا جا رہا ہے...",
+        "logoAlt": "OpenConstructionERP کا لوگو",
+        "by": "بذریعہ DataDrivenConstruction"
+      },
+      "fa": {
+        "status": "در حال راه‌اندازی برنامه",
+        "statusPg": "در حال آماده‌سازی پایگاه داده محلی، نزدیک به پایان",
+        "sLauncher": "در حال راه‌اندازی اجراکننده",
+        "sSidecar": "در حال یافتن بک‌اند",
+        "sPg": "در حال راه‌اندازی پایگاه داده محلی",
+        "sMigrate": "در حال آماده‌سازی پایگاه داده",
+        "sServer": "در حال راه‌اندازی سرور برنامه",
+        "sOpen": "در حال باز کردن برنامه",
+        "hint": "اولین اجرا پایگاه داده محلی شما را آماده می‌کند. این کار ممکن است یک تا دو دقیقه طول بکشد، لطفاً صبر کنید.",
+        "version": "نسخه: {n}",
+        "logFile": "پرونده گزارش: {n}",
+        "copy": "کپی جزئیات",
+        "copied": "کپی شد",
+        "errTitle": "مشکلی پیش آمد",
+        "errGeneric": "راه‌اندازی ناموفق بود.",
+        "errLog": "یک گزارش در پوشه خانگی شما با نام .openestimate/desktop-launcher.log ذخیره شد.",
+        "dReady": "آماده",
+        "dFound": "یک بک‌اند در حال اجرا پیدا شد",
+        "cTitle": "می‌خواهید OpenConstructionERP چگونه باز شود؟",
+        "cBody": "می‌توانید از آن در پنجره اختصاصی برنامه استفاده کنید یا آن را در مرورگری که همیشه استفاده می‌کنید باز کنید. هر زمان می‌توانید تغییر دهید.",
+        "cApp": "باز کردن به صورت پنجره برنامه",
+        "cAppNote": "توصیه می‌شود. پنجره اختصاصی، بدون زبانه مرورگر.",
+        "cBrowser": "باز کردن در مرورگر من",
+        "cBrowserNote": "از مرورگر همیشگی خود در نشانی محلی استفاده کنید.",
+        "cCountdown": "تا {n} ثانیه دیگر به صورت پنجره برنامه باز می‌شود.",
+        "cOpening": "در حال باز شدن در مرورگر شما...",
+        "logoAlt": "نشان OpenConstructionERP",
+        "by": "از DataDrivenConstruction"
+      },
+      "he": {
+        "status": "מפעיל את היישום",
+        "statusPg": "מגדיר את מסד הנתונים המקומי, כמעט סיימנו",
+        "sLauncher": "מפעיל את המשגר",
+        "sSidecar": "מאתר את השרת",
+        "sPg": "מפעיל את מסד הנתונים המקומי",
+        "sMigrate": "מכין את מסד הנתונים",
+        "sServer": "מפעיל את שרת היישום",
+        "sOpen": "פותח את היישום",
+        "hint": "ההפעלה הראשונה מקימה את מסד הנתונים המקומי שלך. זה עשוי לקחת דקה או שתיים, אנא המתן.",
+        "version": "גרסה: {n}",
+        "logFile": "קובץ יומן: {n}",
+        "copy": "העתקת פרטים",
+        "copied": "הועתק",
+        "errTitle": "משהו השתבש",
+        "errGeneric": "ההפעלה נכשלה.",
+        "errLog": "יומן נשמר בתיקיית הבית שלך בשם .openestimate/desktop-launcher.log.",
+        "dReady": "מוכן",
+        "dFound": "נמצא שרת פעיל",
+        "cTitle": "איך תרצה לפתוח את OpenConstructionERP?",
+        "cBody": "אפשר להשתמש בו בחלון יישום נפרד, או לפתוח אותו בדפדפן שאתה כבר משתמש בו. אפשר להחליף בכל רגע.",
+        "cApp": "פתיחה כחלון יישום",
+        "cAppNote": "מומלץ. חלון ייעודי, בלי לשוניות דפדפן.",
+        "cBrowser": "פתיחה בדפדפן שלי",
+        "cBrowserNote": "שימוש בדפדפן הרגיל שלך בכתובת המקומית.",
+        "cCountdown": "ייפתח כחלון יישום בעוד {n} שניות.",
+        "cOpening": "נפתח בדפדפן שלך...",
+        "logoAlt": "הלוגו של OpenConstructionERP",
+        "by": "מאת DataDrivenConstruction"
+      },
+      "el": {
+        "status": "Εκκίνηση της εφαρμογής",
+        "statusPg": "Ρύθμιση της τοπικής βάσης δεδομένων, σχεδόν έτοιμο",
+        "sLauncher": "Εκκίνηση του εκκινητή",
+        "sSidecar": "Εντοπισμός του backend",
+        "sPg": "Εκκίνηση της τοπικής βάσης δεδομένων",
+        "sMigrate": "Προετοιμασία της βάσης δεδομένων",
+        "sServer": "Εκκίνηση του διακομιστή εφαρμογής",
+        "sOpen": "Άνοιγμα της εφαρμογής",
+        "hint": "Η πρώτη εκτέλεση δημιουργεί την τοπική σας βάση δεδομένων. Μπορεί να διαρκέσει ένα ή δύο λεπτά, παρακαλώ περιμένετε.",
+        "version": "Έκδοση: {n}",
+        "logFile": "Αρχείο καταγραφής: {n}",
+        "copy": "Αντιγραφή λεπτομερειών",
+        "copied": "Αντιγράφηκε",
+        "errTitle": "Κάτι πήγε στραβά",
+        "errGeneric": "Η εκκίνηση απέτυχε.",
+        "errLog": "Ένα αρχείο καταγραφής αποθηκεύτηκε στον προσωπικό σας φάκελο ως .openestimate/desktop-launcher.log.",
+        "dReady": "Έτοιμο",
+        "dFound": "Βρέθηκε ένα backend σε λειτουργία",
+        "cTitle": "Πώς θέλετε να ανοίξετε το OpenConstructionERP;",
+        "cBody": "Μπορείτε να το χρησιμοποιήσετε σε δικό του παράθυρο εφαρμογής ή να το ανοίξετε στο πρόγραμμα περιήγησης που ήδη χρησιμοποιείτε. Μπορείτε να αλλάξετε ανά πάσα στιγμή.",
+        "cApp": "Άνοιγμα ως παράθυρο εφαρμογής",
+        "cAppNote": "Συνιστάται. Αποκλειστικό παράθυρο, χωρίς καρτέλες περιήγησης.",
+        "cBrowser": "Άνοιγμα στο πρόγραμμα περιήγησής μου",
+        "cBrowserNote": "Χρήση του συνηθισμένου προγράμματος περιήγησης στην τοπική διεύθυνση.",
+        "cCountdown": "Θα ανοίξει ως παράθυρο εφαρμογής σε {n} δευτερόλεπτα.",
+        "cOpening": "Άνοιγμα στο πρόγραμμα περιήγησής σας...",
+        "logoAlt": "Λογότυπο OpenConstructionERP",
+        "by": "από την DataDrivenConstruction"
+      },
+      "uk": {
+        "status": "Запуск застосунку",
+        "statusPg": "Налаштовуємо локальну базу даних, майже готово",
+        "sLauncher": "Запуск лаунчера",
+        "sSidecar": "Пошук бекенду",
+        "sPg": "Запуск локальної бази даних",
+        "sMigrate": "Підготовка бази даних",
+        "sServer": "Запуск сервера застосунку",
+        "sOpen": "Відкриття застосунку",
+        "hint": "Під час першого запуску створюється ваша локальна база даних. Це може тривати одну-дві хвилини, зачекайте.",
+        "version": "Версія: {n}",
+        "logFile": "Файл журналу: {n}",
+        "copy": "Копіювати подробиці",
+        "copied": "Скопійовано",
+        "errTitle": "Щось пішло не так",
+        "errGeneric": "Не вдалося запустити.",
+        "errLog": "Журнал збережено у вашій домашній теці як .openestimate/desktop-launcher.log.",
+        "dReady": "Готово",
+        "dFound": "Знайдено запущений бекенд",
+        "cTitle": "Як відкрити OpenConstructionERP?",
+        "cBody": "Ви можете користуватися ним в окремому вікні застосунку або відкрити його у браузері, яким уже користуєтеся. Змінити можна будь-коли.",
+        "cApp": "Відкрити як вікно застосунку",
+        "cAppNote": "Рекомендовано. Окреме вікно, без вкладок браузера.",
+        "cBrowser": "Відкрити у моєму браузері",
+        "cBrowserNote": "Використати звичний браузер за локальною адресою.",
+        "cCountdown": "Відкриється як вікно застосунку через {n} с.",
+        "cOpening": "Відкриваємо у вашому браузері...",
+        "logoAlt": "Логотип OpenConstructionERP",
+        "by": "від DataDrivenConstruction"
+      }
+    };
+    // (i18n-table-end)
+
+    // The four offered languages written right to left. The application marks
+    // the same four in SUPPORTED_LANGUAGES, and this screen has to agree with
+    // it or the first thing a reader of those languages sees is a page laid
+    // out backwards.
+    var SPLASH_RTL = ['ar', 'fa', 'he', 'ur'];
+
+    // Which language to show.
+    //
+    // The desktop shell has no language setting of its own: nothing in the
+    // launcher reads, stores or passes one, and the preference the user picks
+    // inside the application is written to localStorage on the
+    // http://127.0.0.1:<port> origin, which this page (on tauri://) cannot
+    // read. So the honest source here is the operating system's own language,
+    // which the webview reports through navigator.languages.
+    //
+    // ?lang= is honoured first, mirroring the application's own resolver. It
+    // is not a setting and there is no UI for it; it is how this file can be
+    // opened in a browser and checked in a language the machine is not set to.
+    var SPLASH_LANG = (function () {
+      var candidates = [];
+      try {
+        var q = new URLSearchParams(window.location.search).get('lang');
+        if (q) { candidates.push(q); }
+      } catch (e) { /* no URL API or odd query; fall through */ }
+      try {
+        var navs = (navigator.languages && navigator.languages.length)
+          ? navigator.languages
+          : [navigator.language];
+        for (var i = 0; i < navs.length; i++) {
+          if (navs[i]) { candidates.push(navs[i]); }
+        }
+      } catch (e) { /* no navigator languages; fall through to English */ }
+
+      for (var j = 0; j < candidates.length; j++) {
+        var parts = String(candidates[j]).trim().split('-');
+        // Match how a two-part tag is normally written, so "pt-br" and "PT-BR"
+        // both find a "pt-BR" table if one is ever added.
+        var exact = parts.length === 2
+          ? parts[0].toLowerCase() + '-' + parts[1].toUpperCase()
+          : String(candidates[j]).trim();
+        if (SPLASH_I18N[exact]) { return exact; }
+        var base = parts[0].toLowerCase();
+        if (SPLASH_I18N[base]) { return base; }
+      }
+      return 'en';
+    })();
+
+    // Look a string up: the resolved language, then its base language, then
+    // English. A key that is missing everywhere returns an empty string rather
+    // than its own name, because a raw key on the first screen of the product
+    // is worse than a blank line. The test alongside this file keeps that
+    // branch unreachable by checking that every key the script asks for exists
+    // in the English table.
+    function t(key) {
+      var table = SPLASH_I18N[SPLASH_LANG];
+      if (table && typeof table[key] === 'string') { return table[key]; }
+      var base = SPLASH_LANG.split('-')[0];
+      var baseTable = SPLASH_I18N[base];
+      if (baseTable && typeof baseTable[key] === 'string') { return baseTable[key]; }
+      var en = SPLASH_I18N.en;
+      if (en && typeof en[key] === 'string') { return en[key]; }
+      return '';
+    }
+
+    // The English string, whatever the interface language is. Used only for the
+    // diagnostics text the user copies and sends to support, which has to stay
+    // readable by the people who receive it.
+    function tEn(key) {
+      var en = SPLASH_I18N.en;
+      return (en && typeof en[key] === 'string') ? en[key] : '';
+    }
+
+    // Put a value into the one interpolation slot these strings use.
+    function fmt(template, value) {
+      return String(template).replace('{n}', String(value));
+    }
+
+    // Apply the language to the document and to every element that carries a
+    // key. Runs immediately rather than on DOMContentLoaded: this script is the
+    // last thing in the body, so the elements already exist, and waiting would
+    // show a frame of English to everyone else first.
+    (function applyStaticTranslations() {
+      try {
+        var root = document.documentElement;
+        root.setAttribute('lang', SPLASH_LANG);
+        root.setAttribute('dir', SPLASH_RTL.indexOf(SPLASH_LANG.split('-')[0]) >= 0 ? 'rtl' : 'ltr');
+        var nodes = document.querySelectorAll('[data-i18n]');
+        for (var i = 0; i < nodes.length; i++) {
+          var text = t(nodes[i].getAttribute('data-i18n'));
+          if (text) { nodes[i].textContent = text; }
+        }
+        var aria = document.querySelectorAll('[data-i18n-aria]');
+        for (var j = 0; j < aria.length; j++) {
+          var label = t(aria[j].getAttribute('data-i18n-aria'));
+          if (label) { aria[j].setAttribute('aria-label', label); }
+        }
+      } catch (e) { /* leave the English already in the markup */ }
+    })();
+
+    // Ordered boot checklist. Each entry: id -> translation key. The launcher
+    // drives state transitions by calling bootStage(id, status, detail). The
+    // same ids are emitted by the backend as "STAGE:<id>:<status>:<detail>"
+    // markers.
     var STEPS = [
-      { id: 'launcher', label: 'Starting launcher' },
-      { id: 'sidecar',  label: 'Locating the backend' },
-      { id: 'pg',       label: 'Starting the local database' },
-      { id: 'migrate',  label: 'Preparing the database' },
-      { id: 'server',   label: 'Starting the application server' },
-      { id: 'open',     label: 'Opening the app' }
+      { id: 'launcher', key: 'sLauncher' },
+      { id: 'sidecar',  key: 'sSidecar' },
+      { id: 'pg',       key: 'sPg' },
+      { id: 'migrate',  key: 'sMigrate' },
+      { id: 'server',   key: 'sServer' },
+      { id: 'open',     key: 'sOpen' }
     ];
 
     var lastDetail = {};
+
+    // The launcher pushes a handful of fixed English sentences into this screen
+    // - as the detail beside a stage, and once as the status line after the
+    // first slow eight seconds - and several of them repeat a label that is
+    // already translated above them. Left as they arrive they would print an
+    // English sentence under a translated one, which reads as a half-finished
+    // translation rather than as extra information.
+    //
+    // Only these exact strings are mapped, and the map is a courtesy rather
+    // than a contract: a phrase that stops matching simply shows in English
+    // again. Anything else - a path, an exception, a message from the backend -
+    // is shown exactly as it was sent, because the launcher is the only thing
+    // that knows what it means.
+    var LAUNCHER_PHRASES = {
+      'Locating the backend': 'sSidecar',
+      'Starting the local database': 'sPg',
+      'Found a running backend': 'dFound',
+      'Ready': 'dReady',
+      'Setting up the local database, almost there': 'statusPg'
+    };
+
+    function translatePhrase(text) {
+      var key = LAUNCHER_PHRASES[text];
+      return key ? (t(key) || text) : text;
+    }
 
     function renderChecklist() {
       var box = document.getElementById('checklist');
@@ -355,8 +1596,11 @@
         row.id = 'step-' + s.id;
         row.innerHTML =
           '<span class="icon"><span class="dot"></span></span>' +
-          '<span class="label-wrap"><span class="label">' + s.label + '</span>' +
+          '<span class="label-wrap"><span class="label"></span>' +
           '<span class="detail"></span></span>';
+        // Written as text, not markup, so a translation can never inject HTML.
+        var label = row.querySelector('.label');
+        if (label) { label.textContent = t(s.key); }
         box.appendChild(row);
       }
     }
@@ -403,14 +1647,19 @@
 
       var detailEl = row.querySelector('.detail');
       if (detailEl) {
-        if (detail) { lastDetail[id] = detail; detailEl.textContent = detail; }
+        // The English detail is what gets remembered: the diagnostics text is
+        // sent to people who read English, whatever the screen is showing.
+        if (detail) { lastDetail[id] = detail; detailEl.textContent = translatePhrase(detail); }
         else { detailEl.textContent = ''; }
       }
     }
 
-    function setStatus(t) {
+    // Called by the launcher with an English sentence. The parameter is named
+    // for what it is rather than `t`, which is the lookup this file uses
+    // everywhere else and which the old name shadowed here.
+    function setStatus(text) {
       var el = document.getElementById('status');
-      if (el) { el.classList.remove('error'); el.textContent = t; }
+      if (el) { el.classList.remove('error'); el.textContent = translatePhrase(text); }
     }
 
     // setLogPath lets the launcher tell the splash exactly where the log lives,
@@ -419,7 +1668,7 @@
     function setLogPath(p) {
       LOG_PATH = p || '';
       var el = document.getElementById('logpath');
-      if (el && LOG_PATH) { el.textContent = 'Log file: ' + LOG_PATH; }
+      if (el && LOG_PATH) { el.textContent = fmt(t('logFile'), LOG_PATH); }
     }
 
     // setAppVersion is the same idea for the build number. A user whose app
@@ -432,19 +1681,19 @@
     function setAppVersion(v) {
       APP_VERSION = v || '';
       var el = document.getElementById('appversion');
-      if (el && APP_VERSION) { el.textContent = 'Version: ' + APP_VERSION; }
+      if (el && APP_VERSION) { el.textContent = fmt(t('version'), APP_VERSION); }
     }
 
-    function setError(t) {
+    function setError(msg) {
       var status = document.getElementById('status');
       var hint = document.getElementById('hint');
       if (status) {
         status.classList.add('error');
-        status.textContent = 'Something went wrong';
+        status.textContent = t('errTitle');
       }
       if (hint) {
-        hint.textContent = (t || 'Startup failed.') +
-          (LOG_PATH ? '' : ' A log was saved under your home folder as .openestimate/desktop-launcher.log.');
+        hint.textContent = (msg || t('errGeneric')) +
+          (LOG_PATH ? '' : ' ' + t('errLog'));
       }
       var btn = document.getElementById('copybtn');
       if (btn) { btn.style.display = 'inline-block'; }
@@ -453,7 +1702,7 @@
     // failStage marks one step as failed and surfaces the error in the hint.
     function failStage(id, detail) {
       bootStage(id, 'failed', detail || '');
-      setError(detail || 'Startup failed.');
+      setError(detail || t('errGeneric'));
     }
 
     // --- Launch choice: app window (default) or normal web browser ----------
@@ -548,7 +1797,7 @@
       var note = document.getElementById('choice-note');
       function tick() {
         if (note) {
-          note.textContent = 'Opening as an app window in ' + seconds + ' seconds.';
+          note.textContent = fmt(t('cCountdown'), seconds);
         }
         seconds -= 1;
         if (seconds < 0) { gotoAppWindow(); return; }
@@ -565,6 +1814,10 @@
       var btn = document.getElementById('copybtn');
       if (btn) {
         btn.addEventListener('click', function () {
+          // Deliberately English, whatever the interface language is. This text
+          // is copied and sent to info@datadrivenconstruction.io, so it has to
+          // be readable by whoever opens it there rather than by the person who
+          // pressed the button.
           var parts = ['OpenConstructionERP startup diagnostics'];
           // Version first: it is the question every one of these reports has to
           // answer before anything else in the list can be interpreted.
@@ -575,14 +1828,14 @@
             var row = document.getElementById('step-' + id);
             var st = row ? (row.className.replace('step', '').trim() || 'pending') : 'pending';
             var d = lastDetail[id] ? (' - ' + lastDetail[id]) : '';
-            parts.push(STEPS[i].label + ': ' + (st || 'pending') + d);
+            parts.push(tEn(STEPS[i].key) + ': ' + (st || 'pending') + d);
           }
           var text = parts.join('\n');
           try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
               navigator.clipboard.writeText(text);
-              btn.textContent = 'Copied';
-              setTimeout(function () { btn.textContent = 'Copy details'; }, 1500);
+              btn.textContent = t('copied');
+              setTimeout(function () { btn.textContent = t('copy'); }, 1500);
             }
           } catch (e) { /* clipboard not available; ignore */ }
         });
@@ -603,7 +1856,7 @@
           writeLaunchPref('browser');
           hideChoice();
           var note = document.getElementById('choice-note');
-          if (note) { note.textContent = 'Opening in your browser...'; }
+          if (note) { note.textContent = t('cOpening'); }
           openInBrowser();
           // Keep the app window open too (showing the same app), so closing the
           // browser tab does not leave the user with nothing, and the tray menu
