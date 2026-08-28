@@ -364,6 +364,103 @@
     ]
   },
   {
+    "country_code": "QA",
+    "name": "Qatar Standard 2026",
+    "name_translations": {
+      "en": "Qatar Standard 2026",
+      "ar": "دولة قطر 2026"
+    },
+    "year": "2026",
+    "work_hours_per_day": "8",
+    "work_days": [7, 1, 2, 3, 4],
+    "exceptions": [
+      {"date": "2026-02-10", "name": {"en": "National Sports Day", "ar": "اليوم الرياضي للدولة"}, "type": "public_holiday"},
+      {"date": "2026-03-19", "name": {"en": "Eid al-Fitr Day 1", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-20", "name": {"en": "Eid al-Fitr Day 2", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-21", "name": {"en": "Eid al-Fitr Day 3", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-05-26", "name": {"en": "Arafat Day", "ar": "يوم عرفة"}, "type": "public_holiday"},
+      {"date": "2026-05-27", "name": {"en": "Eid al-Adha Day 1", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-28", "name": {"en": "Eid al-Adha Day 2", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-29", "name": {"en": "Eid al-Adha Day 3", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-12-18", "name": {"en": "National Day", "ar": "اليوم الوطني"}, "type": "public_holiday"}
+    ]
+  },
+  {
+    "country_code": "KW",
+    "name": "Kuwait Standard 2026",
+    "name_translations": {
+      "en": "Kuwait Standard 2026",
+      "ar": "دولة الكويت 2026"
+    },
+    "year": "2026",
+    "work_hours_per_day": "8",
+    "work_days": [7, 1, 2, 3, 4],
+    "exceptions": [
+      {"date": "2026-01-01", "name": {"en": "New Year's Day", "ar": "رأس السنة الميلادية"}, "type": "public_holiday"},
+      {"date": "2026-02-25", "name": {"en": "National Day", "ar": "اليوم الوطني"}, "type": "public_holiday"},
+      {"date": "2026-02-26", "name": {"en": "Liberation Day", "ar": "يوم التحرير"}, "type": "public_holiday"},
+      {"date": "2026-03-19", "name": {"en": "Eid al-Fitr Day 1", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-20", "name": {"en": "Eid al-Fitr Day 2", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-21", "name": {"en": "Eid al-Fitr Day 3", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-05-26", "name": {"en": "Arafat Day", "ar": "يوم عرفة"}, "type": "public_holiday"},
+      {"date": "2026-05-27", "name": {"en": "Eid al-Adha Day 1", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-28", "name": {"en": "Eid al-Adha Day 2", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-29", "name": {"en": "Eid al-Adha Day 3", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-06-17", "name": {"en": "Islamic New Year", "ar": "رأس السنة الهجرية"}, "type": "public_holiday"},
+      {"date": "2026-08-26", "name": {"en": "Prophet's Birthday", "ar": "المولد النبوي"}, "type": "public_holiday"}
+    ]
+  },
+  {
+    "country_code": "BH",
+    "name": "Bahrain Standard 2026",
+    "name_translations": {
+      "en": "Bahrain Standard 2026",
+      "ar": "مملكة البحرين 2026"
+    },
+    "year": "2026",
+    "work_hours_per_day": "8",
+    "work_days": [7, 1, 2, 3, 4],
+    "exceptions": [
+      {"date": "2026-01-01", "name": {"en": "New Year's Day", "ar": "رأس السنة الميلادية"}, "type": "public_holiday"},
+      {"date": "2026-03-19", "name": {"en": "Eid al-Fitr Day 1", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-20", "name": {"en": "Eid al-Fitr Day 2", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-21", "name": {"en": "Eid al-Fitr Day 3", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-05-01", "name": {"en": "Labour Day", "ar": "عيد العمال"}, "type": "public_holiday"},
+      {"date": "2026-05-26", "name": {"en": "Arafat Day", "ar": "يوم عرفة"}, "type": "public_holiday"},
+      {"date": "2026-05-27", "name": {"en": "Eid al-Adha Day 1", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-28", "name": {"en": "Eid al-Adha Day 2", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-29", "name": {"en": "Eid al-Adha Day 3", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-06-17", "name": {"en": "Islamic New Year", "ar": "رأس السنة الهجرية"}, "type": "public_holiday"},
+      {"date": "2026-08-26", "name": {"en": "Prophet's Birthday", "ar": "المولد النبوي"}, "type": "public_holiday"},
+      {"date": "2026-12-16", "name": {"en": "National Day", "ar": "اليوم الوطني"}, "type": "public_holiday"},
+      {"date": "2026-12-17", "name": {"en": "National Day Holiday", "ar": "عطلة اليوم الوطني"}, "type": "public_holiday"}
+    ]
+  },
+  {
+    "country_code": "OM",
+    "name": "Oman Standard 2026",
+    "name_translations": {
+      "en": "Oman Standard 2026",
+      "ar": "سلطنة عمان 2026"
+    },
+    "year": "2026",
+    "work_hours_per_day": "8",
+    "work_days": [7, 1, 2, 3, 4],
+    "exceptions": [
+      {"date": "2026-01-01", "name": {"en": "New Year's Day", "ar": "رأس السنة الميلادية"}, "type": "public_holiday"},
+      {"date": "2026-03-19", "name": {"en": "Eid al-Fitr Day 1", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-20", "name": {"en": "Eid al-Fitr Day 2", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-03-21", "name": {"en": "Eid al-Fitr Day 3", "ar": "عيد الفطر"}, "type": "public_holiday"},
+      {"date": "2026-05-26", "name": {"en": "Arafat Day", "ar": "يوم عرفة"}, "type": "public_holiday"},
+      {"date": "2026-05-27", "name": {"en": "Eid al-Adha Day 1", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-28", "name": {"en": "Eid al-Adha Day 2", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-05-29", "name": {"en": "Eid al-Adha Day 3", "ar": "عيد الأضحى"}, "type": "public_holiday"},
+      {"date": "2026-06-17", "name": {"en": "Islamic New Year", "ar": "رأس السنة الهجرية"}, "type": "public_holiday"},
+      {"date": "2026-08-26", "name": {"en": "Prophet's Birthday", "ar": "المولد النبوي"}, "type": "public_holiday"},
+      {"date": "2026-11-18", "name": {"en": "National Day", "ar": "اليوم الوطني"}, "type": "public_holiday"}
+    ]
+  },
+  {
     "country_code": "CN",
     "name": "China Standard 2026",
     "name_translations": {
