@@ -7,8 +7,9 @@ Verifies that:
      uploads via `POST /api/v1/costs/items` with `components[]` preserved.
   3. Every uploaded code round-trips through `GET /api/v1/costs/items/?q=...`
      with matching unit + rate (within 0.01).
-  4. A recipe's `components` array survives the round-trip with the right
-     leaf codes and factors.
+  4. A recipe's `components` array survives the round-trip carrying the norm
+     quantity under `quantity` - the key the pricing engine actually reads -
+     rather than merely surviving as an opaque blob.
 
 Usage: python scripts/test_cost_import.py
 
@@ -132,15 +133,23 @@ def verify_recipe_components(s: requests.Session) -> None:
         got_components = got.get("components") or []
         if len(got_components) != len(rec["components"]):
             fail(f"recipe {rec['code']} components count {len(got_components)} != {len(rec['components'])}")
-        # Compare each by code + factor
+        # Compare each by code + quantity. Read `quantity` explicitly rather
+        # than whatever key the template happens to use: the point of this
+        # stage is that the stored component means something to the pricing
+        # engine, and `quantity` is the only key it reads. An absent key is a
+        # failure here, not a zero - reading it as zero is exactly how a recipe
+        # that prices at nothing once passed for a recipe that round-trips.
         by_code = {c["code"]: c for c in got_components if isinstance(c, dict) and c.get("code")}
         for expected_c in rec["components"]:
             ec_code = expected_c["code"]
             if ec_code not in by_code:
                 fail(f"recipe {rec['code']} missing component {ec_code}")
-            got_factor = float(by_code[ec_code].get("factor", 0))
-            if abs(got_factor - float(expected_c["factor"])) > 1e-6:
-                fail(f"recipe {rec['code']} component {ec_code}: factor {got_factor} != {expected_c['factor']}")
+            got = by_code[ec_code]
+            if "quantity" not in got or got["quantity"] in (None, ""):
+                fail(f"recipe {rec['code']} component {ec_code}: no 'quantity' stored, so it prices at nothing")
+            got_qty = float(got["quantity"])
+            if abs(got_qty - float(expected_c["quantity"])) > 1e-6:
+                fail(f"recipe {rec['code']} component {ec_code}: quantity {got_qty} != {expected_c['quantity']}")
     print(f"      all {len(recipes)} recipes have correct component breakdowns")
 
 

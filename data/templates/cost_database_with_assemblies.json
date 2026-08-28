@@ -9,11 +9,11 @@
     "classification": {"masterformat": "03 31 13"},
     "region": "US_CUSTOM",
     "components": [
-      {"code": "LAB-CARP-01",  "factor": 0.18, "unit": "hr",  "type": "labor"},
-      {"code": "LAB-LAB-01",   "factor": 0.22, "unit": "hr",  "type": "labor"},
-      {"code": "MAT-CONC-3K",  "factor": 0.075,"unit": "yd3", "type": "material"},
-      {"code": "MAT-REBAR-60", "factor": 4.50, "unit": "lb",  "type": "material"},
-      {"code": "EQP-EXC-SML",  "factor": 0.025,"unit": "hr",  "type": "equipment"}
+      {"code": "LAB-CARP-01",  "quantity": 0.18, "unit": "hr",  "type": "labor"},
+      {"code": "LAB-LAB-01",   "quantity": 0.22, "unit": "hr",  "type": "labor"},
+      {"code": "MAT-CONC-3K",  "quantity": 0.075,"unit": "yd3", "type": "material"},
+      {"code": "MAT-REBAR-60", "quantity": 4.50, "unit": "lb",  "type": "material"},
+      {"code": "EQP-EXC-SML",  "quantity": 0.025,"unit": "hr",  "type": "equipment"}
     ]
   },
   {
@@ -26,11 +26,11 @@
     "classification": {"masterformat": "03 30 53"},
     "region": "US_CUSTOM",
     "components": [
-      {"code": "LAB-CARP-01",   "factor": 0.15, "unit": "hr",  "type": "labor"},
-      {"code": "LAB-LAB-01",    "factor": 0.12, "unit": "hr",  "type": "labor"},
-      {"code": "MAT-CONC-3K",   "factor": 0.025,"unit": "yd3", "type": "material"},
-      {"code": "MAT-REBAR-60",  "factor": 1.20, "unit": "lb",  "type": "material"},
-      {"code": "EQP-PUMP-CONC", "factor": 0.008,"unit": "hr",  "type": "equipment"}
+      {"code": "LAB-CARP-01",   "quantity": 0.15, "unit": "hr",  "type": "labor"},
+      {"code": "LAB-LAB-01",    "quantity": 0.12, "unit": "hr",  "type": "labor"},
+      {"code": "MAT-CONC-3K",   "quantity": 0.025,"unit": "yd3", "type": "material"},
+      {"code": "MAT-REBAR-60",  "quantity": 1.20, "unit": "lb",  "type": "material"},
+      {"code": "EQP-PUMP-CONC", "quantity": 0.008,"unit": "hr",  "type": "equipment"}
     ]
   },
   {
@@ -43,10 +43,10 @@
     "classification": {"masterformat": "04 22 00"},
     "region": "US_CUSTOM",
     "components": [
-      {"code": "LAB-MASON-01", "factor": 0.16, "unit": "hr", "type": "labor"},
-      {"code": "LAB-LAB-01",   "factor": 0.08, "unit": "hr", "type": "labor"},
-      {"code": "MAT-CMU-8",    "factor": 1.13, "unit": "ea", "type": "material"},
-      {"code": "MAT-REBAR-60", "factor": 0.30, "unit": "lb", "type": "material"}
+      {"code": "LAB-MASON-01", "quantity": 0.16, "unit": "hr", "type": "labor"},
+      {"code": "LAB-LAB-01",   "quantity": 0.08, "unit": "hr", "type": "labor"},
+      {"code": "MAT-CMU-8",    "quantity": 1.13, "unit": "ea", "type": "material"},
+      {"code": "MAT-REBAR-60", "quantity": 0.30, "unit": "lb", "type": "material"}
     ]
   },
   {
@@ -59,9 +59,9 @@
     "classification": {"masterformat": "06 11 00"},
     "region": "US_CUSTOM",
     "components": [
-      {"code": "LAB-CARP-01", "factor": 0.07, "unit": "hr", "type": "labor"},
-      {"code": "LAB-CARP-02", "factor": 0.05, "unit": "hr", "type": "labor"},
-      {"code": "MAT-LUMB-2X4","factor": 1.05, "unit": "ea", "type": "material"}
+      {"code": "LAB-CARP-01", "quantity": 0.07, "unit": "hr", "type": "labor"},
+      {"code": "LAB-CARP-02", "quantity": 0.05, "unit": "hr", "type": "labor"},
+      {"code": "MAT-LUMB-2X4","quantity": 1.05, "unit": "ea", "type": "material"}
     ]
   },
   {
@@ -74,10 +74,10 @@
     "classification": {"masterformat": "09 29 00"},
     "region": "US_CUSTOM",
     "components": [
-      {"code": "LAB-CARP-01",   "factor": 0.04, "unit": "hr", "type": "labor"},
-      {"code": "LAB-LAB-01",    "factor": 0.02, "unit": "hr", "type": "labor"},
-      {"code": "MAT-DRYW-58",   "factor": 1.05, "unit": "sf", "type": "material"},
-      {"code": "MAT-PAINT-INT", "factor": 1.00, "unit": "sf", "type": "material"}
+      {"code": "LAB-CARP-01",   "quantity": 0.04, "unit": "hr", "type": "labor"},
+      {"code": "LAB-LAB-01",    "quantity": 0.02, "unit": "hr", "type": "labor"},
+      {"code": "MAT-DRYW-58",   "quantity": 1.05, "unit": "sf", "type": "material"},
+      {"code": "MAT-PAINT-INT", "quantity": 1.00, "unit": "sf", "type": "material"}
     ]
   },
   {
@@ -90,8 +90,8 @@
     "classification": {"masterformat": "07 31 13"},
     "region": "US_CUSTOM",
     "components": [
-      {"code": "SUB-ROOF-ASPH", "factor": 1.00, "unit": "sq", "type": "subcontractor"},
-      {"code": "LAB-FOREM-01",  "factor": 0.18, "unit": "hr", "type": "labor"}
+      {"code": "SUB-ROOF-ASPH", "quantity": 1.00, "unit": "sq", "type": "subcontractor"},
+      {"code": "LAB-FOREM-01",  "quantity": 0.18, "unit": "hr", "type": "labor"}
     ]
   }
 ]
