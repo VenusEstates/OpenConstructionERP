@@ -21,6 +21,7 @@ import { PageHeader } from '@/shared/ui/PageHeader';
 import { APP_VERSION } from '@/shared/lib/version';
 import { UpdateNotification } from '@/shared/ui/UpdateChecker';
 import { Changelog, getRecentReleases } from './Changelog';
+import { ThirdPartyLicenses } from './ThirdPartyLicenses';
 import { CONTRIBUTORS, SPONSORS, acknowledgedUrl, type Acknowledged } from './acknowledgments';
 
 const REPO_URL = 'https://github.com/datadrivenconstruction/OpenConstructionERP';
@@ -1248,6 +1249,12 @@ export function AboutPage() {
               <Badge variant="success" size="sm">{t('about.license_badge_nolockin', { defaultValue: 'No vendor lock-in' })}</Badge>
               <Badge variant="blue" size="sm">AGPL-3.0</Badge>
             </div>
+
+            {/* Third-party components. AGPL-3.0 above is our own licence and
+                not the whole story: the build also redistributes LGPL-2.1 and
+                LGPL-3.0 components, and their texts ship inside the artefact
+                where nothing could read them until /api/v1/licenses/. */}
+            <ThirdPartyLicenses className="mb-4" />
 
             <div className="mt-auto pt-3 border-t border-border-light">
               <p className="text-xs text-content-secondary mb-2">
