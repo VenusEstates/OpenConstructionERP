@@ -238,10 +238,14 @@ So the shape both readers agree on is `{type, code, name, quantity, unit}`. Use 
 > components as `{code, factor, unit, type}`. Nothing reads `factor`.
 >
 > This does not merely do nothing. A missing `quantity` is read as a quantity of zero, not as an
-> absent value, so each component is priced at zero cost and *counts as priced*. Every line
-> succeeds, the item is reported as fully priced, and its rate is overwritten with `0.00`. Import
-> the shipped assemblies template, seed prices and reprice, and you get six work items priced at
-> zero and a result object saying `items_fully_priced: 6` with no missing resources.
+> absent value. So once the resources involved carry real prices, each component prices at zero
+> cost and *counts as priced*: every line succeeds, the item is reported as fully priced with no
+> missing resources, and its rate is overwritten with `0.00`.
+>
+> The one thing that hides this is an empty price sheet. A resource priced below half a cent is
+> treated as unpriced, and an item on which nothing priced is left alone rather than zeroed, so a
+> reprice run before you have set any prices reports the items as unpriced and changes nothing.
+> The damage lands on the first run after the prices are real.
 >
 > Extraction is unaffected, because it only needs `code` and `type`.
 >

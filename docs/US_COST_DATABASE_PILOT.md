@@ -38,25 +38,27 @@ Load it as it stands and the recipes will store perfectly, price at zero, and re
 as fully priced. Rename the key first:
 
 ```bash
-python -c "
-import json, pathlib
-p = pathlib.Path('data/templates/cost_database_with_assemblies.json')
-items = json.loads(p.read_text(encoding='utf-8'))
+ASSEMBLIES=$(python -c "
+import json, pathlib, tempfile
+src = pathlib.Path('data/templates/cost_database_with_assemblies.json')
+items = json.loads(src.read_text(encoding='utf-8'))
 for item in items:
     for comp in item['components']:
         comp['quantity'] = comp.pop('factor')
-pathlib.Path('assemblies.json').write_text(json.dumps(items, indent=2), encoding='utf-8')
-print(len(items), 'work items written to assemblies.json')
-"
+out = pathlib.Path(tempfile.gettempdir()) / 'oe_assemblies.json'
+out.write_text(json.dumps(items, indent=2), encoding='utf-8')
+print(out)
+")
 ```
 
-Then post them:
+It writes outside the repository on purpose, so this walkthrough leaves nothing behind to clean
+up. Then post them:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/costs/bulk/ \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  --data @assemblies.json
+  --data @"$ASSEMBLIES"
 ```
 
 Six items come back. Their rates are whatever the file said; those are about to be replaced.
@@ -94,9 +96,11 @@ the CSV's own rates, so the figures in the next step follow from files you alrea
 `resource_key` is the component's `code`. Where a resource has no code, the key is its name
 lowercased and prefixed `name:`, which is why giving your resources codes is worth the trouble.
 
-`POST /resource-prices/US_CUSTOM/seed/` builds a sheet from the work items instead, and is the
-right call on a real base. It seeds observed prices, not the ones you intend, so this example
-sets them explicitly.
+`POST /resource-prices/US_CUSTOM/seed/` builds the sheet from the work items instead of from a
+payload you write. It reads whatever price is already recorded on each component under
+`unit_rate`, and these recipes carry none, so seeding here would create fourteen rows priced at
+zero for you to fill in by hand. On a real base that is the right first move. Here it is a
+detour, so the example writes the prices directly.
 
 ## Step 4: reprice, dry run first
 

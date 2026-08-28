@@ -163,9 +163,14 @@ of the parent work item.
 The column is free-form JSON and nothing validates it on the way in. Get the key names wrong and
 the components are stored successfully, and the failure that follows is the worst-shaped one in
 this whole pipeline: a missing `quantity` is read as a quantity of *zero* rather than as an
-absent value, so every line prices at zero cost and counts as successfully priced. The item is
-reported fully priced, with no missing resources, and its rate is overwritten with `0.00`. The
-coverage report comes back clean over a database that is now entirely worthless.
+absent value, so once the resources carry real prices every line prices at zero cost and counts
+as successfully priced. The item is reported fully priced, with no missing resources, and its
+rate is overwritten with `0.00`. The coverage report comes back clean over a database that is now
+entirely worthless.
+
+It will not show up on a run made before you have filled the price sheet, because an item on
+which nothing priced is left alone. It shows up on the first run after your prices are real,
+which is also the first run you are inclined to trust.
 
 Name the key `quantity`. Then check an actual rate after your first reprice, because no count in
 the result object will tell you if you got this wrong.
@@ -174,9 +179,19 @@ Load the work items with their components and a nominal rate. The rate will be r
 
 ### 3. Seed the resource prices
 
-`POST /api/v1/costs/resource-prices/{region}/seed/` derives a starting price per resource from
-what the work items already claim. `POST .../bulk/` sets many prices at once and
-`PUT .../{resource_key}` sets one. `GET .../stats/` tells you the coverage.
+`POST /api/v1/costs/resource-prices/{region}/seed/` walks the components in a region and gives
+each distinct resource a row. All four of these endpoints take `costs.update`.
+
+Understand what seeding does and does not give you. It reads the price already written on each
+component under `unit_rate`, and takes the highest it sees. On a base imported with rates already
+attached to its components, that is a real starting price. On recipes you have just written, no
+component carries a `unit_rate` yet, so every resource seeds at zero. That is not a failure: the
+seeded sheet is the editable list of slots to fill, and a resource priced at zero simply counts
+as unpriced until you fill it. Re-seeding never overwrites a row a user has edited, so it is safe
+to run again after adding recipes.
+
+Fill the sheet with `POST .../bulk/`, which takes up to 5000 edits in one transaction, or
+`PUT .../{resource_key}` for one. `GET .../stats/` reports coverage.
 
 This is where your sourced numbers go. Everything up to here was structure.
 
@@ -195,15 +210,22 @@ coverage report you will get.
 
 ```json
 {
+  "region": "US_NEWYORK",
+  "items_total": 4916,
   "items_repriced": 4820,
+  "items_changed": 4790,
   "items_fully_priced": 4102,
   "items_partially_priced": 718,
   "items_unpriced": 96,
-  "items_changed": 4790,
+  "coverage": 0.8344,
   "missing_resource_count": 34,
-  "missing_resources_sample": ["MAT-REBAR-60", "…"]
+  "missing_resources_sample": ["MAT-REBAR-60"],
+  "dry_run": true
 }
 ```
+
+`coverage` is `items_fully_priced` over `items_total`, so it is the fraction you can defend
+rather than the fraction that changed.
 
 `items_partially_priced` is the number to look at, and it is a trap if you do not.
 
