@@ -166,10 +166,22 @@ describe('semantic colour classes paint what they say', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('agrees with the palette this repo actually ships', () => {
-    // A guard computed from a file it cannot read would pass on an empty
-    // palette, so the floors are pinned here as well. If a hue moves, this
-    // line is the one that says so out loud rather than silently relaxing.
+  it('measured a real tree against the palette this repo actually ships', () => {
+    // This file has two inputs and either one can go quietly empty. Both are
+    // guarded here, in one place, because they are one idea rather than two
+    // defensive lines: every assertion above is only worth reading if neither
+    // input was empty, and a guard that reads as decoration gets deleted.
+    //
+    // The tree. The three assertions above each collect offenders out of
+    // SOURCES and assert the collection is empty, so a walk that returns
+    // nothing satisfies all three while opening no file at all. The walk is a
+    // recursive readdir from a resolved path with an extension filter, and it
+    // empties without erroring if any of those move.
+    expect(SOURCES.length, 'the walk over src collected no files').toBeGreaterThan(1500);
+
+    // The palette. A guard computed from a file it cannot read would pass on
+    // an empty palette, so the floors are pinned here as well. If a hue moves,
+    // this line is the one that says so out loud rather than silently relaxing.
     expect(lowestUsableAlpha('error')).toBe(65);
     expect(lowestUsableAlpha('success')).toBe(75);
     expect(lowestUsableAlpha('warning')).toBe(75);
