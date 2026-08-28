@@ -1043,6 +1043,81 @@ async fn find_existing_backend(client: &reqwest::Client) -> Option<u16> {
     None
 }
 
+/// Where the application server this window will use is going to come from.
+///
+/// Startup used to answer that question without ever asking it. The loopback
+/// probe and the sidecar spawn were one straight line inside `setup`: probe,
+/// and if nothing answered, fall through and start a server. Deciding and
+/// starting were the same code, so there was no point at which a different
+/// answer could have been given, and no name for the thing being decided.
+///
+/// This type is that point. `resolve_backend_source` decides and returns; the
+/// caller carries the decision out. A source that is neither of these is a
+/// third variant and a third arm at the call site, and nothing else in `setup`
+/// changes shape to admit it.
+///
+/// Every variant carries the base URL the webview will be sent to, so the
+/// address is built once, where the decision is made, instead of being
+/// re-derived by whoever acts on it. `port` rides alongside because a loopback
+/// server is addressed by port everywhere else in this file: `wait_for_backend`,
+/// `watch_backend_liveness` and the clean-shutdown request are all port-typed.
+/// A source that is not on loopback would carry no port and would not use them.
+enum BackendSource {
+    /// A server is already running and needs nothing started; use it as it is.
+    AlreadyRunning { base_url: String, port: u16 },
+    /// Nothing suitable is running, so this launcher starts one itself.
+    StartLocally { base_url: String, port: u16 },
+}
+
+/// Decide where this launcher's application server comes from. Starts nothing.
+///
+/// `local_port` is the port a locally started server would bind, chosen before
+/// the Tauri builder ran so that the choice is logged on every run whether or
+/// not it ends up being used.
+///
+/// Attach to an existing healthy backend instead of booting a second one.
+///
+/// If a developer backend or a CLI `openconstructionerp serve` is already
+/// running on this machine, it already owns the embedded PostgreSQL cluster at
+/// ~/.openestimate/pgdata. Spawning our own sidecar against the SAME default
+/// data dir makes two processes share one cluster; when the desktop app later
+/// exits it tells pixeltable-pgserver to clean up, which can stop the postmaster
+/// out from under the still-running developer backend. Attaching instead is both
+/// safer and faster (no second boot, no second cluster handle). We only attach
+/// to a server that self-identifies as ours.
+///
+/// The probe is short (four ports, 1.5s each at worst, only while they are
+/// actually open) and is run to completion here so the decision is made BEFORE
+/// anything is started -- otherwise a concurrent probe would race the spawn and
+/// we could end up with two backends anyway. block_on is safe: `setup()` already
+/// runs on the Tauri async runtime's worker, and the probe never blocks
+/// indefinitely.
+fn resolve_backend_source(local_port: u16) -> BackendSource {
+    let attached_port = tauri::async_runtime::block_on(async {
+        let client = reqwest::Client::new();
+        find_existing_backend(&client).await
+    });
+
+    match attached_port {
+        Some(existing) => {
+            log_line(&format!(
+                "found an existing OpenConstructionERP backend on port {existing}; attaching instead of starting a second one"
+            ));
+            BackendSource::AlreadyRunning {
+                base_url: format!("http://127.0.0.1:{existing}/"),
+                port: existing,
+            }
+        }
+        None => {
+            log_line("no existing backend found; starting our own sidecar");
+            BackendSource::StartLocally {
+                base_url: format!("http://127.0.0.1:{local_port}/"),
+                port: local_port,
+            }
+        }
+    }
+}
+
 /// What one health answer said about the backend.
 enum HealthProbe {
     /// No usable answer: nothing listening yet, no reply in time, or a non-2xx.
@@ -1340,6 +1415,560 @@ fn describe_stage(id: &str) -> &'static str {
     }
 }
 
+/// Use a server that is already running: mark the checklist complete and open
+/// the app against it.
+///
+/// Nothing is started here. This is one of the two things `setup` can do with
+/// a `BackendSource`, and it is the arm that does the least: the server exists,
+/// so all that is left is to say so and navigate to it.
+fn attach_to_running_backend(
+    handle: tauri::AppHandle,
+    base_url: String,
+    port: u16,
+    shutting_down: Arc<AtomicBool>,
+    backend_lost: Arc<AtomicBool>,
+) {
+    boot_stage(&handle, "sidecar", "done", "Found a running backend");
+    boot_stage(&handle, "pg", "done", "");
+    boot_stage(&handle, "migrate", "done", "");
+    boot_stage(&handle, "server", "done", "");
+    boot_stage(&handle, "open", "done", "Ready");
+    let url = base_url;
+    set_app_url(&handle, &url);
+    let handle_nav = handle.clone();
+    tauri::async_runtime::spawn(async move {
+        // Give the splash script a moment to finish loading, then
+        // let it offer the one-time "app window or browser" choice
+        // before navigating the webview to the running app.
+        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        if let Some(window) = handle_nav.get_webview_window("main") {
+            let _ = window.show();
+            let _ = window.set_focus();
+            let url_js = js_escape(&url);
+            let _ = window.eval(&format!(
+                "(function(){{if(typeof offerLaunchChoice==='function'){{\
+                    offerLaunchChoice('{url_js}');}}\
+                    else{{window.location.replace('{url_js}');}}}})()"
+            ));
+        }
+        update_check::note_app_started(&handle_nav, env!("CARGO_PKG_VERSION"));
+    });
+    // We did not spawn a sidecar, so there is no child to manage.
+    // That is exactly why the liveness watch matters most here: the
+    // backend belongs to another process, nothing reports its exit
+    // to us, and without this its death would leave the window
+    // showing an application that no longer has a server.
+    tauri::async_runtime::spawn(watch_backend_liveness(
+        handle.clone(),
+        port,
+        shutting_down.clone(),
+        backend_lost.clone(),
+    ));
+}
+
+/// Start a server locally, as a sidecar of this process, and open the app
+/// against it once it is healthy.
+///
+/// This is the other arm of `BackendSource`, and it is what every user gets
+/// today. It used to be the tail of `setup` with nothing separating it from
+/// the decision to run it, which is why there was no place to put a second
+/// answer. `base_url` is the address this server will be reachable on, handed
+/// in by whoever made the decision rather than rebuilt here.
+fn start_local_backend(
+    handle: tauri::AppHandle,
+    base_url: String,
+    port: u16,
+    bundled_converters: Option<PathBuf>,
+    shutting_down: Arc<AtomicBool>,
+    backend_lost: Arc<AtomicBool>,
+) {
+    // Read the shutdown secret out of managed state here, in
+    // synchronous code, so the spawn below can hand it to the child.
+    let shutdown_token = handle.state::<AppState>().shutdown_token.clone();
+
+    // Start the backend sidecar.
+    //
+    // The "serve" subcommand is required: the CLI only accepts --host /
+    // --port under a subcommand. Invoked bare it would ignore them,
+    // fall back to defaults, and on first run block on an interactive
+    // "open in browser?" stdin prompt that a sidecar has no terminal
+    // for. With --data-dir left unset the sidecar uses its default
+    // (~/.openestimate), which stays writable even for a per-machine
+    // install under Program Files.
+    let shell = handle.shell();
+    let sidecar_cmd = match shell.sidecar("openconstructionerp-server") {
+        Ok(cmd) => {
+            // OE_DESKTOP=1 marks this backend as one we spawned from the
+            // desktop shell (so the backend can run desktop-only
+            // bootstrapping). We deliberately do NOT set it on the attach
+            // path above, because an already-running dev backend must not
+            // be treated as a desktop-bootstrapped one.
+            // The second variable is the secret for the backend's own
+            // shutdown endpoint, which is how this launcher stops it
+            // cleanly on the way out. A backend started without it
+            // refuses to shut down on request at all, which is the
+            // right answer for every backend we did not start.
+            let mut cmd = cmd
+                .env("OE_DESKTOP", "1")
+                .env("OE_DESKTOP_SHUTDOWN_TOKEN", shutdown_token.as_str())
+                .args([
+                    "serve",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    &port.to_string(),
+                ]);
+            // Point the backend at the bundled read-only converters so
+            // an .ifc upload converts offline with no first-use download.
+            // Only set when we actually shipped a converters dir; absent
+            // env keeps the normal auto-download path intact.
+            if let Some(ref dir) = bundled_converters {
+                cmd = cmd.env("OE_BUNDLED_CONVERTERS_DIR", dir.as_os_str());
+            }
+            // Give the sidecar a working directory it is allowed to
+            // write to. Eighteen upload roots across ten modules are
+            // declared as working-directory-relative literals and
+            // create themselves with mkdir on first use, bypassing the
+            // data-dir plumbing the rest of the platform goes through.
+            // Nothing set the child's working directory, so it inherited
+            // this process's, and the Start Menu shortcut of a
+            // per-machine install starts the app in the install folder
+            // under Program Files. Creating a directory there is denied
+            // to an unelevated user, so attaching a file to a request
+            // for information, a submittal, an inspection, a punch item,
+            // a letter, a diary entry, a lien waiver, a closeout item or
+            // a compliance document returned a bare 500 on every such
+            // install, with ten registers carrying an attach button that
+            // could not work.
+            //
+            // The note above about --data-dir is correct and was not
+            // enough: it keeps the data directory writable and says
+            // nothing about the working directory, which is a second
+            // path the same process resolves against. Development and CI
+            // both run with the repository root as the working
+            // directory, which is writable, so those eighteen modules
+            // look healthy everywhere they are ever tested.
+            //
+            // This moves them somewhere writable without editing the
+            // eighteen declarations. It is a floor, not the repair: they
+            // should answer to OE_CLI_DATA_DIR like everything else, and
+            // until they do, a relative path written by any new module
+            // lands here by accident rather than by design. Failing
+            // through silently is deliberate, because an inherited
+            // working directory is exactly what shipped, so a machine
+            // whose home directory cannot be read is left no worse off
+            // than it is today.
+            if let Some(home) = home_dir() {
+                let workdir = home.join(".openestimate");
+                if std::fs::create_dir_all(&workdir).is_ok() {
+                    cmd = cmd.current_dir(&workdir);
+                }
+            }
+            cmd
+        }
+        Err(e) => {
+            report_fatal_stage(
+                &handle,
+                "sidecar",
+                &format!(
+                    "Could not locate the backend component ({e}). Please reinstall \
+the application."
+                ),
+            );
+            // Keep the window open so the user sees the error.
+            return;
+        }
+    };
+
+    let (mut rx, child) = match sidecar_cmd.spawn() {
+        Ok(pair) => pair,
+        Err(e) => {
+            report_fatal_stage(
+                &handle,
+                "sidecar",
+                &format!(
+                    "The backend component could not be started ({e}). Some antivirus \
+tools block newly installed programs; allow OpenConstructionERP and try again."
+                ),
+            );
+            return;
+        }
+    };
+    log_line("sidecar spawned");
+    boot_stage(&handle, "sidecar", "done", "");
+    boot_stage(&handle, "pg", "active", "Starting the local database");
+
+    // Keep the child handle alive (and stoppable on exit). The port
+    // goes in beside it, because the clean stop is a request to the
+    // backend and a request needs an address; it is recorded HERE, on
+    // the spawn path only, so the exit path can never ask a backend we
+    // merely attached to to shut itself down.
+    let backend_exited = {
+        let state = handle.state::<AppState>();
+        *state.backend_child.lock().unwrap() = Some(child);
+        *state.backend_port.lock().unwrap() = Some(port);
+        state.backend_exited.clone()
+    };
+
+    let backend_ready = Arc::new(AtomicBool::new(false));
+    // Separate from readiness on purpose. Readiness means the backend
+    // answered a health check, so it is only ever set on success and
+    // says nothing about whether a failure has already been explained.
+    // This one means the user has been shown a precise reason, which is
+    // the question the startup timeout below actually needs answered.
+    let fatal_reported = Arc::new(AtomicBool::new(false));
+    let last_stderr = Arc::new(Mutex::new(String::new()));
+    // Latch the real startup failure cause so the database-shutdown
+    // noise that follows a crash cannot mask it: a STAGE:server:fail
+    // marker (preferred), or the exception line of a Python traceback
+    // on stderr when the backend died too early to emit a marker.
+    let latched_fail = Arc::new(Mutex::new(None::<String>));
+    let traceback = Arc::new(Mutex::new(TracebackCapture::default()));
+    // Latched the same way and in the same pump as the two above,
+    // because the startup wait needs to know whether the backend is
+    // still working and what it is working on, and the pump is the only
+    // place that sees either.
+    let boot_progress = BootProgress::new();
+
+    // Pump the sidecar's output into the log file and remember recent
+    // stderr so a startup crash can be shown to the user verbatim.
+    {
+        let ready = backend_ready.clone();
+        let fatal_flag = fatal_reported.clone();
+        let stderr_buf = last_stderr.clone();
+        let latched = latched_fail.clone();
+        let traceback = traceback.clone();
+        let handle_evt = handle.clone();
+        let exited_flag = backend_exited.clone();
+        let deliberate = shutting_down.clone();
+        let lost_flag = backend_lost.clone();
+        let progress = boot_progress.clone();
+        tauri::async_runtime::spawn(async move {
+            while let Some(event) = rx.recv().await {
+                match event {
+                    CommandEvent::Stdout(bytes) => {
+                        let line = String::from_utf8_lossy(&bytes);
+                        log_line(&format!("[backend] {}", line.trim_end()));
+                        // A line, any line, is the backend saying it is
+                        // still working.
+                        progress.saw_output();
+                        // Drive the visible boot checklist from the
+                        // backend's machine-readable progress markers.
+                        for raw in line.split('\n') {
+                            if let Some((id, status, detail)) = parse_stage_marker(raw) {
+                                boot_stage(&handle_evt, &id, &status, &detail);
+                                progress.saw_stage(&id, &detail);
+                                // Latch the first real failure cause.
+                                if status == "failed" && !detail.is_empty() {
+                                    let mut lf = latched.lock().unwrap();
+                                    if lf.is_none() {
+                                        *lf = Some(detail.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CommandEvent::Stderr(bytes) => {
+                        let line = String::from_utf8_lossy(&bytes);
+                        log_line(&format!("[backend:err] {}", line.trim_end()));
+                        // Counts as working too: most of what a healthy
+                        // start writes - uvicorn's own log, alembic,
+                        // the module loader - comes out on stderr.
+                        progress.saw_output();
+                        // Some launchers/loggers route progress markers
+                        // to stderr; honour them there too. Non-marker
+                        // lines feed the traceback capture so a hard
+                        // crash still yields a real cause with no marker.
+                        for raw in line.split('\n') {
+                            if let Some((id, status, detail)) = parse_stage_marker(raw) {
+                                boot_stage(&handle_evt, &id, &status, &detail);
+                                progress.saw_stage(&id, &detail);
+                                if status == "failed" && !detail.is_empty() {
+                                    let mut lf = latched.lock().unwrap();
+                                    if lf.is_none() {
+                                        *lf = Some(detail.clone());
+                                    }
+                                }
+                            } else {
+                                traceback.lock().unwrap().feed_line(raw);
+                            }
+                        }
+                        let mut buf = stderr_buf.lock().unwrap();
+                        buf.push_str(&line);
+                        if buf.len() > 4000 {
+                            // Advance the cut to a char boundary so
+                            // slicing a UTF-8 string can never panic and
+                            // kill the pump (which would strand the user
+                            // on the splash for the whole timeout).
+                            let mut cut = buf.len() - 4000;
+                            while cut < buf.len() && !buf.is_char_boundary(cut) {
+                                cut += 1;
+                            }
+                            *buf = buf[cut..].to_string();
+                        }
+                    }
+                    CommandEvent::Error(err) => {
+                        log_line(&format!("[backend:error] {err}"));
+                        // A failure reading the child's own pipes went
+                        // to the log and nowhere else, so on a startup
+                        // that then failed the user was shown a tail of
+                        // stderr with no sign of it. Add it to that tail
+                        // rather than latching it as the cause: it is
+                        // usually a symptom of the crash, and it must
+                        // not displace the exception that explains it.
+                        let mut buf = stderr_buf.lock().unwrap();
+                        buf.push_str(&format!("launcher: {err}\n"));
+                    }
+                    CommandEvent::Terminated(payload) => {
+                        log_line(&format!(
+                            "[backend] terminated: code={:?} signal={:?}",
+                            payload.code, payload.signal
+                        ));
+                        // Record the exit before anything else, so the
+                        // shutdown path can wait for the process to
+                        // really be gone instead of assuming it.
+                        exited_flag.store(true, Ordering::SeqCst);
+                        // If the backend died before ever becoming
+                        // healthy, surface it now instead of leaving the
+                        // user staring at the spinner for the full timeout.
+                        if !ready.load(Ordering::SeqCst) {
+                            // Prefer the real cause the backend reported
+                            // (STAGE:server:fail), then the exception line
+                            // of a captured Python traceback, and only as a
+                            // last resort the raw stderr tail. This is what
+                            // keeps the database-shutdown noise from masking
+                            // the real reason startup failed.
+                            let latched_cause = latched.lock().unwrap().clone();
+                            let tb_cause = traceback.lock().unwrap().cause.clone();
+                            let core = if let Some(cause) = latched_cause.or(tb_cause) {
+                                format!("The backend could not finish starting: {cause}")
+                            } else {
+                                let tail = stderr_buf.lock().unwrap().clone();
+                                if tail.trim().is_empty() {
+                                    format!(
+                                        "The backend stopped unexpectedly (exit code {:?}) \
+before it finished starting.",
+                                        payload.code
+                                    )
+                                } else {
+                                    // Last resort: show the tail of stderr,
+                                    // which usually carries the cause.
+                                    let trimmed = tail.trim();
+                                    let shown = if trimmed.len() > 600 {
+                                        let mut start = trimmed.len() - 600;
+                                        while start < trimmed.len()
+                                            && !trimmed.is_char_boundary(start)
+                                        {
+                                            start += 1;
+                                        }
+                                        &trimmed[start..]
+                                    } else {
+                                        trimmed
+                                    };
+                                    format!(
+                                        "The backend stopped unexpectedly during startup: {shown}"
+                                    )
+                                }
+                            };
+                            // Always pair the cause with a clear next step.
+                            // report_fatal_stage also surfaces the log path
+                            // (the splash shows an Open-log button).
+                            let detail = format!(
+                                "{core} Open the log file for the full details, and if \
+this keeps happening send it to info@datadrivenconstruction.io."
+                            );
+                            // Attribute the failure to the server step so
+                            // the checklist shows a clear red mark.
+                            report_fatal_stage(&handle_evt, "server", &detail);
+                            // Record that the user now has the real
+                            // reason, so the startup timeout does not
+                            // replace it with a vaguer one later.
+                            fatal_flag.store(true, Ordering::SeqCst);
+                        } else if !deliberate.load(Ordering::SeqCst) {
+                            // The backend had already gone healthy, and
+                            // nobody asked it to stop. This case was
+                            // silent: readiness was the end of the
+                            // launcher's attention, so a sidecar that
+                            // died an hour in left the window showing
+                            // the last screen it had rendered while
+                            // every request inside it failed, and the
+                            // only record was a line in a log file the
+                            // user had no reason to open.
+                            report_backend_lost(
+                                &handle_evt,
+                                &lost_flag,
+                                "The application backend has stopped",
+                                &format!(
+                                    "The backend exited unexpectedly (exit code {:?}), so \
+this window can no longer load or save anything. Please close it and start \
+OpenConstructionERP again. If this keeps happening, send the log file to \
+info@datadrivenconstruction.io.",
+                                    payload.code
+                                ),
+                            );
+                        }
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+
+            // The event channel can also just end: the sender is
+            // dropped and no Terminated event ever arrives. Reaching
+            // here means we have stopped watching the backend, and
+            // saying nothing would leave whoever is using it to find
+            // out from a screen that no longer works.
+            if !exited_flag.load(Ordering::SeqCst)
+                && !deliberate.load(Ordering::SeqCst)
+                && ready.load(Ordering::SeqCst)
+            {
+                log_line("backend event stream ended without a termination event");
+                report_backend_lost(
+                    &handle_evt,
+                    &lost_flag,
+                    "The connection to the application backend was lost",
+                    "The launcher can no longer see the backend it started, so this \
+window may stop working. Please close it and start OpenConstructionERP again. If this keeps \
+happening, send the log file to info@datadrivenconstruction.io.",
+                );
+            }
+        });
+    }
+
+    // Wait for the backend to be ready, then navigate the webview from
+    // the splash screen to the live application. First-run embedded
+    // PostgreSQL setup (initdb, migrations, module load, demo seed) can
+    // be slow on a cold machine, so allow up to 240 seconds.
+    let handle_clone = handle.clone();
+    let ready_flag = backend_ready.clone();
+    let fatal_flag_wait = fatal_reported.clone();
+    let shutting_down_wait = shutting_down.clone();
+    let backend_lost_wait = backend_lost.clone();
+    let progress_wait = boot_progress.clone();
+    let base_url_wait = base_url;
+    tauri::async_runtime::spawn(async move {
+        // A first run that has to recover a large local database (WAL
+        // replay + fsync) can take several minutes, so allow a generous
+        // window. This number has one hard requirement: it must exceed
+        // the backend's own budget for bringing embedded PostgreSQL up,
+        // which is OE_PG_BOOT_TIMEOUT and defaults to 600s. It used to
+        // be 600 as well, so the two were equal and a database that
+        // spent its whole budget recovering left nothing at all for the
+        // work that follows it: migrations, the module load, table
+        // creation and first-run seeding. That is not a hypothetical
+        // ordering. The installer stops a running instance by killing
+        // the process tree, which crash-stops the embedded database, so
+        // the next start after every upgrade is exactly the WAL replay
+        // the 600s budget exists for. The user then saw a healthy,
+        // still-working backend reported as one that had not started,
+        // and retrying reproduced it because nothing had gone wrong to
+        // clear. Doubling it keeps a comfortable margin above the inner
+        // budget and costs nothing when a backend has genuinely failed,
+        // because that path reports itself the moment the sidecar dies
+        // rather than waiting for this window to close.
+        //
+        // This is the ceiling and no longer the only limit: a backend
+        // that goes quiet is given up on after STARTUP_QUIET_TIMEOUT,
+        // so the full window is only ever spent on a backend that is
+        // demonstrably still working.
+        match wait_for_backend(&handle_clone, port, 1200, &progress_wait).await {
+            StartupOutcome::Ready => {
+                ready_flag.store(true, Ordering::SeqCst);
+                log_line("backend healthy; navigating to app");
+                boot_stage(&handle_clone, "server", "done", "");
+                boot_stage(&handle_clone, "open", "done", "Ready");
+                    let url = base_url_wait;
+                set_app_url(&handle_clone, &url);
+                if let Some(window) = handle_clone.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    // Let the splash offer the one-time "app window or
+                    // browser" choice; if that helper is missing for any
+                    // reason, fall straight through to the app window so
+                    // the user is never left on the splash.
+                    let url_js = js_escape(&url);
+                    let _ = window.eval(&format!(
+                        "(function(){{if(typeof offerLaunchChoice==='function'){{\
+                            offerLaunchChoice('{url_js}');}}\
+                            else{{window.location.replace('{url_js}');}}}})()"
+                    ));
+                }
+                update_check::note_app_started(&handle_clone, env!("CARGO_PKG_VERSION"));
+                // Readiness is where the launcher used to stop looking.
+                // Keep watching, so a backend that goes away later is
+                // reported instead of being left for the user to find.
+                tauri::async_runtime::spawn(watch_backend_liveness(
+                    handle_clone.clone(),
+                    port,
+                    shutting_down_wait,
+                    backend_lost_wait,
+                ));
+            }
+            StartupOutcome::Broken(reason) => {
+                // The backend is answering and telling us it cannot do
+                // its job. Opening the app on top of that hands the user
+                // a shell whose every action fails, which is how this
+                // ended up looking like the product was broken rather
+                // than the installation.
+                log_line(&format!("backend is up but not fit to serve: {reason}"));
+                if !fatal_flag_wait.load(Ordering::SeqCst) {
+                    report_fatal_stage(
+                        &handle_clone,
+                        "server",
+                        &format!(
+                            "The backend started, but {reason}, so the app cannot open. \
+Please close this window and try again. If the problem persists, please send the log file to \
+info@datadrivenconstruction.io."
+                        ),
+                    );
+                }
+            }
+            StartupOutcome::TimedOut(kind) => {
+                let stage = progress_wait.stage();
+                match &kind {
+                    TimeoutKind::WentQuiet(quiet_for) => log_line(&format!(
+                        "backend went quiet during startup: nothing written for {}s, last step reported was {}",
+                        quiet_for.as_secs(),
+                        stage
+                            .as_ref()
+                            .map(|(id, _)| id.as_str())
+                            .unwrap_or("none"),
+                    )),
+                    TimeoutKind::TookTooLong => log_line(&format!(
+                        "backend did not become healthy within the startup window; last step reported was {}",
+                        stage
+                            .as_ref()
+                            .map(|(id, _)| id.as_str())
+                            .unwrap_or("none"),
+                    )),
+                }
+                // Only say "slow" when nothing better has been said. The
+                // termination handler above names the real cause the
+                // moment the sidecar dies, and this branch used to guard
+                // on the readiness flag, which is set only when the
+                // backend goes healthy. A backend that died during
+                // startup therefore left readiness false and satisfied
+                // this condition, so the timeout fired minutes afterwards
+                // and overwrote a message carrying the actual exception
+                // with one that said only that the backend had not
+                // started in time. A user whose sidecar exited with a
+                // FileNotFoundError nine minutes earlier read the second
+                // message, looked for the fault on their own machine, and
+                // had no way to know the first had ever been shown.
+                if !ready_flag.load(Ordering::SeqCst)
+                    && !fatal_flag_wait.load(Ordering::SeqCst)
+                {
+                    report_fatal_stage(
+                        &handle_clone,
+                        "server",
+                        &startup_timeout_message(stage.as_ref(), &kind),
+                    );
+                }
+            }
+        }
+    });
+}
+
 fn main() {
     // Write the diagnostic log at the VERY FIRST instruction, before anything
     // else in startup can fail. If the user reports "I click the icon and
@@ -1498,560 +2127,27 @@ fn main() {
                 log_line(&format!("warning: tray icon build failed (non-fatal): {e}"));
             }
 
-            // Attach to an existing healthy backend instead of booting a second
-            // one.
-            //
-            // If a developer backend or a CLI `openconstructionerp serve` is
-            // already running on this machine, it already owns the embedded
-            // PostgreSQL cluster at ~/.openestimate/pgdata. Spawning our own
-            // sidecar against the SAME default data dir makes two processes
-            // share one cluster; when the desktop app later exits it tells
-            // pixeltable-pgserver to clean up, which can stop the postmaster out
-            // from under the still-running developer backend. Attaching instead
-            // is both safer and faster (no second boot, no second cluster
-            // handle). We only attach to a server that self-identifies as ours.
-            //
-            // The probe is short (four ports, 1.5s each at worst, only while
-            // they are actually open) and is run to completion here so the
-            // decision to spawn is made BEFORE we start a sidecar -- otherwise a
-            // concurrent probe would race the spawn and we could end up with two
-            // backends anyway. block_on is safe: setup() already runs on the
-            // Tauri async runtime's worker, and the probe never blocks
-            // indefinitely.
-            let attached_port = tauri::async_runtime::block_on(async {
-                let client = reqwest::Client::new();
-                find_existing_backend(&client).await
-            });
-
-            if let Some(existing) = attached_port {
-                log_line(&format!(
-                    "found an existing OpenConstructionERP backend on port {existing}; attaching instead of starting a second one"
-                ));
-                boot_stage(&handle, "sidecar", "done", "Found a running backend");
-                boot_stage(&handle, "pg", "done", "");
-                boot_stage(&handle, "migrate", "done", "");
-                boot_stage(&handle, "server", "done", "");
-                boot_stage(&handle, "open", "done", "Ready");
-                let url = format!("http://127.0.0.1:{existing}/");
-                set_app_url(&handle, &url);
-                let handle_nav = handle.clone();
-                tauri::async_runtime::spawn(async move {
-                    // Give the splash script a moment to finish loading, then
-                    // let it offer the one-time "app window or browser" choice
-                    // before navigating the webview to the running app.
-                    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
-                    if let Some(window) = handle_nav.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                        let url_js = js_escape(&url);
-                        let _ = window.eval(&format!(
-                            "(function(){{if(typeof offerLaunchChoice==='function'){{\
-                                offerLaunchChoice('{url_js}');}}\
-                                else{{window.location.replace('{url_js}');}}}})()"
-                        ));
-                    }
-                    update_check::note_app_started(&handle_nav, env!("CARGO_PKG_VERSION"));
-                });
-                // We did not spawn a sidecar, so there is no child to manage.
-                // That is exactly why the liveness watch matters most here: the
-                // backend belongs to another process, nothing reports its exit
-                // to us, and without this its death would leave the window
-                // showing an application that no longer has a server.
-                tauri::async_runtime::spawn(watch_backend_liveness(
-                    handle.clone(),
-                    existing,
-                    shutting_down.clone(),
-                    backend_lost.clone(),
-                ));
-                return Ok(());
-            }
-
-            log_line("no existing backend found; starting our own sidecar");
-
-            // Read the shutdown secret out of managed state here, in
-            // synchronous code, so the spawn below can hand it to the child.
-            let shutdown_token = handle.state::<AppState>().shutdown_token.clone();
-
-            // Start the backend sidecar.
-            //
-            // The "serve" subcommand is required: the CLI only accepts --host /
-            // --port under a subcommand. Invoked bare it would ignore them,
-            // fall back to defaults, and on first run block on an interactive
-            // "open in browser?" stdin prompt that a sidecar has no terminal
-            // for. With --data-dir left unset the sidecar uses its default
-            // (~/.openestimate), which stays writable even for a per-machine
-            // install under Program Files.
-            let shell = handle.shell();
-            let sidecar_cmd = match shell.sidecar("openconstructionerp-server") {
-                Ok(cmd) => {
-                    // OE_DESKTOP=1 marks this backend as one we spawned from the
-                    // desktop shell (so the backend can run desktop-only
-                    // bootstrapping). We deliberately do NOT set it on the attach
-                    // path above, because an already-running dev backend must not
-                    // be treated as a desktop-bootstrapped one.
-                    // The second variable is the secret for the backend's own
-                    // shutdown endpoint, which is how this launcher stops it
-                    // cleanly on the way out. A backend started without it
-                    // refuses to shut down on request at all, which is the
-                    // right answer for every backend we did not start.
-                    let mut cmd = cmd
-                        .env("OE_DESKTOP", "1")
-                        .env("OE_DESKTOP_SHUTDOWN_TOKEN", shutdown_token.as_str())
-                        .args([
-                            "serve",
-                            "--host",
-                            "127.0.0.1",
-                            "--port",
-                            &port.to_string(),
-                        ]);
-                    // Point the backend at the bundled read-only converters so
-                    // an .ifc upload converts offline with no first-use download.
-                    // Only set when we actually shipped a converters dir; absent
-                    // env keeps the normal auto-download path intact.
-                    if let Some(ref dir) = bundled_converters {
-                        cmd = cmd.env("OE_BUNDLED_CONVERTERS_DIR", dir.as_os_str());
-                    }
-                    // Give the sidecar a working directory it is allowed to
-                    // write to. Eighteen upload roots across ten modules are
-                    // declared as working-directory-relative literals and
-                    // create themselves with mkdir on first use, bypassing the
-                    // data-dir plumbing the rest of the platform goes through.
-                    // Nothing set the child's working directory, so it inherited
-                    // this process's, and the Start Menu shortcut of a
-                    // per-machine install starts the app in the install folder
-                    // under Program Files. Creating a directory there is denied
-                    // to an unelevated user, so attaching a file to a request
-                    // for information, a submittal, an inspection, a punch item,
-                    // a letter, a diary entry, a lien waiver, a closeout item or
-                    // a compliance document returned a bare 500 on every such
-                    // install, with ten registers carrying an attach button that
-                    // could not work.
-                    //
-                    // The note above about --data-dir is correct and was not
-                    // enough: it keeps the data directory writable and says
-                    // nothing about the working directory, which is a second
-                    // path the same process resolves against. Development and CI
-                    // both run with the repository root as the working
-                    // directory, which is writable, so those eighteen modules
-                    // look healthy everywhere they are ever tested.
-                    //
-                    // This moves them somewhere writable without editing the
-                    // eighteen declarations. It is a floor, not the repair: they
-                    // should answer to OE_CLI_DATA_DIR like everything else, and
-                    // until they do, a relative path written by any new module
-                    // lands here by accident rather than by design. Failing
-                    // through silently is deliberate, because an inherited
-                    // working directory is exactly what shipped, so a machine
-                    // whose home directory cannot be read is left no worse off
-                    // than it is today.
-                    if let Some(home) = home_dir() {
-                        let workdir = home.join(".openestimate");
-                        if std::fs::create_dir_all(&workdir).is_ok() {
-                            cmd = cmd.current_dir(&workdir);
-                        }
-                    }
-                    cmd
+            // Decide where the application server comes from, then carry that
+            // decision out. Choosing and starting are two steps now rather than
+            // one, so a server this launcher did not start has a place to be
+            // chosen; see `BackendSource`. Both of today's answers are still
+            // local, and both behave exactly as they did when this was one
+            // straight line of code.
+            match resolve_backend_source(port) {
+                BackendSource::AlreadyRunning { base_url, port } => {
+                    attach_to_running_backend(handle, base_url, port, shutting_down, backend_lost);
                 }
-                Err(e) => {
-                    report_fatal_stage(
-                        &handle,
-                        "sidecar",
-                        &format!(
-                            "Could not locate the backend component ({e}). Please reinstall \
-the application."
-                        ),
+                BackendSource::StartLocally { base_url, port } => {
+                    start_local_backend(
+                        handle,
+                        base_url,
+                        port,
+                        bundled_converters,
+                        shutting_down,
+                        backend_lost,
                     );
-                    // Keep the window open so the user sees the error.
-                    return Ok(());
                 }
-            };
-
-            let (mut rx, child) = match sidecar_cmd.spawn() {
-                Ok(pair) => pair,
-                Err(e) => {
-                    report_fatal_stage(
-                        &handle,
-                        "sidecar",
-                        &format!(
-                            "The backend component could not be started ({e}). Some antivirus \
-tools block newly installed programs; allow OpenConstructionERP and try again."
-                        ),
-                    );
-                    return Ok(());
-                }
-            };
-            log_line("sidecar spawned");
-            boot_stage(&handle, "sidecar", "done", "");
-            boot_stage(&handle, "pg", "active", "Starting the local database");
-
-            // Keep the child handle alive (and stoppable on exit). The port
-            // goes in beside it, because the clean stop is a request to the
-            // backend and a request needs an address; it is recorded HERE, on
-            // the spawn path only, so the exit path can never ask a backend we
-            // merely attached to to shut itself down.
-            let backend_exited = {
-                let state = handle.state::<AppState>();
-                *state.backend_child.lock().unwrap() = Some(child);
-                *state.backend_port.lock().unwrap() = Some(port);
-                state.backend_exited.clone()
-            };
-
-            let backend_ready = Arc::new(AtomicBool::new(false));
-            // Separate from readiness on purpose. Readiness means the backend
-            // answered a health check, so it is only ever set on success and
-            // says nothing about whether a failure has already been explained.
-            // This one means the user has been shown a precise reason, which is
-            // the question the startup timeout below actually needs answered.
-            let fatal_reported = Arc::new(AtomicBool::new(false));
-            let last_stderr = Arc::new(Mutex::new(String::new()));
-            // Latch the real startup failure cause so the database-shutdown
-            // noise that follows a crash cannot mask it: a STAGE:server:fail
-            // marker (preferred), or the exception line of a Python traceback
-            // on stderr when the backend died too early to emit a marker.
-            let latched_fail = Arc::new(Mutex::new(None::<String>));
-            let traceback = Arc::new(Mutex::new(TracebackCapture::default()));
-            // Latched the same way and in the same pump as the two above,
-            // because the startup wait needs to know whether the backend is
-            // still working and what it is working on, and the pump is the only
-            // place that sees either.
-            let boot_progress = BootProgress::new();
-
-            // Pump the sidecar's output into the log file and remember recent
-            // stderr so a startup crash can be shown to the user verbatim.
-            {
-                let ready = backend_ready.clone();
-                let fatal_flag = fatal_reported.clone();
-                let stderr_buf = last_stderr.clone();
-                let latched = latched_fail.clone();
-                let traceback = traceback.clone();
-                let handle_evt = handle.clone();
-                let exited_flag = backend_exited.clone();
-                let deliberate = shutting_down.clone();
-                let lost_flag = backend_lost.clone();
-                let progress = boot_progress.clone();
-                tauri::async_runtime::spawn(async move {
-                    while let Some(event) = rx.recv().await {
-                        match event {
-                            CommandEvent::Stdout(bytes) => {
-                                let line = String::from_utf8_lossy(&bytes);
-                                log_line(&format!("[backend] {}", line.trim_end()));
-                                // A line, any line, is the backend saying it is
-                                // still working.
-                                progress.saw_output();
-                                // Drive the visible boot checklist from the
-                                // backend's machine-readable progress markers.
-                                for raw in line.split('\n') {
-                                    if let Some((id, status, detail)) = parse_stage_marker(raw) {
-                                        boot_stage(&handle_evt, &id, &status, &detail);
-                                        progress.saw_stage(&id, &detail);
-                                        // Latch the first real failure cause.
-                                        if status == "failed" && !detail.is_empty() {
-                                            let mut lf = latched.lock().unwrap();
-                                            if lf.is_none() {
-                                                *lf = Some(detail.clone());
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            CommandEvent::Stderr(bytes) => {
-                                let line = String::from_utf8_lossy(&bytes);
-                                log_line(&format!("[backend:err] {}", line.trim_end()));
-                                // Counts as working too: most of what a healthy
-                                // start writes - uvicorn's own log, alembic,
-                                // the module loader - comes out on stderr.
-                                progress.saw_output();
-                                // Some launchers/loggers route progress markers
-                                // to stderr; honour them there too. Non-marker
-                                // lines feed the traceback capture so a hard
-                                // crash still yields a real cause with no marker.
-                                for raw in line.split('\n') {
-                                    if let Some((id, status, detail)) = parse_stage_marker(raw) {
-                                        boot_stage(&handle_evt, &id, &status, &detail);
-                                        progress.saw_stage(&id, &detail);
-                                        if status == "failed" && !detail.is_empty() {
-                                            let mut lf = latched.lock().unwrap();
-                                            if lf.is_none() {
-                                                *lf = Some(detail.clone());
-                                            }
-                                        }
-                                    } else {
-                                        traceback.lock().unwrap().feed_line(raw);
-                                    }
-                                }
-                                let mut buf = stderr_buf.lock().unwrap();
-                                buf.push_str(&line);
-                                if buf.len() > 4000 {
-                                    // Advance the cut to a char boundary so
-                                    // slicing a UTF-8 string can never panic and
-                                    // kill the pump (which would strand the user
-                                    // on the splash for the whole timeout).
-                                    let mut cut = buf.len() - 4000;
-                                    while cut < buf.len() && !buf.is_char_boundary(cut) {
-                                        cut += 1;
-                                    }
-                                    *buf = buf[cut..].to_string();
-                                }
-                            }
-                            CommandEvent::Error(err) => {
-                                log_line(&format!("[backend:error] {err}"));
-                                // A failure reading the child's own pipes went
-                                // to the log and nowhere else, so on a startup
-                                // that then failed the user was shown a tail of
-                                // stderr with no sign of it. Add it to that tail
-                                // rather than latching it as the cause: it is
-                                // usually a symptom of the crash, and it must
-                                // not displace the exception that explains it.
-                                let mut buf = stderr_buf.lock().unwrap();
-                                buf.push_str(&format!("launcher: {err}\n"));
-                            }
-                            CommandEvent::Terminated(payload) => {
-                                log_line(&format!(
-                                    "[backend] terminated: code={:?} signal={:?}",
-                                    payload.code, payload.signal
-                                ));
-                                // Record the exit before anything else, so the
-                                // shutdown path can wait for the process to
-                                // really be gone instead of assuming it.
-                                exited_flag.store(true, Ordering::SeqCst);
-                                // If the backend died before ever becoming
-                                // healthy, surface it now instead of leaving the
-                                // user staring at the spinner for the full timeout.
-                                if !ready.load(Ordering::SeqCst) {
-                                    // Prefer the real cause the backend reported
-                                    // (STAGE:server:fail), then the exception line
-                                    // of a captured Python traceback, and only as a
-                                    // last resort the raw stderr tail. This is what
-                                    // keeps the database-shutdown noise from masking
-                                    // the real reason startup failed.
-                                    let latched_cause = latched.lock().unwrap().clone();
-                                    let tb_cause = traceback.lock().unwrap().cause.clone();
-                                    let core = if let Some(cause) = latched_cause.or(tb_cause) {
-                                        format!("The backend could not finish starting: {cause}")
-                                    } else {
-                                        let tail = stderr_buf.lock().unwrap().clone();
-                                        if tail.trim().is_empty() {
-                                            format!(
-                                                "The backend stopped unexpectedly (exit code {:?}) \
-before it finished starting.",
-                                                payload.code
-                                            )
-                                        } else {
-                                            // Last resort: show the tail of stderr,
-                                            // which usually carries the cause.
-                                            let trimmed = tail.trim();
-                                            let shown = if trimmed.len() > 600 {
-                                                let mut start = trimmed.len() - 600;
-                                                while start < trimmed.len()
-                                                    && !trimmed.is_char_boundary(start)
-                                                {
-                                                    start += 1;
-                                                }
-                                                &trimmed[start..]
-                                            } else {
-                                                trimmed
-                                            };
-                                            format!(
-                                                "The backend stopped unexpectedly during startup: {shown}"
-                                            )
-                                        }
-                                    };
-                                    // Always pair the cause with a clear next step.
-                                    // report_fatal_stage also surfaces the log path
-                                    // (the splash shows an Open-log button).
-                                    let detail = format!(
-                                        "{core} Open the log file for the full details, and if \
-this keeps happening send it to info@datadrivenconstruction.io."
-                                    );
-                                    // Attribute the failure to the server step so
-                                    // the checklist shows a clear red mark.
-                                    report_fatal_stage(&handle_evt, "server", &detail);
-                                    // Record that the user now has the real
-                                    // reason, so the startup timeout does not
-                                    // replace it with a vaguer one later.
-                                    fatal_flag.store(true, Ordering::SeqCst);
-                                } else if !deliberate.load(Ordering::SeqCst) {
-                                    // The backend had already gone healthy, and
-                                    // nobody asked it to stop. This case was
-                                    // silent: readiness was the end of the
-                                    // launcher's attention, so a sidecar that
-                                    // died an hour in left the window showing
-                                    // the last screen it had rendered while
-                                    // every request inside it failed, and the
-                                    // only record was a line in a log file the
-                                    // user had no reason to open.
-                                    report_backend_lost(
-                                        &handle_evt,
-                                        &lost_flag,
-                                        "The application backend has stopped",
-                                        &format!(
-                                            "The backend exited unexpectedly (exit code {:?}), so \
-this window can no longer load or save anything. Please close it and start \
-OpenConstructionERP again. If this keeps happening, send the log file to \
-info@datadrivenconstruction.io.",
-                                            payload.code
-                                        ),
-                                    );
-                                }
-                                break;
-                            }
-                            _ => {}
-                        }
-                    }
-
-                    // The event channel can also just end: the sender is
-                    // dropped and no Terminated event ever arrives. Reaching
-                    // here means we have stopped watching the backend, and
-                    // saying nothing would leave whoever is using it to find
-                    // out from a screen that no longer works.
-                    if !exited_flag.load(Ordering::SeqCst)
-                        && !deliberate.load(Ordering::SeqCst)
-                        && ready.load(Ordering::SeqCst)
-                    {
-                        log_line("backend event stream ended without a termination event");
-                        report_backend_lost(
-                            &handle_evt,
-                            &lost_flag,
-                            "The connection to the application backend was lost",
-                            "The launcher can no longer see the backend it started, so this \
-window may stop working. Please close it and start OpenConstructionERP again. If this keeps \
-happening, send the log file to info@datadrivenconstruction.io.",
-                        );
-                    }
-                });
             }
-
-            // Wait for the backend to be ready, then navigate the webview from
-            // the splash screen to the live application. First-run embedded
-            // PostgreSQL setup (initdb, migrations, module load, demo seed) can
-            // be slow on a cold machine, so allow up to 240 seconds.
-            let handle_clone = handle.clone();
-            let ready_flag = backend_ready.clone();
-            let fatal_flag_wait = fatal_reported.clone();
-            let shutting_down_wait = shutting_down.clone();
-            let backend_lost_wait = backend_lost.clone();
-            let progress_wait = boot_progress.clone();
-            tauri::async_runtime::spawn(async move {
-                // A first run that has to recover a large local database (WAL
-                // replay + fsync) can take several minutes, so allow a generous
-                // window. This number has one hard requirement: it must exceed
-                // the backend's own budget for bringing embedded PostgreSQL up,
-                // which is OE_PG_BOOT_TIMEOUT and defaults to 600s. It used to
-                // be 600 as well, so the two were equal and a database that
-                // spent its whole budget recovering left nothing at all for the
-                // work that follows it: migrations, the module load, table
-                // creation and first-run seeding. That is not a hypothetical
-                // ordering. The installer stops a running instance by killing
-                // the process tree, which crash-stops the embedded database, so
-                // the next start after every upgrade is exactly the WAL replay
-                // the 600s budget exists for. The user then saw a healthy,
-                // still-working backend reported as one that had not started,
-                // and retrying reproduced it because nothing had gone wrong to
-                // clear. Doubling it keeps a comfortable margin above the inner
-                // budget and costs nothing when a backend has genuinely failed,
-                // because that path reports itself the moment the sidecar dies
-                // rather than waiting for this window to close.
-                //
-                // This is the ceiling and no longer the only limit: a backend
-                // that goes quiet is given up on after STARTUP_QUIET_TIMEOUT,
-                // so the full window is only ever spent on a backend that is
-                // demonstrably still working.
-                match wait_for_backend(&handle_clone, port, 1200, &progress_wait).await {
-                    StartupOutcome::Ready => {
-                        ready_flag.store(true, Ordering::SeqCst);
-                        log_line("backend healthy; navigating to app");
-                        boot_stage(&handle_clone, "server", "done", "");
-                        boot_stage(&handle_clone, "open", "done", "Ready");
-                        let url = format!("http://127.0.0.1:{port}/");
-                        set_app_url(&handle_clone, &url);
-                        if let Some(window) = handle_clone.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                            // Let the splash offer the one-time "app window or
-                            // browser" choice; if that helper is missing for any
-                            // reason, fall straight through to the app window so
-                            // the user is never left on the splash.
-                            let url_js = js_escape(&url);
-                            let _ = window.eval(&format!(
-                                "(function(){{if(typeof offerLaunchChoice==='function'){{\
-                                    offerLaunchChoice('{url_js}');}}\
-                                    else{{window.location.replace('{url_js}');}}}})()"
-                            ));
-                        }
-                        update_check::note_app_started(&handle_clone, env!("CARGO_PKG_VERSION"));
-                        // Readiness is where the launcher used to stop looking.
-                        // Keep watching, so a backend that goes away later is
-                        // reported instead of being left for the user to find.
-                        tauri::async_runtime::spawn(watch_backend_liveness(
-                            handle_clone.clone(),
-                            port,
-                            shutting_down_wait,
-                            backend_lost_wait,
-                        ));
-                    }
-                    StartupOutcome::Broken(reason) => {
-                        // The backend is answering and telling us it cannot do
-                        // its job. Opening the app on top of that hands the user
-                        // a shell whose every action fails, which is how this
-                        // ended up looking like the product was broken rather
-                        // than the installation.
-                        log_line(&format!("backend is up but not fit to serve: {reason}"));
-                        if !fatal_flag_wait.load(Ordering::SeqCst) {
-                            report_fatal_stage(
-                                &handle_clone,
-                                "server",
-                                &format!(
-                                    "The backend started, but {reason}, so the app cannot open. \
-Please close this window and try again. If the problem persists, please send the log file to \
-info@datadrivenconstruction.io."
-                                ),
-                            );
-                        }
-                    }
-                    StartupOutcome::TimedOut(kind) => {
-                        let stage = progress_wait.stage();
-                        match &kind {
-                            TimeoutKind::WentQuiet(quiet_for) => log_line(&format!(
-                                "backend went quiet during startup: nothing written for {}s, last step reported was {}",
-                                quiet_for.as_secs(),
-                                stage
-                                    .as_ref()
-                                    .map(|(id, _)| id.as_str())
-                                    .unwrap_or("none"),
-                            )),
-                            TimeoutKind::TookTooLong => log_line(&format!(
-                                "backend did not become healthy within the startup window; last step reported was {}",
-                                stage
-                                    .as_ref()
-                                    .map(|(id, _)| id.as_str())
-                                    .unwrap_or("none"),
-                            )),
-                        }
-                        // Only say "slow" when nothing better has been said. The
-                        // termination handler above names the real cause the
-                        // moment the sidecar dies, and this branch used to guard
-                        // on the readiness flag, which is set only when the
-                        // backend goes healthy. A backend that died during
-                        // startup therefore left readiness false and satisfied
-                        // this condition, so the timeout fired minutes afterwards
-                        // and overwrote a message carrying the actual exception
-                        // with one that said only that the backend had not
-                        // started in time. A user whose sidecar exited with a
-                        // FileNotFoundError nine minutes earlier read the second
-                        // message, looked for the fault on their own machine, and
-                        // had no way to know the first had ever been shown.
-                        if !ready_flag.load(Ordering::SeqCst)
-                            && !fatal_flag_wait.load(Ordering::SeqCst)
-                        {
-                            report_fatal_stage(
-                                &handle_clone,
-                                "server",
-                                &startup_timeout_message(stage.as_ref(), &kind),
-                            );
-                        }
-                    }
-                }
-            });
 
             Ok(())
         })
