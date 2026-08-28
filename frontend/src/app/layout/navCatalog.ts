@@ -148,17 +148,22 @@ export interface NavGroup {
   items: NavItem[];
   defaultOpen: boolean;
   hideInSimple?: boolean; // Entire group hidden in simple mode
-  /** Render a thin horizontal divider above this group. Used to peel
-   *  reference/setup groups (Regional, Modules, Settings) away from
-   *  the project-work surface above. */
+  /** Render a thin horizontal divider above this group. This used to name
+   *  Regional, Modules and Settings as the users, peeling the setup
+   *  surfaces off the project work above; none of the three is a nav group
+   *  any more (Settings survives as an `adminGridItems` tile).
+   *  `grp_rate_buildup` is the only group carrying it now, where it opens
+   *  the rate build-up run rather than a setup block. */
   separator?: boolean;
   /** Registry key used to pull dynamic module nav items into this group,
    *  when it differs from `id`. The render loop calls
    *  `getModuleNavItems(group.dynamicGroupKey ?? group.id)`. Used by
    *  `grp_reality`, whose stable internal id is `grp_reality` but whose
-   *  module-injection contract (so `oe_pointcloud`'s manifest can add its
-   *  own row) is the shorter `reality` key documented in the point-cloud
-   *  plan (`docs/strategy/POINTCLOUD_AND_SPATIAL_PLAN.md`, section 4). */
+   *  module-injection contract is the shorter `reality` key from the
+   *  point-cloud plan (`docs/strategy/POINTCLOUD_AND_SPATIAL_PLAN.md`,
+   *  section 4). The contract is reserved, not in use: this used to add
+   *  "so `oe_pointcloud`'s manifest can add its own row", and no such
+   *  frontend manifest exists — `oe_pointcloud` is backend-only. */
   dynamicGroupKey?: string;
 }
 
@@ -320,9 +325,16 @@ export const navGroups: NavGroup[] = [
   // dedicated home for spatial surfaces (point-cloud plan
   // `docs/strategy/POINTCLOUD_AND_SPATIAL_PLAN.md`, section 4); it
   // supersedes the earlier "no separate sidebar section" note for this
-  // spatial context only. `oe_pointcloud`'s frontend manifest injects its
-  // own rows here via `getModuleNavItems('reality')` (the group's
-  // `dynamicGroupKey`).
+  // spatial context only. The group's `dynamicGroupKey: 'reality'` keeps a
+  // short registry key across the `grp_` rename, so a manifest can publish
+  // rows here with `group: 'reality'`. This comment used to say
+  // `oe_pointcloud`'s frontend manifest does exactly that; it does not, and
+  // cannot — `oe_pointcloud` is a backend module with no frontend manifest,
+  // and nothing in `MODULE_REGISTRY` sets `group: 'reality'`. The key is a
+  // live extension point, not wiring anything currently depends on. The
+  // three rows below are static and keep the group on screen either way,
+  // which is why this one is kept where the empty `regional` group was
+  // deleted.
   {
     id: 'grp_reality',
     labelKey: 'sidebar.group.reality',
@@ -825,10 +837,14 @@ export const navGroups: NavGroup[] = [
   // statically — its manifest group `ai` no longer matches any group id,
   // so there is no dynamic duplication).
   //
-  // Founder-requested last position. Last among the working groups rather
-  // than last in the array: the `regional` group below carries
-  // `separator: true`, which draws the line between project work and the
-  // reference and setup surfaces, and this is not one of those.
+  // Founder-requested last position, and now last in the array too. This
+  // used to read "last among the working groups rather than last in the
+  // array", pointing at a `regional` group below that carried
+  // `separator: true` and was said to draw the line between project work
+  // and the setup surfaces. That group is gone (see the note under the
+  // closing bracket); its separator drew nothing in this tree, because it
+  // sat inside a group the empty-group guard skipped, so the rendered
+  // order is unchanged by its removal.
   {
     id: 'grp_automation_ai',
     labelKey: 'sidebar.group.automation_ai',
@@ -846,21 +862,32 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'nav.module_builder', to: '/module-builder', icon: Wand2, advancedOnly: true },
     ],
   },
-  // ── REGIONAL EXCHANGE (setup-only, dynamic) ────────────────────────
-  // Separator marks the boundary between the project-work groups above
-  // and the reference/setup surfaces below. Rows are injected purely
-  // from the module registry via `getModuleNavItems('regional')`; the
-  // group renders only when at least one regional module is enabled
-  // (conditional render preserved from the previous design).
-  {
-    id: 'regional',
-    labelKey: 'modules.cat_regional',
-    descriptionKey: 'modules.cat_regional_desc',
-    defaultOpen: true,
-    hideInSimple: true,
-    separator: true,
-    items: [
-      // All regional exchange modules injected dynamically from module registry
-    ],
-  },
 ];
+
+// A `regional` group used to close this array, and in this tree it was dead
+// wiring. Its rows were to arrive only from `getModuleNavItems('regional')`,
+// which filters manifest `navItems` by `group`. Nothing in the tree sets
+// `group: 'regional'`: the one frontend module in that category,
+// `regional-exchange`, ships `navItems: []` deliberately, and
+// `modules/_registry.test.ts` asserts the list stays empty (#217 — the
+// twenty country pages were meant to be reached from a BOQ rather than from
+// the menu; whether that way in exists is a separate question, and today
+// nothing in the app links to those routes). The group header therefore
+// renders in no build of this tree, hidden by the generic
+// `visibleItems.length === 0` guard in `Sidebar.tsx` and not by any
+// regional-specific condition, and the `separator: true` it carried sat
+// inside that same skipped branch, so no divider is lost by deleting it.
+//
+// Where regional packs are surfaced instead: the thirteen backend data
+// packs (`oe_us_pack`, `oe_dach_pack`, `oe_uk_pack`, …) appear on
+// `/modules` under the "Regional Standards" category, in
+// Settings -> Modules, and in the onboarding module picker. They expose a
+// single `GET /config/` endpoint and carry no page of their own, so a
+// sidebar row for one would have nowhere to point.
+//
+// Note that `regional` names two unrelated axes. `ModuleManifest.category`
+// is the shelf a module sits on for the registry page; `ModuleNavItem.group`
+// is the sidebar group a row publishes into. A module can be in the
+// `regional` category and publish no nav rows at all, which is exactly the
+// case here — reading the category as the sidebar wiring is what made this
+// group look alive.

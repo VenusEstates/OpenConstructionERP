@@ -1062,8 +1062,19 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
           // Merge static items + dynamic module items for this group.
           // Most groups inject by their own `id`; `grp_reality` overrides
-          // with `dynamicGroupKey: 'reality'` so `oe_pointcloud`'s manifest
-          // can add its row via the documented `reality` registry key.
+          // with `dynamicGroupKey: 'reality'`.
+          //
+          // Nothing reaches this path today, which is worth knowing before
+          // debugging a module whose row will not appear. Every id in the
+          // catalogue is `grp_*` and the only `dynamicGroupKey` is
+          // `reality`, while the two manifests that declare navItems name
+          // `tools` (sustainability) and `ai` (pipelines) — neither is a
+          // group id in this catalogue, so both lists are dropped and both
+          // rows are carried statically there instead. This comment used
+          // to credit `oe_pointcloud` with injecting into `reality`; it is
+          // backend-only and has no manifest here. The mechanism itself
+          // works — a module publishing to a real `grp_*` id lands — it is
+          // simply unused in-tree.
           const dynamicItems: NavItem[] = getModuleNavItems(group.dynamicGroupKey ?? group.id)
             .filter((mi) => {
               const moduleId = mi.labelKey.split('.')[1] ?? mi.to.slice(1);

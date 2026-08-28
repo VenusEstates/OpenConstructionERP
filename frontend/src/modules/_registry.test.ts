@@ -152,10 +152,17 @@ describe('getModuleNavItems', () => {
     expect(items.some((i) => i.to === '/risk-analysis')).toBe(false);
   });
 
-  it('regional nav-items are intentionally empty (the page is reached via /boq)', () => {
-    // Issue #217 — the 20 country pages are reached from the BOQ
-    // page, not from individual sidebar entries. Wave 5 Epic I kept
-    // this invariant when collapsing the modules.
+  it('regional nav-items are intentionally empty (no twenty country rows in the menu)', () => {
+    // Issue #217 — the 20 country pages get no individual sidebar entries;
+    // the way in was to be a link from the BOQ page, the way `gaeb-exchange`
+    // is. Wave 5 Epic I kept this invariant when collapsing the modules.
+    //
+    // The title and this comment used to state the BOQ link as fact. It does
+    // not exist: nothing under `frontend/src` navigates to any of the twenty
+    // routes. What this test pins is the empty list, which is still the right
+    // invariant — twenty rows do not belong in the menu — so the assertion is
+    // unchanged and only the false half of its wording is gone. See the note
+    // on `navItems` in `regional-exchange/manifest.tsx`.
     const items = getModuleNavItems('regional');
     expect(items).toEqual([]);
   });

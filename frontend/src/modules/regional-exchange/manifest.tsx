@@ -82,7 +82,19 @@ export const manifest: ModuleManifest = {
   defaultEnabled: false,
   depends: ['boq'],
   routes,
-  // Reached from /boq (regional import/export) — no per-country sidebar items.
+  // No per-country sidebar items, by the #217 decision: twenty country rows
+  // would swamp the menu, so the way in was to be a link from a BOQ, the way
+  // `gaeb-exchange` is reached from `BOQListPage` and `BOQToolbar`.
+  //
+  // That link is not in the tree. This line used to claim "reached from
+  // /boq", while nothing under `frontend/src` navigates to any of the twenty
+  // routes below and the command palette does not offer them either, so
+  // today they are reachable only by typing the URL. Written down plainly
+  // rather than left as a claim: the routes work, the entry point is
+  // missing, and adding one means choosing a target among twenty countries
+  // (there is no region-to-template resolver — `regionalRegistry` resolves
+  // only by `id` and by route slug) or giving the module a landing page
+  // that picks.
   navItems: [],
   translations: {
     en: {
