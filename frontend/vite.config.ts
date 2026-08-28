@@ -202,7 +202,15 @@ export default defineConfig({
         // takes the growing file out of the manifest entirely, which is
         // the fix that does not need revisiting the next time a
         // translation lands.
-        globIgnores: ['stats.html', '**/*.map', '**/i18n-*.js'],
+        //
+        // splash.html is excluded because the web build has no use for it at
+        // all. It is the desktop launcher's startup screen, loaded by the
+        // Tauri window from the tauri:// origin before this bundle exists, and
+        // nothing a browser can reach ever links to it. It only appears here
+        // because it lives in ``public/``, which Vite copies verbatim. Left in,
+        // every web visitor downloads it on first load to cache a page they
+        // can never open, and it grows every time a language is added to it.
+        globIgnores: ['stats.html', 'splash.html', '**/*.map', '**/i18n-*.js'],
         // Allow large lazy-loaded chunks (vendor-three, vendor-maplibre)
         // to be precached on first visit. Workbox's own default is 2 MiB;
         // this raises it, it does not restate it.

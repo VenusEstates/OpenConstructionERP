@@ -8,10 +8,11 @@
  * and is not covered by any of the locale gates that guard
  * ``src/app/locales/``. Its strings live in a JSON table inside the file.
  *
- * That leaves three ways for it to rot quietly, and this file is here for all
- * three: a language gets added to the picker and nobody adds a splash table for
- * it, a translation loses the ``{n}`` slot the code interpolates into, or the
- * script asks for a key that no table has and the screen renders a blank.
+ * That leaves four ways for it to rot quietly, and this file is here for all
+ * four: a language gets added to the picker and nobody adds a splash table for
+ * it, a language is answered in a different language than the one asked for, a
+ * translation loses the ``{n}`` slot the code interpolates into, or the script
+ * asks for a key that no table has and the screen renders a blank.
  *
  * The table is parsed out of the HTML rather than imported, because the file
  * has to be a single self-contained document the Tauri window can load.
@@ -60,6 +61,31 @@ function offeredLanguages(): { code: string; rtl: boolean }[] {
   return out;
 }
 
+/**
+ * The offered languages that deliberately read another language's table.
+ *
+ * Read from the file rather than restated here, so that this test asks the
+ * shipped document what it decided instead of asking a copy of the decision.
+ */
+function readInherit(): Record<string, string> {
+  const m = /var SPLASH_INHERIT = \{([^}]*)\}/.exec(html);
+  expect(m, 'SPLASH_INHERIT not found in splash.html').not.toBeNull();
+  const out: Record<string, string> = {};
+  for (const e of m![1]!.matchAll(/'([^']+)':\s*'([^']+)'/g)) out[e[1]!] = e[2]!;
+  return out;
+}
+
+/**
+ * Every interpolation slot in a string, sorted, duplicates kept.
+ *
+ * Sorted because word order is exactly what a translation is allowed to
+ * change; duplicates kept because a slot repeated once too often is as wrong
+ * as one that went missing, and a plain set would call the two the same.
+ */
+function placeholders(value: string): string[] {
+  return [...value.matchAll(/\{[^}]*\}/g)].map((m) => m[0]).sort();
+}
+
 /** Every translation key the splash script actually asks for. */
 function keysUsed(): Set<string> {
   const used = new Set<string>();
@@ -74,6 +100,7 @@ function keysUsed(): Set<string> {
 }
 
 const table = readTable();
+const inherit = readInherit();
 const offered = offeredLanguages();
 const english = table.en!;
 
@@ -86,20 +113,46 @@ describe('desktop splash translations', () => {
     expect(offered.length).toBeGreaterThan(30);
   });
 
-  it('gives every language the picker offers something to render', () => {
-    // Resolution is exact code, then base language, then English. A language
-    // whose base has no table would silently show English on the first screen
-    // of the product, so name the ones that would.
-    const withoutTable = offered
+  it('answers every offered language, by a table or by a stated decision', () => {
+    // This used to accept a base-language table as cover for a regional one,
+    // and that is exactly how pt-BR came to be answered in European
+    // Portuguese: the picker offered it, "pt" had a table, the test passed,
+    // and Brazilian users read "ficheiro" on the first screen of the product
+    // while every other screen said "arquivo". Falling back to the base
+    // language is the right behaviour for a machine set to a language nobody
+    // offers. It is not an answer for a language the product does offer, so
+    // each of those has to be either translated here or written down as
+    // deliberately inherited.
+    const unanswered = offered
       .map((l) => l.code)
-      .filter((code) => {
-        const base = code.split('-')[0]!;
-        // English and its regional variants are answered by the source table.
-        if (base === 'en') return false;
-        return !table[code] && !table[base];
-      });
-    expect(withoutTable, 'offered languages with no splash table').toEqual([]);
+      .filter((code) => !table[code] && !inherit[code]);
+    expect(unanswered, 'offered languages that no table and no decision covers').toEqual([]);
   });
+
+  it('inherits only from tables that exist, and never from itself', () => {
+    for (const [code, from] of Object.entries(inherit)) {
+      expect(table[from], `${code} inherits from ${from}, which has no table`).toBeDefined();
+      expect(table[code], `${code} both inherits and has its own table`).toBeUndefined();
+      expect(from, `${code} inherits from itself`).not.toBe(code);
+    }
+  });
+
+  it.each(Object.keys(table).filter((c) => c.includes('-')))(
+    '%s is a real translation rather than a copy of its base',
+    (code) => {
+      const base = code.split('-')[0]!;
+      const baseTable = table[base];
+      if (!baseTable) return;
+      // A regional table that matches its base word for word is either a
+      // copy-paste that meant to be edited, or a decision that belongs in
+      // SPLASH_INHERIT where a reader can see it. Two sets that come back
+      // equal are the finding, not a coincidence.
+      const same = Object.keys(table[code]!).filter((k) => table[code]![k] === baseTable[k]);
+      expect(same.length, `${code} is identical to ${base} on every key`).toBeLessThan(
+        Object.keys(baseTable).length,
+      );
+    },
+  );
 
   it('lays out the right-to-left languages right to left', () => {
     const declared = /var SPLASH_RTL = \[([^\]]*)\]/.exec(html);
@@ -125,21 +178,20 @@ describe('desktop splash translations', () => {
   );
 
   it.each(Object.keys(table).filter((code) => code !== 'en'))(
-    '%s keeps the {n} slot exactly where English has one',
+    '%s carries exactly the placeholders its English source carries',
     (code) => {
       const t = table[code]!;
-      // A mechanical pass over these files can rename or drop an
-      // interpolation token without any other gate noticing, and the result is
-      // a literal "{n}" on screen or a number that never appears at all.
-      const expected = Object.keys(english)
-        .filter((k) => english[k]!.includes('{n}'))
-        .sort();
-      const actual = Object.keys(t)
-        .filter((k) => t[k]!.includes('{n}'))
-        .sort();
-      expect(actual).toEqual(expected);
-      for (const k of expected) {
-        expect(t[k]!.split('{n}').length - 1, `${code}.${k} repeats {n}`).toBe(1);
+      // Placeholders are code wearing the clothes of prose. A pass over these
+      // strings can rename what is inside the braces, and the result is still
+      // a well formed sentence, so review, lint, the build and a test that
+      // only counts slots all stay quiet while the number stops appearing.
+      // Compare the whole set, not the count and not just the one token we
+      // happen to use today: a translation that invents {count} beside {n} is
+      // as broken as one that drops {n}, and only the set catches both.
+      for (const k of Object.keys(english)) {
+        expect(placeholders(t[k]!), `${code}.${k} placeholders`).toEqual(
+          placeholders(english[k]!),
+        );
       }
     },
   );
