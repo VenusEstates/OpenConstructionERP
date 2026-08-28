@@ -525,6 +525,7 @@ class TeamsEmptyTeam(ValidationRule):
                 suggestion="Add the people this team represents, or deactivate the team.",
                 details={
                     "team_id": t.get("id"),
+                    "team_name": t.get("name"),
                     "restriction_count": t.get("restriction_count") or 0,
                 },
             )
@@ -656,6 +657,7 @@ class TeamsRosterTicketValid(ValidationRule):
                 suggestion="Record the renewed ticket, or take the person off the roster until it is renewed.",
                 details={
                     "roster_member_id": row.get("id"),
+                    "display_name": row.get("display_name"),
                     "expired": row.get("expired_certifications") or [],
                 },
             )
@@ -687,7 +689,10 @@ class TeamsRosterWindow(ValidationRule):
                 f"{row.get('display_name')} is still on the roster although their last day has passed",
                 element_ref=str(row.get("id")),
                 suggestion="Extend the end date if they are still here, otherwise mark the line as left.",
-                details={"roster_member_id": row.get("id")},
+                details={
+                    "roster_member_id": row.get("id"),
+                    "display_name": row.get("display_name"),
+                },
             )
             for row in overdue
         ]
