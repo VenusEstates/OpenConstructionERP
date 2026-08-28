@@ -42,9 +42,9 @@ from app.modules.boq.router import _persist_imported_markups
 from app.modules.boq.schemas import MarkupCreate
 from app.modules.boq.service import _calculate_markup_amounts
 
-# Committed copy of the official BVBS Pruefdatei 3.3 X84.
+# In-house X84 conformance fixture.
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "gaeb"
-_X84 = _FIXTURES / "bvbs_pruefdatei_3.3_x84.x84"
+_X84 = _FIXTURES / "oce_conformance_x84.x84"
 
 _REF_DIRECT_COST = Decimal("1915000.00")
 _REF_MARKUP_IT = Decimal("85000.00")
@@ -121,7 +121,7 @@ class TestGAEBX84MarkupPersistMoney:
         assert created.percentage == 0.0
         # Provenance preserved so nothing about the source figure is lost.
         assert created.metadata["source"] == "gaeb_import"
-        assert created.metadata["gaeb_ordinal"] == "002.001.0030"
+        assert created.metadata["gaeb_ordinal"] == "001.002.0040"
         assert Decimal(created.metadata["gaeb_it"]) == _REF_MARKUP_IT
         assert Decimal(created.metadata["gaeb_it_markup_base"]) == _REF_MARKUP_BASE
         # The source percent is preserved verbatim from the file (<Markup>10.00</Markup>).
@@ -172,7 +172,7 @@ class TestGAEBX84MarkupPersistMoney:
             metadata = {
                 "markup_items": [
                     {
-                        "ordinal": "002.001.0030",
+                        "ordinal": "001.002.0040",
                         "it": "",
                         "it_markup_base": "",
                         "percentage": "10",

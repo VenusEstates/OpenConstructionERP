@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OpenConstructionERP GAEB DA XML 3.3 profile schema, exchange phase X83
+  (Angebotsaufforderung, the unpriced call for bids).
+
+  Copyright (c) 2026 Artem Boiko / DataDrivenConstruction. Published under
+  the same licence as the rest of this repository.
+
+  This file is our own work. It was written from the element model that the
+  publicly available GAEB DA XML 3.3 Fachdokumentation describes and from
+  the reader and writer in this repository, not by editing a copy of any
+  schema published by GAEB, DIN or BVBS. It describes only the subset of
+  the standard that OpenConstructionERP actually reads and writes, and it
+  uses type names of our own choosing.
+
+  A document that satisfies this profile is a valid GAEB DA XML 3.3 X83.
+  The reverse does not hold: the full standard allows a great deal this
+  profile does not describe, and a file using those parts is not defective
+  because this schema rejects it. To check a document against the whole
+  standard, validate it against the schema set GAEB publishes.
+
+  See docs/standards/GAEB.md for what we assert about our implementation.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://www.gaeb.de/GAEB_DA_XML/DA83/3.3"
+           targetNamespace="http://www.gaeb.de/GAEB_DA_XML/DA83/3.3"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <!-- ==== Scalar types ================================================ -->
+
+  <!-- One segment of the Ordnungszahl. Letters, digits and underscore,
+       never a dot: the dotted OZ is assembled from one segment per
+       hierarchy level. -->
+  <xs:simpleType name="OrdinalSegment">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Za-z0-9_]{1,14}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- The index that distinguishes an Indexposition from its base
+       position. It is part of the OZ, not decoration. -->
+  <xs:simpleType name="OrdinalIndex">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Za-z0-9]{1,4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Quantity">
+    <xs:restriction base="xs:decimal">
+      <xs:totalDigits value="11"/>
+      <xs:fractionDigits value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="UnitPrice">
+    <xs:restriction base="xs:decimal">
+      <xs:totalDigits value="13"/>
+      <xs:fractionDigits value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Money">
+    <xs:restriction base="xs:decimal">
+      <xs:totalDigits value="13"/>
+      <xs:fractionDigits value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Percent">
+    <xs:restriction base="xs:decimal">
+      <xs:totalDigits value="9"/>
+      <xs:fractionDigits value="6"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ShortText">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="255"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="UnitOfMeasure">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="10"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="YesNo">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Yes"/>
+      <xs:enumeration value="No"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- How a Bedarfsposition (an item priced but only executed on
+       instruction) counts towards the totals. -->
+  <xs:simpleType name="ProvisionalKind">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="WithTotal"/>
+      <xs:enumeration value="WithoutTotal"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="BreakdownKind">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="BoQLevel"/>
+      <xs:enumeration value="Item"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ==== Rich text =================================================== -->
+
+  <!-- An inline graphic. The payload is base64 and can run to tens of
+       thousands of characters; a reader is expected to keep the
+       surrounding text and drop the payload. -->
+  <xs:complexType name="InlineImage">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="Name" type="xs:string"/>
+        <xs:attribute name="Type" type="xs:string"/>
+        <xs:attribute name="align" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="TextRun" mixed="true">
+    <xs:attribute name="bold" type="YesNo"/>
+    <xs:attribute name="italic" type="YesNo"/>
+    <xs:attribute name="underline" type="YesNo"/>
+  </xs:complexType>
+
+  <xs:complexType name="Paragraph">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="span" type="TextRun"/>
+        <xs:element name="image" type="InlineImage"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="align" type="xs:string"/>
+  </xs:complexType>
+
+  <xs:complexType name="RichText">
+    <xs:sequence>
+      <xs:element name="p" type="Paragraph" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LongText">
+    <xs:sequence>
+      <xs:element name="Text" type="RichText" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ShortTextBlock">
+    <xs:sequence>
+      <xs:element name="TextOutlTxt" type="RichText"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OutlineTextBlock">
+    <xs:sequence>
+      <xs:element name="OutlTxt" type="ShortTextBlock"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Langtext before Kurztext, which is the order the standard fixes. -->
+  <xs:complexType name="CompleteTextBlock">
+    <xs:sequence>
+      <xs:element name="DetailTxt" type="LongText"/>
+      <xs:element name="OutlineText" type="OutlineTextBlock" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DescriptionBlock">
+    <xs:sequence>
+      <xs:element name="CompleteText" type="CompleteTextBlock"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ==== Bill of quantities ========================================== -->
+
+  <xs:complexType name="Position">
+    <xs:sequence>
+      <xs:element name="Provis" type="ProvisionalKind" minOccurs="0"/>
+      <xs:element name="Qty" type="Quantity" minOccurs="0"/>
+      <xs:element name="QU" type="UnitOfMeasure" minOccurs="0"/>
+      <xs:element name="UP" type="UnitPrice" minOccurs="0"/>
+      <xs:element name="IT" type="Money" minOccurs="0"/>
+      <xs:element name="Description" type="DescriptionBlock" minOccurs="0"/>
+      <xs:element name="BidComm" type="RichText" minOccurs="0"/>
+    </xs:sequence>
+    <!-- @ID is an opaque handle. It is never the OZ: an xs:ID may not
+         start with a digit and most OZ values do. -->
+    <xs:attribute name="ID" type="xs:ID" use="required"/>
+    <xs:attribute name="RNoPart" type="OrdinalSegment" use="required"/>
+    <xs:attribute name="RNoIndex" type="OrdinalIndex"/>
+  </xs:complexType>
+
+  <!-- A Zuschlagsposition. The percentage applies to ITMarkup, which is
+       the sum of the surcharged positions only and not the whole bill, so
+       IT is the figure that must be carried through unchanged. -->
+  <xs:complexType name="SurchargePosition">
+    <xs:sequence>
+      <xs:element name="ITMarkup" type="Money" minOccurs="0"/>
+      <xs:element name="Markup" type="Percent" minOccurs="0"/>
+      <xs:element name="IT" type="Money" minOccurs="0"/>
+      <xs:element name="Description" type="DescriptionBlock" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="ID" type="xs:ID" use="required"/>
+    <xs:attribute name="RNoPart" type="OrdinalSegment" use="required"/>
+    <xs:attribute name="RNoIndex" type="OrdinalIndex"/>
+  </xs:complexType>
+
+  <xs:complexType name="PositionList">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="Item" type="Position"/>
+        <xs:element name="MarkupItem" type="SurchargePosition"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Totals">
+    <xs:sequence>
+      <xs:element name="Total" type="Money" minOccurs="0"/>
+      <xs:element name="TotalNet" type="Money" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Body">
+    <xs:sequence>
+      <xs:element name="BoQCtgy" type="Category" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Itemlist" type="PositionList" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Category">
+    <xs:sequence>
+      <xs:element name="LblTx" type="RichText" minOccurs="0"/>
+      <xs:element name="BoQBody" type="Body"/>
+      <xs:element name="Totals" type="Totals" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="ID" type="xs:ID" use="required"/>
+    <xs:attribute name="RNoPart" type="OrdinalSegment" use="required"/>
+  </xs:complexType>
+
+  <!-- One part of the OZ-Maske. Reading the mask is what lets a consumer
+       render the OZ the way the issuer intended. -->
+  <xs:complexType name="BreakdownPart">
+    <xs:sequence>
+      <xs:element name="Type" type="BreakdownKind"/>
+      <xs:element name="Length" type="xs:positiveInteger"/>
+      <xs:element name="Num" type="YesNo" minOccurs="0"/>
+      <xs:element name="Alignment" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BillInfo">
+    <xs:sequence>
+      <xs:element name="Name" type="ShortText" minOccurs="0"/>
+      <xs:element name="LblBoQ" type="ShortText" minOccurs="0"/>
+      <xs:element name="Date" type="xs:date" minOccurs="0"/>
+      <xs:element name="OutlCompl" type="xs:string" minOccurs="0"/>
+      <xs:element name="BoQBkdn" type="BreakdownPart" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Totals" type="Totals" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Bill">
+    <xs:sequence>
+      <xs:element name="BoQInfo" type="BillInfo"/>
+      <xs:element name="BoQBody" type="Body"/>
+    </xs:sequence>
+    <xs:attribute name="ID" type="xs:ID" use="required"/>
+  </xs:complexType>
+
+  <!-- ==== Envelope ==================================================== -->
+
+  <xs:complexType name="PostalAddress">
+    <xs:sequence>
+      <xs:element name="Name1" type="ShortText" minOccurs="0"/>
+      <xs:element name="Name2" type="ShortText" minOccurs="0"/>
+      <xs:element name="Street" type="ShortText" minOccurs="0"/>
+      <xs:element name="PCode" type="ShortText" minOccurs="0"/>
+      <xs:element name="City" type="ShortText" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Party">
+    <xs:sequence>
+      <xs:element name="Address" type="PostalAddress" minOccurs="0"/>
+      <xs:element name="CntryType" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AwardInfo">
+    <xs:sequence>
+      <xs:element name="Cur" type="ShortText" minOccurs="0"/>
+      <xs:element name="CurLbl" type="ShortText" minOccurs="0"/>
+      <xs:element name="OpenDate" type="xs:date" minOccurs="0"/>
+      <xs:element name="OpenTime" type="xs:time" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Award">
+    <xs:sequence>
+      <xs:element name="DP" type="xs:string"/>
+      <xs:element name="AwardInfo" type="AwardInfo" minOccurs="0"/>
+      <xs:element name="OWN" type="Party" minOccurs="0"/>
+      <xs:element name="CTR" type="Party" minOccurs="0"/>
+      <xs:element name="BoQ" type="Bill"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ProjectInfo">
+    <xs:sequence>
+      <xs:element name="NamePrj" type="ShortText" minOccurs="0"/>
+      <xs:element name="LblPrj" type="ShortText" minOccurs="0"/>
+      <xs:element name="Cur" type="ShortText" minOccurs="0"/>
+      <xs:element name="CurLbl" type="ShortText" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExchangeInfo">
+    <xs:sequence>
+      <xs:element name="Version" type="xs:string"/>
+      <xs:element name="VersDate" type="xs:string" minOccurs="0"/>
+      <xs:element name="Date" type="xs:date" minOccurs="0"/>
+      <xs:element name="Time" type="xs:time" minOccurs="0"/>
+      <xs:element name="ProgSystem" type="ShortText" minOccurs="0"/>
+      <xs:element name="ProgName" type="ShortText" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="GAEB">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="GAEBInfo" type="ExchangeInfo"/>
+        <xs:element name="PrjInfo" type="ProjectInfo" minOccurs="0"/>
+        <xs:element name="Award" type="Award"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -3,13 +3,13 @@
 """End-to-end GAEB import through ``POST /import/auto/`` (server-side path).
 
 The audit of the DACH import flow found the client-side import losing 5 of
-the official BVBS Pruefdatei's 27 positions (4x 409 from dropped RNoIndex,
+the conformance fixture's 27 positions (4x 409 from dropped RNoIndex,
 1x 422 from a 56k-char base64 graphic pushed into the description) and
 misreporting the X83 as X81. The server-side dispatcher must not share any
 of those faults - this suite pins the acceptance end to end, through the
 real ASGI app and database:
 
-* the Pruefdatei imports 27/27 with ZERO persistence errors (no 409, no 422),
+* the fixture imports 27/27 with ZERO persistence errors (no 409, no 422),
 * the phase is reported as x83 (read from ``Award/DP``, not price presence),
 * an ``.x84`` upload is accepted by the dispatcher (a partner's priced bid),
 * the realistic Frankfurt Rohbau X83 imports 21/21.
@@ -37,17 +37,17 @@ import app.modules.users.models  # noqa: F401
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "gaeb"
 
-_PRUEFDATEI = _FIXTURES / "pruefdatei_3.3_x83.x83"
-_PRUEFDATEI_ITEMS = 27
-_PRUEFDATEI_SECTIONS = 12
-_PRUEFDATEI_INDEXED_OZS = (
+_CONFORMANCE_X83 = _FIXTURES / "oce_conformance_x83.x83"
+_CONFORMANCE_ITEMS = 27
+_CONFORMANCE_SECTIONS = 12
+_CONFORMANCE_INDEXED_OZS = (
     "001.001.0010.1",
     "001.001.0010.A",
     "999.999.9999.y",
     "999.999.9999.z",
 )
 
-_X84_BID = _FIXTURES / "bvbs_pruefdatei_3.3_x84.x84"
+_X84_BID = _FIXTURES / "oce_conformance_x84.x84"
 
 _FRANKFURT = _FIXTURES / "frankfurt_rohbau_x83.x83"
 _FRANKFURT_ITEMS = 21
@@ -161,33 +161,33 @@ async def _persisted_positions(http_client, auth_headers, boq_id: str) -> list[d
     return resp.json()["positions"]
 
 
-# ── Acceptance: the official Pruefdatei imports 27/27 ────────────────────────
+# ── Acceptance: the X83 conformance fixture imports 27/27 ────────────────────
 
 
 @pytest.mark.asyncio
-async def test_pruefdatei_imports_all_27_positions(http_client, auth_headers, project_id) -> None:
-    """The BVBS certification X83 lands completely: 27 items, zero errors.
+async def test_conformance_x83_imports_all_27_positions(http_client, auth_headers, project_id) -> None:
+    """The X83 conformance fixture lands completely: 27 items, zero errors.
 
     Every error entry here would have been a 409 (duplicate ordinal from a
     dropped RNoIndex) or a 422 (oversized description) in the old flow.
     """
     boq_id = await _fresh_boq(http_client, auth_headers, project_id)
-    body = await _import_auto(http_client, auth_headers, boq_id, _PRUEFDATEI)
+    body = await _import_auto(http_client, auth_headers, boq_id, _CONFORMANCE_X83)
 
     assert body["method"] == "native"
     assert body["format_id"] == "gaeb_xml"
     assert body["errors"] == [], f"import reported errors: {body['errors']}"
     assert body["skipped"] == 0
-    assert body["created"] == _PRUEFDATEI_ITEMS + _PRUEFDATEI_SECTIONS
+    assert body["created"] == _CONFORMANCE_ITEMS + _CONFORMANCE_SECTIONS
     assert body["metadata"]["da_kind"] == "x83", "X83 must be reported as x83 (Award/DP), not inferred from prices"
 
     positions = await _persisted_positions(http_client, auth_headers, boq_id)
     items = [p for p in positions if p["unit"] != "section"]
-    assert len(items) == _PRUEFDATEI_ITEMS, f"expected 27 persisted items, got {len(items)}"
+    assert len(items) == _CONFORMANCE_ITEMS, f"expected 27 persisted items, got {len(items)}"
 
     ordinals = {p["ordinal"] for p in items}
-    assert len(ordinals) == _PRUEFDATEI_ITEMS, "persisted ordinals must be distinct"
-    for oz in _PRUEFDATEI_INDEXED_OZS:
+    assert len(ordinals) == _CONFORMANCE_ITEMS, "persisted ordinals must be distinct"
+    for oz in _CONFORMANCE_INDEXED_OZS:
         assert oz in ordinals, f"Indexposition {oz} missing after persistence"
 
     # The embedded base64 JPEG must not survive anywhere in a description.

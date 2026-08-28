@@ -1,8 +1,8 @@
 """FA-GAEB-001 - GAEB X84 import must preserve every cent.
 
-The worst money bug in the full audit: importing the official BVBS
-Pruefdatei DA XML 3.3 X84 (Angebotsabgabe / priced bid) used to wipe all
-2,000,000.00 EUR to 0.00 while reporting ``imported: 27, errors: []``. An
+The worst money bug in the full audit: importing a conformant GAEB DA XML
+3.3 X84 (Angebotsabgabe / priced bid) used to wipe all 2,000,000.00 EUR to
+0.00 while reporting ``imported: 27, errors: []``. An
 X84 carries the binding unit price in ``<UP>`` and the binding position
 total in ``<IT>`` but no ``<Qty>``; the old importer dropped IT, defaulted
 Qty to 0 and so produced a 0.00 grand total, and silently dropped the
@@ -35,10 +35,9 @@ import pytest
 
 from app.modules.boq.importers.gaeb_xml import GAEBXMLImporter
 
-# Committed copy of the official BVBS Pruefdatei 3.3 X84 (see
-# tests/fixtures/gaeb/README.md for provenance).
+# In-house X84 conformance fixture (see tests/fixtures/gaeb/README.md).
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "gaeb"
-_X84 = _FIXTURES / "bvbs_pruefdatei_3.3_x84.x84"
+_X84 = _FIXTURES / "oce_conformance_x84.x84"
 
 # Reference figures computed by hand from the fixture (sum of <IT>).
 _REF_ITEM_IT_TOTAL = Decimal("1915000.00")
@@ -53,7 +52,7 @@ def _line_total(quantity: float, unit_rate: float) -> Decimal:
     return (Decimal(repr(quantity)) * Decimal(repr(unit_rate))).quantize(Decimal("0.01"))
 
 
-@pytest.mark.skipif(not _X84.exists(), reason="official BVBS X84 fixture not present")
+@pytest.mark.skipif(not _X84.exists(), reason="X84 conformance fixture not present")
 class TestGAEBX84ImportMoney:
     @pytest.mark.asyncio
     async def test_grand_total_to_the_cent(self) -> None:
@@ -92,7 +91,7 @@ class TestGAEBX84ImportMoney:
         mk = markups[0]
         assert Decimal(mk["it"]) == _REF_MARKUP_IT
         assert Decimal(mk["it_markup_base"]) == _REF_MARKUP_BASE
-        assert mk["ordinal"] == "002.001.0030"
+        assert mk["ordinal"] == "001.002.0040"
         # And it surfaces as a warning so the UI cannot miss it.
         assert any("Markup position" in w["warning"] for w in result.warnings)
 

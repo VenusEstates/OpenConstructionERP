@@ -183,6 +183,14 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://oe:oe@localhost:5432/openconstructionerp_test
           DATABASE_SYNC_URL: postgresql+psycopg2://oe:oe@localhost:5432/openconstructionerp_test
+          # We do not carry the GAEB schema in the repository, so the tests
+          # that validate our exporter against it skip unless a copy is
+          # available. This is the one place they should not skip: without
+          # it the only thing checking our GAEB output is a schema we wrote
+          # ourselves. The fetch is opt-in everywhere else, and a test that
+          # cannot reach the publisher skips rather than fails, so a bad day
+          # at gaeb.de cannot turn the lane red.
+          OCE_GAEB_FETCH_XSD: "1"
         run: >-
           pytest tests/unit -q -ra --durations=25
           --timeout=300 --timeout-method=signal

@@ -1,29 +1,31 @@
 """GAEB DA XML 3.3 exporter conformance + money round-trip tests.
 
-The exporter must produce documents that validate against the official GAEB
-DA XML 3.3 schema and that round-trip (export -> import) without losing a cent
-or a position. These tests drive the pure ``build_gaeb_xml`` builder directly
+The exporter must produce documents a GAEB consumer will accept, and those
+documents must round-trip (export -> import) without losing a cent or a
+position. These tests drive the pure ``build_gaeb_xml`` builder directly
 (no app / DB), so they run anywhere lxml is installed.
 
-XSD provenance / oracle
------------------------
-The official GAEB DA XML **3.3** XSD is not redistributed as a free direct
-download (GAEB ships it to members). The closest freely-licensed official
-schema is the GAEB DA XML **3.2** XSD (2012-01), committed under
-``tests/fixtures/gaeb/xsd/``. The 3.3 BoQ element model is a superset of 3.2
-for the X83/X84 exchange phases, so we use the 3.2 XSD as a faithful oracle
-after two mechanical adaptations, both documented and asserted below:
+Two schemas, two different jobs
+-------------------------------
+**Our profile schema**, ``app/modules/boq/gaeb_profile/``, is written by us
+and ships with the product. It describes the subset of GAEB DA XML 3.3 that
+this codebase reads and writes, and it is the schema a customer can point at
+our output. What it cannot do is settle a conformance question on its own:
+it was written from the same understanding of the format as the exporter, so
+a mistake present in both would pass. It catches drift and structural
+regressions, which is a real job, but it is not an independent opinion.
 
-* the schema target namespace ``.../DA8x/3.2`` is rewritten to ``.../DA8x/3.3``
-  so it matches the namespace the exporter (and every real 3.3 file) declares;
-* the ``Version`` / ``VersDate`` enumeration facets, which in 3.2 are pinned to
-  ``3.2`` / ``2012-01``, are widened to also accept the 3.3 values ``3.3`` /
-  ``2021-05``.
+**The schema set GAEB publishes** is the independent opinion. We do not
+redistribute it - docs/standards/GAEB.md explains why - so the tests that use
+it skip unless a copy is available locally. Two ways to provide one:
 
-We pin the oracle's fidelity first by validating the official BVBS 3.3
-Pruefdatei (a real-world conformant file) against it: if the rewritten schema
-accepts the official file, it is a sound check for our own output. See
-``qa/.../fixtures/gaeb/SOURCES.md`` for the XSD download provenance.
+* point ``GAEB_XSD_DIR`` at a directory holding the unpacked 3.3 schema
+  files, or
+* set ``OCE_GAEB_FETCH_XSD=1`` and let the test fetch the publicly offered
+  schema archive once into a cache directory.
+
+Both are opt-in, so an offline run never fails on a network call, and CI
+sets the second so the conformance claim is exercised somewhere.
 
 Run::
 
@@ -33,6 +35,8 @@ Run::
 
 from __future__ import annotations
 
+import os
+import tempfile
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -43,60 +47,155 @@ etree = pytest.importorskip("lxml.etree")
 
 from app.modules.boq.router import build_gaeb_xml
 
-# ── XSD oracle ───────────────────────────────────────────────────────────────
+_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "gaeb"
+_CONFORMANCE = {
+    "83": _FIXTURES / "oce_conformance_x83.x83",
+    "84": _FIXTURES / "oce_conformance_x84.x84",
+}
 
-_XSD_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "gaeb" / "xsd"
-_ROOT_XSD = {
-    "83": "GAEB_DA_XML_83_3.2_2012-01.xsd",
-    "84": "GAEB_DA_XML_84_3.2_2012-01.xsd",
+# ── Our own profile schema (always available) ────────────────────────────────
+
+_PROFILE_DIR = Path(__file__).resolve().parents[2] / "app" / "modules" / "boq" / "gaeb_profile"
+_PROFILE_XSD = {
+    "83": "oce-gaeb-3.3-x83.xsd",
+    "84": "oce-gaeb-3.3-x84.xsd",
 }
 
 
-def _patched_schema_bytes(name: str) -> bytes:
-    """Read an XSD source and adapt the 3.2 schema into a 3.3 oracle.
-
-    Rewrites the DA8x/3.2 target namespace to DA8x/3.3 and widens the
-    Version / VersDate enumeration facets to accept the 3.3 values.
-    """
-    data = (_XSD_DIR / name).read_bytes()
-    data = data.replace(b"GAEB_DA_XML/DA83/3.2", b"GAEB_DA_XML/DA83/3.3")
-    data = data.replace(b"GAEB_DA_XML/DA84/3.2", b"GAEB_DA_XML/DA84/3.3")
-    data = data.replace(
-        b'<xs:enumeration value="3.2"/>',
-        b'<xs:enumeration value="3.2"/><xs:enumeration value="3.3"/>',
-    )
-    data = data.replace(
-        b'<xs:enumeration value="2012-01"/>',
-        b'<xs:enumeration value="2012-01"/><xs:enumeration value="2021-05"/>',
-    )
-    return data
-
-
-class _SchemaResolver(etree.Resolver):
-    """Serve the (patched) included XSDs from the local fixtures dir."""
-
-    def resolve(self, system_url, public_id, context):  # noqa: ANN001, ARG002
-        name = system_url.split("/")[-1]
-        if (_XSD_DIR / name).exists():
-            return self.resolve_string(_patched_schema_bytes(name), context)
-        return None
-
-
 def _load_schema(dp_code: str) -> etree.XMLSchema:
-    """Load the GAEB DA XML 3.3 oracle schema for the given DP phase."""
+    """Load our GAEB 3.3 profile schema for the given DP phase."""
     parser = etree.XMLParser(load_dtd=False, no_network=True)
-    parser.resolvers.add(_SchemaResolver())
-    root = etree.fromstring(_patched_schema_bytes(_ROOT_XSD[dp_code]), parser)
+    root = etree.parse(str(_PROFILE_DIR / _PROFILE_XSD[dp_code]), parser)
     return etree.XMLSchema(root)
 
 
-def test_oracle_accepts_official_pruefdatei() -> None:
-    """Sanity-pin the oracle: it must accept the official BVBS 3.3 X84 file."""
-    fixture = Path(__file__).resolve().parents[1] / "fixtures" / "gaeb" / "bvbs_pruefdatei_3.3_x84.x84"
-    schema = _load_schema("84")
-    doc = etree.parse(str(fixture))
-    assert schema.validate(doc), "Oracle rejected the official BVBS 3.3 Pruefdatei: " + "; ".join(
+def test_profile_schemas_differ_only_in_the_exchange_phase() -> None:
+    """The two profile files must not drift apart.
+
+    They describe the same element model for two exchange phases, so the X84
+    file is the X83 file with the phase swapped. Anything else that differs
+    is an edit someone made to one and forgot in the other.
+    """
+    x83 = (_PROFILE_DIR / _PROFILE_XSD["83"]).read_text(encoding="utf-8")
+    x84 = (_PROFILE_DIR / _PROFILE_XSD["84"]).read_text(encoding="utf-8")
+    swapped = (
+        x83.replace("DA83/3.3", "DA84/3.3")
+        .replace("phase X83", "phase X84")
+        .replace(
+            "(Angebotsaufforderung, the unpriced call for bids)",
+            "(Angebotsabgabe, the priced bid submission)",
+        )
+        .replace("3.3 X83.", "3.3 X84.")
+    )
+    assert swapped == x84, "the X83 and X84 profile schemas have drifted apart"
+
+
+@pytest.mark.parametrize("dp_code", ["83", "84"])
+def test_profile_accepts_our_conformance_fixture(dp_code: str) -> None:
+    """The in-house conformance fixtures satisfy the shipped profile."""
+    schema = _load_schema(dp_code)
+    doc = etree.parse(str(_CONFORMANCE[dp_code]))
+    assert schema.validate(doc), f"profile rejected {_CONFORMANCE[dp_code].name}: " + "; ".join(
         f"{e.line}:{e.message}" for e in schema.error_log[:6]
+    )
+
+
+# ── The schema GAEB publishes (opt-in, never redistributed) ──────────────────
+
+_OFFICIAL_XSD = {
+    "83": "GAEB_DA_XML_83_3.3_2021-05.xsd",
+    "84": "GAEB_DA_XML_84_3.3_2021-05.xsd",
+}
+# The bill-of-quantities package of the GAEB DA XML 3.3 (2021-05) schema
+# release, offered for download by the publisher without registration.
+_OFFICIAL_ARCHIVE = "https://www.gaeb.de/wp-content/uploads/2021/06/2021-05_Leistungsverzeichnis.zip"
+_SKIP_REASON = (
+    "the schema published by GAEB is not in this repository; set GAEB_XSD_DIR to a local copy, "
+    "or OCE_GAEB_FETCH_XSD=1 to fetch one"
+)
+
+
+def _fetch_official_schemas(target: Path) -> bool:
+    """Download and unpack the published schema archive into ``target``.
+
+    Returns False on any failure. A test that cannot reach the publisher
+    skips rather than fails: an unreachable web server says nothing about
+    our exporter.
+    """
+    import io
+    import urllib.request
+    import zipfile
+
+    try:
+        with urllib.request.urlopen(_OFFICIAL_ARCHIVE, timeout=60) as response:  # noqa: S310
+            payload = response.read()
+        target.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            for name in archive.namelist():
+                if name.endswith(".xsd") and "/" not in name and "\\" not in name:
+                    (target / name).write_bytes(archive.read(name))
+    except Exception:  # noqa: BLE001 - any failure means "no oracle available"
+        return False
+    return all((target / name).exists() for name in _OFFICIAL_XSD.values())
+
+
+def _official_dir() -> Path | None:
+    """Locate a local copy of the published 3.3 schema set, or None."""
+    configured = os.environ.get("GAEB_XSD_DIR")
+    if configured:
+        candidate = Path(configured)
+        if all((candidate / name).exists() for name in _OFFICIAL_XSD.values()):
+            return candidate
+        return None
+
+    if os.environ.get("OCE_GAEB_FETCH_XSD", "").lower() not in ("1", "true", "yes"):
+        return None
+
+    cache = Path(tempfile.gettempdir()) / "oce-gaeb-xsd-3.3-2021-05"
+    if all((cache / name).exists() for name in _OFFICIAL_XSD.values()):
+        return cache
+    if _fetch_official_schemas(cache):
+        return cache
+    return None
+
+
+def _load_official_schema(dp_code: str) -> etree.XMLSchema:
+    directory = _official_dir()
+    if directory is None:
+        pytest.skip(_SKIP_REASON)
+    parser = etree.XMLParser(load_dtd=False, no_network=True)
+    root = etree.parse(str(directory / _OFFICIAL_XSD[dp_code]), parser)
+    return etree.XMLSchema(root)
+
+
+@pytest.mark.parametrize("dp_code", ["83", "84"])
+def test_published_schema_accepts_our_conformance_fixture(dp_code: str) -> None:
+    """Our hand-authored fixtures really are conformant GAEB 3.3 documents.
+
+    This is the check that keeps the fixtures honest. We wrote them, so
+    nothing else in the suite would notice if they quietly stopped being
+    valid GAEB.
+    """
+    schema = _load_official_schema(dp_code)
+    doc = etree.parse(str(_CONFORMANCE[dp_code]))
+    assert schema.validate(doc), f"published schema rejected {_CONFORMANCE[dp_code].name}: " + "; ".join(
+        f"{e.line}:{e.message}" for e in schema.error_log[:8]
+    )
+
+
+@pytest.mark.parametrize("gaeb_format", ["x83", "x84"])
+def test_published_schema_accepts_our_export(gaeb_format: str) -> None:
+    """The exporter's output is accepted by the schema GAEB publishes.
+
+    The independent conformance check. The profile tests cannot replace it:
+    those compare our writer against our own description of the format.
+    """
+    dp_code = "84" if gaeb_format == "x84" else "83"
+    schema = _load_official_schema(dp_code)
+    xml = build_gaeb_xml(_build_demo_boq(), project_name="XSD Demo", project_currency="EUR", gaeb_format=gaeb_format)
+    doc = etree.fromstring(xml.encode("utf-8"))
+    assert schema.validate(doc), f"published schema rejected the {gaeb_format} export: " + "; ".join(
+        f"{e.line}:{e.message}" for e in schema.error_log[:12]
     )
 
 

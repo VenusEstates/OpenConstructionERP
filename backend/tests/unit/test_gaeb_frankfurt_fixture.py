@@ -2,13 +2,13 @@
 # Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 """The Frankfurt Rohbau X83 fixture: schema-valid, realistic, fully imported.
 
-``frankfurt_rohbau_x83.x83`` is the everyday-shaped companion to the BVBS
-certification Pruefdatei: a clean German Angebotsaufforderung (X83, DA83/3.3)
+``frankfurt_rohbau_x83.x83`` is the everyday-shaped companion to the
+conformance fixture: a clean German Angebotsaufforderung (X83, DA83/3.3)
 for "Bürogebäude Frankfurt Europaviertel" - one Gewerk (Rohbau), 21 positions
 with real German construction texts, m2/m3/psch/St/kg units, non-round
 quantities and NO prices. These tests pin that the fixture
 
-* validates against the same GAEB 3.3 XSD oracle the exporter tests use,
+* validates against the GAEB 3.3 profile schema we ship,
 * imports completely (21/21 items) with the phase read from ``Award/DP``,
 * keeps its German texts, units and quantities intact, and
 * carries no prices and no company names (it is a tender request).
@@ -45,7 +45,7 @@ def _items(result) -> list:
 
 
 def test_fixture_validates_against_gaeb_33_xsd() -> None:
-    """The authored file passes the official X83 3.3 XSD oracle."""
+    """The authored file passes the X83 3.3 profile schema we ship."""
     etree = pytest.importorskip("lxml.etree")
 
     from tests.unit.test_gaeb_export_xsd import _load_schema
