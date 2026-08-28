@@ -922,16 +922,26 @@ The Windows installer, and only the Windows installer, carries a second
 program of ours and the third-party runtime it needs. The release job
 fetches the DDC IFC converter from the public repository
 `datadrivenconstruction/cad2data-Revit-IFC-DWG-DGN` at a pinned commit
-and stages the whole of its `DDC_CONVERTER_IFC` directory as a Tauri
-resource, so a fresh install converts IFC offline with no download. The
-job fails the build rather than shipping without it, and it runs on
-Windows alone; the macOS and Linux packages carry nothing from it and
-fetch a converter on first use instead.
+and stages its `DDC_CONVERTER_IFC` directory as a Tauri resource, so a
+fresh install converts IFC offline with no download. The job fails the
+build rather than shipping without it, and it runs on Windows alone; the
+macOS and Linux packages carry nothing from it and fetch a converter on
+first use instead.
 
-What that directory contains is three things with three different
+The upstream directory holds two programs: `IfcExporter.exe`, which we
+run from the command line and is the only converter this application
+ever starts, and `DDC_Community_IFC_converter.exe`, a window for a
+person to click. Since we never open the window, the release job now
+deletes it before the installer is built, together with the Qt libraries
+that only it loads: Qt6Gui.dll, Qt6Widgets.dll and the platforms/ and
+styles/ plugin folders. Installers up to and including 16.1.0 carry all
+of them; later ones carry Qt 6 Core alone, which the command line
+converter imports directly and cannot run without.
+
+What the staged directory contains is three things with three different
 licensing positions:
 
-    IfcExporter.exe and DDC_Community_IFC_converter.exe
+    IfcExporter.exe
         Proprietary software of DataDrivenConstruction, all rights
         reserved. It is not licensed under the AGPL and the AGPL is not
         offered for it. It travels beside OpenConstructionERP in one
@@ -942,10 +952,13 @@ licensing positions:
         agreement between DataDrivenConstruction and the Open Design
         Alliance. Copyright (C) 2002-2026 Open Design Alliance.
 
-    Qt 6 (Core, Gui, Widgets), plus the platforms/ and styles/ plugins
+    Qt 6 Core
         Copyright (C) 2022-2025 The Qt Company Ltd., under the GNU
-        Lesser General Public License version 3. The converter links
-        them dynamically, as separate DLLs a user can replace.
+        Lesser General Public License version 3. The converter links it
+        dynamically, as a separate DLL a user can replace. Qt 6 Gui and
+        Qt 6 Widgets, and the platforms/ and styles/ plugin folders,
+        stood here too until the graphical converter they exist for
+        stopped being shipped.
 
 The converter directory ships its own LICENSE and its own
 THIRD-PARTY-NOTICES, the second of which carries the Qt attribution,
@@ -953,10 +966,11 @@ the verbatim LGPL-3.0 text, the statement that linking is dynamic under
 LGPL-3.0 section 4(d)(1), and where to obtain the Qt sources. The
 release job stages both files into the resource directory along with
 everything else in the converter tree, and the bundle configuration maps
-that directory into the installer, so the notices are expected to
-arrive with the binaries they describe rather than only with this file.
-That is read from the build configuration. A built installer has not
-been unpacked to confirm it.
+that directory into the installer, so the notices arrive with the
+binaries they describe rather than only with this file. That was read
+from the build configuration and has since been confirmed against a
+published artefact: the 16.1.0 Windows installer was unpacked and both
+files are in it, under converters\ifc_windows\.
 
 This section exists because nothing else in this notice mentioned any of
 it. A reader working out what a Windows installer contains would have

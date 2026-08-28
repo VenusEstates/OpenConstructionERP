@@ -630,16 +630,33 @@ jobs:
             codesign -dvvv "$f" 2>&1 | grep -Ei 'teamidentifier|signature|flags=' || true
           done
 
-      # Bundle the small (~30 MB) DDC IFC converter into the Windows installer
-      # so a fresh install converts .ifc files offline with no first-use
-      # download. We fetch the public converter repo as a zipball for the pinned
-      # ref, extract only the DDC_WINDOWS_Converters/DDC_CONVERTER_IFC subtree,
+      # Bundle the DDC IFC converter into the Windows installer so a fresh
+      # install converts .ifc files offline with no first-use download. We
+      # fetch the public converter repo as a zipball for the pinned ref,
+      # extract only the DDC_WINDOWS_Converters/DDC_CONVERTER_IFC subtree,
       # and drop it under resources/converters/ifc_windows/ (the layout the
       # backend resolver expects via OE_BUNDLED_CONVERTERS_DIR). Windows only,
       # because the bundled exe is win_amd64; the much larger RVT converter is
       # deliberately NOT bundled and stays on demand. The step retries on
       # transient network failures and never code-signs these binaries (they are
       # upstream artifacts shipped as resources, not our own executables).
+      #
+      # This comment said "~30 MB" for months. The step prints the real number
+      # and the v16.1.0 build printed 241.96 MB, so the installer carries a
+      # quarter of a gigabyte of converter. Read the step's own output before
+      # quoting a size here again.
+      #
+      # WE TAKE THE TERMINAL BUILD AND LEAVE THE GRAPHICAL ONE. The upstream
+      # folder holds both: IfcExporter.exe, which the backend runs as a
+      # subprocess with arguments, and DDC_Community_IFC_converter.exe, a
+      # window nothing in this codebase opens. The prune below drops the
+      # window and the Qt libraries that exist only for it. Qt6Core.dll stays
+      # because the command line exporter imports it directly and will not
+      # start without it. Anyone tempted to bundle "the whole folder, it is
+      # simpler" should read app/core/converter_source.py first: the list is
+      # measured from PE import tables, not guessed, and the test
+      # backend/tests/unit/test_converter_graphical_payload_is_not_shipped.py
+      # compares the names below against the ones the backend uses.
       - name: Bundle IFC converter (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -707,14 +724,48 @@ jobs:
           New-Item -ItemType Directory -Force -Path $destRoot | Out-Null
           Copy-Item -Path (Join-Path $srcDir '*') -Destination $destRoot -Recurse -Force
 
+          # Drop the graphical shell and the Qt libraries only it uses. Keep
+          # this list equal to GRAPHICAL_ONLY_LIBRARIES / GRAPHICAL_ONLY_DIRS
+          # and the DDC_Community_ prefix in backend/app/core/converter_source.py.
+          $graphicalOnly = @(
+            'DDC_Community_IFC_converter.exe',
+            'Qt6Gui.dll',
+            'Qt6Widgets.dll',
+            'platforms',
+            'styles'
+          )
+          $beforeMb = [math]::Round(((Get-ChildItem -Recurse -File $destRoot | Measure-Object -Property Length -Sum).Sum) / 1MB, 2)
+          foreach ($name in $graphicalOnly) {
+            $victim = Join-Path $destRoot $name
+            if (Test-Path $victim) {
+              Remove-Item -Recurse -Force $victim
+              Write-Host "Removed graphical-only payload: $name"
+            } else {
+              # Not fatal: upstream may rename or drop it. Say so, because a
+              # silent no-op here is how the payload comes back unnoticed.
+              Write-Host "::warning::Expected graphical-only payload $name was not in the converter folder."
+            }
+          }
+
           $exe = Join-Path $destRoot 'IfcExporter.exe'
           if (-not (Test-Path $exe)) {
             Get-ChildItem -Recurse $destRoot | Select-Object -First 50 FullName | Format-Table -AutoSize
             throw "IfcExporter.exe missing after extraction at $exe."
           }
+          # The exporter is a Qt program: without Qt6Core.dll beside it the
+          # installer would ship a converter that cannot start at all.
+          $qtCore = Join-Path $destRoot 'Qt6Core.dll'
+          if (-not (Test-Path $qtCore)) {
+            throw "Qt6Core.dll missing after the graphical-only prune. IfcExporter.exe imports it and will not run."
+          }
+          foreach ($name in @('Qt6Gui.dll', 'Qt6Widgets.dll', 'DDC_Community_IFC_converter.exe')) {
+            if (Test-Path (Join-Path $destRoot $name)) {
+              throw "$name is still in the bundle after the prune - the installer would ship the graphical build."
+            }
+          }
           $sizeMb = [math]::Round((Get-Item $exe).Length / 1MB, 2)
-          $totalMb = [math]::Round(((Get-ChildItem -Recurse $destRoot | Measure-Object -Property Length -Sum).Sum) / 1MB, 2)
-          Write-Host "Bundled IFC converter: IfcExporter.exe = $sizeMb MB, total resource = $totalMb MB"
+          $totalMb = [math]::Round(((Get-ChildItem -Recurse -File $destRoot | Measure-Object -Property Length -Sum).Sum) / 1MB, 2)
+          Write-Host "Bundled IFC converter: IfcExporter.exe = $sizeMb MB, total resource = $totalMb MB (was $beforeMb MB before the graphical-only prune)"
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0

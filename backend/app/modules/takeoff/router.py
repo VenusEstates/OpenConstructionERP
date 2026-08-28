@@ -55,6 +55,7 @@ from app.core.content_disposition import attachment_disposition
 from app.core.converter_source import (
     DEFAULT_CONVERTER_REF,
     WINDOWS_CONVERTER_DIRS,
+    is_graphical_only,
     resolve_converter_ref,
     resolve_converter_repo,
 )
@@ -1019,10 +1020,11 @@ def _github_list_directory(repo_path: str) -> list[dict[str, Any]]:
         if item_type == "file":
             files.append(item)
         elif item_type == "dir":
-            # Recurse into subdirectories. The Qt-based converters keep
-            # their plugins under platforms/ / styles/ / datadrivenlibs/
-            # so we MUST recurse - flat downloads would miss the DLLs
-            # the .exe needs at runtime.
+            # Recurse into subdirectories. The exporter loads most of what
+            # it needs from datadrivenlibs/, so a flat download would miss
+            # the DLLs the .exe needs at runtime. platforms/ and styles/ are
+            # listed by this walk too and then dropped by the caller, because
+            # they belong to the graphical converter we do not ship.
             files.extend(_github_list_directory(item["path"]))
     return files
 
@@ -1445,17 +1447,41 @@ def _download_converter_files_windows(converter_id: str, *, clean: bool = False)
     # BEFORE any network IO - we want to fail fast on a hostile
     # listing rather than partway through a 600 MB download.
     download_jobs: list[tuple[str, Path]] = []
+    skipped_graphical = 0
     for entry in files:
         download_url = entry.get("download_url")
         if not download_url:
             continue  # submodules / symlinks - skip
+        # THE DOWNLOAD IS THE TERMINAL BUILD ONLY. Upstream ships the
+        # command-line ``*Exporter.exe`` and a windowed
+        # ``DDC_Community_*_converter.exe`` in the same folder, and we drive
+        # only the first one - see ``is_graphical_only`` in
+        # app/core/converter_source.py for the file-by-file measurement of
+        # what that leaves out and why Qt6Core.dll is not in the list. Do not
+        # widen this back to "download everything the listing returns": that
+        # is how ~19 MB of Qt GUI libraries, under LGPL-3.0, ended up on
+        # every user's disk for a window nothing in this codebase opens.
+        # Skipped files are also absent from the prune set below, so a repair
+        # install clears them out of a folder that already has them.
+        repo_path = entry["path"]
+        rel_path = repo_path[len(src_prefix) :] if repo_path.startswith(src_prefix) else Path(repo_path).name
+        if is_graphical_only(rel_path):
+            skipped_graphical += 1
+            continue
         target = _resolve_target_path(
-            entry["path"],
+            repo_path,
             src_prefix,
             dest_root,
             install_dir_resolved,
         )
         download_jobs.append((download_url, target))
+
+    if skipped_graphical:
+        logger.info(
+            "Converter %s: skipping %d file(s) that only the graphical shell needs",
+            converter_id,
+            skipped_graphical,
+        )
 
     if not download_jobs:
         _clear_install_progress(converter_id)
@@ -1926,7 +1952,9 @@ async def _install_converter_impl(converter_id: str, force: bool, app: Any) -> d
                     smoke_message = (
                         f"Installed but the binary can't load - "
                         f"a required DLL is missing (Windows error 0x{rc & 0xFFFFFFFF:08x}). "
-                        f"This usually means the Qt6 plugins didn't download correctly. "
+                        f"Check that Qt6Core.dll landed next to the exe: it is the only Qt library "
+                        f"this converter needs, and the platforms/ and styles/ plugin folders are "
+                        f"not part of a healthy install any more. "
                         f"Try uninstalling and reinstalling, or install manually from "
                         f"https://github.com/{_DDC_REPO}/tree/{_DDC_REF}/"
                         f"{_WINDOWS_CONVERTER_DIRS[converter_id]}"

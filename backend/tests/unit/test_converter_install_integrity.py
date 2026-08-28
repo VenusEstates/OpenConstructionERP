@@ -30,6 +30,7 @@ from typing import Any
 
 import pytest
 
+from app.core.converter_source import is_graphical_only
 from app.modules.boq import cad_import
 from app.modules.takeoff import router
 
@@ -300,12 +301,21 @@ def test_a_file_that_disappeared_upstream_is_gone_after_an_install(
 
 
 def test_the_install_keeps_every_file_the_listing_carries(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """The other half. A prune that deleted the install would also pass above."""
+    """The other half. A prune that deleted the install would also pass above.
+
+    "Every file" now means every file we install. The listing still carries the
+    graphical shell and the Qt libraries only it uses, and the installer skips
+    them on purpose - see
+    tests/unit/test_converter_graphical_payload_is_not_shipped.py, which owns
+    that decision and asserts they are absent afterwards.
+    """
     exe = _run_install(monkeypatch, tmp_path, _PUBLISHED)
     dest = tmp_path / "dgn_windows"
 
     assert exe == dest / "DgnExporter.exe"
-    for rel, data in _PUBLISHED.items():
+    installed = {rel: data for rel, data in _PUBLISHED.items() if not is_graphical_only(rel)}
+    assert installed, "the fixture must still publish something we install"
+    for rel, data in installed.items():
         assert (dest / rel).read_bytes() == data
 
 
@@ -319,7 +329,11 @@ def test_a_directory_the_prune_empties_is_removed_too(monkeypatch: pytest.Monkey
     _run_install(monkeypatch, tmp_path, _PUBLISHED)
 
     assert not orphan.exists()
-    assert (dest / "platforms").is_dir(), "a folder the listing still carries stays"
+    # datadrivenlibs/ rather than platforms/: the listing carries both, but
+    # platforms/ holds Qt plugins that only the graphical shell loads and the
+    # installer no longer downloads it, so it would be missing here for a
+    # second reason and the assertion would stop meaning what it says.
+    assert (dest / "datadrivenlibs").is_dir(), "a folder the listing still carries stays"
 
 
 def test_a_forced_install_empties_the_folder_before_downloading(

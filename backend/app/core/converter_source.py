@@ -86,3 +86,70 @@ WINDOWS_CONVERTER_DIRS: dict[str, str] = {
     "dwg": "DDC_WINDOWS_Converters/DDC_CONVERTER_DWG",
     "dgn": "DDC_WINDOWS_Converters/DDC_CONVERTER_DGN",
 }
+
+
+# ── We take the terminal converter and leave the graphical one ───────────
+#
+# Every upstream converter folder holds two programs: the ``*Exporter.exe``
+# we drive from the command line, and a ``DDC_Community_*_converter.exe``
+# window that a person clicks. We only ever run the first one - every call
+# site goes through ``boq.cad_import.convert_cad_to_excel``, which is a
+# ``subprocess`` invocation with arguments and no window - so the second one
+# and the Qt libraries that exist solely for it have no reason to be in our
+# installer or on a user's disk.
+#
+# Which files those are was measured on the pinned tree, from the PE import
+# tables of all 140 executables and libraries in DDC_CONVERTER_IFC
+# (2026-08-28):
+#
+#   IfcExporter.exe                  imports Qt6Core.dll and nothing else Qt
+#   RvtExporter/DwgExporter/DgnExporter  same, Qt6Core.dll only
+#   DDC_Community_IFC_converter.exe  imports Qt6Core, Qt6Gui, Qt6Widgets
+#   Qt6Widgets.dll                   imports Qt6Core, Qt6Gui
+#   platforms/qwindows.dll           imports Qt6Core, Qt6Gui
+#   styles/qmodernwindowsstyle.dll   imports Qt6Core, Qt6Gui, Qt6Widgets
+#   none of the 133 files in datadrivenlibs/ import Qt at all
+#
+# So Qt6Core.dll stays: the terminal build is itself a Qt program and cannot
+# run without it. Qt6Gui.dll, Qt6Widgets.dll and the two plugin folders are
+# reachable only from the graphical shell. Converting a 4 MB IFC model with
+# those five entries removed produced a byte-identical XLSX (all 13 archive
+# members) and a byte-identical JSON, so nothing we ship depends on them.
+#
+# Do not "fix" a converter folder by adding them back. A missing Qt6Gui.dll
+# is not a broken install here, it is this decision.
+GRAPHICAL_ONLY_LIBRARIES: tuple[str, ...] = ("Qt6Gui.dll", "Qt6Widgets.dll")
+
+GRAPHICAL_ONLY_DIRS: tuple[str, ...] = ("platforms", "styles")
+
+# The graphical shell is named per format - DDC_Community_IFC_converter.exe,
+# DDC_Community_DWG_converter.exe, DDC_Community_Revit(2015-2026)_converter.exe
+# - so it is matched by prefix rather than listed. Only at the top level:
+# datadrivenlibs/ holds helper executables of its own and none of them is a
+# window.
+GRAPHICAL_SHELL_PREFIX = "DDC_Community_"
+
+
+def is_graphical_only(rel_path: str) -> bool:
+    """Is this converter file needed only by the graphical shell?
+
+    Args:
+        rel_path: Path relative to the converter folder, e.g. ``"Qt6Gui.dll"``
+            or ``"platforms/qwindows.dll"``. Both separators are accepted so
+            a caller can pass a POSIX repo path or a Windows on-disk one.
+
+    Returns:
+        True when the file can be left out of an install without changing
+        what a command-line conversion produces.
+    """
+    parts = [part for part in rel_path.replace("\\", "/").split("/") if part]
+    if not parts:
+        return False
+    if parts[0] in GRAPHICAL_ONLY_DIRS:
+        return True
+    if len(parts) > 1:
+        return False
+    name = parts[0]
+    if name in GRAPHICAL_ONLY_LIBRARIES:
+        return True
+    return name.startswith(GRAPHICAL_SHELL_PREFIX) and name.lower().endswith(".exe")

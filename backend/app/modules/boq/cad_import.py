@@ -203,11 +203,19 @@ if _ddc_bin:
     logger.info("DDC toolkit converters found at %s", _ddc_bin)
 
 
-# The libraries every Windows converter folder carries beside its exe.
-# All four formats ship the same three files - byte for byte the same
-# blobs - so their absence is not a per-format quirk of the layout, it is
-# a folder holding part of what we installed.
-_WINDOWS_COMPANION_FILES: tuple[str, ...] = ("Qt6Core.dll", "Qt6Gui.dll", "Qt6Widgets.dll")
+# The library every Windows converter folder carries beside its exe.
+# All four formats ship the same blob, so its absence is not a per-format
+# quirk of the layout, it is a folder holding part of what we installed.
+#
+# This used to name Qt6Gui.dll and Qt6Widgets.dll as well, and it stopped
+# because we stopped installing them: the PE import tables say the command
+# line ``*Exporter.exe`` binaries need Qt6Core.dll and nothing else from Qt,
+# while Gui and Widgets are reachable only from the graphical shell we never
+# launch. ``app.core.converter_source.is_graphical_only`` carries the
+# measurement. A folder without them is complete; keep this list in step
+# with what the installer actually writes, or every install reports itself
+# as partial.
+_WINDOWS_COMPANION_FILES: tuple[str, ...] = ("Qt6Core.dll",)
 
 
 def missing_companion_files(exe_path: Path) -> list[str]:
@@ -931,10 +939,17 @@ def smoke_test_converter(extension: str, force: bool = False) -> ConverterHealth
                     f"here and a listing of that folder with file sizes."
                 )
             else:
+                # Do not blame the Qt6 plugin folders here. ``platforms/`` and
+                # ``styles/`` belong to the graphical converter and are no longer
+                # installed at all (see ``app.core.converter_source.is_graphical_only``),
+                # so a user sent looking for them would be hunting files that are
+                # absent from every healthy install. Qt6Core.dll is the one Qt
+                # library the command line exporter loads, so name that instead.
                 diagnosis = (
                     f"{exe_path.name} exists on disk but cannot load - a required Qt6 / Visual C++ DLL is "
-                    f"missing or the wrong version (Windows error 0x{unsigned:08x}). The Qt6 plugins probably "
-                    f"did not download cleanly during install."
+                    f"missing or the wrong version (Windows error 0x{unsigned:08x}). Check that Qt6Core.dll "
+                    f"sits next to the exe in {exe_path.parent}: it is the only Qt library this converter "
+                    f"needs, and an interrupted install is the usual reason it is not there."
                 )
             result = {
                 "status": "failed",
