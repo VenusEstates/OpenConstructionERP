@@ -29,6 +29,7 @@ from app.core.pdf_fonts import (
     BOLD_FONT,
     pdf_table_available_width,
     pdf_table_column_widths,
+    pdf_table_legible_columns,
     pdf_table_paragraph_rows,
     register_pdf_fonts,
 )
@@ -86,6 +87,25 @@ _HEADER_ACRONYMS: frozenset[str] = frozenset(
 #: marker, not part of the reader's question.
 _BREAKDOWN_PREFIX = "breakdown__"
 
+#: The record a ``top_by`` KPI puts under each of its breakdown groups:
+#: the winning row's label and the value it won on. ``run_report``
+#: flattens a breakdown one level, so the group becomes the column and
+#: this record becomes the whole cell. Named here rather than imported
+#: from its producer (``kpi_spec._evaluate_top_by``) because that module
+#: reaches the database and this one deliberately does not.
+_LABEL_VALUE_RECORD: frozenset[str] = frozenset({"label", "value"})
+
+#: The breakdown key a grouped KPI uses for rows that had no value in the
+#: grouped column, and the text it is printed as. The key is reserved so
+#: that a consumer can tell an absent group from a real one - a word could
+#: not be told apart from a value like ``m3`` - and this module is the
+#: consumer that turns it back into something a reader parses. Spelled out
+#: rather than imported from ``kpi_spec.NULL_GROUP_KEY``, which declares
+#: it, for the same reason as :data:`_LABEL_VALUE_RECORD`: that module
+#: reaches the database and this one deliberately does not.
+_NULL_GROUP_KEY = "__null__"
+_NULL_GROUP_LABEL = "(not set)"
+
 
 def humanize_column(name: str) -> str:
     """Turn a row key into a column heading a person can read.
@@ -112,6 +132,10 @@ def humanize_column(name: str) -> str:
     if label.startswith(_BREAKDOWN_PREFIX):
         prefix = "Breakdown: "
         label = label[len(_BREAKDOWN_PREFIX) :]
+        if label == _NULL_GROUP_KEY:
+            # A reserved key, not a word. Left to the word-splitting below
+            # it reads "Null", which is the plumbing showing through again.
+            return prefix + _NULL_GROUP_LABEL
     label = label.lstrip("_")
     if not label:
         return name
@@ -125,6 +149,40 @@ def humanize_column(name: str) -> str:
         else:
             rendered.append(word)
     return prefix + " ".join(rendered)
+
+
+def _report_table(rows: list[dict[str, Any]]) -> list[list[str]]:
+    """Turn report rows into a heading row and formatted cells.
+
+    All three writers print the same report to a person, so all three ask
+    for the table here rather than each assembling its own. They used not
+    to, and the result was a fix that reached one format: the cell
+    formatter was shared and the heading logic was not, so a report whose
+    PDF read correctly still had ``breakdown__ac_by_currency`` across the
+    top of its spreadsheet, and the CSV of the same run stringified
+    through ``str`` and wrote ``{'EUR': Decimal('100000.00')}`` into a
+    cell. Which of the three a reader gets is a setting on the report
+    definition, so all three are documents and none of them is the
+    machine's copy - that is ``ReportRunResponse.rows``, which keeps the
+    row keys and the raw values exactly as they are.
+
+    Args:
+        rows: The report rows, keyed by the API's row keys.
+
+    Returns:
+        The heading row followed by one row of rendered cells per input
+        row. Empty when there are no rows.
+    """
+    if not rows:
+        return []
+    columns: list[str] = []
+    for row in rows:
+        for key in row:
+            if key not in columns:
+                columns.append(key)
+    table: list[list[str]] = [[humanize_column(column) for column in columns]]
+    table.extend([_format_cell(row.get(column)) for column in columns] for row in rows)
+    return table
 
 
 def _safe_filename(stem: str, ext: str) -> str:
@@ -165,20 +223,16 @@ def build_csv_report(
             fh.write("(no rows)\n")
         return path, os.path.getsize(path)
 
-    columns: list[str] = []
-    for row in rows:
-        for k in row:
-            if k not in columns:
-                columns.append(k)
     path = os.path.join(
         _reports_dir(),
         _safe_filename(report_name, "csv"),
     )
+    # ``csv.writer`` rather than ``DictWriter``: the rows are already
+    # rendered and positional, and a dict writer keyed by heading would
+    # silently drop a column whenever two row keys humanise to the same
+    # heading.
     with open(path, "w", encoding="utf-8", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=columns)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({k: row.get(k, "") for k in columns})
+        csv.writer(fh).writerows(_report_table(rows))
     return path, os.path.getsize(path)
 
 
@@ -247,21 +301,11 @@ def build_pdf_report(
         doc.build(story)
         return path, os.path.getsize(path)
 
-    # Build column list preserving insertion order across rows
-    columns: list[str] = []
-    for row in rows:
-        for k in row:
-            if k not in columns:
-                columns.append(k)
     # The heading is the reader's, the key stays the API's. Humanised before
     # the widths are computed, because the widths are computed from this
     # very table and a heading that wraps at word boundaries needs a
     # different amount of room than one that has to be chopped mid-word.
-    table_data: list[list[str]] = [[humanize_column(col) for col in columns]]
-    for row in rows:
-        table_data.append(
-            [_format_cell(row.get(col)) for col in columns],
-        )
+    table_data = _report_table(rows)
     # A dashboard export is whatever columns somebody selected, so its width is
     # not known when this code is written. Left to size itself the table grew
     # past the sheet and the right hand columns were drawn onto no paper at
@@ -293,9 +337,45 @@ def build_pdf_report(
         spaceBefore=0,
         spaceAfter=0,
     )
+    # Past a point there is no width left to divide and reportlab refuses
+    # the table outright, which reached the reader as a failed run and no
+    # document at all. A KPI grouped by a free-text field is capped at 200
+    # groups and ``run_report`` gives each its own column, so 204 columns
+    # is an ordinary report rather than a stress input. The columns that
+    # do not fit are dropped, and the note above the table says so - a
+    # short document that admits what it left out is the only honest thing
+    # to hand somebody here, and the CSV and XLSX of the same run still
+    # carry every column.
+    available = pdf_table_available_width(doc)
+    total_columns = len(table_data[0])
+    shown_columns = pdf_table_legible_columns(
+        table_data,
+        available,
+        cell_style,
+        header_style=header_style,
+        header_rows=1,
+    )
+    if shown_columns < total_columns:
+        logger.warning(
+            "%s: %d of %d columns are not printed - they cannot be drawn legibly on this sheet",
+            report_name,
+            total_columns - shown_columns,
+            total_columns,
+        )
+        table_data = [line[:shown_columns] for line in table_data]
+        story.append(
+            Paragraph(
+                f"Showing {shown_columns} of {total_columns} columns. The other "
+                f"{total_columns - shown_columns} are not printed here because they cannot be drawn "
+                "wide enough to read on this sheet. The CSV and XLSX exports of this report carry "
+                "every column.",
+                styles["BodyText"],
+            ),
+        )
+        story.append(Spacer(1, 0.3 * cm))
     col_widths = pdf_table_column_widths(
         table_data,
-        pdf_table_available_width(doc),
+        available,
         cell_style,
         header_style=header_style,
         header_rows=1,
@@ -346,14 +426,8 @@ def build_xlsx_report(
     ws = wb.active
     ws.title = report_name[:31]
     if rows:
-        columns: list[str] = []
-        for row in rows:
-            for k in row:
-                if k not in columns:
-                    columns.append(k)
-        ws.append(columns)
-        for row in rows:
-            ws.append([_format_cell(row.get(col)) for col in columns])
+        for line in _report_table(rows):
+            ws.append(line)
     else:
         ws.append(["(no rows)"])
     wb.save(path)
@@ -376,6 +450,11 @@ def _format_cell(v: Any, _depth: int = 0) -> str:
     falls back to ``str`` below it, because a cell that needs two levels of
     nesting is a table design problem rather than a formatting one.
 
+    One mapping is a record and not data: ``{"label": ..., "value": ...}``
+    is what a ``top_by`` KPI puts under each of its groups, and printing
+    its keys prints the query's own column names at the reader. It becomes
+    ``Precast beam: 12345.6789``.
+
     Args:
         v: The value to render.
         _depth: Internal recursion guard.
@@ -385,12 +464,27 @@ def _format_cell(v: Any, _depth: int = 0) -> str:
     """
     if v is None:
         return ""
+    if v == _NULL_GROUP_KEY:
+        # The same reserved key, reaching a cell rather than a heading: a
+        # grouped KPI puts it in the ``label`` of every record whose group
+        # had no value.
+        return _NULL_GROUP_LABEL
     if isinstance(v, bool):
         # Before the Decimal branch: bool is an int, and "1.0000" for True
         # would be worse than the word.
         return str(v)
     if isinstance(v, Decimal):
         return f"{v:,.4f}".rstrip("0").rstrip(".") or "0"
+    if isinstance(v, dict) and set(v) == _LABEL_VALUE_RECORD:
+        # A record, not a mapping of data. The generic branch below prints
+        # keys and values alike, which is right for ``{"EUR": 100000}``
+        # where the key is a currency and wrong here, where the keys are
+        # the names of the query's own columns: it put the words "label"
+        # and "value" in front of the reader, in the document this
+        # formatter exists to keep plumbing out of.
+        label = _format_cell(v["label"], _depth + 1)
+        value = _format_cell(v["value"], _depth + 1)
+        return f"{label}: {value}" if label and value else label or value
     if _depth < 1:
         if isinstance(v, dict):
             return "; ".join(f"{k}: {_format_cell(value, _depth + 1)}" for k, value in v.items())
@@ -422,7 +516,10 @@ def build_report(
         return build_xlsx_report(report_name=report_name, rows=rows)
     if fmt == "csv":
         return build_csv_report(report_name=report_name, rows=rows)
-    # Unknown - default to CSV (safe + machine-readable)
+    # Unknown - default to CSV, which is the format that survives being
+    # opened by anything. It is not the machine's copy of the run: that is
+    # ``ReportRunResponse.rows``, returned alongside this file with the row
+    # keys and the raw values untouched.
     return build_csv_report(report_name=report_name, rows=rows)
 
 

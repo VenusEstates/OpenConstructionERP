@@ -408,25 +408,32 @@ async def create_kpi(
 )
 async def delete_kpi(
     code: str,
+    user_id: CurrentUserId,
     session: SessionDep,
     service: BIDashboardsService = Depends(_service),
 ) -> None:
     """Delete a custom KPI definition.
 
-    Refused with 409 while any widget or alert rule still names the code.
-    Nothing in the schema stops the row from going - ``kpi_code`` is a
-    plain string, because a code may equally be served by a built-in
-    formula that has no row at all - so the referential answer is given
-    here, and it names the widgets and the alerts so the user can act on
-    them instead of hunting for what broke.
+    Refused with 409 while any widget, alert rule or report definition
+    still names the code. Nothing in the schema stops the row from going -
+    the code is held as data, because it may equally be served by a
+    built-in formula that has no row at all - so the referential answer is
+    given here, and it names every referrer so the user can act on them
+    instead of hunting for what broke.
+
+    A definition pinned to a project is access-checked against that
+    project the same way :func:`create_kpi` checks the one it pins to.
+    Codes are globally unique, so leaving that out let any holder of
+    ``bi.kpi.write`` delete another project's KPI.
 
     Args:
         code: The KPI code to delete.
-        session: Database session.
+        user_id: The authenticated caller.
+        session: Database session, used for the project access check.
         service: Module service.
     """
     try:
-        await service.delete_custom_kpi(code)
+        await service.delete_custom_kpi(code, user_id=user_id)
     except CustomKPINotFound as exc:
         raise _not_found("KPI definition not found") from exc
     except CustomKPIIsSystem as exc:
@@ -443,6 +450,7 @@ async def delete_kpi(
                 "message": str(exc),
                 "widget_ids": [str(w) for w in exc.referrers.get("widgets", [])],
                 "alert_rule_ids": [str(a) for a in exc.referrers.get("alerts", [])],
+                "report_definition_ids": [str(r) for r in exc.referrers.get("reports", [])],
             },
         ) from exc
 

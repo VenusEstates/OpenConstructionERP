@@ -107,6 +107,24 @@ MAX_BREAKDOWN_GROUPS = 200
 #: Longest ``in`` list a filter may carry.
 MAX_IN_VALUES = 100
 
+#: The breakdown key standing for "this group had no value".
+#:
+#: Every other key in a breakdown is a data value, so the absent one needs
+#: a key a consumer can recognise rather than a word it has to guess at.
+#: This used to be the text ``(unset)``, which is a value a column can
+#: hold: rows with no value and rows spelling "(unset)" keyed the same,
+#: and since both grouped paths assign into ``breakdown[key]``, the later
+#: write overwrote the earlier and a group disappeared from the KPI.
+#:
+#: Reserved rather than impossible - a row whose group value is literally
+#: this string collides the same way - and that is the trade taken
+#: knowingly. An empty string collides with a genuine empty-string group,
+#: which SQL keeps apart from NULL; a word collides with prose somebody
+#: typed, and cannot be localised once it is a dict key, by which point it
+#: is indistinguishable from a real value like ``m3``. A name a consumer
+#: can test for is mapped to whatever label that consumer speaks.
+NULL_GROUP_KEY = "__null__"
+
 
 class KPISpecError(ValueError):
     """A spec was rejected, and the exception says exactly where.
@@ -420,18 +438,85 @@ def _validate_filter(entry: CatalogEntity, raw: Any, path: str) -> dict[str, Any
             )
         if any(isinstance(v, (dict, list)) for v in value):
             raise KPISpecError(f"{path}.value", "operator 'in' accepts scalars only.", value=value)
-        return {"field": name, "op": op, "value": list(value)}
+        # Every member has to be a value the column could hold - a list is
+        # not a way in past the type check its scalar sibling gets.
+        return {
+            "field": name,
+            "op": op,
+            "value": [_check_value_kind(kind, name, v, f"{path}.value[{i}]") for i, v in enumerate(value)],
+        }
     if value is None:
         raise KPISpecError(f"{path}.value", f"operator '{op}' needs a value.", value=None)
     if isinstance(value, (dict, list)):
         raise KPISpecError(f"{path}.value", "expected a scalar value.", value=value)
-    if kind == KIND_NUMERIC and not isinstance(value, (int, float, Decimal)) and not _looks_numeric(value):
+    return {"field": name, "op": op, "value": _check_value_kind(kind, name, value, f"{path}.value")}
+
+
+def _check_value_kind(kind: str, name: str, value: Any, path: str) -> Any:
+    """Refuse a filter value the field's column could never answer to.
+
+    The kind decided which operators the field accepts; it has to decide
+    the value's shape too, and for the same reason. What the compute path
+    does with the value is dialect-level and unforgiving: a bool where a
+    number belongs becomes ``Decimal("True")``, a string where a boolean
+    belongs is something the driver refuses to encode, and either failure
+    is caught upstream and returned as an empty computation. The tile then
+    reads zero forever and looks exactly like a measurement, which is the
+    outcome checking at creation time exists to prevent.
+
+    Args:
+        kind: The field's kind from the catalog.
+        name: The field name, for the message.
+        value: The submitted value.
+        path: Dotted path into the spec, for the error.
+
+    Returns:
+        The value in its stored form - identical except for a UUID, which
+        is normalised to its canonical spelling.
+
+    Raises:
+        KPISpecError: The value does not fit the field's kind.
+    """
+    if kind == KIND_NUMERIC:
+        # ``isinstance(True, int)`` is True, so the bool test has to come
+        # first: left to the numeric acceptance below, a flag would be
+        # taken for a quantity and only fail at compute time.
+        if isinstance(value, bool) or (not isinstance(value, (int, float, Decimal)) and not _looks_numeric(value)):
+            raise KPISpecError(
+                path,
+                f"field '{name}' is numeric, so its filter value must be a number.",
+                value=value,
+            )
+        return value
+    if kind == KIND_BOOL:
+        if not isinstance(value, bool):
+            raise KPISpecError(
+                path,
+                f"field '{name}' is boolean, so its filter value must be true or false.",
+                value=value,
+            )
+        return value
+    if kind == KIND_UUID:
+        try:
+            canonical = str(uuid.UUID(str(value)))
+        except (AttributeError, TypeError, ValueError):
+            raise KPISpecError(
+                path,
+                f"field '{name}' holds a UUID, so its filter value must be one.",
+                value=value,
+            ) from None
+        # Ids are stored in their canonical lower-case spelling, so an
+        # equally valid uppercase or braced form would match no row at
+        # all. Normalising here is the difference between a filter that
+        # works and one that reads zero without saying why.
+        return canonical
+    if kind == KIND_TEXT and not isinstance(value, str):
         raise KPISpecError(
-            f"{path}.value",
-            f"field '{name}' is numeric, so its filter value must be a number.",
+            path,
+            f"field '{name}' is text, so its filter value must be a string.",
             value=value,
         )
-    return {"field": name, "op": op, "value": value}
+    return value
 
 
 def _looks_numeric(value: Any) -> bool:
@@ -689,8 +774,16 @@ def _fold(aggregation: str, values: list[Any]) -> Decimal:
 
 
 def _group_key(value: Any) -> str:
+    """The breakdown key for one group's value.
+
+    Args:
+        value: The grouped column's value, ``None`` when the row had none.
+
+    Returns:
+        ``str(value)``, or :data:`NULL_GROUP_KEY` when there was none.
+    """
     if value is None:
-        return "(unset)"
+        return NULL_GROUP_KEY
     return str(value)
 
 
@@ -866,6 +959,7 @@ __all__ = [
     "FILTER_OPERATORS",
     "MAX_BREAKDOWN_GROUPS",
     "MAX_IN_VALUES",
+    "NULL_GROUP_KEY",
     "BoundEntity",
     "BoundField",
     "CatalogEntity",

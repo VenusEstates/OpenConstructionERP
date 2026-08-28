@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -152,13 +153,18 @@ async def _seed_two_bids(session: AsyncSession) -> tuple[uuid.UUID, uuid.UUID, u
     return project_id, bid_a.id, bid_b.id
 
 
-def _weighted_confidence_payload(code: str = "bid_confidence") -> KPIDefinitionCreate:
+def _weighted_confidence_payload(
+    code: str = "bid_confidence",
+    *,
+    project_id: uuid.UUID | None = None,
+) -> KPIDefinitionCreate:
     return KPIDefinitionCreate(
         code=code,
         name="Amount-weighted bid confidence",
         description="Confidence of the estimate, weighted by what each line is worth.",
         unit="ratio",
         category="quality",
+        project_id=project_id,
         spec={
             "entity": "boq_position",
             "aggregation": "weighted_avg",
@@ -563,7 +569,7 @@ async def test_delete_is_refused_while_a_widget_points_at_the_kpi(
     await session.flush()
 
     with pytest.raises(CustomKPIInUse) as exc_info:
-        await service.delete_custom_kpi("bid_confidence")
+        await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
     assert exc_info.value.referrers["widgets"] == [widget.id]
     assert exc_info.value.referrers["alerts"] == []
     assert str(widget.id) not in str(exc_info.value)  # the message counts, the payload names
@@ -575,7 +581,7 @@ async def test_delete_is_refused_while_a_widget_points_at_the_kpi(
     # Repointing the widget releases the KPI.
     widget.kpi_code = "cpi"
     await session.flush()
-    await service.delete_custom_kpi("bid_confidence")
+    await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
     assert await service.repo.get_kpi_definition_by_code("bid_confidence") is None
 
 
@@ -597,7 +603,7 @@ async def test_delete_is_refused_while_an_alert_rule_points_at_the_kpi(
     await session.flush()
 
     with pytest.raises(CustomKPIInUse) as exc_info:
-        await service.delete_custom_kpi("bid_confidence")
+        await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
     assert exc_info.value.referrers["alerts"] == [alert.id]
 
 
@@ -606,7 +612,7 @@ async def test_delete_refuses_a_builtin_definition(session: AsyncSession) -> Non
     service = BIDashboardsService(session)
     await service.bootstrap_system_kpis()
     with pytest.raises(CustomKPIIsSystem):
-        await service.delete_custom_kpi("cpi")
+        await service.delete_custom_kpi("cpi", user_id=str(OWNER_ID))
     assert await service.repo.get_kpi_definition_by_code("cpi") is not None
 
 
@@ -617,7 +623,7 @@ async def test_deleted_custom_kpi_stops_computing(session: AsyncSession) -> None
     await service.create_custom_kpi(_weighted_confidence_payload())
     assert (await kpis.compute("bid_confidence", session, project_id=project_id)).source_record_count == 3
 
-    await service.delete_custom_kpi("bid_confidence")
+    await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
     after = await kpis.compute("bid_confidence", session, project_id=project_id)
     assert after.value == Decimal("0")
     assert after.source_record_count == 0
@@ -760,3 +766,451 @@ async def test_custom_kpi_reaches_a_report_run(session: AsyncSession) -> None:
     assert run is not None
     row = next(r for r in run.rows if r["kpi_code"] == "bid_confidence")
     assert Decimal(row["value"]) == pytest.approx(Decimal("0.45"), abs=Decimal("0.0001"))
+
+
+# ── Deletion: the referrers a scalar column cannot see ─────────────────
+
+
+async def _report_naming_kpis(
+    session: AsyncSession,
+    service: BIDashboardsService,
+    codes: list[str],
+    **extra_spec: Any,
+) -> Any:
+    """A report definition whose query spec runs the given KPI codes."""
+    from app.modules.bi_dashboards.schemas import ReportDefinitionCreate
+
+    return await service.create_report(
+        ReportDefinitionCreate(
+            code=f"rep_{uuid.uuid4().hex[:8]}",
+            name="Monthly client pack",
+            query_spec_json={"kpis": codes, **extra_spec},
+            output_format="pdf",
+        ),
+        owner_user_id=OWNER_ID,
+    )
+
+
+@pytest.mark.asyncio
+async def test_delete_is_refused_while_a_report_definition_runs_the_kpi(
+    session: AsyncSession,
+) -> None:
+    """The report is the referrer whose failure reaches a client.
+
+    ``run_report`` reads ``query_spec_json["kpis"]`` and hands every code
+    to ``kpis.compute``, so a definition deleted out from under it does
+    not break the run - it prints 0.0000 into a client-facing PDF, which
+    is worse. The delete has to see the report, and the refusal has to
+    name it: a message that counts widgets and alerts only would report
+    "0 widget(s) and 0 alert rule(s)" while refusing.
+    """
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload())
+    report = await _report_naming_kpis(session, service, ["cpi", "bid_confidence"])
+
+    with pytest.raises(CustomKPIInUse) as exc_info:
+        await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
+
+    assert exc_info.value.referrers["reports"] == [report.id]
+    assert exc_info.value.referrers["widgets"] == []
+    assert exc_info.value.referrers["alerts"] == []
+    # The refusal has to say what is holding the KPI, and must not claim
+    # the two kinds that are not.
+    assert "1 report definition(s)" in str(exc_info.value)
+    assert "widget(s)" not in str(exc_info.value)
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is not None
+
+    # Dropping the code from the report releases the KPI.
+    report.query_spec_json = {"kpis": ["cpi"]}
+    await session.flush()
+    await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is None
+
+
+@pytest.mark.asyncio
+async def test_delete_is_refused_while_a_composite_alert_expression_reads_the_kpi(
+    session: AsyncSession,
+) -> None:
+    """A composite rule reads its KPI from the tree, not from the column.
+
+    ``expression_json`` takes precedence over ``condition`` /
+    ``threshold_value`` when it is non-empty, and its ``kpi`` leaf may sit
+    at any depth. This rule's ``kpi_code`` column names a built-in, so
+    nothing but the tree walk can find it - and the leaf is two levels
+    down, so a check that only looked at the root would miss it too.
+    """
+    from app.modules.bi_dashboards.models import AlertRule
+
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload())
+    rule = AlertRule(
+        name="Weak bid in an executing project",
+        kpi_code="cpi",
+        condition="below",
+        threshold_value=Decimal("0.95"),
+        expression_json={
+            "op": "and",
+            "operands": [
+                {"op": "field", "source": "project", "path": "phase", "compare": "eq", "value": "execution"},
+                {
+                    "op": "or",
+                    "operands": [
+                        {"op": "kpi", "code": "cpi", "compare": "lt", "value": "0.95"},
+                        {"op": "kpi", "code": "bid_confidence", "compare": "lt", "value": "0.5"},
+                    ],
+                },
+            ],
+        },
+    )
+    session.add(rule)
+    await session.flush()
+
+    with pytest.raises(CustomKPIInUse) as exc_info:
+        await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
+
+    assert exc_info.value.referrers["alerts"] == [rule.id]
+    assert "1 alert rule(s)" in str(exc_info.value)
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is not None
+
+
+@pytest.mark.asyncio
+async def test_an_alert_naming_the_kpi_twice_is_counted_once(
+    session: AsyncSession,
+) -> None:
+    """The column and the tree can name the same code; the rule is one rule."""
+    from app.modules.bi_dashboards.models import AlertRule
+
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload())
+    rule = AlertRule(
+        name="Bid confidence, both ways",
+        kpi_code="bid_confidence",
+        condition="below",
+        threshold_value=Decimal("0.5"),
+        expression_json={
+            "op": "not",
+            "operands": [{"op": "kpi", "code": "bid_confidence", "compare": "gte", "value": "0.5"}],
+        },
+    )
+    session.add(rule)
+    await session.flush()
+
+    referrers = await service.repo.list_kpi_code_referrers("bid_confidence")
+    assert referrers["alerts"] == [rule.id]
+    assert "1 alert rule(s)" in str(CustomKPIInUse("bid_confidence", referrers))
+
+
+@pytest.mark.asyncio
+async def test_a_code_that_is_only_mentioned_does_not_block_the_delete(
+    session: AsyncSession,
+) -> None:
+    """The scan is structural, so a textual mention is not a reference.
+
+    Both JSON columns are narrowed by a LIKE over their text, which is a
+    prefilter and nothing more. If the confirmation step were dropped -
+    or written as a substring test - every one of these rows would count
+    as a referrer and the KPI would become undeletable for reasons its
+    owner could never act on. Each row here contains the exact string
+    ``"bid_confidence"`` inside its JSON and none of them reads the KPI.
+    """
+    from app.modules.bi_dashboards.models import AlertRule
+
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload())
+
+    # A report that names the code somewhere other than its kpis list.
+    await _report_naming_kpis(session, service, ["cpi"], title="bid_confidence over time")
+    # An alert comparing a project field against the code as a string.
+    session.add(
+        AlertRule(
+            name="Not a KPI reference",
+            kpi_code="cpi",
+            condition="below",
+            threshold_value=Decimal("1"),
+            expression_json={
+                "op": "field",
+                "source": "project",
+                "path": "phase",
+                "compare": "eq",
+                "value": "bid_confidence",
+            },
+        ),
+    )
+    # A code the prefilter must not confuse with ours in either direction.
+    await service.create_custom_kpi(_weighted_confidence_payload("bid_confidence_v2"))
+    await _report_naming_kpis(session, service, ["bid_confidence_v2"])
+    await session.flush()
+
+    referrers = await service.repo.list_kpi_code_referrers("bid_confidence")
+    assert referrers == {"widgets": [], "alerts": [], "reports": []}
+    await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is None
+    # The neighbour is untouched and still guarded by its own report.
+    with pytest.raises(CustomKPIInUse):
+        await service.delete_custom_kpi("bid_confidence_v2", user_id=str(OWNER_ID))
+
+
+# ── Filter values: the kinds that are not numeric ──────────────────────
+
+
+def _count_payload(code: str, entity: str, filters: list[dict[str, Any]]) -> KPIDefinitionCreate:
+    return KPIDefinitionCreate(
+        code=code,
+        name="Counted with a filter",
+        unit="count",
+        category="operational",
+        spec={"entity": entity, "aggregation": "count", "filters": filters},
+    )
+
+
+@pytest.mark.parametrize(
+    ("entity", "filter_item", "expected_path"),
+    [
+        # ``isinstance(True, int)`` is True, so a flag walked straight
+        # through the numeric check and became ``Decimal("True")``.
+        ("boq_position", {"field": "quantity", "op": "gt", "value": True}, "spec.filters[0].value"),
+        # A boolean field had no value check at all; the driver refuses
+        # to encode 'yes' for a boolean parameter.
+        ("boq", {"field": "is_locked", "op": "eq", "value": "yes"}, "spec.filters[0].value"),
+        ("boq", {"field": "is_locked", "op": "eq", "value": 1}, "spec.filters[0].value"),
+        # A text column compared against a number.
+        ("boq_position", {"field": "unit", "op": "eq", "value": 3}, "spec.filters[0].value"),
+        # An id that is not one matches no row, so the KPI reads zero.
+        ("boq_position", {"field": "boq_id", "op": "eq", "value": "not-a-uuid"}, "spec.filters[0].value"),
+    ],
+)
+def test_a_filter_value_outside_its_field_kind_is_refused(
+    entity: str,
+    filter_item: dict[str, Any],
+    expected_path: str,
+) -> None:
+    """Every kind gets a value check, not just the numeric one.
+
+    Each of these was accepted at creation and died at compute time, and
+    the compute path catches everything and returns an empty computation.
+    So the definition stayed in the table and the tile read zero forever -
+    indistinguishable from a real measurement of nothing.
+    """
+    with pytest.raises(kpi_spec.KPISpecError) as exc_info:
+        kpi_spec.validate_spec(
+            {"entity": entity, "aggregation": "count", "filters": [filter_item]},
+        )
+    assert exc_info.value.path == expected_path
+    assert exc_info.value.value == filter_item["value"]
+
+
+def test_an_in_list_is_type_checked_member_by_member() -> None:
+    """A list is not a way past the check its scalar sibling gets."""
+    with pytest.raises(kpi_spec.KPISpecError) as exc_info:
+        kpi_spec.validate_spec(
+            {
+                "entity": "boq_position",
+                "aggregation": "count",
+                "filters": [{"field": "boq_id", "op": "in", "value": [str(uuid.uuid4()), "not-a-uuid"]}],
+            },
+        )
+    assert exc_info.value.path == "spec.filters[0].value[1]"
+
+
+def test_the_values_each_kind_does_accept_survive_validation() -> None:
+    """The counterweight: a check that refused everything would be worse.
+
+    A numeric field keeps taking a numeric string, because
+    ``_apply_filters`` coerces one and that path works. A UUID comes back
+    in its canonical spelling: an uppercase id is equally valid input and
+    would have matched no row at all, which is the same silent zero by a
+    different route.
+    """
+    ident = uuid.uuid4()
+    spec = kpi_spec.validate_spec(
+        {
+            "entity": "boq_position",
+            "aggregation": "count",
+            "filters": [
+                {"field": "confidence", "op": "lt", "value": "0.5"},
+                {"field": "quantity", "op": "gte", "value": 3},
+                {"field": "unit", "op": "in", "value": ["m3", "m2"]},
+                {"field": "boq_id", "op": "eq", "value": str(ident).upper()},
+                {"field": "parent_id", "op": "is_null"},
+            ],
+        },
+    )
+    assert [f["value"] for f in spec["filters"]] == ["0.5", 3, ["m3", "m2"], str(ident), None]
+
+    bool_spec = kpi_spec.validate_spec(
+        {
+            "entity": "boq",
+            "aggregation": "count",
+            "filters": [{"field": "is_locked", "op": "eq", "value": False}],
+        },
+    )
+    assert bool_spec["filters"][0]["value"] is False
+
+
+@pytest.mark.asyncio
+async def test_an_accepted_filter_value_actually_computes(session: AsyncSession) -> None:
+    """The check is only right if what survives it reaches a real number.
+
+    Validation is a claim about the database, so it is worth one round
+    trip: these are the two kinds that had no check, run against the real
+    driver on the real column types. A bool bound to a boolean column and
+    an id bound to an id column both have to come back with a count.
+    """
+    project_id, bid_a, _b = await _seed_two_bids(session)
+    service = BIDashboardsService(session)
+
+    await service.create_custom_kpi(
+        _count_payload("open_bids", "boq", [{"field": "is_locked", "op": "eq", "value": False}])
+    )
+    await service.create_custom_kpi(
+        _count_payload(
+            "lines_of_bid_a", "boq_position", [{"field": "boq_id", "op": "eq", "value": str(bid_a).upper()}]
+        ),
+    )
+
+    open_bids = await kpis.compute("open_bids", session, project_id=project_id)
+    assert open_bids.value == Decimal("2")
+
+    lines = await kpis.compute("lines_of_bid_a", session, project_id=project_id)
+    assert lines.value == Decimal("2")
+
+
+# ── Deletion: the project the KPI belongs to ───────────────────────────
+
+
+async def _stranger_project(session: AsyncSession) -> tuple[uuid.UUID, uuid.UUID]:
+    """A project owned by somebody who is not ``OWNER_ID``.
+
+    Returns ``(project_id, stranger_user_id)``. The owner is a real user
+    row with the default ``editor`` role - ``verify_project_access`` lets
+    an admin through unconditionally, so an admin on either side of this
+    would make the test pass for a reason that is not the fix.
+    """
+    from app.modules.projects.models import Project
+    from app.modules.users.models import User
+
+    stranger_id = uuid.uuid4()
+    session.add(
+        User(
+            id=stranger_id,
+            email=f"stranger-{uuid.uuid4().hex[:6]}@test.io",
+            hashed_password="x",
+            full_name="S",
+        ),
+    )
+    await session.flush()
+    project_id = uuid.uuid4()
+    session.add(
+        Project(id=project_id, name="Somebody else's job", owner_id=stranger_id, currency="EUR"),
+    )
+    await session.flush()
+    return project_id, stranger_id
+
+
+@pytest.mark.asyncio
+async def test_delete_refuses_a_caller_who_cannot_reach_the_project(
+    session: AsyncSession,
+) -> None:
+    """Create checks the project it pins to; delete has to check it too.
+
+    KPI codes are globally unique, so a definition pinned to a project is
+    reachable by code alone from anywhere. Without this check any holder
+    of ``bi.kpi.write`` could delete another project's KPI - the write
+    permission was doing the work of a tenancy boundary.
+    """
+    from fastapi import HTTPException
+
+    project_id, _stranger = await _stranger_project(session)
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload(project_id=project_id))
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
+    assert exc_info.value.status_code == 404
+    # The project is what was refused, not the KPI - a 404 raised for the
+    # other reason would pass a bare status-code assertion.
+    assert exc_info.value.detail == "Project not found"
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is not None
+
+
+@pytest.mark.asyncio
+async def test_the_projects_own_people_can_still_delete_its_kpi(
+    session: AsyncSession,
+) -> None:
+    """The counterweight - a check that refused everyone would be worse."""
+    project_id, stranger_id = await _stranger_project(session)
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload(project_id=project_id))
+
+    await service.delete_custom_kpi("bid_confidence", user_id=str(stranger_id))
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is None
+
+
+@pytest.mark.asyncio
+async def test_a_company_wide_kpi_needs_no_project_to_be_deleted(
+    session: AsyncSession,
+) -> None:
+    """A definition pinned to nothing is nobody's project to check."""
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload())
+    await service.delete_custom_kpi("bid_confidence", user_id=str(uuid.uuid4()))
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is None
+
+
+@pytest.mark.asyncio
+async def test_an_unreachable_project_hides_whether_the_kpi_is_in_use(
+    session: AsyncSession,
+) -> None:
+    """Order matters: the access answer comes before the referrer answer.
+
+    Run the other way round, a caller outside the project would get a 409
+    naming the widgets and alert rules that hold the KPI - ids from a
+    project they were just told they cannot see.
+    """
+    from fastapi import HTTPException
+
+    from app.modules.bi_dashboards.schemas import DashboardCreate
+
+    project_id, _stranger = await _stranger_project(session)
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload(project_id=project_id))
+    dashboard = await service.create_dashboard(
+        DashboardCreate(name="Theirs", scope="personal"),
+        owner_user_id=OWNER_ID,
+    )
+    session.add(DashboardWidget(dashboard_id=dashboard.id, widget_type="kpi_card", kpi_code="bid_confidence"))
+    await session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.delete_custom_kpi("bid_confidence", user_id=str(OWNER_ID))
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Project not found"
+
+
+@pytest.mark.asyncio
+async def test_the_delete_route_hands_the_caller_to_the_service(
+    session: AsyncSession,
+) -> None:
+    """The check lives in the service, so the route has to supply the caller.
+
+    ``user_id`` is a required keyword argument there, which turns a route
+    that forgets it into a loud TypeError rather than a silent bypass -
+    but only if something actually calls the route. Nothing else in this
+    module's tests does, so the wiring is exercised here, in both
+    directions: refused for an outsider, and through for the owner.
+    """
+    from fastapi import HTTPException
+
+    from app.modules.bi_dashboards.router import delete_kpi
+
+    project_id, stranger_id = await _stranger_project(session)
+    service = BIDashboardsService(session)
+    await service.create_custom_kpi(_weighted_confidence_payload(project_id=project_id))
+
+    with pytest.raises(HTTPException) as exc_info:
+        await delete_kpi("bid_confidence", str(OWNER_ID), session, service)
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Project not found"
+
+    await delete_kpi("bid_confidence", str(stranger_id), session, service)
+    assert await service.repo.get_kpi_definition_by_code("bid_confidence") is None

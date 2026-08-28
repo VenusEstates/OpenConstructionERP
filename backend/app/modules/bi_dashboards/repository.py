@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, false, or_, select
+from sqlalchemy import Text, cast, delete, false, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -43,6 +44,57 @@ def project_scope_clause(column: Any, project_id: uuid.UUID) -> ColumnElement[bo
         keeps the unfiltered, portfolio-wide result set.
     """
     return or_(column == project_id, column.is_(None))
+
+
+#: Escape character for the ``LIKE`` prefilters below. A KPI code is
+#: ``^[a-z][a-z0-9_]*$``, so it routinely contains ``_`` - which is a
+#: single-character wildcard in ``LIKE`` and would widen the prefilter to
+#: every code of the same length. Escaped, the prefilter stays selective.
+_LIKE_ESCAPE = "/"
+
+
+def _like_contains(needle: str) -> str:
+    """Build a ``%needle%`` pattern with the LIKE metacharacters escaped."""
+    for ch in (_LIKE_ESCAPE, "%", "_"):
+        needle = needle.replace(ch, f"{_LIKE_ESCAPE}{ch}")
+    return f"%{needle}%"
+
+
+def _expression_names_kpi(node: Any, code: str) -> bool:
+    """Whether a composite alert-rule tree reads the given KPI code.
+
+    The alert DSL's ``{"op": "kpi", "code": ...}`` leaf may sit at any
+    depth under ``and`` / ``or`` / ``not`` operands, so the whole tree is
+    walked. The match is structural rather than textual on purpose: a
+    ``field`` leaf that happens to *compare against* the string is not a
+    reference to the KPI and must not block its deletion.
+
+    Args:
+        node: The parsed ``expression_json`` value.
+        code: The KPI code being looked for.
+
+    Returns:
+        ``True`` when some node is a ``kpi`` leaf naming ``code``.
+    """
+    # Iterative rather than recursive: the column is user-supplied JSON and
+    # the grammar puts no bound on nesting depth.
+    stack: list[Any] = [node]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            if current.get("op") == "kpi" and current.get("code") == code:
+                return True
+            stack.extend(current.values())
+        elif isinstance(current, list):
+            stack.extend(current)
+    return False
+
+
+def _report_spec_names_kpi(spec: Any, code: str) -> bool:
+    """Whether a report definition's query spec runs the given KPI code."""
+    if not isinstance(spec, dict):
+        return False
+    return any(entry == code for entry in (spec.get("kpis") or []))
 
 
 class BIDashboardsRepository:
@@ -157,14 +209,75 @@ class BIDashboardsRepository:
         code may equally be served by a Python formula that has no row.
         So the referential answer has to be assembled here rather than
         delegated to the database.
+
+        The population is every place a code reaches ``kpis.compute``
+        having come out of a table, and there are four of them:
+
+        * ``DashboardWidget.kpi_code`` and ``AlertRule.kpi_code``, plain
+          columns answered by an equality predicate;
+        * ``AlertRule.expression_json``, where the composite-rule grammar
+          puts a ``{"op": "kpi", "code": ...}`` leaf at any depth;
+        * ``ReportDefinition.query_spec_json["kpis"]``, the list of codes
+          a report run computes into its output file.
+
+        The last two are the ones a scalar predicate cannot see, and they
+        are the expensive half of the honest answer: a report that keeps
+        printing 0.0000 into a client-facing PDF is exactly the silent
+        zero this guard exists to prevent.
+
+        ``KPIValue.kpi_code`` is deliberately **not** a referrer. Those
+        rows record what the KPI measured while it existed; they stay
+        truthful after the definition goes, and counting them would make
+        every KPI ever computed with ``persist=True`` undeletable.
+
+        Both JSON columns are the generic ``JSON`` type - JSONB on
+        PostgreSQL, TEXT on SQLite - so neither dialect's containment
+        operator is portable here. They are narrowed in SQL by a ``LIKE``
+        over the column cast to text, which both dialects do understand,
+        and each hit is then confirmed in Python against the parsed
+        structure. The prefilter may over-select (the quoted code can
+        appear somewhere that is not a reference); it cannot under-select,
+        because a referring row always contains the code verbatim. That
+        keeps the guard a narrowed scan rather than a full table read.
+
+        Args:
+            code: The KPI code about to be deleted.
+
+        Returns:
+            Referrer ids by kind: ``widgets``, ``alerts``, ``reports``.
         """
         widgets = (
             (await self.session.execute(select(DashboardWidget.id).where(DashboardWidget.kpi_code == code)))
             .scalars()
             .all()
         )
-        alerts = (await self.session.execute(select(AlertRule.id).where(AlertRule.kpi_code == code))).scalars().all()
-        return {"widgets": list(widgets), "alerts": list(alerts)}
+        alerts = list(
+            (await self.session.execute(select(AlertRule.id).where(AlertRule.kpi_code == code))).scalars().all(),
+        )
+
+        # The code as it is written inside the stored JSON, quotes included,
+        # so ``bid_confidence`` cannot prefilter-match ``bid_confidence_v2``.
+        pattern = _like_contains(json.dumps(code))
+
+        seen = set(alerts)
+        expression_rows = await self.session.execute(
+            select(AlertRule.id, AlertRule.expression_json).where(
+                cast(AlertRule.expression_json, Text).like(pattern, escape=_LIKE_ESCAPE),
+            ),
+        )
+        for rule_id, expression in expression_rows:
+            if rule_id not in seen and _expression_names_kpi(expression, code):
+                alerts.append(rule_id)
+                seen.add(rule_id)
+
+        report_rows = await self.session.execute(
+            select(ReportDefinition.id, ReportDefinition.query_spec_json).where(
+                cast(ReportDefinition.query_spec_json, Text).like(pattern, escape=_LIKE_ESCAPE),
+            ),
+        )
+        reports = [report_id for report_id, spec in report_rows if _report_spec_names_kpi(spec, code)]
+
+        return {"widgets": list(widgets), "alerts": alerts, "reports": reports}
 
     # ── Dashboard ──────────────────────────────────────────────────
 

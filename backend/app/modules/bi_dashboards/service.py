@@ -93,17 +93,31 @@ class CustomKPIIsSystem(Exception):
         super().__init__(f"KPI '{code}' is a built-in definition and cannot be deleted.")
 
 
+#: How each referrer kind is named in a refusal, in the order they are
+#: listed. Adding a kind to
+#: :meth:`~app.modules.bi_dashboards.repository.BIDashboardsRepository.list_kpi_code_referrers`
+#: without adding it here would leave the refusal counting it as nothing.
+_REFERRER_LABELS: tuple[tuple[str, str], ...] = (
+    ("widgets", "widget(s)"),
+    ("alerts", "alert rule(s)"),
+    ("reports", "report definition(s)"),
+)
+
+
 class CustomKPIInUse(Exception):
     """Something still points at the KPI, so deleting it would blind them."""
 
     def __init__(self, code: str, referrers: dict[str, list[uuid.UUID]]) -> None:
         self.code = code
         self.referrers = referrers
-        widgets = len(referrers.get("widgets") or [])
-        alerts = len(referrers.get("alerts") or [])
+        # Only the kinds that actually hold something are named. A message
+        # that reports "0 widget(s)" next to the real referrer reads as a
+        # contradiction of itself, which is the kind of quietly wrong text
+        # this guard is here to avoid producing.
+        counted = [f"{len(referrers.get(key) or [])} {label}" for key, label in _REFERRER_LABELS if referrers.get(key)]
+        listed = ", ".join(counted) if counted else "something that could not be named"
         super().__init__(
-            f"KPI '{code}' is still referenced by {widgets} widget(s) and {alerts} alert rule(s). "
-            "Repoint or remove them first.",
+            f"KPI '{code}' is still referenced by {listed}. Repoint or remove them first.",
         )
 
 
@@ -302,31 +316,52 @@ class BIDashboardsService:
         )
         return row
 
-    async def delete_custom_kpi(self, code: str) -> None:
+    async def delete_custom_kpi(self, code: str, *, user_id: str) -> None:
         """Delete a custom KPI, refusing while anything still points at it.
 
-        Widgets and alert rules hold ``kpi_code`` as a plain string, so the
-        database would let the row go and leave them reading a permanent
-        zero - a dashboard tile that looks like a measurement and is not
-        one. Validation is a first-class part of this workflow, so the
-        delete is refused and the refusal names every referrer, letting the
-        user repoint or remove them and try again.
+        Widgets, alert rules and report definitions hold the code as data
+        rather than as a foreign key, so the database would let the row go
+        and leave them reading a permanent zero - a dashboard tile that
+        looks like a measurement and is not one, or a client-facing PDF
+        printing 0.0000. Validation is a first-class part of this
+        workflow, so the delete is refused and the refusal names every
+        referrer, letting the user repoint or remove them and try again.
+
+        ``user_id`` is required rather than optional, and it is checked
+        the way :meth:`create_custom_kpi`'s caller checks the project it
+        pins a definition to. Codes are globally unique, so without this
+        any holder of ``bi.kpi.write`` could delete a KPI belonging to a
+        project they cannot even read. The check runs before the system
+        and referrer answers, so a caller who cannot see the project does
+        not learn from the error which of those the KPI is.
 
         Args:
             code: The KPI code to delete.
+            user_id: The authenticated caller, access-checked against the
+                project the definition is pinned to. A company-wide
+                definition carries no project and needs no check.
 
         Raises:
             CustomKPINotFound: No definition row carries this code.
             CustomKPIIsSystem: The code belongs to a built-in KPI.
-            CustomKPIInUse: Widgets or alert rules still reference it.
+            CustomKPIInUse: Something still references it.
+            HTTPException: 404 when the caller cannot reach the project
+                the definition belongs to.
         """
         row = await self.repo.get_kpi_definition_by_code(code)
         if row is None:
             raise CustomKPINotFound(code)
+        if row.project_id is not None:
+            from app.dependencies import verify_project_access
+
+            await verify_project_access(row.project_id, user_id, self.session)
         if row.is_system or code in _kpis.KPI_FORMULAS:
             raise CustomKPIIsSystem(code)
         referrers = await self.repo.list_kpi_code_referrers(code)
-        if referrers["widgets"] or referrers["alerts"]:
+        # Asked of the whole answer rather than of two named keys: a
+        # referrer kind the repository learns about later is then refused
+        # by default instead of being collected and silently ignored.
+        if any(referrers.values()):
             raise CustomKPIInUse(code, referrers)
         await self.repo.delete_kpi_definition(code)
         _safe_publish("bi.kpi.definition_deleted", {"kpi_code": code})

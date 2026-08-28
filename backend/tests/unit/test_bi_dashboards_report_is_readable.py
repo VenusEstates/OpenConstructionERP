@@ -9,7 +9,13 @@ document sent to a client.
 
 The row keys themselves are left alone: ``ReportRunResponse.rows`` is the
 JSON the API returns and something machine-side matches on those keys.
-Only the printed heading changes, and only in the PDF.
+Only the printed heading changes.
+
+These tests read the PDF, which is one of three writers, and that is the
+reason the XLSX and CSV shipped the defect for a further commit. What
+every format has to say is asserted in
+``test_bi_dashboards_every_writer_is_readable.py``; this file stays on
+the PDF because the PDF is the one whose page geometry is at stake.
 
 The reported third symptom, wide tables losing their right hand columns,
 was already fixed - ``build_pdf_report`` computes column widths through

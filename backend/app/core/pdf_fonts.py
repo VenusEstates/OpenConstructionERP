@@ -1077,6 +1077,158 @@ def pdf_table_available_width(doc: Any) -> float:
     return float(doc.width) - getattr(frame, "_leftPadding", 6.0) - getattr(frame, "_rightPadding", 6.0)
 
 
+def _natural_column_widths(
+    rows: Sequence[Sequence[Any]],
+    style: Any,
+    *,
+    header_style: Any | None = None,
+    header_rows: int = 0,
+    padding: float = _TABLE_CELL_PADDING,
+) -> list[float]:
+    """The width each column would take if nothing had to fit.
+
+    Measuring is the expensive part of laying a table out - one
+    ``stringWidth`` per cell - so it is done once and the arithmetic that
+    follows works on the answer.
+
+    Args:
+        rows: The table's cells, as they will be handed to ``Table``.
+        style: The paragraph style body cells are drawn with.
+        header_style: The style for the first ``header_rows`` rows.
+        header_rows: How many leading rows use ``header_style``.
+        padding: Horizontal cell padding, both sides together, in points.
+
+    Returns:
+        One natural width per column, empty when there are no columns.
+    """
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    columns = max((len(row) for row in rows), default=0)
+    if not columns:
+        return []
+    natural = [0.0] * columns
+    for row_index, row in enumerate(rows):
+        row_style = _row_style(style, header_style, row_index, header_rows)
+        for col_index, cell in enumerate(row):
+            if not isinstance(cell, str):
+                continue
+            faced = pdf_style_for_text(row_style, cell)
+            width = stringWidth(cell, faced.fontName, faced.fontSize) + padding
+            natural[col_index] = max(natural[col_index], width)
+    return natural
+
+
+def _fit_to_width(natural: Sequence[float], available: float) -> list[float]:
+    """Squeeze natural widths into ``available``, taking it from the wide.
+
+    Every column narrower than an equal share keeps its natural width, and
+    what remains is divided among the rest, repeatedly, until the division
+    holds. A label column stays legible and the prose column beside it
+    absorbs the loss.
+
+    Args:
+        natural: One natural width per column.
+        available: The frame width to fit into.
+
+    Returns:
+        One width per column, summing to at most ``available``.
+    """
+    if sum(natural) <= available:
+        return list(natural)
+    fitted = list(natural)
+    unsettled = list(range(len(natural)))
+    room = available
+    while unsettled:
+        share = room / len(unsettled)
+        settled = {index for index in unsettled if natural[index] <= share}
+        if not settled:
+            for index in unsettled:
+                fitted[index] = share
+            break
+        for index in settled:
+            fitted[index] = natural[index]
+            room -= natural[index]
+        unsettled = [index for index in unsettled if index not in settled]
+    return fitted
+
+
+def pdf_table_legible_columns(
+    rows: Sequence[Sequence[Any]],
+    available: float,
+    style: Any,
+    *,
+    header_style: Any | None = None,
+    header_rows: int = 0,
+    padding: float = _TABLE_CELL_PADDING,
+) -> int:
+    """How many leading columns this table can print and still be read.
+
+    :func:`pdf_table_column_widths` divides the frame between whatever
+    columns it is given, and past a point there is nothing left to divide.
+    Measured on a landscape A4 frame at the size a dashboard export draws
+    at: thirty columns are narrow but drawn, forty make the header row
+    taller than the frame and reportlab refuses the table, and eighty
+    leave each column narrower than its own padding, at which point
+    reportlab is handed a negative content width and raises. The caller
+    that hits this is not a stress test - a KPI grouped by a free-text
+    field becomes one column per group.
+
+    So the count comes back here and the caller decides what to do with
+    the columns beyond it, which has to be something a reader can see:
+    dropping them quietly would be a worse defect than the crash.
+
+    The answer is the widest leading run of columns that
+    :func:`pdf_table_column_widths` would not squeeze below the legibility
+    floor - not ``available`` divided by that floor. The difference
+    matters: twenty short columns fit the frame at their own widths with
+    room to spare, and a flat division would throw four of them away to
+    fix a problem they do not have. Dropping a column only ever frees
+    room, so the property is monotone in the count and the answer is found
+    by halving rather than by trying every prefix.
+
+    At least one column always comes back, even where the frame cannot
+    hold one legibly, because a squeezed column beats a blank page.
+
+    Args:
+        rows: The table's cells, as they will be handed to ``Table``.
+        available: The frame width to fit into, normally ``doc.width``.
+        style: The paragraph style body cells are drawn with.
+        header_style: The style for the first ``header_rows`` rows.
+        header_rows: How many leading rows use ``header_style``.
+        padding: Horizontal cell padding, both sides together, in points.
+
+    Returns:
+        How many of the leading columns to keep. ``0`` only when there are
+        no columns at all.
+    """
+    natural = _natural_column_widths(
+        rows,
+        style,
+        header_style=header_style,
+        header_rows=header_rows,
+        padding=padding,
+    )
+    if not natural:
+        return 0
+
+    def legible(count: int) -> bool:
+        head = natural[:count]
+        fitted = _fit_to_width(head, available)
+        return all(w >= n or w >= _MIN_LEGIBLE_COLUMN for w, n in zip(fitted, head, strict=True))
+
+    if legible(len(natural)):
+        return len(natural)
+    low, high, best = 1, len(natural), 1
+    while low <= high:
+        middle = (low + high) // 2
+        if legible(middle):
+            best = middle
+            low = middle + 1
+        else:
+            high = middle - 1
+    return best
+
+
 def pdf_table_column_widths(
     rows: Sequence[Sequence[Any]],
     available: float,
@@ -1123,38 +1275,16 @@ def pdf_table_column_widths(
     Returns:
         One width per column, summing to at most ``available``.
     """
-    from reportlab.pdfbase.pdfmetrics import stringWidth
-
-    columns = max((len(row) for row in rows), default=0)
-    if not columns:
+    natural = _natural_column_widths(
+        rows,
+        style,
+        header_style=header_style,
+        header_rows=header_rows,
+        padding=padding,
+    )
+    if not natural:
         return []
-    natural = [0.0] * columns
-    for row_index, row in enumerate(rows):
-        row_style = _row_style(style, header_style, row_index, header_rows)
-        for col_index, cell in enumerate(row):
-            if not isinstance(cell, str):
-                continue
-            faced = pdf_style_for_text(row_style, cell)
-            width = stringWidth(cell, faced.fontName, faced.fontSize) + padding
-            natural[col_index] = max(natural[col_index], width)
-    if sum(natural) <= available:
-        return natural
-
-    fitted = list(natural)
-    unsettled = list(range(columns))
-    room = available
-    while unsettled:
-        share = room / len(unsettled)
-        settled = {index for index in unsettled if natural[index] <= share}
-        if not settled:
-            for index in unsettled:
-                fitted[index] = share
-            break
-        for index in settled:
-            fitted[index] = natural[index]
-            room -= natural[index]
-        unsettled = [index for index in unsettled if index not in settled]
-
+    fitted = _fit_to_width(natural, available)
     squeezed = [w for w, n in zip(fitted, natural, strict=True) if w < n and w < _MIN_LEGIBLE_COLUMN]
     if squeezed:
         logger.warning(
@@ -1162,7 +1292,7 @@ def pdf_table_column_widths(
             "The data is on the page, but those columns are hard to read",
             report,
             len(squeezed),
-            columns,
+            len(natural),
             _MIN_LEGIBLE_COLUMN,
             min(squeezed),
         )
@@ -1280,6 +1410,7 @@ __all__ = [
     "pdf_table_available_width",
     "pdf_table_column_widths",
     "pdf_table_font_commands",
+    "pdf_table_legible_columns",
     "pdf_table_paragraph_rows",
     "pdf_table_shaped_rows",
     "register_cjk_font",

@@ -1194,6 +1194,16 @@ async def test_run_report_produces_pdf_file(session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_run_report_csv_format(session: AsyncSession) -> None:
+    """A CSV run writes a headed file with the KPI's row in it.
+
+    The heading is the reader's, not the API's: ``output_format`` is a
+    choice somebody made about how to read this report, and all three
+    formats go to a person through the same download endpoint. The
+    machine's copy of the same run is ``ReportRunResponse.rows``, which
+    keeps ``kpi_code`` and the raw values untouched. This assertion used
+    to name the row key, which read as a promise about the CSV that the
+    PDF of the same report had already stopped making.
+    """
     from app.modules.bi_dashboards.schemas import ReportDefinitionCreate
     from app.modules.bi_dashboards.service import BIDashboardsService
 
@@ -1213,7 +1223,8 @@ async def test_run_report_csv_format(session: AsyncSession) -> None:
     assert run.file_path.endswith(".csv")
     with open(run.file_path) as fh:
         body = fh.read()
-    assert "kpi_code" in body
+    assert "KPI code" in body
+    assert "kpi_code" not in body
     assert "cpi" in body
 
 
