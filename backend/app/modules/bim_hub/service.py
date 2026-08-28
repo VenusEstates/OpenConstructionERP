@@ -489,6 +489,23 @@ _COUNT_UNITS: frozenset[str] = frozenset(
         "座",
         "只",
         "片",
+        # 件 is the platform's own Chinese for "pcs" - the zh locale renders the
+        # canonical pcs that way, and the cost matcher folds 件 to pcs - but it
+        # was missing here, so a 件 row took the unknown-unit branch while the
+        # 个 row beside it took the count branch. 棵, one planted tree in
+        # landscape works, joins it on the same 1:1 footing.
+        #
+        # Deliberately NOT in this set: 副, a pair or matched set of hardware,
+        # and 处, one location where a detail recurs. Both are real bill units,
+        # but the branch below rewrites the quantity to the number of linked
+        # elements, and neither counts one-to-one with an element: three
+        # waterproofing 处 can link fifteen elements, and five 副 of leaves link
+        # ten. Membership would overwrite a correct hand-entered figure, which
+        # is the corruption E-XMOD-003 exists to prevent arriving by a different
+        # door. Both stay in the cost matcher's alias table, where folding to
+        # pcs only picks a dimension family and converts no quantity.
+        "件",
+        "棵",
     }
 )
 

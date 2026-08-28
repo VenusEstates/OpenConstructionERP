@@ -79,6 +79,42 @@ _LOCALE_UNIT_ALIASES: dict[str, str] = {
     "套": "pcs",  # set - bucket as pcs (no separate set canon)
     "小时": "h",
     "小時": "h",
+    # The count units a GB 50500 bill is actually priced in. This block was
+    # assembled from the metric words and stopped there, so the units carrying
+    # 58 of the 222 rows in our own two Chinese demo projects had no entry: 项
+    # alone carries 30 of them. Without a fold the boost cannot fire on those
+    # rows, and a candidate priced per item scores no better than one priced
+    # per square metre.
+    "项": "lsum",  # a lump-sum work item, the same reading as Japanese 式
+    "台": "pcs",  # a machine or equipment set
+    "樘": "pcs",  # a door or window leaf
+    "根": "pcs",  # a long single piece - a pile, a bar
+    "组": "pcs",  # a group
+    "座": "pcs",  # a standing structure - a tank, a substation
+    "只": "pcs",  # a piece, used for fittings
+    "片": "pcs",  # a sheet
+    "块": "pcs",  # a slab or panel
+    "副": "pcs",  # a pair or matched set of hardware
+    "处": "pcs",  # a location where a detail recurs
+    "棵": "pcs",  # a planted tree, landscape works
+    # Linear metre as Chinese writes it. 线性米 is the zh locale's own rendering
+    # of the canonical lm; 延长米 / 延米 are what a bill writes.
+    "线性米": "lm",
+    "延长米": "lm",
+    "延米": "lm",
+    # Everyday contractions. 平米 and 立米 are already folded in the Japanese
+    # block below, which this table shares.
+    "平方": "m2",
+    "立方": "m3",
+    "公吨": "t",
+    # 工日 (a man-day) and 台班 (a machine-shift) are deliberately NOT folded to
+    # "h". Both are whole-shift units of roughly eight hours, so folding them
+    # would put a shift rate and an hourly rate in the same bucket and let the
+    # boost promote a candidate whose unit rate is out by that factor. Left
+    # unfolded they pass through verbatim, which already gives the right
+    # behaviour: self-equal against another 工日 row, and a dimensional
+    # mismatch against an area or a volume. The same reasoning the docstring
+    # records for the CWICR "100 CY" batch units applies here.
     # ── Japanese ─────────────────────────────────────────────────────
     "立方メートル": "m3",
     "立米": "m3",
