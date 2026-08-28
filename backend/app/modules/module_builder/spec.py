@@ -259,6 +259,21 @@ class ModuleSpec(BaseModel):
     entity: EntitySpec
     rules: Annotated[list[RuleSpec], Field(min_length=1, max_length=60)]
 
+    #: Who wrote this specification, as opposed to what the generated module
+    #: later does. ``assistant`` means a model drafted it from a sentence;
+    #: ``wizard`` means a person filled the form in, which is the default
+    #: because a hand-built spec never passes through ``draft_spec``.
+    #:
+    #: It stays ``assistant`` after a person edits the draft, because that is
+    #: what happened: a model wrote the first version and a person changed it.
+    #: Clearing it on the first keystroke would report a hand-written spec as
+    #: soon as somebody fixed a typo.
+    #:
+    #: This is a statement about the artefact, not about the module's runtime.
+    #: The generated manifest separately declares ``InferenceRole.NONE``, which
+    #: remains true: the module the generator emits calls no model.
+    drafted_by: Literal["assistant", "wizard"] = "wizard"
+
     @field_validator("key")
     @classmethod
     def _key_shape(cls, value: str) -> str:

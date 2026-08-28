@@ -183,7 +183,7 @@ def _manifest(spec: ModuleSpec) -> str:
     return f'''{HEADER}"""{spec.display_name} module manifest."""
 
 {GENERATED_NOTE}
-from app.core.module_loader import ModuleManifest
+from app.core.module_loader import InferenceDeclaration, InferenceRole, ModuleManifest
 
 manifest = ModuleManifest(
     name={spec.module_name!r},
@@ -195,6 +195,17 @@ manifest = ModuleManifest(
     depends={["oe_projects"] if spec.entity.project_scoped else []!r},
     auto_install=False,
     enabled=True,
+    inference=InferenceDeclaration(
+        role=InferenceRole.NONE,
+        basis=(
+            "Generated from a module specification as create, read, update and delete over one "
+            "table. The generator emits no model call and no scoring of any kind, so this is a "
+            "statement about the code as written rather than a guess about what it is for. "
+            "Add inference here by hand and this declaration stops being true: change the role "
+            "and say what is inferred, because the register this feeds is quoted outside the "
+            "project."
+        ),
+    ),
 )
 '''
 

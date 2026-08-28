@@ -204,6 +204,40 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_prompt_provenance.py
 
+      # The neighbouring question, and the first one a regulator or a buyer
+      # asks: which of the things you ship performs inference, and on what.
+      # `ModuleManifest.inference` lets a module answer for itself and this
+      # prints the answers checked against the code, because a register nobody
+      # checks drifts and it is quoted outside the project.
+      #
+      # THIS STEP DOES NOT BLOCK ON FINDINGS, and that is deliberate rather
+      # than an oversight to be tidied up later. Measured on the tree the day
+      # it was wired: 193 module directories scanned, 31 reach an inference
+      # primitive on their own account, 7 declare it, 24 declare nothing, 0
+      # declare the opposite. Turning that into a failure today would paint
+      # every lane red over a gap that predates the register, so the count is
+      # printed first and closed second. `--strict` makes findings fail and
+      # belongs here the day the 24 reach zero.
+      #
+      # It DOES block on a broken or stale scan, which is the half worth
+      # knowing about, so do not read the paragraph above as "this step cannot
+      # fail". Without `--strict` the script still exits non-zero when a file
+      # under backend/app will not parse, and when a name in its PRIMITIVES
+      # list is no longer in the tree. The second is the one that matters: a
+      # renamed primitive makes every module stop reaching it, and the whole
+      # instrument would otherwise read green while blind. Expect the first to
+      # turn this red occasionally on a genuinely broken Python file, which is
+      # the correct outcome and not a fault of this gate.
+      #
+      # The scanner's own logic is covered by backend/tests/unit/
+      # test_module_inference_gate.py, which points it at a fixture app tree so
+      # its negative control never has to write into the live one. This step is
+      # the part that test cannot be: the scanner aimed at what we actually
+      # ship.
+      - name: Report which modules reach an inference primitive
+        if: ${{ !cancelled() }}
+        run: python scripts/check_module_inference_declarations.py
+
       # A collection endpoint moving from a bare array to {items, total,
       # offset, limit} breaks every caller left behind. The build catches most
       # of it and structurally cannot catch the case this guards: React Query
