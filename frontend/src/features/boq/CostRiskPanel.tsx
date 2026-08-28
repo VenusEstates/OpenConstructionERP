@@ -322,8 +322,8 @@ function DistributionChart({
             aria-hidden="true"
           >
             {/* 50% / 80% horizontal guides */}
-            <line x1="0" y1="50" x2="100" y2="50" className="stroke-content-quaternary/30" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
-            <line x1="0" y1="20" x2="100" y2="20" className="stroke-content-quaternary/30" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+            <line x1="0" y1="50" x2="100" y2="50" className="stroke-content-quaternary" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+            <line x1="0" y1="20" x2="100" y2="20" className="stroke-content-quaternary" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
             <polyline
               points={curve}
               fill="none"

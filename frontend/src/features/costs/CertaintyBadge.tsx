@@ -109,7 +109,7 @@ export function CertaintyBadge({
       return (
         <span
           className={clsx(
-            'inline-flex h-2 w-2 shrink-0 rounded-full bg-content-tertiary/20 animate-pulse',
+            'inline-flex h-2 w-2 shrink-0 rounded-full bg-content-tertiary animate-pulse',
             className,
           )}
           aria-label={t('costs.certainty.loading', { defaultValue: 'Loading certainty…' })}

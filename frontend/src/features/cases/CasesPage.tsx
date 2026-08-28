@@ -1397,7 +1397,7 @@ function CasesList() {
                     defaultValue: "Remove filter {{name}}",
                     name: chip.label,
                   })}
-                  className="inline-flex items-center gap-1 rounded-full border border-current/30 bg-white/40 px-2 py-0.5 text-2xs font-medium transition-colors hover:bg-white/70 dark:bg-black/10 dark:hover:bg-black/20"
+                  className="inline-flex items-center gap-1 rounded-full border border-current bg-white/40 px-2 py-0.5 text-2xs font-medium transition-colors hover:bg-white/70 dark:bg-black/10 dark:hover:bg-black/20"
                 >
                   {chip.label}
                   <X size={11} aria-hidden="true" />
@@ -1408,7 +1408,7 @@ function CasesList() {
           <button
             type="button"
             onClick={clearAllFilters}
-            className="shrink-0 rounded-lg border border-current/30 px-2.5 py-1 text-2xs font-semibold transition-colors hover:bg-white/30 dark:hover:bg-black/10"
+            className="shrink-0 rounded-lg border border-current px-2.5 py-1 text-2xs font-semibold transition-colors hover:bg-white/30 dark:hover:bg-black/10"
           >
             {t("cases.persona.clear", { defaultValue: "Clear" })}
           </button>

@@ -454,7 +454,7 @@ function HistogramTab({ projectId }: { projectId: string }) {
                       {/* Availability / capacity reference line */}
                       {availPct != null && (
                         <div
-                          className="absolute top-0 bottom-0 z-10 w-px bg-content-secondary/70"
+                          className="absolute top-0 bottom-0 z-10 w-px bg-content-secondary"
                           style={{ left: `${availPct}%` }}
                           title={t('schedule.resources.available_units', {
                             defaultValue: 'Available: {{units}}',
@@ -489,7 +489,7 @@ function HistogramTab({ projectId }: { projectId: string }) {
                     {t('schedule.resources.legend_demand', { defaultValue: 'Demand' })}
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="inline-block h-2 w-px bg-content-secondary/70" />
+                    <span className="inline-block h-2 w-px bg-content-secondary" />
                     {t('schedule.resources.legend_available', { defaultValue: 'Available' })}
                   </span>
                   <span className="inline-flex items-center gap-1">

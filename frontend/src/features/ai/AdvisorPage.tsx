@@ -181,7 +181,7 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="inline-block h-[7px] w-[7px] rounded-full bg-content-tertiary/60"
+          className="inline-block h-[7px] w-[7px] rounded-full bg-content-tertiary"
           style={{
             animation: 'oeTypingDot 1.4s ease-in-out infinite',
             animationDelay: `${i * 0.2}s`,

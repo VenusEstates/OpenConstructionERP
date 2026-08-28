@@ -1136,7 +1136,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             <Fragment key={group.id}>
               {group.separator && (
                 <div
-                  className="my-3 mx-auto h-px w-10/12 bg-border-light/70"
+                  className="my-3 mx-auto h-px w-10/12 bg-border-light"
                   aria-hidden
                 />
               )}
@@ -1622,7 +1622,7 @@ function NavGroupSection({
   if (iconified) {
     return (
       <div className="mb-1">
-        <div className="my-1.5 mx-auto h-px w-6 bg-border-light/60" aria-hidden />
+        <div className="my-1.5 mx-auto h-px w-6 bg-border-light" aria-hidden />
         {children}
       </div>
     );
@@ -1662,7 +1662,7 @@ function NavGroupSection({
             className={clsx(
               'h-1 w-1 rounded-full shrink-0 transition-colors duration-150',
               isCollapsed
-                ? 'bg-content-quaternary/45 group-hover:bg-content-tertiary'
+                ? 'bg-content-quaternary group-hover:bg-content-tertiary'
                 : 'bg-oe-blue/55 group-hover:bg-oe-blue',
             )}
             aria-hidden

@@ -548,22 +548,22 @@ export function CataloguesPanelCard({ preferredRegion }: Props) {
                       className="border-b border-border/50 last:border-b-0"
                     >
                       <td className="py-2 pr-2">
-                        <div className="h-3 w-32 rounded bg-content-tertiary/15 animate-pulse" />
+                        <div className="h-3 w-32 rounded bg-black/[0.06] dark:bg-white/10 animate-pulse" />
                       </td>
                       <td className="py-2 pr-2 hidden sm:table-cell">
-                        <div className="h-3 w-6 rounded bg-content-tertiary/15 animate-pulse" />
+                        <div className="h-3 w-6 rounded bg-black/[0.06] dark:bg-white/10 animate-pulse" />
                       </td>
                       <td className="py-2 pr-2 hidden sm:table-cell">
-                        <div className="h-3 w-8 rounded bg-content-tertiary/15 animate-pulse" />
+                        <div className="h-3 w-8 rounded bg-black/[0.06] dark:bg-white/10 animate-pulse" />
                       </td>
                       <td className="py-2 pr-2 hidden md:table-cell">
-                        <div className="h-3 w-12 rounded bg-content-tertiary/15 animate-pulse" />
+                        <div className="h-3 w-12 rounded bg-black/[0.06] dark:bg-white/10 animate-pulse" />
                       </td>
                       <td className="py-2 pr-2">
-                        <div className="h-4 w-16 rounded bg-content-tertiary/15 animate-pulse" />
+                        <div className="h-4 w-16 rounded bg-black/[0.06] dark:bg-white/10 animate-pulse" />
                       </td>
                       <td className="py-2">
-                        <div className="h-5 w-16 rounded bg-content-tertiary/15 animate-pulse" />
+                        <div className="h-5 w-16 rounded bg-black/[0.06] dark:bg-white/10 animate-pulse" />
                       </td>
                     </tr>
                   ))

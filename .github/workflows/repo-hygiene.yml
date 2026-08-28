@@ -665,13 +665,21 @@ jobs:
       # --no-save install can leave the first one's package gone, and the guard
       # that needed it would fail for a reason that has nothing to do with what
       # it guards. Naming both specs in one call cannot get into that state.
+      # Tailwind and postcss joined the list for the alpha-drop guard at the end
+      # of this job, which answers its question by compiling the real config and
+      # cannot answer it any other way. Same rule as the two above: the versions
+      # come out of package.json, because a config that resolves under some
+      # other Tailwind is not the question anyone is asking. And all four in one
+      # call, for the reason in the paragraph above.
       - name: Install the compiler and the i18next the application uses
         working-directory: frontend
         run: |
           tsv=$(node -p "require('./package.json').devDependencies.typescript")
           i18nv=$(node -p "require('./package.json').dependencies.i18next")
-          echo "installing typescript@$tsv and i18next@$i18nv, as declared by the application"
-          npm install --no-save --no-audit --no-fund "typescript@$tsv" "i18next@$i18nv"
+          twv=$(node -p "require('./package.json').devDependencies.tailwindcss")
+          pcv=$(node -p "require('./package.json').devDependencies.postcss")
+          echo "installing typescript@$tsv, i18next@$i18nv, tailwindcss@$twv and postcss@$pcv, as declared by the application"
+          npm install --no-save --no-audit --no-fund "typescript@$tsv" "i18next@$i18nv" "tailwindcss@$twv" "postcss@$pcv"
 
       # First, because every guard below it answers a question about the
       # contents of a file that has to load before any of those answers matter.
@@ -834,6 +842,49 @@ jobs:
       - name: Check locale files for homoglyph-mixed words
         if: ${{ !cancelled() }}
         run: python scripts/check_locale_mixed_script.py
+
+      # A class like `bg-oe-blue-subtle/60` names a colour token that cannot
+      # take an alpha modifier, and Tailwind's answer to that is to emit
+      # nothing. No warning, no fallback, no approximation: the declaration is
+      # dropped and the element renders with no fill while the source reads as
+      # though it has one. Every gate in this repo goes green over it, because
+      # the class IS in the file and is simply not in the stylesheet, so there
+      # is no missing key, no type error, no failing assertion, and a review
+      # reads the class and believes it.
+      #
+      # This is why the selftest above it is not decoration. The guard's whole
+      # job is to separate two classes that look identical in source, so
+      # "it printed some findings" is not evidence it works. The selftest writes
+      # both kinds plus a `text-sm/6`, which is a real utility whose token is not
+      # a colour, and demands three different answers.
+      #
+      # THIS STEP DOES NOT BLOCK ON FINDINGS, deliberately, not as an oversight
+      # to tidy up later. Measured on the tree the day it was wired: 566
+      # occurrences in 207 files across 14 tokens, plus 80 more classes naming a
+      # colour token this theme has never defined. 267 of those render nothing
+      # at all in either theme; 198 more are borders falling back to the
+      # preflight #e5e7eb, which is a near-white rule on every dark surface.
+      # Failing on that today would paint every lane red over a gap that
+      # predates the instrument, and a lane that is red for a week gets switched
+      # off. The count is printed first and closed second. `--strict` makes
+      # findings fail and belongs here the day the count reaches zero.
+      #
+      # It DOES block on being broken or stale, so this is not a step that
+      # cannot fail. Without `--strict` it still exits non-zero when the probe
+      # will not compile, when the config resolves to almost no colours, when
+      # too few utilities emit anything, when no token at all accepts an alpha,
+      # and when the content globs collect fewer files than the source tree has.
+      # That last one is the one worth having: point this at the wrong directory
+      # and it would otherwise report zero findings in a confident voice.
+      - name: Prove the Tailwind alpha-drop guard can fail
+        if: ${{ !cancelled() }}
+        run: node scripts/check-tailwind-alpha-drop.mjs --selftest
+        working-directory: frontend
+
+      - name: Report classes whose alpha modifier makes Tailwind emit nothing
+        if: ${{ !cancelled() }}
+        run: node scripts/check-tailwind-alpha-drop.mjs
+        working-directory: frontend
 
   # Alone deliberately, and it has to stay alone. This is the only guard that
   # reads git history rather than the working tree, so it is the only one that

@@ -2309,7 +2309,7 @@ function PhasesTimelineView({
                           const bw = Math.max(0.5, ((bf - bs) / span) * 100);
                           return (
                             <div
-                              className="absolute top-0 h-1 rounded-sm bg-content-tertiary/40"
+                              className="absolute top-0 h-1 rounded-sm bg-content-tertiary"
                               style={{ left: `${bl}%`, width: `${bw}%` }}
                               aria-hidden
                               data-testid="phase-gantt-baseline-bar"

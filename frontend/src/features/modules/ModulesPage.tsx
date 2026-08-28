@@ -2477,7 +2477,7 @@ function SystemModulesTab({ query, onClearQuery }: SystemModulesTabProps) {
                     <div
                       className={clsx(
                         'relative h-5 w-9 rounded-full transition-colors duration-200',
-                        mod.enabled ? 'bg-oe-blue' : 'bg-content-quaternary/40',
+                        mod.enabled ? 'bg-oe-blue' : 'bg-content-quaternary',
                       )}
                     >
                       <div
@@ -2601,7 +2601,7 @@ function ModuleToggleCard({
         <div
           className={clsx(
             'relative h-5 w-9 rounded-full transition-colors duration-200',
-            enabled ? 'bg-oe-blue' : 'bg-content-quaternary/40',
+            enabled ? 'bg-oe-blue' : 'bg-content-quaternary',
           )}
         >
           <div

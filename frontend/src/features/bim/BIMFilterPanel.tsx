@@ -2024,7 +2024,7 @@ function FilterChip({
           // Unselected chip → neutral dot, NOT eye-off. An eye-off icon here
           // wrongly read as "this category is hidden" when no filter is set,
           // which made selecting a chip feel like it was removing elements.
-          <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-content-quaternary/40" />
+          <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-content-quaternary" />
         )}
         <div className="min-w-0 flex-1 text-left">
           <span className="truncate block text-left">{label}</span>

@@ -550,7 +550,7 @@ export function LoginPage() {
         </div>
 
         {/* Divider */}
-        <div className="mt-5 mb-4 h-px bg-gradient-to-r from-content-primary/[0.06] via-content-primary/[0.1] to-transparent animate-stagger-in" style={{ animationDelay: '220ms' }} />
+        <div className="mt-5 mb-4 h-px bg-gradient-to-r from-black/[0.06] via-black/[0.1] dark:from-white/10 dark:via-white/[0.14] to-transparent animate-stagger-in" style={{ animationDelay: '220ms' }} />
 
         {/* Module honeycomb - proper pointy-top hex grid where every cell
             shares an edge with its neighbours. Layout is intentionally

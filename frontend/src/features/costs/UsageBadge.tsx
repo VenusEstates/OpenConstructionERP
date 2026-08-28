@@ -80,7 +80,7 @@ export function UsageBadge({ count, band, className }: UsageBadgeProps) {
         data-usage="0"
         data-band={band?.confidence_badge ?? 'none'}
         className={clsx(
-          'inline-flex h-2.5 w-2.5 shrink-0 rounded-full border border-content-tertiary/40',
+          'inline-flex h-2.5 w-2.5 shrink-0 rounded-full border border-content-tertiary',
           className,
         )}
       />

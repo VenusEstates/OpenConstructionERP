@@ -175,7 +175,7 @@ export function DesktopToolbar() {
         <Home size={14} strokeWidth={1.9} />
       </button>
 
-      <div className="mx-1 h-4 w-px bg-border-light/70" aria-hidden />
+      <div className="mx-1 h-4 w-px bg-border-light" aria-hidden />
 
       {/* Address field: shows the friendly page name and the local path. Editing
           it and pressing Enter navigates to that in-app path. */}

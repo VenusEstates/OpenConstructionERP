@@ -158,7 +158,7 @@ export function BIMCRSPanel({
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium
-                     px-2 py-0.5 rounded border border-current/30 hover:bg-current/10
+                     px-2 py-0.5 rounded border border-current hover:bg-black/5 dark:hover:bg-white/10
                      transition-colors"
           data-testid="bim-crs-set-button"
         >

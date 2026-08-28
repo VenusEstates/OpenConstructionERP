@@ -171,7 +171,7 @@ function statusColor(status: string): {
       };
     default:
       return {
-        bg: 'bg-content-tertiary/15',
+        bg: 'bg-black/[0.06] dark:bg-white/10',
         fill: 'bg-content-tertiary',
         text: 'text-content-tertiary',
         variant: 'neutral',
@@ -897,7 +897,7 @@ function GanttChart({
                     {timelineMarkers.map((marker) => (
                       <div
                         key={`grid-${marker.label}-${marker.offsetPct}`}
-                        className="absolute top-0 bottom-0 w-px bg-border-light/50"
+                        className="absolute top-0 bottom-0 w-px bg-border-light"
                         style={{ left: `${marker.offsetPct}%` }}
                       />
                     ))}
