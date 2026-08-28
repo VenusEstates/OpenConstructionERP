@@ -179,6 +179,31 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_module_manifests.py
 
+      # AI Act Article 5 is in force and prohibits, among other things, a system
+      # that infers emotion in a workplace. This platform is a workplace tool,
+      # so a prompt that asked a model how frustrated a subcontractor sounds
+      # would be the prohibited thing rather than a bad feature, and it would
+      # arrive as an ordinary string literal in an ordinary service.
+      #
+      # The guard reads every model call site and accounts for each instruction
+      # slot, so a prompt assembled from a variable is not simply skipped: an
+      # unresolvable slot fails rather than passing quietly, which is the only
+      # arrangement that survives someone moving a prompt into a constant.
+      #
+      # It was written and then wired to nothing. Grep across HEAD for its name
+      # returned only the file itself: not this workflow, not .pre-commit-config
+      # .yaml, not the Makefile. A 1055-line guard that no lane runs is
+      # indistinguishable from no guard at all, except that it reads as
+      # coverage. The self-test above runs first for the reason the neighbouring
+      # gates do it: a run that passes has also just shown it can fail.
+      - name: Prove the prompt provenance guard can fail
+        if: ${{ !cancelled() }}
+        run: python scripts/check_prompt_provenance.py --self-test
+
+      - name: Check no shipped prompt asks a model to read a person
+        if: ${{ !cancelled() }}
+        run: python scripts/check_prompt_provenance.py
+
       # A collection endpoint moving from a bare array to {items, total,
       # offset, limit} breaks every caller left behind. The build catches most
       # of it and structurally cannot catch the case this guards: React Query
