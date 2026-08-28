@@ -316,6 +316,14 @@
     <p class="logpath" id="logpath"></p>
     <button class="copybtn" id="copybtn" type="button" data-i18n="copy">Copy details</button>
 
+    <!-- The way out of a configured server that cannot be reached. Hidden
+         unless the launcher calls offerLocalFallback(), because on every other
+         failure there is nothing here to fall back FROM: the local server is
+         already what was being started. Without this button the only way back
+         from a wrong server address is to find and edit a file, which is not
+         something we can ask of the people this fails for. -->
+    <button class="copybtn" id="uselocalbtn" type="button" style="display:none" data-i18n="useLocal">Use a server on this computer</button>
+
     <!-- One-time launch choice: app window (default) or normal web browser. -->
     <section class="choice" id="choice" aria-live="polite">
       <h2 data-i18n="cTitle">How would you like to open OpenConstructionERP?</h2>
@@ -380,6 +388,7 @@
         "errTitle": "Something went wrong",
         "errGeneric": "Startup failed.",
         "errLog": "A log was saved under your home folder as .openestimate/desktop-launcher.log.",
+        "useLocal": "Use a server on this computer",
         "dReady": "Ready",
         "dFound": "Found a running backend",
         "cTitle": "How would you like to open OpenConstructionERP?",
@@ -418,6 +427,7 @@
         "errTitle": "Etwas ist schiefgelaufen",
         "errGeneric": "Der Start ist fehlgeschlagen.",
         "errLog": "Ein Protokoll wurde in Ihrem Benutzerordner unter .openestimate/desktop-launcher.log gespeichert.",
+        "useLocal": "Server auf diesem Computer verwenden",
         "dReady": "Bereit",
         "dFound": "Laufendes Backend gefunden",
         "cTitle": "Wie möchten Sie OpenConstructionERP öffnen?",
@@ -456,6 +466,7 @@
         "errTitle": "Un problème est survenu",
         "errGeneric": "Le démarrage a échoué.",
         "errLog": "Un journal a été enregistré dans votre dossier personnel sous .openestimate/desktop-launcher.log.",
+        "useLocal": "Utiliser un serveur sur cet ordinateur",
         "dReady": "Prêt",
         "dFound": "Backend en cours d'exécution trouvé",
         "cTitle": "Comment souhaitez-vous ouvrir OpenConstructionERP ?",
@@ -494,6 +505,7 @@
         "errTitle": "Algo ha salido mal",
         "errGeneric": "El arranque ha fallado.",
         "errLog": "Se ha guardado un registro en su carpeta personal como .openestimate/desktop-launcher.log.",
+        "useLocal": "Usar un servidor en este equipo",
         "dReady": "Listo",
         "dFound": "Se encontró un backend en ejecución",
         "cTitle": "¿Cómo quiere abrir OpenConstructionERP?",
@@ -532,6 +544,7 @@
         "errTitle": "Algo correu mal",
         "errGeneric": "O arranque falhou.",
         "errLog": "Foi guardado um registo na sua pasta pessoal em .openestimate/desktop-launcher.log.",
+        "useLocal": "Usar um servidor neste computador",
         "dReady": "Pronto",
         "dFound": "Encontrado um backend em execução",
         "cTitle": "Como pretende abrir o OpenConstructionERP?",
@@ -570,6 +583,7 @@
         "errTitle": "Algo deu errado",
         "errGeneric": "A inicialização falhou.",
         "errLog": "Um log foi salvo na sua pasta pessoal em .openestimate/desktop-launcher.log.",
+        "useLocal": "Usar um servidor neste computador",
         "dReady": "Pronto",
         "dFound": "Backend em execução encontrado",
         "cTitle": "Como você quer abrir o OpenConstructionERP?",
@@ -608,6 +622,7 @@
         "errTitle": "Что-то пошло не так",
         "errGeneric": "Не удалось запустить приложение.",
         "errLog": "Журнал сохранён в вашей домашней папке: .openestimate/desktop-launcher.log.",
+        "useLocal": "Использовать сервер на этом компьютере",
         "dReady": "Готово",
         "dFound": "Найден работающий бэкенд",
         "cTitle": "Как открыть OpenConstructionERP?",
@@ -646,6 +661,7 @@
         "errTitle": "出了点问题",
         "errGeneric": "启动失败。",
         "errLog": "日志已保存在您的用户目录下的 .openestimate/desktop-launcher.log。",
+        "useLocal": "使用此电脑上的服务器",
         "dReady": "就绪",
         "dFound": "已找到正在运行的后端",
         "cTitle": "您想如何打开 OpenConstructionERP？",
@@ -684,6 +700,7 @@
         "errTitle": "حدث خطأ ما",
         "errGeneric": "فشل بدء التشغيل.",
         "errLog": "تم حفظ سجل في مجلدك الشخصي باسم ‎.openestimate/desktop-launcher.log.",
+        "useLocal": "استخدام خادم على هذا الجهاز",
         "dReady": "جاهز",
         "dFound": "تم العثور على خادم خلفي قيد التشغيل",
         "cTitle": "كيف تريد فتح OpenConstructionERP؟",
@@ -722,6 +739,7 @@
         "errTitle": "कुछ गड़बड़ हो गई",
         "errGeneric": "शुरू करने में विफल।",
         "errLog": "आपके होम फ़ोल्डर में .openestimate/desktop-launcher.log के रूप में एक लॉग सहेजा गया है।",
+        "useLocal": "इस कंप्यूटर पर सर्वर का उपयोग करें",
         "dReady": "तैयार",
         "dFound": "चालू बैकएंड मिला",
         "cTitle": "आप OpenConstructionERP को कैसे खोलना चाहेंगे?",
@@ -760,6 +778,7 @@
         "errTitle": "Bir şeyler ters gitti",
         "errGeneric": "Başlatma başarısız oldu.",
         "errLog": "Giriş klasörünüze .openestimate/desktop-launcher.log adıyla bir günlük kaydedildi.",
+        "useLocal": "Bu bilgisayarda bir sunucu kullan",
         "dReady": "Hazır",
         "dFound": "Çalışan bir arka uç bulundu",
         "cTitle": "OpenConstructionERP'yi nasıl açmak istersiniz?",
@@ -798,6 +817,7 @@
         "errTitle": "Qualcosa è andato storto",
         "errGeneric": "Avvio non riuscito.",
         "errLog": "Un log è stato salvato nella cartella personale come .openestimate/desktop-launcher.log.",
+        "useLocal": "Usa un server su questo computer",
         "dReady": "Pronto",
         "dFound": "Trovato un backend in esecuzione",
         "cTitle": "Come vuoi aprire OpenConstructionERP?",
@@ -836,6 +856,7 @@
         "errTitle": "Er is iets misgegaan",
         "errGeneric": "Starten is mislukt.",
         "errLog": "Er is een logbestand opgeslagen in uw persoonlijke map als .openestimate/desktop-launcher.log.",
+        "useLocal": "Een server op deze computer gebruiken",
         "dReady": "Gereed",
         "dFound": "Draaiende backend gevonden",
         "cTitle": "Hoe wilt u OpenConstructionERP openen?",
@@ -874,6 +895,7 @@
         "errTitle": "Coś poszło nie tak",
         "errGeneric": "Uruchomienie nie powiodło się.",
         "errLog": "Dziennik został zapisany w folderze domowym jako .openestimate/desktop-launcher.log.",
+        "useLocal": "Użyj serwera na tym komputerze",
         "dReady": "Gotowe",
         "dFound": "Znaleziono działający backend",
         "cTitle": "Jak chcesz otworzyć OpenConstructionERP?",
@@ -912,6 +934,7 @@
         "errTitle": "Něco se pokazilo",
         "errGeneric": "Spuštění se nezdařilo.",
         "errLog": "Protokol byl uložen ve vaší domovské složce jako .openestimate/desktop-launcher.log.",
+        "useLocal": "Použít server na tomto počítači",
         "dReady": "Připraveno",
         "dFound": "Nalezen běžící backend",
         "cTitle": "Jak chcete OpenConstructionERP otevřít?",
@@ -950,6 +973,7 @@
         "errTitle": "問題が発生しました",
         "errGeneric": "起動に失敗しました。",
         "errLog": "ログはホームフォルダーの .openestimate/desktop-launcher.log に保存されました。",
+        "useLocal": "このコンピューターのサーバーを使用",
         "dReady": "準備完了",
         "dFound": "実行中のバックエンドが見つかりました",
         "cTitle": "OpenConstructionERP をどのように開きますか？",
@@ -988,6 +1012,7 @@
         "errTitle": "문제가 발생했습니다",
         "errGeneric": "시작하지 못했습니다.",
         "errLog": "홈 폴더에 .openestimate/desktop-launcher.log 로 로그를 저장했습니다.",
+        "useLocal": "이 컴퓨터의 서버 사용",
         "dReady": "준비됨",
         "dFound": "실행 중인 백엔드를 찾았습니다",
         "cTitle": "OpenConstructionERP를 어떻게 여시겠습니까?",
@@ -1026,6 +1051,7 @@
         "errTitle": "Något gick fel",
         "errGeneric": "Starten misslyckades.",
         "errLog": "En logg sparades i din hemmapp som .openestimate/desktop-launcher.log.",
+        "useLocal": "Använd en server på den här datorn",
         "dReady": "Klart",
         "dFound": "Hittade en backend som redan körs",
         "cTitle": "Hur vill du öppna OpenConstructionERP?",
@@ -1064,6 +1090,7 @@
         "errTitle": "Noe gikk galt",
         "errGeneric": "Oppstarten mislyktes.",
         "errLog": "En logg ble lagret i hjemmemappen din som .openestimate/desktop-launcher.log.",
+        "useLocal": "Bruk en server på denne datamaskinen",
         "dReady": "Klar",
         "dFound": "Fant en backend som allerede kjører",
         "cTitle": "Hvordan vil du åpne OpenConstructionERP?",
@@ -1102,6 +1129,7 @@
         "errTitle": "Noget gik galt",
         "errGeneric": "Opstarten mislykkedes.",
         "errLog": "En log blev gemt i din hjemmemappe som .openestimate/desktop-launcher.log.",
+        "useLocal": "Brug en server på denne computer",
         "dReady": "Klar",
         "dFound": "Fandt en kørende backend",
         "cTitle": "Hvordan vil du åbne OpenConstructionERP?",
@@ -1140,6 +1168,7 @@
         "errTitle": "Jokin meni pieleen",
         "errGeneric": "Käynnistys epäonnistui.",
         "errLog": "Loki tallennettiin kotikansioosi nimellä .openestimate/desktop-launcher.log.",
+        "useLocal": "Käytä palvelinta tässä tietokoneessa",
         "dReady": "Valmis",
         "dFound": "Käynnissä oleva taustapalvelu löytyi",
         "cTitle": "Miten haluat avata OpenConstructionERP:n?",
@@ -1178,6 +1207,7 @@
         "errTitle": "Нещо се обърка",
         "errGeneric": "Стартирането не бе успешно.",
         "errLog": "Дневникът е записан в личната ви папка като .openestimate/desktop-launcher.log.",
+        "useLocal": "Използване на сървър на този компютър",
         "dReady": "Готово",
         "dFound": "Намерен е работещ бекенд",
         "cTitle": "Как искате да отворите OpenConstructionERP?",
@@ -1216,6 +1246,7 @@
         "errTitle": "Nešto je pošlo po zlu",
         "errGeneric": "Pokretanje nije uspjelo.",
         "errLog": "Zapisnik je spremljen u vašu osobnu mapu kao .openestimate/desktop-launcher.log.",
+        "useLocal": "Koristi poslužitelj na ovom računalu",
         "dReady": "Spremno",
         "dFound": "Pronađena je pokrenuta pozadinska usluga",
         "cTitle": "Kako želite otvoriti OpenConstructionERP?",
@@ -1254,6 +1285,7 @@
         "errTitle": "Terjadi kesalahan",
         "errGeneric": "Gagal memulai.",
         "errLog": "Log disimpan di folder beranda Anda sebagai .openestimate/desktop-launcher.log.",
+        "useLocal": "Gunakan server di komputer ini",
         "dReady": "Siap",
         "dFound": "Menemukan backend yang sedang berjalan",
         "cTitle": "Bagaimana Anda ingin membuka OpenConstructionERP?",
@@ -1292,6 +1324,7 @@
         "errTitle": "Ceva nu a mers bine",
         "errGeneric": "Pornirea a eșuat.",
         "errLog": "Un jurnal a fost salvat în folderul dumneavoastră personal ca .openestimate/desktop-launcher.log.",
+        "useLocal": "Utilizează un server pe acest computer",
         "dReady": "Gata",
         "dFound": "A fost găsit un backend care rulează",
         "cTitle": "Cum doriți să deschideți OpenConstructionERP?",
@@ -1330,6 +1363,7 @@
         "errTitle": "เกิดข้อผิดพลาด",
         "errGeneric": "เริ่มต้นไม่สำเร็จ",
         "errLog": "บันทึกถูกเก็บไว้ในโฟลเดอร์ผู้ใช้ของคุณที่ .openestimate/desktop-launcher.log",
+        "useLocal": "ใช้เซิร์ฟเวอร์บนคอมพิวเตอร์เครื่องนี้",
         "dReady": "พร้อม",
         "dFound": "พบแบ็กเอนด์ที่กำลังทำงานอยู่",
         "cTitle": "คุณต้องการเปิด OpenConstructionERP อย่างไร",
@@ -1368,6 +1402,7 @@
         "errTitle": "Đã xảy ra sự cố",
         "errGeneric": "Khởi động thất bại.",
         "errLog": "Nhật ký đã được lưu trong thư mục cá nhân của bạn tại .openestimate/desktop-launcher.log.",
+        "useLocal": "Dùng máy chủ trên máy tính này",
         "dReady": "Sẵn sàng",
         "dFound": "Đã tìm thấy backend đang chạy",
         "cTitle": "Bạn muốn mở OpenConstructionERP như thế nào?",
@@ -1406,6 +1441,7 @@
         "errTitle": "Бир нерсе туура эмес болду",
         "errGeneric": "Иштетүү ишке ашкан жок.",
         "errLog": "Журнал үй папкаңызда .openestimate/desktop-launcher.log деп сакталды.",
+        "useLocal": "Бул компьютердеги серверди колдонуу",
         "dReady": "Даяр",
         "dFound": "Иштеп жаткан бэкенд табылды",
         "cTitle": "OpenConstructionERP кантип ачылсын?",
@@ -1444,6 +1480,7 @@
         "errTitle": "Midagi läks valesti",
         "errGeneric": "Käivitamine ebaõnnestus.",
         "errLog": "Logi salvestati teie kodukausta nimega .openestimate/desktop-launcher.log.",
+        "useLocal": "Kasuta selle arvuti serverit",
         "dReady": "Valmis",
         "dFound": "Leiti töötav taustateenus",
         "cTitle": "Kuidas soovite OpenConstructionERP avada?",
@@ -1482,6 +1519,7 @@
         "errTitle": "কিছু একটা ভুল হয়েছে",
         "errGeneric": "চালু করা যায়নি।",
         "errLog": "আপনার হোম ফোল্ডারে .openestimate/desktop-launcher.log নামে একটি লগ সংরক্ষণ করা হয়েছে।",
+        "useLocal": "এই কম্পিউটারে একটি সার্ভার ব্যবহার করুন",
         "dReady": "প্রস্তুত",
         "dFound": "চলমান একটি ব্যাকএন্ড পাওয়া গেছে",
         "cTitle": "আপনি OpenConstructionERP কীভাবে খুলতে চান?",
@@ -1520,6 +1558,7 @@
         "errTitle": "Бірдеңе дұрыс болмады",
         "errGeneric": "Іске қосу сәтсіз аяқталды.",
         "errLog": "Журнал үй қалтаңызда .openestimate/desktop-launcher.log деп сақталды.",
+        "useLocal": "Осы компьютердегі серверді пайдалану",
         "dReady": "Дайын",
         "dFound": "Жұмыс істеп тұрған бэкенд табылды",
         "cTitle": "OpenConstructionERP қалай ашылсын?",
@@ -1558,6 +1597,7 @@
         "errTitle": "May nangyaring mali",
         "errGeneric": "Nabigo ang pagsisimula.",
         "errLog": "May naitalang log sa iyong home folder bilang .openestimate/desktop-launcher.log.",
+        "useLocal": "Gumamit ng server sa computer na ito",
         "dReady": "Handa na",
         "dFound": "May nakitang tumatakbong backend",
         "cTitle": "Paano mo gustong buksan ang OpenConstructionERP?",
@@ -1596,6 +1636,7 @@
         "errTitle": "کچھ غلط ہو گیا",
         "errGeneric": "شروع کرنے میں ناکامی۔",
         "errLog": "آپ کے ہوم فولڈر میں ‎.openestimate/desktop-launcher.log کے نام سے ایک لاگ محفوظ کیا گیا ہے۔",
+        "useLocal": "اس کمپیوٹر پر سرور استعمال کریں",
         "dReady": "تیار",
         "dFound": "چلتا ہوا بیک اینڈ مل گیا",
         "cTitle": "آپ OpenConstructionERP کو کیسے کھولنا چاہیں گے؟",
@@ -1634,6 +1675,7 @@
         "errTitle": "مشکلی پیش آمد",
         "errGeneric": "راه‌اندازی ناموفق بود.",
         "errLog": "یک گزارش در پوشه خانگی شما با نام ‎.openestimate/desktop-launcher.log ذخیره شد.",
+        "useLocal": "استفاده از سرور روی این رایانه",
         "dReady": "آماده",
         "dFound": "یک بک‌اند در حال اجرا پیدا شد",
         "cTitle": "می‌خواهید OpenConstructionERP چگونه باز شود؟",
@@ -1672,6 +1714,7 @@
         "errTitle": "משהו השתבש",
         "errGeneric": "ההפעלה נכשלה.",
         "errLog": "יומן נשמר בתיקיית הבית שלך בשם ‎.openestimate/desktop-launcher.log.",
+        "useLocal": "השתמש בשרת במחשב הזה",
         "dReady": "מוכן",
         "dFound": "נמצא שרת פעיל",
         "cTitle": "איך תרצה לפתוח את OpenConstructionERP?",
@@ -1710,6 +1753,7 @@
         "errTitle": "Κάτι πήγε στραβά",
         "errGeneric": "Η εκκίνηση απέτυχε.",
         "errLog": "Ένα αρχείο καταγραφής αποθηκεύτηκε στον προσωπικό σας φάκελο ως .openestimate/desktop-launcher.log.",
+        "useLocal": "Χρήση διακομιστή σε αυτόν τον υπολογιστή",
         "dReady": "Έτοιμο",
         "dFound": "Βρέθηκε ένα backend σε λειτουργία",
         "cTitle": "Πώς θέλετε να ανοίξετε το OpenConstructionERP;",
@@ -1748,6 +1792,7 @@
         "errTitle": "Щось пішло не так",
         "errGeneric": "Не вдалося запустити.",
         "errLog": "Журнал збережено у вашій домашній теці як .openestimate/desktop-launcher.log.",
+        "useLocal": "Використати сервер на цьому комп'ютері",
         "dReady": "Готово",
         "dFound": "Знайдено запущений бекенд",
         "cTitle": "Як відкрити OpenConstructionERP?",
@@ -2045,6 +2090,32 @@
     function failStage(id, detail) {
       bootStage(id, 'failed', detail || '');
       setError(detail || t('errGeneric'));
+    }
+
+    // Offer to start a server on this computer instead.
+    //
+    // Called by the launcher only when the failure was a configured remote
+    // server that could not be used, so the button is never shown on a failure
+    // it cannot fix. Clicking it records the choice and restarts; the launcher
+    // writes the choice before restarting, so a restart cannot land back on
+    // this screen for the same reason.
+    function offerLocalFallback() {
+      var btn = document.getElementById('uselocalbtn');
+      if (!btn) { return; }
+      btn.style.display = 'inline-block';
+      if (btn.dataset.wired) { return; }
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', function () {
+        var invoke = window.__TAURI__ &&
+          ((window.__TAURI__.core && window.__TAURI__.core.invoke) ||
+            window.__TAURI__.invoke);
+        if (!invoke) { return; }
+        // Disable on the way out. The restart takes a moment and a button that
+        // still looks live invites a second click, which would be a second
+        // restart request against a process already on its way down.
+        btn.disabled = true;
+        try { invoke('use_local_server'); } catch (e) { btn.disabled = false; }
+      });
     }
 
     // --- Launch choice: app window (default) or normal web browser ----------

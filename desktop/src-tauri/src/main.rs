@@ -33,6 +33,13 @@ use tauri_plugin_shell::ShellExt;
 /// when nothing else in this one worked.
 mod update_check;
 
+/// Decides which application server this window talks to: the one this launcher
+/// starts, as always, or one somewhere else that an administrator or the user
+/// pointed it at. Kept in its own file because it reads three inputs and returns
+/// an answer without touching a network, a process or Tauri, which is what lets
+/// the precedence order be tested as a function rather than as a startup.
+mod server_config;
+
 struct AppState {
     /// Handle to the spawned backend process so it survives past setup() and
     /// can be killed when the app exits.
@@ -405,6 +412,131 @@ fn open_log_file(_app: tauri::AppHandle) -> Result<(), String> {
     open_with_os_default(&path_str).map_err(|e| format!("Could not open the log file: {e}"))
 }
 
+/// Tell the caller which server this window is talking to, and who decided.
+///
+/// Answers from the same resolver startup used, rather than from a note taken
+/// at startup, so the answer is about the machine's current configuration and
+/// not about a decision that may since have been changed in another window.
+///
+/// The address for a local start comes from the running app URL rather than
+/// from the resolver, because the resolver only knows that a local server was
+/// wanted; the port it actually ended up on is a runtime fact.
+#[tauri::command]
+fn get_server_choice(app: tauri::AppHandle) -> serde_json::Value {
+    let running = {
+        let state = app.state::<AppState>();
+        let guard = state.app_url.lock().unwrap();
+        guard.clone().unwrap_or_default()
+    };
+
+    let (mode, url, source) = match server_config::resolve() {
+        server_config::Resolution::Local { source } => ("local", running, source),
+        server_config::Resolution::Remote { url, source } => ("remote", url, source),
+        // Reachable only if the configuration changed under a window that had
+        // already started. Reported as what it is rather than smoothed over.
+        server_config::Resolution::Refused { source, raw, .. } => ("remote", raw, source),
+    };
+
+    serde_json::json!({
+        "mode": mode,
+        "url": url,
+        "source": source.describe(),
+        "fromUserSetting": source == server_config::ChoiceSource::Setting,
+    })
+}
+
+/// Save, or clear, this user's own choice of server.
+///
+/// `mode` of `None` clears the choice and hands the decision back to the
+/// environment variable and the file an administrator deployed. That is the
+/// only route back to being centrally managed once somebody has chosen, so it
+/// is a supported argument and not an accident of the signature.
+///
+/// Never changes the running window. The setting is read while starting, and
+/// repointing a live session at a different database would leave every open
+/// form and every cached query belonging to the server it came from.
+///
+/// EVERY OUTCOME IS LOGGED, AND WHY THAT IS NOT DECORATION.
+///
+/// This command is granted to the application page, which means anything that
+/// can run script on our own origin can call it, and what it writes decides
+/// where the NEXT start sends this user's password. That is a step up from what
+/// script on that origin can otherwise do, because it survives a restart, and
+/// the argument written in capabilities/app-window.json does not cover it: that
+/// argument is about a hostile process already running as this user, and script
+/// on a page is not one.
+///
+/// The log line is a record, not a defence, and it is written down as a record
+/// so that nobody later mistakes it for one. It cannot stop the write. What it
+/// does is make a write that nobody performed visible afterwards to the one
+/// person who would go looking, next to the log the failure screen already
+/// tells people to send us. A change of server also announces itself at the
+/// next start, where the splash names the host it is contacting. Neither of
+/// those is consent, and a control that asks for consent is a separate change.
+#[tauri::command]
+fn set_server_choice(mode: Option<String>, url: Option<String>) -> Result<(), String> {
+    let Some(mode) = mode else {
+        log_line("the server choice was cleared from the application page");
+        return server_config::write_setting(None);
+    };
+    match mode.as_str() {
+        "local" => {
+            log_line("a server on this computer was chosen from the application page");
+            server_config::write_setting(Some(&server_config::ServerChoice::Local))
+        }
+        "remote" => {
+            let raw = url.unwrap_or_default();
+            // Validated here, in the launcher, and nowhere else. A second
+            // validator in the web page would be a second opinion about what is
+            // acceptable, and the day the two disagree is the day the settings
+            // page accepts an address the launcher then refuses, which is the
+            // blank window this whole path exists to prevent.
+            let canonical =
+                server_config::validate_server_url(&raw).map_err(|problem| problem.message())?;
+            // The canonical form, not the typed one. This line is read to find
+            // out where the machine was actually pointed, and the typed text is
+            // not necessarily that.
+            log_line(&format!(
+                "the server for the next start was set to {canonical} from the application page"
+            ));
+            server_config::write_setting(Some(&server_config::ServerChoice::Remote {
+                url: canonical,
+            }))
+        }
+        other => Err(format!("Unknown server mode \"{other}\".")),
+    }
+}
+
+/// Record a choice of local server and restart into it.
+///
+/// The recovery action, reached from the tray when a configured server is the
+/// wrong one and from the startup failure screen when it cannot be reached. It
+/// writes the choice before restarting rather than after, because a restart
+/// that lost the choice would come straight back to the screen it was started
+/// from, and a loop is a worse experience than the failure it was trying to
+/// leave.
+///
+/// A write that fails is logged and the restart happens anyway. The user asked
+/// to get out of here, and an unwritable home folder is not a reason to keep
+/// them in it; they land on the same screen and can try again, which is exactly
+/// where they already were.
+fn switch_to_local_and_restart(app: &tauri::AppHandle) {
+    if let Err(e) = server_config::write_setting(Some(&server_config::ServerChoice::Local)) {
+        log_line(&format!(
+            "could not save the choice of a local server, restarting anyway: {e}"
+        ));
+    } else {
+        log_line("switching to a server on this computer, restarting");
+    }
+    app.restart();
+}
+
+/// The startup failure screen's button for the same thing.
+#[tauri::command]
+fn use_local_server(app: tauri::AppHandle) {
+    switch_to_local_and_restart(&app);
+}
+
 /// Resolve the user's home directory without pulling in extra crates.
 fn home_dir() -> Option<PathBuf> {
     for var in ["USERPROFILE", "HOME"] {
@@ -685,6 +817,27 @@ const LIVENESS_REFUSED_STRIKES: u32 = 2;
 /// working perfectly well.
 const LIVENESS_SILENT_STRIKES: u32 = 12;
 
+/// What to say when a server this machine was running has gone.
+const LOCAL_BACKEND_LOST_DETAIL: &str =
+    "Nothing is listening on the local address any more, so this window can no longer load or \
+save anything. Please close it and start OpenConstructionERP again. If this keeps happening, \
+send the log file to info@datadrivenconstruction.io.";
+
+/// What to say when a server somewhere else has gone.
+///
+/// A separate sentence rather than the local one with the address swapped in,
+/// because the action is different: nobody can restart a server on another
+/// machine by reopening this window, and telling them to try would send them
+/// round a loop that cannot end.
+fn remote_backend_lost_detail(url: &str) -> String {
+    format!(
+        "The server at {url} is no longer answering, so this window can no longer load or save \
+anything. Check that the server is running and that this computer can still reach it, then \
+start OpenConstructionERP again. You can also switch back to a server on this computer from \
+the tray icon menu."
+    )
+}
+
 /// Keep watching the backend AFTER it has answered its first health check.
 ///
 /// Readiness was the end of the launcher's attention: past that point nothing
@@ -695,14 +848,21 @@ const LIVENESS_SILENT_STRIKES: u32 = 12;
 /// This is also the only cover for the attach path, where the backend belongs
 /// to another process entirely: there is no child to wait on and no output to
 /// pump, so its death is invisible by construction.
+///
+/// Takes the health address rather than a port because the backend is no longer
+/// always on loopback. `lost_detail` travels with it for the same reason: what
+/// a user should do about a dead server is different depending on whose server
+/// it is, and "nothing is listening on the local address" is actively
+/// misleading about one that lives on the network.
 async fn watch_backend_liveness(
     handle: tauri::AppHandle,
-    port: u16,
+    health_url: String,
+    lost_detail: String,
     shutting_down: Arc<AtomicBool>,
     reported: Arc<AtomicBool>,
 ) {
     let client = reqwest::Client::new();
-    let url = format!("http://127.0.0.1:{port}/api/health");
+    let url = health_url;
     let mut refused: u32 = 0;
     let mut silent: u32 = 0;
     let mut silent_notice = false;
@@ -752,9 +912,7 @@ async fn watch_backend_liveness(
                 &handle,
                 &reported,
                 "The application backend has stopped",
-                "Nothing is listening on the local address any more, so this window can no \
-longer load or save anything. Please close it and start OpenConstructionERP again. If this \
-keeps happening, send the log file to info@datadrivenconstruction.io.",
+                &lost_detail,
             );
             return;
         }
@@ -1140,6 +1298,30 @@ enum BackendSource {
     AlreadyRunning { base_url: String, port: u16 },
     /// Nothing suitable is running, so this launcher starts one itself.
     StartLocally { base_url: String, port: u16 },
+    /// A server somewhere else, named by a setting, an environment variable or
+    /// a file an administrator deployed.
+    ///
+    /// The third answer this type was shaped to admit. It carries no port,
+    /// exactly as the doc comment above predicted a non-loopback source would:
+    /// the port-typed helpers cannot describe it, and everything that touches
+    /// it works from the base URL instead.
+    Remote {
+        base_url: String,
+        source: server_config::ChoiceSource,
+    },
+    /// Somebody named a server address that cannot be used, so nothing is
+    /// started and nothing is contacted.
+    ///
+    /// Not an error state that the resolver stumbled into; it is an answer, and
+    /// the point of returning it as one is that the failure screen can then say
+    /// which of the four places the bad address came from. Falling back to a
+    /// local start here would be worse than failing: it would open a working
+    /// window onto the wrong, empty database and say nothing.
+    Refused {
+        source: server_config::ChoiceSource,
+        raw: String,
+        problem: server_config::UrlProblem,
+    },
 }
 
 /// Decide where this launcher's application server comes from. Starts nothing.
@@ -1166,6 +1348,51 @@ enum BackendSource {
 /// runs on the Tauri async runtime's worker, and the probe never blocks
 /// indefinitely.
 fn resolve_backend_source(local_port: u16) -> BackendSource {
+    // Ask first whether anybody has said where the server should come from.
+    // This runs before the loopback probe on purpose: a machine pointed at the
+    // office server has no business attaching to whatever happens to be
+    // listening on 127.0.0.1, and probing first would let a stray developer
+    // backend quietly win against an administrator's deployed configuration.
+    match server_config::resolve() {
+        server_config::Resolution::Remote { url, source } => {
+            log_line(&format!(
+                "using the server at {url}, configured in {}",
+                source.describe()
+            ));
+            return BackendSource::Remote {
+                base_url: url,
+                source,
+            };
+        }
+        server_config::Resolution::Refused {
+            source,
+            raw,
+            problem,
+        } => {
+            log_line(&format!(
+                "refusing to start: the server address \"{raw}\" from {} cannot be used: {}",
+                source.describe(),
+                problem.message()
+            ));
+            return BackendSource::Refused {
+                source,
+                raw,
+                problem,
+            };
+        }
+        server_config::Resolution::Local { source } => {
+            // The default path, and the one almost every install takes. Only
+            // logged when somebody actually chose it, so an ordinary start
+            // keeps the log it has always had.
+            if source != server_config::ChoiceSource::Default {
+                log_line(&format!(
+                    "starting a server on this computer, as configured in {}",
+                    source.describe()
+                ));
+            }
+        }
+    }
+
     let attached_port = tauri::async_runtime::block_on(async {
         let client = reqwest::Client::new();
         find_existing_backend(&client).await
@@ -1533,10 +1760,177 @@ fn attach_to_running_backend(
     // showing an application that no longer has a server.
     tauri::async_runtime::spawn(watch_backend_liveness(
         handle.clone(),
-        port,
+        format!("http://127.0.0.1:{port}/api/health"),
+        LOCAL_BACKEND_LOST_DETAIL.to_string(),
         shutting_down.clone(),
         backend_lost.clone(),
     ));
+}
+
+/// How long to give a configured remote server to answer before saying it did
+/// not.
+///
+/// Longer than the loopback attach probe's 1.5 seconds, because this one is
+/// crossing a network that may be a site office on a slow uplink, and shorter
+/// than the local startup budget, because there is nothing to wait for here: a
+/// server that is up answers a health check immediately, and one that is not is
+/// not going to become up while we hold a blank window in front of somebody.
+const REMOTE_PROBE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Ask a configured remote server whether it is there and ready.
+///
+/// Returns the reason it is not, in a sentence, rather than a bool. The whole
+/// point of this path is that the user is told which server was tried and why
+/// it did not work, and a bool would throw away the half of that which they
+/// cannot guess.
+///
+/// Deliberately more forgiving than `is_our_backend_healthy`, which is the
+/// probe used to decide whether to ATTACH to something nobody asked about. That
+/// one may reject on a doubt, because the cost of being wrong is starting a
+/// second server. Here a person has named this server on purpose, so the only
+/// question is whether it answers; refusing it over an unrecognised health
+/// field would be overruling an explicit instruction on a technicality.
+async fn probe_remote_backend(base_url: &str) -> Result<(), String> {
+    let url = format!("{base_url}api/health");
+    let client = reqwest::Client::new();
+    let resp = match client.get(&url).timeout(REMOTE_PROBE_TIMEOUT).send().await {
+        Ok(resp) => resp,
+        Err(e) if e.is_timeout() => {
+            return Err(format!(
+                "It did not answer within {} seconds. The server may be switched off, or a \
+firewall may be blocking the connection.",
+                REMOTE_PROBE_TIMEOUT.as_secs()
+            ))
+        }
+        Err(e) if e.is_connect() => {
+            return Err(
+                "This computer could not connect to it. Check the address, and check that the \
+server is running and reachable from here."
+                    .to_string(),
+            )
+        }
+        Err(e) => return Err(format!("The connection failed: {e}.")),
+    };
+
+    let status = resp.status();
+    if status.is_success() {
+        return Ok(());
+    }
+    if status.as_u16() == 404 {
+        // Something is listening and it is not us. Worth its own sentence,
+        // because the address is almost right and the user is about to stare at
+        // it looking for a typo that is not there.
+        return Err(
+            "Something answered at that address, but it is not an OpenConstructionERP server. \
+Check that the address is complete, including any folder the server is published under."
+                .to_string(),
+        );
+    }
+    Err(format!(
+        "It answered with HTTP {}. The server is reachable but is not ready to serve the \
+application.",
+        status.as_u16()
+    ))
+}
+
+/// Use a server somewhere else: check it is there, then open the app against
+/// it.
+///
+/// The third arm of `BackendSource`, and the only one that can fail before
+/// anything is on screen. What it must never do is navigate to an address it
+/// has not checked: a webview pointed at an unreachable host shows a blank
+/// window with no way back, and a blank window is worse than never having had
+/// the feature.
+fn attach_to_remote_backend(
+    handle: tauri::AppHandle,
+    base_url: String,
+    source: server_config::ChoiceSource,
+    shutting_down: Arc<AtomicBool>,
+    backend_lost: Arc<AtomicBool>,
+) {
+    boot_stage(&handle, "sidecar", "done", "Using a server on the network");
+    boot_stage(&handle, "pg", "done", "");
+    boot_stage(&handle, "migrate", "done", "");
+    boot_stage(
+        &handle,
+        "server",
+        "active",
+        &format!("Contacting {base_url}"),
+    );
+
+    tauri::async_runtime::spawn(async move {
+        if let Err(reason) = probe_remote_backend(&base_url).await {
+            report_remote_unreachable(&handle, &base_url, source, &reason);
+            return;
+        }
+
+        boot_stage(&handle, "server", "done", "");
+        boot_stage(&handle, "open", "done", "Ready");
+        set_app_url(&handle, &base_url);
+
+        // Same 400ms as the loopback attach path, and for the same reason: the
+        // splash script needs a moment to finish loading before it can be
+        // asked to offer the launch choice.
+        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        if let Some(window) = handle.get_webview_window("main") {
+            let _ = window.show();
+            let _ = window.set_focus();
+            let url_js = js_escape(&base_url);
+            let _ = window.eval(&format!(
+                "(function(){{if(typeof offerLaunchChoice==='function'){{\
+                    offerLaunchChoice('{url_js}');}}\
+                    else{{window.location.replace('{url_js}');}}}})()"
+            ));
+        }
+        update_check::note_app_started(&handle, env!("CARGO_PKG_VERSION"));
+
+        // No child process and no port, so nothing anywhere reports this
+        // server going away. On a network it is likelier to go away than a
+        // loopback one, not less.
+        tauri::async_runtime::spawn(watch_backend_liveness(
+            handle.clone(),
+            format!("{base_url}api/health"),
+            remote_backend_lost_detail(&base_url),
+            shutting_down,
+            backend_lost,
+        ));
+    });
+}
+
+/// Tell the user which server was tried, why it did not work, and how to get
+/// out of it.
+///
+/// The third sentence is the one that matters. A desktop application that opens
+/// to a blank window because an address is wrong has no way out that does not
+/// involve finding a file, and the people most likely to hit this are the least
+/// likely to know which file. So every message on this path ends by naming the
+/// button on this very screen that starts a server on this computer instead.
+fn report_remote_unreachable(
+    handle: &tauri::AppHandle,
+    base_url: &str,
+    source: server_config::ChoiceSource,
+    reason: &str,
+) {
+    let message = format!(
+        "Could not reach the OpenConstructionERP server at {base_url}, which is configured in \
+{}. {reason} Use the button below to run a server on this computer instead.",
+        source.describe()
+    );
+    report_fatal_stage(handle, "server", &message);
+    offer_local_fallback(handle);
+}
+
+/// Put the way back to a local start on the failure screen.
+///
+/// Kept separate from the message so that adding a second failure path later
+/// cannot accidentally ship without the button. This is the whole of the
+/// promise that a user never has to edit a file to recover.
+fn offer_local_fallback(handle: &tauri::AppHandle) {
+    eval_in_splash(
+        handle,
+        "(function(){if(typeof offerLocalFallback==='function'){offerLocalFallback();}})()"
+            .to_string(),
+    );
 }
 
 /// Start a server locally, as a sidecar of this process, and open the app
@@ -1972,7 +2366,8 @@ happening, send the log file to info@datadrivenconstruction.io.",
                 // reported instead of being left for the user to find.
                 tauri::async_runtime::spawn(watch_backend_liveness(
                     handle_clone.clone(),
-                    port,
+                    format!("http://127.0.0.1:{port}/api/health"),
+                    LOCAL_BACKEND_LOST_DETAIL.to_string(),
                     shutting_down_wait,
                     backend_lost_wait,
                 ));
@@ -2074,6 +2469,9 @@ fn main() {
             open_app_in_browser,
             open_external_url,
             get_app_url,
+            get_server_choice,
+            set_server_choice,
+            use_local_server,
             update_check::set_update_check_enabled,
             update_check::decline_update_version
         ])
@@ -2135,12 +2533,34 @@ fn main() {
                         .build(app)?;
                 let quit_item = MenuItemBuilder::with_id("tray_quit", "Quit").build(app)?;
                 let sep = PredefinedMenuItem::separator(app)?;
-                MenuBuilder::new(app)
-                    .item(&show_item)
-                    .item(&browser_item)
-                    .item(&sep)
-                    .item(&quit_item)
-                    .build()
+                let mut menu = MenuBuilder::new(app).item(&show_item).item(&browser_item);
+
+                // The way back, for the case the failure screen never sees: a
+                // configured server that works perfectly well and is the wrong
+                // one. In that state the application loads, so there is no
+                // failure screen and no button on it, and the settings page
+                // inside the application cannot help either, because that page
+                // is served by the remote server and its origin is granted no
+                // command here. The tray belongs to the launcher and answers to
+                // nobody's access control list, which is exactly why the escape
+                // hatch lives on it.
+                //
+                // Only shown when there is something to escape from. On an
+                // ordinary local install this item would be an offer to switch
+                // to what the user is already using.
+                let local_item = match server_config::resolve() {
+                    server_config::Resolution::Remote { .. }
+                    | server_config::Resolution::Refused { .. } => Some(
+                        MenuItemBuilder::with_id("tray_use_local", "Use a server on this computer")
+                            .build(app)?,
+                    ),
+                    server_config::Resolution::Local { .. } => None,
+                };
+                if let Some(item) = local_item.as_ref() {
+                    menu = menu.item(item);
+                }
+
+                menu.item(&sep).item(&quit_item).build()
             })();
 
             let tray_build = match tray_menu_result {
@@ -2164,6 +2584,7 @@ fn main() {
                                 log_line(&format!("tray: open in browser failed: {e}"));
                             }
                         }
+                        "tray_use_local" => switch_to_local_and_restart(app),
                         "tray_quit" => app.exit(0),
                         _ => {}
                     })
@@ -2219,6 +2640,35 @@ fn main() {
                         shutting_down,
                         backend_lost,
                     );
+                }
+                BackendSource::Remote { base_url, source } => {
+                    attach_to_remote_backend(
+                        handle,
+                        base_url,
+                        source,
+                        shutting_down,
+                        backend_lost,
+                    );
+                }
+                BackendSource::Refused {
+                    source,
+                    raw,
+                    problem,
+                } => {
+                    // Nothing is started and nothing is contacted. The address
+                    // was rejected before any of that, which is the point: a
+                    // bad address should cost a message, not a timeout.
+                    report_fatal_stage(
+                        &handle,
+                        "server",
+                        &format!(
+                            "The server address \"{raw}\", configured in {}, cannot be used. {} \
+Use the button below to run a server on this computer instead.",
+                            source.describe(),
+                            problem.message()
+                        ),
+                    );
+                    offer_local_fallback(&handle);
                 }
             }
 
@@ -2528,6 +2978,87 @@ fn show_startup_failure_dialog(_message: &str) {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A server that has gone away is described differently depending on whose
+    /// server it was.
+    ///
+    /// The local wording tells the user to close the window and start again,
+    /// which is sound advice about a server this machine runs and useless
+    /// advice about one it does not: reopening a window on this computer cannot
+    /// restart a service on another. The two messages were one message with an
+    /// address substituted into it until this test existed to say why they are
+    /// not.
+    #[test]
+    fn a_lost_server_is_described_by_whose_server_it_was() {
+        let remote = remote_backend_lost_detail("https://erp.example.com/");
+
+        assert!(
+            remote.contains("https://erp.example.com/"),
+            "a remote failure has to name the server, or it names nothing the user can check"
+        );
+        assert!(
+            !remote.contains("local address"),
+            "the local wording describes a loopback socket and is false about a network server"
+        );
+        assert!(
+            LOCAL_BACKEND_LOST_DETAIL.contains("local address"),
+            "the local wording is the one that may talk about a local address"
+        );
+        assert_ne!(remote, LOCAL_BACKEND_LOST_DETAIL);
+    }
+
+    /// Every remote failure names the address, the layer that configured it,
+    /// and the way out.
+    ///
+    /// These three are the entire difference between a startup failure a person
+    /// can act on and a blank window. The address alone is not enough: with
+    /// four places the value can come from, a user who does not know WHICH one
+    /// holds it cannot change it, and the ones most likely to be wrong are the
+    /// ones the user never wrote.
+    #[test]
+    fn a_remote_failure_says_what_was_tried_where_it_came_from_and_the_way_out() {
+        for source in [
+            server_config::ChoiceSource::Setting,
+            server_config::ChoiceSource::Environment,
+            server_config::ChoiceSource::AdminFile,
+        ] {
+            let message = format!(
+                "Could not reach the OpenConstructionERP server at {}, which is configured in \
+{}. {} Use the button below to run a server on this computer instead.",
+                "https://erp.example.com/",
+                source.describe(),
+                "It did not answer."
+            );
+            assert!(message.contains("https://erp.example.com/"));
+            assert!(message.contains(source.describe()));
+            assert!(
+                message.contains("run a server on this computer"),
+                "the way out has to be in the message, because the button beside it has no \
+other explanation"
+            );
+        }
+    }
+
+    /// The address the launcher will use is the address the settings page was
+    /// told to show.
+    ///
+    /// One validator, in one place. A second copy in the web page would be a
+    /// second opinion about what is acceptable, and the first day they disagree
+    /// is the day the settings page accepts an address the launcher then
+    /// refuses at the next start, which is the blank window this whole path
+    /// exists to prevent.
+    #[test]
+    fn the_stored_address_is_the_canonical_one_and_not_what_was_typed() {
+        let canonical = server_config::validate_server_url("HTTPS://ERP.Example.com").unwrap();
+        assert_eq!(canonical, "https://erp.example.com/");
+        // And it survives a second pass unchanged, which is what makes it safe
+        // to hand to a webview, an HTTP client and a log line and expect all
+        // three to mean the same server.
+        assert_eq!(
+            server_config::validate_server_url(&canonical).unwrap(),
+            canonical
+        );
+    }
 
     /// The link the shell is given is the link the caller asked for.
     ///

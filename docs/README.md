@@ -68,6 +68,7 @@ For developers extending or building on OpenConstructionERP.
 
 - [Linux install guide](./INSTALL_LINUX.md) - set up on a server.
 - [Desktop install guide](./desktop/INSTALL.md) - set up on a workstation.
+- [Desktop remote server](./desktop/REMOTE_SERVER.md) - point desktop installations at one server your organisation already runs, instead of a separate database per desk.
 - [Email and SMTP setup](./email-setup.md) - configure outbound mail for password resets, tender invitations and notifications, pick the right port, and check whether it is working.
 - [Backup freshness monitoring](./backup-monitoring.md) - point the staleness check at your database dumps, set the age threshold to match your backup schedule, and route the three exit codes so a backup that quietly stopped is heard.
 

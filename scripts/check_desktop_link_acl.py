@@ -127,11 +127,22 @@ RUNTIME_ACL_NAMES = ("add_capability", "RuntimeCapability")
 # `open_log_file` and `get_app_url` are deliberately absent: the launcher shell
 # calls them, the application page does not, and a command nobody calls does not
 # need a remote grant.
+#
+# The two server-choice commands are the settings card that points this install
+# at a server the organisation already runs. They are listed for the same reason
+# as the update-check pair: losing the grant does not raise anything, it turns
+# the card from an editor into the read-only panel that remote mode is supposed
+# to show, and a local install would then look like it had been centrally
+# managed by nobody. `use_local_server` is deliberately not here. It is the way
+# back from a server that cannot be reached, it is called from the launcher's own
+# failure screen over the Tauri protocol, and no web origin gets it.
 APP_WINDOW_COMMANDS = (
     "open_external_url",
     "open_app_in_browser",
     "set_update_check_enabled",
     "decline_update_version",
+    "get_server_choice",
+    "set_server_choice",
 )
 
 # The functions the Windows link-opening path is made of. Named rather than

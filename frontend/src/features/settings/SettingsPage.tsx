@@ -11,6 +11,7 @@ import { EInvoiceSettings } from './EInvoiceSettings';
 import { ModulesSettings } from './ModulesSettings';
 import { SettingsTeamPanel } from './SettingsTeamPanel';
 import { WebhookLeads } from './WebhookLeads';
+import { DesktopServerCard } from './DesktopServerCard';
 import VectorStatusCard from './VectorStatusCard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -1983,6 +1984,10 @@ export function SettingsPage() {
           {/* ── ADVANCED ─────────────────────────────────────────── */}
           {activeTab === 'advanced' && (
             <>
+              {/* Renders nothing outside the desktop build, where the question
+                  of which server this window talks to does not arise. */}
+              <DesktopServerCard />
+
               <div className="lg:col-span-2">
                 <BackupRestore />
               </div>

@@ -186,6 +186,100 @@ function reportLinkNotOpened(url: string): void {
 }
 
 /**
+ * Which server the desktop launcher has this window pointed at.
+ *
+ * `source` arrives as a finished English phrase from the launcher rather than
+ * as a code to translate here, because the launcher itself has no translation
+ * layer and the same phrase has to appear on its startup failure screen, which
+ * this app never gets to render. One English sentence in two places beats one
+ * translated here and a different English one there.
+ */
+export interface DesktopServerChoice {
+  /** `local` when the launcher runs the server itself, `remote` when it does not. */
+  mode: 'local' | 'remote';
+  /** The address in use, canonicalised by the launcher. */
+  url: string;
+  /** Which layer of the launcher's precedence chain decided this. */
+  source: string;
+  /** True when this user's own saved choice is what decided it. */
+  fromUserSetting: boolean;
+}
+
+/**
+ * Ask the launcher which server this window is talking to.
+ *
+ * Returns undefined when there is no answer to be had, and deliberately does
+ * not distinguish "not running in the desktop shell" from "the access control
+ * list refused the call", because the caller does the same thing in both cases:
+ * fall back to what the page can see without asking anyone, which is its own
+ * origin.
+ *
+ * That refusal is a designed state, not a bug. In remote mode the application
+ * is served by a server whose address a person typed, and that origin is
+ * granted no native commands at all, so this call is refused there by design.
+ * Probing the outcome is therefore the honest way to find out whether this page
+ * may configure the launcher: it measures the actual grant instead of guessing
+ * it from the hostname and drifting apart from the capability files.
+ */
+export async function getDesktopServerChoice(): Promise<DesktopServerChoice | undefined> {
+  if (!isTauri) return undefined;
+  const invoke = getTauriInvoke();
+  if (!invoke) return undefined;
+  try {
+    const answer = await invoke('get_server_choice');
+    if (!answer || typeof answer !== 'object') return undefined;
+    return answer as DesktopServerChoice;
+  } catch (err) {
+    console.warn('get_server_choice failed:', err);
+    return undefined;
+  }
+}
+
+/**
+ * Outcome of asking the launcher to change which server it uses.
+ *
+ * An object rather than a boolean for the same reason `OpenInBrowserResult` is
+ * one: the launcher validates the address and its refusal carries the sentence
+ * explaining why, and that sentence is the entire value of the round trip. A
+ * boolean would throw away the only part the user can act on.
+ */
+export interface SetServerResult {
+  ok: boolean;
+  /** The launcher's own explanation when `ok` is false. */
+  reason?: string;
+}
+
+/**
+ * Save which server the desktop launcher should use from the next start.
+ *
+ * Pass null to clear this user's choice, which hands the decision back to the
+ * environment variable and the file an administrator deploys. That is the only
+ * way back to being centrally managed once somebody has chosen for themselves,
+ * so it is a real argument and not an oversight.
+ *
+ * Takes effect on the next start, never on this one. Repointing a running
+ * window at a different database mid-session would leave every open form, every
+ * cached query and every unsaved edit belonging to the previous server, so the
+ * launcher only ever reads this while starting.
+ */
+export async function setDesktopServerChoice(
+  choice: { mode: 'local' } | { mode: 'remote'; url: string } | null,
+): Promise<SetServerResult> {
+  if (!isTauri) return { ok: false, reason: 'Not running in the desktop app.' };
+  const invoke = getTauriInvoke();
+  if (!invoke) return { ok: false, reason: 'The desktop bridge is unavailable.' };
+  try {
+    await invoke('set_server_choice', {
+      mode: choice?.mode ?? null,
+      url: choice && choice.mode === 'remote' ? choice.url : null,
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: typeof err === 'string' ? err : undefined };
+  }
+}
+
+/**
  * Open a URL in a genuinely new browser tab, never a chrome-less popup.
  *
  * Clicks a hidden anchor carrying rel="noopener" rather than passing a features

@@ -29,6 +29,21 @@
       "identifier": "allow-decline-update-version",
       "description": "Record that the user does not want to be told about one particular version again.",
       "commands": { "allow": ["decline_update_version"] }
+    },
+    {
+      "identifier": "allow-get-server-choice",
+      "description": "Read which application server this window is talking to and which of the four configuration layers decided it. Reads no file the caller names and reports nothing about the machine beyond the address of the page asking, which the page already knows.",
+      "commands": { "allow": ["get_server_choice"] }
+    },
+    {
+      "identifier": "allow-set-server-choice",
+      "description": "Save which application server the launcher should use from the next start, or clear that choice. The address is validated by the launcher before it is stored, and the setting is only ever read while starting, so this cannot repoint a running window. This is the one permission here that changes what the application does on the next run rather than what it does now, and it is deliberately NOT granted to a server whose address a user typed in: see capabilities/app-window.json.",
+      "commands": { "allow": ["set_server_choice"] }
+    },
+    {
+      "identifier": "allow-use-local-server",
+      "description": "Record a choice of a server on this computer and restart into it. This is the way out of a configured server that cannot be reached, so it is granted to the launcher's own startup failure screen. It takes no argument and can only ever move the launcher towards the default it shipped with.",
+      "commands": { "allow": ["use_local_server"] }
     }
   ],
   "set": [
@@ -41,7 +56,10 @@
         "allow-open-log-file",
         "allow-get-app-url",
         "allow-set-update-check-enabled",
-        "allow-decline-update-version"
+        "allow-decline-update-version",
+        "allow-get-server-choice",
+        "allow-set-server-choice",
+        "allow-use-local-server"
       ]
     }
   ]
