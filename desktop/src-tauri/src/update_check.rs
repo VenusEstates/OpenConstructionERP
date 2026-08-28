@@ -394,6 +394,13 @@ Nothing about you or this computer was sent.",
     let off_label = js_escape("Turn off update checks");
     let off_done = js_escape("Update checks are off. Set the OE_DISABLE_UPDATE_CHECK environment \
 variable to turn them off for every user on this computer.");
+    // What the two buttons say when the launcher refuses the command behind
+    // them. Both name the consequence rather than the fault, because the fault
+    // is ours and the consequence is the only part the reader can act on.
+    let later_failed = js_escape("This choice could not be saved, so the notice will appear again \
+the next time the application starts.");
+    let off_failed = js_escape("Update checks could not be turned off. Set the \
+OE_DISABLE_UPDATE_CHECK environment variable to turn them off instead.");
 
     format!(
         "(function(){{\
@@ -414,15 +421,28 @@ screen the card was never shown and this is inert. */\
 throws, or comes back rejected as one failure with one recovery. The rejected \
 case is the one worth spelling out: a machine with no registered browser \
 answers the open request with an error rather than by never answering, so \
-without this the button would look like it had worked and nothing would open. */\
-            function invoke(name,args,onfail){{\
+without this the button would look like it had worked and nothing would open. \
+\
+The success callback matters for the same reason and is easier to forget. A \
+button that reports what it did BEFORE the command answers reports the thing it \
+attempted, not the thing that happened, and the two differ every time the call \
+is refused. Anything that changes its own label to say a setting was written \
+has to wait to be told the setting was written. \
+\
+A call that comes back as something other than a promise is treated as a \
+failure rather than as a success, because there is nothing in that answer that \
+says the command ran. Reporting a success nobody gave us is the whole defect \
+this callback exists to remove, and it would be no better for being in a \
+branch that Tauri does not currently take. */\
+            function invoke(name,args,onfail,onok){{\
                 function failed(){{if(onfail){{onfail();}}}}\
+                function ok(){{if(onok){{onok();}}}}\
                 var t=window.__TAURI__;\
                 var f=t&&((t.core&&t.core.invoke)||t.invoke);\
                 if(!f){{failed();return;}}\
                 try{{\
                     var p=f(name,args);\
-                    if(p&&p.catch){{p.catch(failed);}}\
+                    if(p&&p.then){{p.then(ok,failed);}}else{{failed();}}\
                 }}catch(e){{failed();}}\
             }}\
             var box=d.createElement('div');\
@@ -445,6 +465,19 @@ clip its chrome. There the strip simply overlaps the last few pixels. */\
             }}\
             var inner=d.createElement('div');\
             inner.setAttribute('style','max-width:640px;margin:0 auto');\
+            /* Where a refused command gets to say so. One strip for both \
+buttons, built up front and left empty, so a handler reporting a refusal is a \
+single call and the two cannot drift into reporting it differently. Hidden \
+until something has been written into it: an empty line at the foot of the \
+notice would read as a rendering fault. */\
+            var warnBox=d.createElement('div');\
+            warnBox.setAttribute('style','margin-top:10px;font-size:12.5px;\
+color:#ffb3a7;display:none');\
+            function warn(text){{\
+                warnBox.textContent=text;\
+                warnBox.style.display='';\
+                reserveSpace((box.offsetHeight+24)+'px');\
+            }}\
             var h=d.createElement('div');\
             h.setAttribute('style','font-size:16px;font-weight:600;margin-bottom:6px');\
             h.textContent='{head_js}';\
@@ -475,11 +508,21 @@ retried for as long as the notice has to survive a page change, and the guard \
 at the top of this function is the only thing keeping it from being built twice: \
 remove the element and the very next retry puts a dismissed notice straight back \
 on screen. Left in the document, it is its own record that the user answered. */\
+            /* Dismissed only once the launcher has written the dismissal down. \
+Hiding first and asking afterwards is what made this button lie: the strip went \
+away whether or not the choice was recorded, and a choice that was not recorded \
+brings the same notice back on the next start, so the user is left believing \
+they answered a question they will be asked again. The wait costs nothing a \
+person can perceive, since this is local IPC that either answers or is refused \
+at once, and the refusal now has somewhere to appear. */\
             later.onclick=function(){{\
-                box.style.display='none';\
-                box.setAttribute('data-oe-dismissed','1');\
-                reserveSpace('');\
-                invoke('decline_update_version',{{version:'{version_js}'}});\
+                invoke('decline_update_version',{{version:'{version_js}'}},function(){{\
+                    warn('{later_failed}');\
+                }},function(){{\
+                    box.style.display='none';\
+                    box.setAttribute('data-oe-dismissed','1');\
+                    reserveSpace('');\
+                }});\
             }};\
             row.appendChild(get);row.appendChild(later);\
             var note=d.createElement('div');\
@@ -491,13 +534,21 @@ color:rgba(245,247,250,0.72)');\
             off.textContent='{off_label}';\
             off.setAttribute('style','border:0;background:transparent;padding:0;font:inherit;\
 color:rgba(245,247,250,0.72);text-decoration:underline;cursor:pointer');\
+            /* The label changes only after the setting has been written. It \
+used to change on the way out, which made this the plainest false statement in \
+the launcher: the note read that update checks were off while the command that \
+turns them off had been refused and nothing on disk had changed. */\
             off.onclick=function(){{\
-                invoke('set_update_check_enabled',{{enabled:false}});\
-                note.textContent='{off_done}';\
+                invoke('set_update_check_enabled',{{enabled:false}},function(){{\
+                    warn('{off_failed}');\
+                }},function(){{\
+                    note.textContent='{off_done}';\
+                }});\
             }};\
             note.appendChild(off);\
             inner.appendChild(h);inner.appendChild(p);inner.appendChild(row);\
-            inner.appendChild(note);box.appendChild(inner);host.appendChild(box);\
+            inner.appendChild(note);inner.appendChild(warnBox);\
+            box.appendChild(inner);host.appendChild(box);\
             reserveSpace((box.offsetHeight+24)+'px');\
         }})()"
     )
@@ -865,6 +916,60 @@ mod tests {
             script.contains("version:'15.0.1'"),
             "the version declined must be the one that was offered"
         );
+    }
+
+    #[test]
+    fn neither_button_reports_an_outcome_it_was_not_given() {
+        // Both of these buttons used to act on the way out. Not now hid the
+        // strip and then asked the launcher to remember the dismissal, and the
+        // opt-out link rewrote its own label to say update checks were off and
+        // then asked for them to be turned off. On the application page both
+        // commands were refused, so the strip came back on the next start and
+        // the label said a setting had been written that had not been. A
+        // control that reports a success it did not get is worse than one that
+        // does nothing, because the user has no reason to look again.
+        //
+        // The discriminator is the close paren. `invoke(name,args)` with the
+        // arguments closed off immediately is the old shape and cannot be
+        // told anything; the callbacks are the whole fix, so their absence is
+        // what this refuses. Checked on both documents, since the failure
+        // screen builds the same script.
+        for after_failure in [true, false] {
+            let script = notice_script(&some_update(), "15.0.0", after_failure);
+            assert!(
+                !script.contains("version:'15.0.1'});"),
+                "Not now must pass callbacks to invoke, or it cannot know the dismissal was saved"
+            );
+            assert!(
+                !script.contains("{enabled:false});"),
+                "the opt-out must pass callbacks to invoke, or its label is a guess"
+            );
+            // And the answer has to have somewhere to appear.
+            assert!(
+                script.matches("warn(").count() >= 3,
+                "both handlers must report a refusal through the one warning strip"
+            );
+            assert!(
+                script.contains("the notice will appear again"),
+                "a dismissal that was not saved has to say the notice is coming back"
+            );
+            assert!(
+                script.contains("Update checks could not be turned off"),
+                "a refused opt-out has to say so rather than claim it worked"
+            );
+            // The callbacks are only worth having if the helper cannot reach
+            // the success one without being told. A call that answers with
+            // something other than a promise has told us nothing, and treating
+            // that as success would put the same lie back one level down.
+            assert!(
+                !script.contains("else{ok();}"),
+                "an answer that is not a promise is not a success, and must not be reported as one"
+            );
+            assert!(
+                script.contains("else{failed();}"),
+                "the helper must fail closed when the call does not come back as a promise"
+            );
+        }
     }
 
     #[test]
