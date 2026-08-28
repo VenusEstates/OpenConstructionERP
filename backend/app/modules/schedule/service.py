@@ -505,7 +505,7 @@ _CALENDAR_BY_COUNTRY: dict[str, str] = {
 # Nothing in here may be a two-letter ISO code. AR and PT used to sit in the
 # same dict as the country codes, where they meant Arabic and Portuguese, so
 # Buenos Aires was given the Gulf week of six 10-hour days and Lisbon the
-# Brazilian week of six. Because the two keyspaces below cannot overlap, the
+# Brazilian week of six. Because the three head keyspaces cannot overlap, the
 # order they are consulted in does not decide any answer.
 _CALENDAR_BY_LEGACY_HEAD: dict[str, str] = {
     "BRAZIL": "BRAZIL",
@@ -525,14 +525,60 @@ _CALENDAR_BY_LEGACY_HEAD: dict[str, str] = {
     "ZH": "CHINA",  # ZH_SHANGHAI
 }
 
+# The vocabulary the project region picker emits, which is none of the three
+# above: not ISO codes, not superseded catalogue heads, and not the spaced
+# labels below. frontend/src/features/projects/CreateProjectPage.tsx ships
+# REGION_GROUPS as compound CamelCase tokens, so a project created through the
+# product carries "GulfStates" or "MiddleEast" rather than "QA" or "Middle East".
+#
+# That mismatch is why the Gulf week was unreachable from the product's own
+# picker while every gate stayed green: the tests walked _CALENDAR_BY_COUNTRY,
+# whose ISO codes the picker never emits, so the instrument and the product were
+# speaking different vocabularies and neither could see the other.
+#
+# Only regions whose week actually differs from DEFAULT, or that own a named
+# calendar, need an entry. A region with no calendar of its own is left to fall
+# through to DEFAULT on purpose: that is the honest answer rather than a
+# neighbouring country's week. The gate over this dict's coverage of the shipped
+# picker is tests/unit/test_every_shipped_region_option_reaches_a_calendar.py,
+# and it reads the picker file rather than a copy of these keys.
+#
+# Same rule as the dict above: nothing in here may be a two-letter ISO code.
+_CALENDAR_BY_PICKER_REGION: dict[str, str] = {
+    # "Gulf States" and "Middle East (General)" both carry no country, so both
+    # get the week five of the six GCC states work, matching what the spaced
+    # "MIDDLE EAST" label below has always answered. The UAE is the one GCC
+    # state that does not work it, and it stays reachable by "AE", "AE_DUBAI"
+    # and "United Arab Emirates"; a UAE project stored under a region naming the
+    # group rather than the country still gets Sunday-Thursday.
+    "GULFSTATES": "GULF",
+    "MIDDLEEAST": "GULF",
+    # Not a week change: RU is Monday-Friday and eight hours, exactly DEFAULT.
+    # It is here so the badge a Russian project renders reads "Russia" instead
+    # of "Standard", because a shipped calendar the picker cannot reach is
+    # indistinguishable from one that does not exist.
+    "RUSSIA": "RU",
+}
+
 # Human-readable region labels that projects carry instead of a code, matched
-# in full. There is deliberately no bare "UNITED" entry: it used to catch every
+# by prefix. There is deliberately no bare "UNITED" entry: it used to catch every
 # label beginning with that word, so "United Arab Emirates" was given the
 # American calendar rather than the Gulf one.
+#
+# The five Gulf states are named here as well as coded above because the region
+# field accepts free text: the picker's "Custom..." option stores whatever the
+# user types. "QA" resolved to Sunday-Thursday while "Qatar" fell through to
+# Monday-Friday, so the same project got two different weeks depending on which
+# form was typed, and the longer, more natural one was the wrong one.
 _CALENDAR_BY_LABEL: dict[str, str] = {
+    "BAHRAIN": "GULF",
+    "KUWAIT": "GULF",
     # "Middle East" carries no country, so it gets the week five of the six GCC
     # states work. The UAE is named in full and is the one that does not.
     "MIDDLE EAST": "GULF",
+    "OMAN": "GULF",
+    "QATAR": "GULF",
+    "SAUDI ARABIA": "GULF",
     "UNITED ARAB EMIRATES": "UAE",
     "UNITED KINGDOM": "UK",
     "UNITED STATES": "US",
@@ -544,7 +590,8 @@ def get_work_calendar(region: str | None = None) -> dict:
 
     A region may be a calendar key ("GULF"), an ISO 3166-1 alpha-2 country code
     or a region id headed by one ("DE_BERLIN"), a superseded catalogue head
-    ("ZH_SHANGHAI"), or a human-readable label ("United States").
+    ("ZH_SHANGHAI"), a value the project region picker emits ("GulfStates"), or
+    a human-readable label ("United States", "Qatar").
 
     Args:
         region: The region string stored on a project or a catalogue row.
@@ -573,7 +620,9 @@ def get_work_calendar(region: str | None = None) -> dict:
     # Otherwise the head of a region id: "DE_BERLIN" -> "DE".
     head_words = normalized.split("_")[0].split()
     head = head_words[0] if head_words else ""
-    mapped = _CALENDAR_BY_COUNTRY.get(head) or _CALENDAR_BY_LEGACY_HEAD.get(head)
+    mapped = (
+        _CALENDAR_BY_COUNTRY.get(head) or _CALENDAR_BY_LEGACY_HEAD.get(head) or _CALENDAR_BY_PICKER_REGION.get(head)
+    )
     if mapped:
         return WORK_CALENDARS.get(mapped, WORK_CALENDARS["DEFAULT"])
     return WORK_CALENDARS["DEFAULT"]
