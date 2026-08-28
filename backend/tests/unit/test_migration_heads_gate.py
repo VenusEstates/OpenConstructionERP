@@ -42,15 +42,26 @@ def _write(directory: Path, name: str, revision: str, down: str) -> None:
     )
 
 
+def _entries(directory: Path) -> list[tuple[str, str]]:
+    """Read a fixture directory into the name and text pairs the gate parses.
+
+    ``read_graph`` stopped taking a directory when the gate moved off the disk
+    and onto the committed graph. It takes pairs now, so whoever produced them
+    is the caller's business: the gate reads them from the index, and these
+    tests read them from a temporary directory.
+    """
+    return sorted((path.name, path.read_text(encoding="utf-8")) for path in directory.glob("*.py"))
+
+
 def test_a_linear_chain_has_one_head(tmp_path: Path) -> None:
     _write(tmp_path, "v1.py", "v1", "None")
     _write(tmp_path, "v2.py", "v2", '"v1"')
     _write(tmp_path, "v3.py", "v3", '"v2"')
 
-    revisions, parents, unparsed = gate.read_graph(str(tmp_path))
+    graph = gate.read_graph(_entries(tmp_path))
 
-    assert unparsed == []
-    assert gate.heads_of(revisions, parents) == ["v3"]
+    assert graph.unparsed == []
+    assert graph.heads == ["v3"]
 
 
 def test_two_revisions_on_one_parent_are_two_heads(tmp_path: Path) -> None:
@@ -59,9 +70,9 @@ def test_two_revisions_on_one_parent_are_two_heads(tmp_path: Path) -> None:
     _write(tmp_path, "v2a.py", "v2a", '"v1"')
     _write(tmp_path, "v2b.py", "v2b", '"v1"')
 
-    revisions, parents, _ = gate.read_graph(str(tmp_path))
+    graph = gate.read_graph(_entries(tmp_path))
 
-    assert gate.heads_of(revisions, parents) == ["v2a", "v2b"]
+    assert graph.heads == ["v2a", "v2b"]
 
 
 def test_a_merge_revision_written_as_a_multiline_tuple_keeps_both_parents(tmp_path: Path) -> None:
@@ -76,11 +87,11 @@ def test_a_merge_revision_written_as_a_multiline_tuple_keeps_both_parents(tmp_pa
     _write(tmp_path, "v2b.py", "v2b", '"v1"')
     _write(tmp_path, "v3.py", "v3", '(\n    "v2a",\n    "v2b",\n)')
 
-    revisions, parents, _ = gate.read_graph(str(tmp_path))
+    graph = gate.read_graph(_entries(tmp_path))
 
-    assert sorted(parents["v3"]) == ["v2a", "v2b"]
-    assert gate.heads_of(revisions, parents) == ["v3"]
-    assert [r for r, ps in parents.items() if not ps] == ["v1"]
+    assert sorted(graph.parents["v3"]) == ["v2a", "v2b"]
+    assert graph.heads == ["v3"]
+    assert graph.bases == ["v1"]
 
 
 def test_a_merge_written_on_one_line_keeps_both_parents(tmp_path: Path) -> None:
@@ -89,10 +100,10 @@ def test_a_merge_written_on_one_line_keeps_both_parents(tmp_path: Path) -> None:
     _write(tmp_path, "v2b.py", "v2b", '"v1"')
     _write(tmp_path, "v3.py", "v3", '("v2a", "v2b")')
 
-    revisions, parents, _ = gate.read_graph(str(tmp_path))
+    graph = gate.read_graph(_entries(tmp_path))
 
-    assert sorted(parents["v3"]) == ["v2a", "v2b"]
-    assert gate.heads_of(revisions, parents) == ["v3"]
+    assert sorted(graph.parents["v3"]) == ["v2a", "v2b"]
+    assert graph.heads == ["v3"]
 
 
 def test_two_files_claiming_one_revision_id_are_reported(tmp_path: Path) -> None:
@@ -101,24 +112,30 @@ def test_two_files_claiming_one_revision_id_are_reported(tmp_path: Path) -> None
     _write(tmp_path, "v2.py", "v2", '"v1"')
     _write(tmp_path, "v2_again.py", "v2", '"v1"')
 
-    _, _, unparsed = gate.read_graph(str(tmp_path))
+    graph = gate.read_graph(_entries(tmp_path))
 
-    assert len(unparsed) == 1
-    assert "duplicate id v2" in unparsed[0]
+    assert len(graph.unparsed) == 1
+    assert "duplicate id v2" in graph.unparsed[0]
 
 
-def test_the_real_tree_has_exactly_one_head() -> None:
-    """The gate over the tree it actually guards.
+def test_the_committed_graph_has_exactly_one_head() -> None:
+    """The gate over the graph that ships, which is the one it actually guards.
 
-    This is the assertion that would have caught today's fork, and it is
-    deliberately not a fixture: a gate proven only against fixtures is proven
-    against the author's idea of the repository.
+    This is the assertion that would have caught the fork it was written for,
+    and it is deliberately not a fixture: a gate proven only against fixtures
+    is proven against the author's idea of the repository.
+
+    It asks HEAD plus the index rather than the versions directory. In a tree
+    several sessions write to at once, an untracked revision file forks the
+    graph on one disk and nowhere else, and a test that read the directory
+    would go red for everybody over a file that ships to nobody. The gate
+    itself made that move; this follows it, and the disk stays a warning.
     """
-    revisions, parents, unparsed = gate.read_graph(gate.VERSIONS)
+    graph = gate.read_graph(gate.index_entries().items())
 
-    assert unparsed == [], f"unparsable revision files: {unparsed}"
-    assert len(revisions) >= gate.MIN_EXPECTED_REVISIONS, (
-        f"only {len(revisions)} revisions found, so this assertion is not about the tree"
+    assert graph.unparsed == [], f"unparsable revision files: {graph.unparsed}"
+    assert len(graph.revisions) >= gate.MIN_EXPECTED_REVISIONS, (
+        f"only {len(graph.revisions)} revisions found, so this assertion is not about the tree"
     )
-    heads = gate.heads_of(revisions, parents)
-    assert len(heads) == 1, f"expected one head, found {heads}"
+    assert graph.dangling == [], f"revisions named as a parent but present nowhere: {graph.dangling}"
+    assert len(graph.heads) == 1, f"expected one head, found {graph.heads}"

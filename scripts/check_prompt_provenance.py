@@ -112,7 +112,6 @@ from __future__ import annotations
 
 import argparse
 import ast
-import io
 import pathlib
 import re
 import sys
@@ -375,9 +374,7 @@ class ParseFailure(Exception):
 
 def iter_source_files(root: pathlib.Path) -> list[pathlib.Path]:
     """Every .py file under ``root`` that is ours to answer for."""
-    return [
-        p for p in sorted(root.rglob("*.py")) if not SKIP_PARTS.intersection(p.parts)
-    ]
+    return [p for p in sorted(root.rglob("*.py")) if not SKIP_PARTS.intersection(p.parts)]
 
 
 def dotted_name(path: pathlib.Path, root: pathlib.Path) -> str:
@@ -449,7 +446,7 @@ class Tree:
         """Parse one file and record the names it binds."""
         dotted = dotted_name(path, self.root)
         try:
-            tree = ast.parse(io.open(path, encoding="utf-8").read())
+            tree = ast.parse(path.read_text(encoding="utf-8"))
         except (SyntaxError, UnicodeDecodeError) as exc:
             raise ParseFailure(f"{self.relative(path)}: {exc}") from exc
         mod = SourceFile(path=path, rel=self.relative(path), dotted=dotted, tree=tree)
@@ -474,11 +471,7 @@ def collect_module_names(mod: SourceFile) -> None:
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     mod.consts[target.id] = node.value
-        elif (
-            isinstance(node, ast.AnnAssign)
-            and isinstance(node.target, ast.Name)
-            and node.value is not None
-        ):
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.value is not None:
             mod.consts[node.target.id] = node.value
     for node in ast.walk(mod.tree):
         if not isinstance(node, ast.ImportFrom):
@@ -542,11 +535,7 @@ def enclosing_functions(mod: SourceFile) -> dict[int, ast.AST]:
 
     def descend(node: ast.AST, current: ast.AST | None) -> None:
         for child in ast.iter_child_nodes(node):
-            inner = (
-                child
-                if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef)
-                else current
-            )
+            inner = child if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef) else current
             if inner is not None:
                 owner[id(child)] = inner
             descend(child, inner)
@@ -606,11 +595,7 @@ def last_local_assignment(func: ast.AST, name: str) -> ast.expr | None:
                 if isinstance(target, ast.Name) and target.id == name:
                     found = node.value
         elif isinstance(node, ast.AnnAssign):
-            if (
-                isinstance(node.target, ast.Name)
-                and node.target.id == name
-                and node.value is not None
-            ):
+            if isinstance(node.target, ast.Name) and node.target.id == name and node.value is not None:
                 found = node.value
     return found
 
@@ -624,9 +609,7 @@ class Resolver:
     def module_constant(self, dotted: str, name: str, depth: int = 0) -> Origin | None:
         """Classify a module-level name, following one import hop at a time."""
         if depth > 4:
-            return Origin(
-                "unresolved", f"import chain deeper than four hops at {dotted}.{name}"
-            )
+            return Origin("unresolved", f"import chain deeper than four hops at {dotted}.{name}")
         mod = self.tree.get(dotted)
         if mod is None:
             return None
@@ -645,8 +628,7 @@ class Resolver:
                             continue
                     return Origin(
                         "runtime",
-                        f"module constant {dotted}.{name} interpolates "
-                        f"{ast.unparse(hole)}",
+                        f"module constant {dotted}.{name} interpolates {ast.unparse(hole)}",
                     )
                 return Origin("constant", f"module constant {dotted}.{name}")
             if is_literal_text(value):
@@ -689,8 +671,7 @@ class Resolver:
             if origin.kind != "constant":
                 return Origin(
                     origin.kind,
-                    f"f-string interpolating {ast.unparse(hole)}, which is "
-                    f"{origin.detail}",
+                    f"f-string interpolating {ast.unparse(hole)}, which is {origin.detail}",
                 )
         return Origin("constant", "f-string whose holes are all constant")
 
@@ -713,10 +694,7 @@ class Resolver:
             return node.value if isinstance(node.value, str) else None
         if isinstance(node, ast.JoinedStr):
             return "".join(
-                v.value
-                if isinstance(v, ast.Constant) and isinstance(v.value, str)
-                else " ... "
-                for v in node.values
+                v.value if isinstance(v, ast.Constant) and isinstance(v.value, str) else " ... " for v in node.values
             )
         if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
             left = self.text_of(node.left, mod, func, depth + 1)
@@ -805,9 +783,7 @@ class Resolver:
                 from_callers = self.from_local_callers(mod, func, name, seen)
                 if from_callers is not None:
                     return from_callers
-                return Origin(
-                    "runtime", f"parameter {name} of {getattr(func, 'name', '?')}"
-                )
+                return Origin("runtime", f"parameter {name} of {getattr(func, 'name', '?')}")
             local = last_local_assignment(func, name)
             if local is not None:
                 if isinstance(local, ast.JoinedStr):
@@ -819,18 +795,14 @@ class Resolver:
                 if isinstance(local, ast.Attribute):
                     return Origin("runtime", f"local {name} = {ast.unparse(local)}")
                 if isinstance(local, ast.Call):
-                    return Origin(
-                        "builder", f"local {name} = call to {ast.unparse(local.func)}"
-                    )
+                    return Origin("builder", f"local {name} = call to {ast.unparse(local.func)}")
                 if isinstance(local, ast.BinOp | ast.IfExp):
                     return self.classify(local, mod, func, seen)
                 return Origin("unresolved", f"local {name} = {type(local).__name__}")
         found = self.module_constant(mod.dotted, name)
         if found is not None:
             return found
-        return Origin(
-            "unresolved", f"name {name} is bound somewhere this scan does not read"
-        )
+        return Origin("unresolved", f"name {name} is bound somewhere this scan does not read")
 
     def from_local_callers(
         self,
@@ -878,13 +850,7 @@ class Resolver:
             for kw in node.keywords:
                 if kw.arg == param:
                     arg = kw.value
-            at = (
-                index
-                if isinstance(node.func, ast.Attribute)
-                else index + bound
-                if index is not None
-                else None
-            )
+            at = index if isinstance(node.func, ast.Attribute) else index + bound if index is not None else None
             if arg is None and at is not None and len(node.args) > at:
                 arg = node.args[at]
             if arg is None:
@@ -895,9 +861,7 @@ class Resolver:
         for origin in origins:
             if origin.kind != "constant":
                 return Origin(origin.kind, f"via {name}({param}=...): {origin.detail}")
-        return Origin(
-            "constant", f"every {name}({param}=...) in this file passes a constant"
-        )
+        return Origin("constant", f"every {name}({param}=...) in this file passes a constant")
 
 
 def instruction_argument(node: ast.Call) -> ast.expr | None:
@@ -925,9 +889,7 @@ def model_call_sites(
     return out
 
 
-def site_key(
-    mod: SourceFile, arg: ast.expr, func: ast.AST | None
-) -> tuple[str, str, str]:
+def site_key(mod: SourceFile, arg: ast.expr, func: ast.AST | None) -> tuple[str, str, str]:
     """The acknowledgement key for one call site."""
     return (mod.rel, str(getattr(func, "name", "?")), ast.unparse(arg))
 
@@ -961,9 +923,7 @@ def scan_model_calls(
     return findings, total, used
 
 
-def shipped_prompt_texts(
-    modules: list[SourceFile], resolver: Resolver
-) -> dict[tuple[str, int, str], str]:
+def shipped_prompt_texts(modules: list[SourceFile], resolver: Resolver) -> dict[tuple[str, int, str], str]:
     """The text of every instruction slot this project fills from its own source.
 
     A slot counts as ours when the scan settled it as constant, and also when a
@@ -979,10 +939,7 @@ def shipped_prompt_texts(
             key = site_key(mod, arg, func)
             if key in RUNTIME_BY_DESIGN:
                 continue
-            if (
-                resolver.classify(arg, mod, func).kind != "constant"
-                and key not in CLEARED_BY_READING
-            ):
+            if resolver.classify(arg, mod, func).kind != "constant" and key not in CLEARED_BY_READING:
                 continue
             text = resolver.text_of(arg, mod, func)
             if text is not None:
@@ -1038,11 +995,7 @@ def form_keys(node: ast.expr, func: ast.AST | None) -> set[str]:
             node = local
     if not isinstance(node, ast.Dict):
         return set()
-    return {
-        k.value
-        for k in node.keys
-        if isinstance(k, ast.Constant) and isinstance(k.value, str)
-    }
+    return {k.value for k in node.keys if isinstance(k, ast.Constant) and isinstance(k.value, str)}
 
 
 def scan_transcription_posts(modules: list[SourceFile]) -> list[Finding]:
@@ -1073,26 +1026,20 @@ def scan_transcription_posts(modules: list[SourceFile]) -> list[Finding]:
             for kw in node.keywords:
                 if kw.arg not in {"data", "json"}:
                     continue
-                for key in sorted(
-                    form_keys(kw.value, func) & TRANSCRIPTION_INSTRUCTION_FIELDS
-                ):
+                for key in sorted(form_keys(kw.value, func) & TRANSCRIPTION_INSTRUCTION_FIELDS):
                     findings.append(
                         Finding(
                             mod.rel,
                             node.lineno,
                             str(getattr(func, "name", "?")),
                             f"{kw.arg}[{key!r}]",
-                            Origin(
-                                "runtime", "instruction field on the audio endpoint"
-                            ),
+                            Origin("runtime", "instruction field on the audio endpoint"),
                         )
                     )
     return findings
 
 
-def unused_acknowledgements(
-    modules: list[SourceFile], used: set[tuple[str, str, str]]
-) -> list[str]:
+def unused_acknowledgements(modules: list[SourceFile], used: set[tuple[str, str, str]]) -> list[str]:
     """Acknowledgement entries nothing consulted on this run.
 
     An entry reads as a reviewed exception. There are two ways it can stop being
@@ -1106,11 +1053,7 @@ def unused_acknowledgements(
     entry. Nothing was wrong with the entry. Nothing was wrong with the count.
     The gate agreed with itself and was not measuring the thing it named.
     """
-    live = {
-        site_key(mod, arg, func)
-        for mod in modules
-        for _, arg, func in model_call_sites(mod)
-    }
+    live = {site_key(mod, arg, func) for mod in modules for _, arg, func in model_call_sites(mod)}
     out = []
     for key in [*CLEARED_BY_READING, *RUNTIME_BY_DESIGN]:
         where = f"{key[0]} :: {key[1]} :: {key[2]}"
@@ -1285,17 +1228,13 @@ def self_test() -> int:
             if name in _RED_FIXTURES and not found:
                 failures.append(f"{name}: expected a finding and the scan cleared it")
             if name not in _RED_FIXTURES and found:
-                failures.append(
-                    f"{name}: expected clean, got {found[0].origin.kind}: {found[0].origin.detail}"
-                )
+                failures.append(f"{name}: expected clean, got {found[0].origin.kind}: {found[0].origin.detail}")
 
         for name, source, expected in (
             ("transcription without a prompt field", _TRANSCRIPTION_CLEAN, 0),
             ("transcription with a prompt field", _TRANSCRIPTION_PROMPTED, 1),
         ):
-            tree = _fixture_tree(
-                base / name.replace(" ", "_"), {"modules/p/transcription.py": source}
-            )
+            tree = _fixture_tree(base / name.replace(" ", "_"), {"modules/p/transcription.py": source})
             modules = [tree.load(path) for path in tree.candidates()]
             got = len(scan_transcription_posts(modules))
             if got != expected:
@@ -1311,9 +1250,7 @@ def self_test() -> int:
                 "    from app.modules.ai.ai_client import call_ai\n"
                 "    return await call_ai('openai', 'k', system=SYSTEM, prompt=text)\n"
             )
-            tree = _fixture_tree(
-                base / name.replace(" ", "_"), {"modules/x/service.py": source}
-            )
+            tree = _fixture_tree(base / name.replace(" ", "_"), {"modules/x/service.py": source})
             modules = [tree.load(path) for path in tree.candidates()]
             texts = shipped_prompt_texts(modules, Resolver(tree))
             got = len(scan_affective_text(texts))
@@ -1332,18 +1269,12 @@ def self_test() -> int:
             "    from app.modules.ai.ai_client import call_ai\n"
             "    return await call_ai('openai', 'k', system=SYSTEM, prompt=text)\n"
         )
-        tree = _fixture_tree(
-            base / name.replace(" ", "_"), {"modules/x/service.py": source}
-        )
+        tree = _fixture_tree(base / name.replace(" ", "_"), {"modules/x/service.py": source})
         modules = [tree.load(path) for path in tree.candidates()]
         _f, _t, used = scan_model_calls(modules, Resolver(tree))
         # Taken from the fixture rather than written out, because a fixture
         # tree lives in a temp directory and its recorded path is absolute.
-        live = [
-            site_key(mod, arg, func)
-            for mod in modules
-            for _, arg, func in model_call_sites(mod)
-        ]
+        live = [site_key(mod, arg, func) for mod in modules for _, arg, func in model_call_sites(mod)]
         if len(live) != 1:
             failures.append(f"{name}: expected 1 call site, found {len(live)}")
         else:
@@ -1353,20 +1284,14 @@ def self_test() -> int:
             finally:
                 del CLEARED_BY_READING[live[0]]
             if not any("without consulting it" in line for line in reported):
-                failures.append(
-                    f"{name}: an entry the scan never looked up was not reported"
-                )
+                failures.append(f"{name}: an entry the scan never looked up was not reported")
 
         empty = _fixture_tree(base / "empty", {"modules/x/service.py": "VALUE = 1\n"})
         if empty.candidates():
-            failures.append(
-                "empty tree: a file with no model call was still selected for scanning"
-            )
+            failures.append("empty tree: a file with no model call was still selected for scanning")
 
     if not interpreter_is_current():
-        failures.append(
-            "interpreter floor: this interpreter cannot parse the syntax the backend uses"
-        )
+        failures.append("interpreter floor: this interpreter cannot parse the syntax the backend uses")
 
     if failures:
         for line in failures:
@@ -1447,9 +1372,7 @@ def main(argv: list[str] | None = None) -> int:
     stale = unused_acknowledgements(modules, used)
 
     if args.verbose:
-        print(
-            f"read {len(modules)} of {len(tree.paths)} app modules, {total} model call sites"
-        )
+        print(f"read {len(modules)} of {len(tree.paths)} app modules, {total} model call sites")
         print(
             f"acknowledged: {len(CLEARED_BY_READING)} cleared by reading, "
             f"{len(RUNTIME_BY_DESIGN)} runtime by design, {len(used)} consulted"
@@ -1472,19 +1395,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"    {INSTRUCTION_KEYWORD} = {f.source}")
         print(f"    {f.origin.kind.upper()}: {f.origin.detail}")
         if f.origin.kind == "unresolved":
-            print(
-                "    The scan could not decide. Read it, then fix it or record it in a list."
-            )
+            print("    The scan could not decide. Read it, then fix it or record it in a list.")
         else:
-            print(
-                "    Record it in CLEARED_BY_READING or RUNTIME_BY_DESIGN with the reading that clears it."
-            )
+            print("    Record it in CLEARED_BY_READING or RUNTIME_BY_DESIGN with the reading that clears it.")
     for f in affective:
         print(f"{f.path}:{f.lineno} in {f.func}()")
         print(f"    a prompt this project ships contains {f.source!r}")
         print(
-            "    Read it. If it is not about a person, record it in "
-            "AFFECT_CLEARED_BY_READING with what it really says."
+            "    Read it. If it is not about a person, record it in AFFECT_CLEARED_BY_READING with what it really says."
         )
     for entry in stale:
         print(f"acknowledgement out of date: {entry}")

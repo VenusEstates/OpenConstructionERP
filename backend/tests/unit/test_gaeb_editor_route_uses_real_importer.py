@@ -204,9 +204,7 @@ class TestEditorRouteImportsTheFile:
     async def test_the_markup_lands_as_a_native_markup_row(self, session) -> None:
         """The Zuschlagsposition is a BOQMarkup, not a note in metadata."""
         boq_id, _, _ = await _import(session, _X84)
-        markups = list(
-            (await session.execute(select(BOQMarkup).where(BOQMarkup.boq_id == boq_id))).scalars().all()
-        )
+        markups = list((await session.execute(select(BOQMarkup).where(BOQMarkup.boq_id == boq_id))).scalars().all())
 
         assert len(markups) == 1
         assert markups[0].markup_type == "fixed"
