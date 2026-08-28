@@ -22,9 +22,11 @@ Lint and Python version come from `backend/pyproject.toml`. The frontend gate co
 `frontend/package.json`. Available commands come from the `Makefile`. What runs in continuous
 integration comes from `.github/workflows/`.
 
-That is not a formality. `CONTRIBUTING.md` currently states that the Python line length is 100.
-`backend/pyproject.toml` sets it to 120, and `ruff` reads the latter. If you take the prose over
-the file you will reformat code that was already correct. Check the file.
+That is not a formality, and this project supplied its own example of why. `CONTRIBUTING.md`
+said for a long time that the Python line length is 100. `backend/pyproject.toml` sets it to 120,
+`ruff` reads the latter, and anyone who trusted the prose reformatted code that was already
+correct. The prose has since been corrected. The habit it should leave you with has not changed:
+where a document and a configuration file disagree, the file is the one that runs.
 
 Some of what follows was measured at version 16.2.0. Counts move. Where a number matters to a
 decision you are making, count it yourself, and this file tries to tell you how.
@@ -87,9 +89,10 @@ afternoon here: a module directory with no `manifest.py` is invisible. It is not
 scan simply does not find it, the module does not load, and nothing anywhere says so. If you
 scaffolded a module and its endpoints are not there, check that first.
 
-There are 192 directories under `backend/app/modules/` at the time of writing, and very nearly
-all of them carry a manifest. Count them yourself when it matters, with a scan for `manifest.py`
-one level down, because the answer moves as modules land.
+There are 193 directories under `backend/app/modules/` at the time of writing and 189 of them
+carry a manifest. Count them yourself when it matters, with a scan for `manifest.py` one level
+down, because the answer moves as modules land, and both of those numbers had already moved by
+one between this file being drafted and being reviewed.
 
 A directory without one is not automatically a mistake, though, and it is worth knowing why
 before you go fixing them. Two different questions are being asked. Whether a directory has a
@@ -235,7 +238,7 @@ checks that the committed tree can import itself, which is not automatic and has
 `check_zero_width.py` catches invisible characters. `check_no_brand_tokens.py` catches competitor
 and vendor brand names, which are not allowed anywhere in the tree.
 
-There are 39 of these in `scripts/` as of writing, each named for what it checks, and reading the
+There are about forty of these in `scripts/`, each named for what it checks, and reading the
 filenames is faster than reading this list. The workflows that call them are
 `.github/workflows/repo-hygiene.yml` and `.github/workflows/ci.yml`.
 
