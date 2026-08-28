@@ -317,27 +317,47 @@ jobs:
           python -m pip install --quiet "$spec"
 
       # Proves the two steps below are reading something. Both commands treat a
-      # path that resolves to zero Python files as success: they print a warning
-      # to stderr, `ruff check` even prints "All checks passed!", and both exit
-      # 0. So a widened `.gitignore` pattern, a broadened exclude or a renamed
-      # directory would leave a permanently green lane that has never opened a
-      # file, and nothing in the log would look wrong. A typo is not the risk,
-      # that is already loud: a path that does not exist exits 1 from check and
-      # 2 from format. The silent case is a path that exists and holds no
-      # Python, and this is the only step that can see it.
+      # scope that resolves to no Python as success, so a permanently green lane
+      # that has never opened a file looks exactly like a passing one. Measured
+      # on 0.15.20, because the three ways a scope can empty out do not behave
+      # alike:
+      #   path does not exist        check exits 1, format exits 2. Already loud.
+      #   path exists, holds no .py  both exit 0, warning on stderr only, and
+      #                              check prints "All checks passed!"
+      #   every file excluded        identical to the line above, and
+      #                              --show-files agrees, so counting catches it
+      # A typo was never the risk. A widened .gitignore pattern, a broadened
+      # exclude or a renamed directory is, and `.gitignore` line 394 already
+      # empties part of this scope by exactly that mechanism.
       #
-      # The floor is zero rather than a number near today's 116, deliberately.
-      # A count that has to be edited whenever a file is added or removed is a
-      # ratchet somebody eventually raises without reading, whereas zero never
-      # needs touching. The trade is that a partial collapse still passes, so
-      # the count is echoed to make that visible to a human reading the log.
+      # Both halves are counted, not just the lint half, because the two have
+      # separate exclude lists and this repository already sets one of them:
+      # [tool.ruff.format] exclude in backend/pyproject.toml. A format-only
+      # exclude is the realistic drift here, and it is the quietest case of all,
+      # since `ruff format --check` then exits 0 printing NOTHING at all, not
+      # even the stderr warning, while `ruff check` still reports normally. A
+      # guard that counted only the lint side would pass while the formatting
+      # step read zero files.
+      #
+      # The floor is zero rather than a number near today's 116, deliberately. A
+      # count that has to be edited whenever a file is added or removed is a
+      # ratchet somebody eventually raises without reading. Zero never needs
+      # touching. The trade is that a partial collapse still passes, so both
+      # counts are echoed to make that visible to a human reading the log.
       - name: Check the ruff lane is reading files at all
         if: ${{ !cancelled() && steps.ruff.outcome == 'success' }}
         run: |
-          count=$(ruff check --show-files --config backend/pyproject.toml scripts tools | wc -l)
-          echo "the two steps below read $count Python files"
-          if [ "$count" -eq 0 ]; then
-            echo "::error::ruff resolved zero Python files under scripts and tools, so the two steps below would pass without opening anything"
+          lint_files=$(ruff check --show-files --config backend/pyproject.toml scripts tools | wc -l) || true
+          fmt_summary=$(ruff format --check --config backend/pyproject.toml scripts tools 2>/dev/null | tail -1) || true
+          fmt_files=${fmt_summary%% *}
+          case "$fmt_files" in (''|*[!0-9]*) fmt_files=0 ;; esac
+          echo "lint step reads ${lint_files:-0} file(s), format step reads ${fmt_files:-0} file(s)"
+          if [ "${lint_files:-0}" -eq 0 ]; then
+            echo "::error::ruff check resolved zero Python files under scripts and tools, so the lint step would pass without opening anything"
+            exit 1
+          fi
+          if [ "${fmt_files:-0}" -eq 0 ]; then
+            echo "::error::ruff format resolved zero Python files under scripts and tools, so the formatting step would pass without opening anything"
             exit 1
           fi
 
