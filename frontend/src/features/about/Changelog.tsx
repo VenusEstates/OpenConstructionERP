@@ -47,10 +47,10 @@ interface ChangelogEntry {
 const CHANGELOG: ChangelogEntry[] = [
   {
     version: '16.2.0',
-    date: '2026-08-27',
+    date: '2026-08-28',
     tag: 'NEW',
     summary:
-      'Maps work again: the basemap now comes from us, with no key to obtain and no quota to exceed, and any module can be found by name without knowing which tab it sits on. Regional packs are in the build at last, an upgraded install no longer calls itself degraded for good, and the dashboard opens cases as two rows with a link to the rest.',
+      'Maps work again: the basemap now comes from us, with no key to obtain and no quota to exceed, and any module can be found by name without knowing which tab it sits on. Regional packs are in the build at last, an upgraded install no longer calls itself degraded for good, and the dashboard opens cases as two rows with a link to the rest. A new DEVELOPING.md at the root explains how to build on the platform in one sitting, and says plainly how contributions are taken.',
   },
   {
     version: '16.1.0',

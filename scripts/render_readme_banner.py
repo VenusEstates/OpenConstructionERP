@@ -707,6 +707,13 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
             raise SystemExit(f"the {name} line overruns the banner by {over:.0f}px: {text}")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    # Saved as full colour on purpose, and it is worth saying why, because the
+    # file is a megabyte and quantising it looks like free money. It is not: a
+    # 256 colour palette is dominated by the photographs, and the module comb's
+    # hues get remapped around them. Measured, the legend swatch for Extension
+    # came back blue, Controls came back red and Regional came back brown, so
+    # the key stopped matching the cells it labels. A smaller file that lies
+    # about its own legend is not an optimisation.
     canvas.save(OUT, optimize=True)
 
     degrees = [data.degree[m.ident] for m in data.modules]

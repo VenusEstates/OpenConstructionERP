@@ -5,7 +5,7 @@ All notable changes to OpenConstructionERP are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [16.2.0] - 2026-08-27
+## [16.2.0] - 2026-08-28
 
 Maps work again. Every map surface had been drawing tiles with API KEY REQUIRED
 printed across them. Nothing in our code changed to cause it, the free tile
@@ -70,6 +70,35 @@ directory.
 
 When a repair drops a NOT NULL on the way in, it says so rather than doing it
 quietly.
+
+Building on the platform no longer means reading it first. DEVELOPING.md at the
+root explains how the place actually works in one sitting: what a module is and
+why a directory without a manifest is invisible to the loader, that the frontend
+has two different systems people keep mistaking for one, which gate is the real
+one, and where regional behaviour lives if you are adapting the platform to a
+country. It says which document wins when two disagree and points at the tree
+rather than at itself. It is also written to be handed whole to an AI coding
+assistant, since most people doing this work now use one and this codebase has
+several traps that make an assistant confidently wrong.
+
+That file also writes down something that had never been said out loud in the
+repository: this project does not take external pull requests, on supply chain
+grounds, and what the team acts on instead is issues, specifications,
+reproductions and reports from adapting the platform to a market. CONTRIBUTING.md
+had been walking first-time contributors into a fork and a pull request that was
+never going to be merged, and offering them a licence agreement to sign for it.
+Both files now say the same thing in the same place.
+
+Three things nothing was checking now are. A module directory that loses its
+manifest is the one failure this system has that produces no log line at all, and
+a guard now refuses it. The generated country portrait manifest is checked against
+the folder it is generated from. And the Python outside the backend, 116 files of
+it, was neither linted nor format checked by anything, which is now fixed along
+with the pre-commit hooks that would have quietly undone it.
+
+Documentation that had drifted is measured again. The architecture overview said
+it tracked version 10.10.0 and shipped 161 modules, and four links pointed at
+files that are not in the repository at all.
 
 ## [16.1.0] - 2026-08-27
 
