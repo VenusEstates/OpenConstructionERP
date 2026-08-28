@@ -1,36 +1,44 @@
-"""Render the README banner: every backend module, and how tightly they are wired.
+"""Render the README banner: who the platform is for, and how much of it there is.
 
-The banner is one honeycomb. Each cell is one directory under
-`backend/app/modules`, its colour says which category the module puts in its own
-manifest, and how deep that colour runs says how many of the other modules it is
-wired to. Nothing in the picture is typed in by hand, so a module added to the
-tree shows up on the next run of this script rather than on the next time someone
-remembers the banner exists.
+Two honeycombs, one above the other and drawn to the same margins so they read as
+one field seen at two scales. The upper comb is the cast the Cases hub is built
+around, eight company types and fifteen professional roles, each cell a
+photograph. The lower comb is every package under `backend/app/modules`, one cell
+each, coloured by the category its own manifest declares and shaded by how many
+of the others it is wired to.
+
+Nothing in the picture is typed in by hand. Four sources are read:
+
+    frontend/src/features/cases/companyTypes.ts   COMPANY_TYPE_META  (8 entries)
+    frontend/src/features/cases/roles.ts          ROLE_META          (15 entries)
+    frontend/public/assets/people/                the photographs
+    backend/app/modules/*/manifest.py             one per module
+
+so a role added to the product or a module added to the tree shows up on the next
+run of this script rather than on the next time somebody remembers it exists.
 
 The cells touch. A hexagon row whose neighbours sit a full row height apart is a
 line of separate tiles that happen to be six sided, and an earlier banner drew
 exactly that: the triangular notches above and below every cell stayed open and
 the picture read as a chain. Pointy top hexagons share edges at one spacing only,
 a row step of three quarters of the cell height with every other row inset by half
-a cell width, and that is the spacing here.
+a cell width, and that is the spacing here. It costs the strip under each cell
+where the captions used to sit, so the captions moved inside, into the band
+between half height and three quarter height, which is the only part of a pointy
+top hexagon still at its full width.
 
-Two graphs are counted, because they answer two different questions and the
-difference between them is worth seeing:
+Two module graphs are counted, because they answer different questions and the
+gap between them is worth seeing: the `depends` lists in the manifests, which is
+what the loader topologically sorts on, and the imports, which is where the
+coupling really is. Imports are found with a line anchored regular expression
+rather than with `ast` on purpose, because parts of the backend use PEP 695
+syntax that only a 3.12 parser accepts and this script should render on whatever
+interpreter is at hand. The expression was checked against a full `ast` walk over
+the 2120 files a 3.12 parser does accept and the two agree exactly, 704 directed
+pairs either way.
 
-    declared dependencies   the `depends` lists in the manifests, which is what
-                            the module loader topologically sorts on
-    imports                 one module's Python actually importing another's,
-                            which is where the coupling really is
-
-Imports are found with a line anchored regular expression rather than with the
-`ast` module on purpose. Parts of the backend use PEP 695 generic syntax, so
-parsing the tree requires Python 3.12, and this script should render on whatever
-interpreter is at hand. The regular expression was checked against a full `ast`
-walk over the 2120 files a 3.12 parser accepts and the two agree exactly, 704
-directed pairs either way, so nothing is traded for the portability.
-
-The title is not in the picture. It lives in the README as text, above the image,
-where it is selectable, searchable and readable by a screen reader.
+The title is not in the picture. It lives in the README above the image, where it
+is selectable, searchable and readable by a screen reader.
 
 Usage:
 
@@ -51,53 +59,70 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 REPO = Path(__file__).resolve().parent.parent
+CASES = REPO / "frontend" / "src" / "features" / "cases"
+PEOPLE = REPO / "frontend" / "public" / "assets" / "people"
 MODULES = REPO / "backend" / "app" / "modules"
 FONT = REPO / "scripts" / "assets" / "fonts" / "Inter-Variable-Latin.ttf"
 OUT = REPO / "docs" / "screenshots" / "banner.png"
 
-# Supersampling for the comb. A hexagon drawn straight into the final raster has
-# visibly stepped diagonals; drawn three times over and reduced, the edges
-# resolve. Text is drawn at final size instead, because FreeType hints it better
-# than a downscale does.
-SS = 3
+# Supersampling for the hexagon shapes and masks. A hexagon drawn straight into
+# the final raster has visibly stepped diagonals; drawn four times over and
+# reduced, the edges resolve. Only the shapes pay this, not the photographs, and
+# text is drawn at final size because FreeType hints it better than a downscale.
+SS = 4
 
 WIDTH = 1800
-COLS = 24
-ROWS = 8
 MARGIN = 18
+CONTENT = WIDTH - 2 * MARGIN
 
-# Pointy top geometry. Width and height of a regular hexagon are related by
-# W = H * sqrt(3) / 2, rows step three quarters of the height, and alternate rows
-# are inset by half a width. Change one of these and the cells stop touching.
-HEX_W = (WIDTH - 2 * MARGIN) * 2 // (2 * COLS + 1)
-HEX_H = round(HEX_W * 2 / 3**0.5)
-ROW_STEP = HEX_H * 3 // 4
+# Pointy top geometry, twice. Width and height of a regular hexagon are related
+# by W = H * sqrt(3) / 2, rows step three quarters of the height, and alternate
+# rows are inset by half a width. Change one of these and the cells stop
+# touching. The two combs are sized independently to the same content width, so
+# their left and right edges line up and the picture reads as one object.
+CAST_COLS = 8
+CAST_W = CONTENT * 2 // (2 * CAST_COLS + 1)
+CAST_H = round(CAST_W * 2 / 3**0.5)
+CAST_STEP = CAST_H * 3 // 4
 
-# Where the colour ramp saturates, in number of modules wired to. Read off the
-# measured distribution: the union of the two graphs has a median around six and
-# a long thin tail, so scaling against the maximum would leave nine cells in ten
-# indistinguishable from an unwired one. Twenty sits near the ninetieth
-# percentile, which spreads out the range the modules actually occupy while
-# staying monotonic, so a deeper cell is still a more wired one all the way up.
+MOD_COLS = 32
+MOD_ROWS = 6
+MOD_W = CONTENT * 2 // (2 * MOD_COLS + 1)
+MOD_H = round(MOD_W * 2 / 3**0.5)
+MOD_STEP = MOD_H * 3 // 4
+
+# How far the photograph is pulled toward its accent colour, and then toward
+# white. Enough that the comb reads as one palette rather than as a contact
+# sheet, little enough that the faces stay faces.
+WASH = 0.16
+LIFT = 0.06
+
+# Where the module colour ramp saturates, in number of modules wired to. Read off
+# the measured distribution: the union of the two graphs has a median around five
+# and a long thin tail out past a hundred, so scaling against the maximum would
+# leave nine cells in ten indistinguishable from an unwired one. Twenty sits near
+# the ninetieth percentile, which spreads out the range the modules actually
+# occupy while staying monotonic, so a deeper cell is still a more wired one all
+# the way up.
 RAMP_TOP = 20
 RAMP_GAMMA = 0.62
 
 # How far the palest cell is washed out toward the paper. This was 0.90 and the
-# regional and other buckets, which are the least wired, came out close enough to
-# white that you could not count them. A banner whose subject is how many modules
-# there are cannot afford cells that disappear, so the floor is high enough that
-# every one of the 192 is visible against the paper.
+# least wired buckets came out close enough to white that you could not count
+# them. A banner whose subject is how many modules there are cannot afford cells
+# that disappear.
 RAMP_FLOOR = 0.74
 
 INK = (28, 25, 23)
 MUTED = (120, 113, 108)
+LABEL = (140, 133, 128)
 PAPER = (255, 255, 255)
 
 # One colour per `category` value that at least three modules claim for
-# themselves. The six categories with a single member each, and the three
-# directories carrying no manifest at all, share the last swatch: inventing a
-# colour for a category of one would give six specks equal billing with a
-# hundred and nineteen modules.
+# themselves. The six categories with a single member each, and the directories
+# carrying no manifest at all, share the last swatch: inventing a colour for a
+# category of one would give six specks equal billing with a hundred and nineteen
+# modules.
 BUCKETS: list[tuple[str, str, tuple[int, int, int]]] = [
     ("core", "Core", (29, 78, 216)),
     ("business", "Business", (13, 148, 136)),
@@ -108,9 +133,225 @@ BUCKETS: list[tuple[str, str, tuple[int, int, int]]] = [
     ("__other__", "Other", (168, 162, 158)),
 ]
 
+# --------------------------------------------------------------------------- #
+# Vocabularies, read from the TypeScript sources that own them
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class Cell:
+    """One captioned hexagon: a photograph, a caption and an accent colour."""
+
+    ident: str
+    caption: tuple[str, ...]
+    photo: Path
+    accent: tuple[int, int, int]
+
+
+def _read_ids(source: Path, array_name: str) -> list[str]:
+    """The `id:` values of every entry in a `const <array_name>: X[] = [...]` literal.
+
+    Parsing the source rather than hardcoding the ids is the whole point of the
+    script: a role added to `roles.ts` has to show up here on the next run without
+    anyone remembering that this file exists.
+    """
+    text = source.read_text(encoding="utf-8")
+    start = text.index(f"export const {array_name}")
+    end = text.index("\n];", start)
+    # Digits are in the character class so that an id like `tier-2-contractor` is
+    # READ and then rejected by `_require`, rather than being skipped as if it had
+    # never been written. An id this regex cannot match is invisible twice over:
+    # its tile goes missing, and because `_accents` pairs ids with tints by
+    # position it also shifts the accent of every entry after it.
+    return re.findall(r"^\s{4}id: '([a-z0-9-]+)',$", text[start:end], flags=re.MULTILINE)
+
+
+# The two cast headings, and the counts they spell out. These are the reason the
+# script cannot simply draw whatever it finds: "FIFTEEN PROFESSIONAL ROLES" over
+# fourteen hexagons is a caption that lies, and nothing downstream would catch it.
+# The module heading needs no such guard because its number is not written here at
+# all, it is counted on the way past.
+EXPECTED_COMPANIES = 8
+EXPECTED_ROLES = 15
+HEAD_CAST = "EIGHT COMPANY TYPES, FIFTEEN PROFESSIONAL ROLES"
+
+# Short captions. The `labelDefault` strings in the sources are written for a
+# selector row with a full line to itself ("Project / construction management
+# firm"); inside a hexagon they have about two short lines, so the banner keeps
+# its own shortened forms and asserts below that it has one for every id.
+COMPANY_CAPTIONS: dict[str, tuple[str, ...]] = {
+    "general-contractor": ("General", "contractor"),
+    "subcontractor": ("Specialist", "subcontractor"),
+    "cost-consultant": ("Cost consultancy", "/ QS"),
+    "designer": ("Design /", "engineering"),
+    "developer-client": ("Developer", "/ client"),
+    "project-manager": ("Project", "management"),
+    "bim-consultant": ("BIM / digital", "consultancy"),
+    "owner-operator": ("Owner /", "operator (FM)"),
+}
+
+ROLE_CAPTIONS: dict[str, tuple[str, ...]] = {
+    "estimator": ("Estimator",),
+    "quantity-surveyor": ("Quantity", "surveyor"),
+    "site-manager": ("Site", "manager"),
+    "project-manager": ("Project", "manager"),
+    "bim-coordinator": ("BIM", "coordinator"),
+    "procurement-buyer": ("Procurement", "/ buyer"),
+    "planner": ("Planner /", "scheduler"),
+    "hse-officer": ("Health &", "safety"),
+    "design-lead": ("Design", "lead"),
+    "document-controller": ("Document", "controller"),
+    "commercial-manager": ("Commercial", "manager"),
+    "accountant": ("Accountant",),
+    "contract-administrator": ("Contract", "administrator"),
+    "finance-manager": ("Finance", "manager"),
+    "foreman": ("Foreman /", "supervisor"),
+}
+
+# Company type -> photo stem. Copied from COMPANY_THUMB_ALIASES in caseFaces.ts,
+# which points each company type at its archetype's picture; ids that already
+# name a stem need no entry there and get none here.
+COMPANY_STEM: dict[str, str] = {
+    "general-contractor": "general-contractor",
+    "subcontractor": "subcontractor",
+    "cost-consultant": "estimator",
+    "designer": "architecture-engineering",
+    "developer-client": "real-estate-developer",
+    "project-manager": "construction-manager",
+    "bim-consultant": "bim-vdc",
+    "owner-operator": "facility-manager",
+}
+
+# Role -> portrait stem. This mapping is the banner's own and deliberately does
+# NOT live in caseFaces.ts: that module casts by company type on purpose, and its
+# header says in as many words not to make it read `Playbook.roles`. Here the two
+# axes are both being drawn at once, so each role needs a face of its own, and
+# the constraint is only that the fifteen are distinct - a reader comparing two
+# neighbouring tiles must not see the same person under two job titles.
+ROLE_STEM: dict[str, str] = {
+    "estimator": "estimator",
+    "quantity-surveyor": "quality-manager",
+    "site-manager": "site-supervisor",
+    "project-manager": "construction-manager",
+    "bim-coordinator": "bim-vdc",
+    "procurement-buyer": "procurement-manager",
+    "planner": "scheduler-planner",
+    "hse-officer": "hse-manager",
+    "design-lead": "architecture-engineering",
+    "document-controller": "government-agency",
+    "commercial-manager": "commercial-manager",
+    "accountant": "owner-client",
+    "contract-administrator": "design-build",
+    "finance-manager": "real-estate-developer",
+    "foreman": "subcontractor",
+}
+
+# Accent colours, the 600 weight of the Tailwind hue each source file names in its
+# tint, so the banner and the app tint the same concept the same way.
+TAILWIND_600: dict[str, tuple[int, int, int]] = {
+    "blue": (37, 99, 235),
+    "orange": (234, 88, 12),
+    "green": (22, 163, 74),
+    "purple": (147, 51, 234),
+    "pink": (219, 39, 119),
+    "yellow": (202, 138, 4),
+    "indigo": (79, 70, 229),
+    "cyan": (8, 145, 178),
+    "amber": (217, 119, 6),
+    "teal": (13, 148, 136),
+    "violet": (124, 58, 237),
+    "emerald": (5, 150, 105),
+    "sky": (2, 132, 199),
+    "red": (220, 38, 38),
+    "slate": (71, 85, 105),
+    "fuchsia": (192, 38, 211),
+    "rose": (225, 29, 72),
+}
+
+
+def _accents(source: Path, array_name: str, ids: list[str]) -> dict[str, tuple[int, int, int]]:
+    """The accent colour per entry, taken from the Tailwind hue in its `tint.text`.
+
+    `tint.text` is a literal like `text-amber-600 dark:text-amber-400`; the hue is
+    what the banner needs and the weights are the app's business.
+    """
+    text = source.read_text(encoding="utf-8")
+    start = text.index(f"export const {array_name}")
+    # Bounded at the end of the literal, like `_read_ids`: an unbounded scan would
+    # happily read a tint belonging to some later constant in the same file. Ids
+    # and tints are paired by POSITION, so one stray or missing match silently
+    # recolours every entry after it - hence `!=` rather than `<`.
+    end = text.index("\n];", start)
+    hues = re.findall(r"^\s+text: 'text-([a-z]+)-\d00 ", text[start:end], flags=re.MULTILINE)
+    if len(hues) != len(ids):
+        raise SystemExit(f"{source.name}: found {len(hues)} tints for {len(ids)} ids")
+    unknown = sorted({h for h in hues if h not in TAILWIND_600})
+    if unknown:
+        raise SystemExit(f"{source.name}: no RGB for Tailwind hue(s) {', '.join(unknown)}")
+    return {i: TAILWIND_600[h] for i, h in zip(ids, hues, strict=True)}
+
+
+def build_cells() -> tuple[list[Cell], list[Cell]]:
+    """The eight company types and the fifteen roles, in source order."""
+    company_ids = _read_ids(CASES / "companyTypes.ts", "COMPANY_TYPE_META")
+    role_ids = _read_ids(CASES / "roles.ts", "ROLE_META")
+    if not company_ids or not role_ids:
+        raise SystemExit("could not parse the vocabularies out of the cases sources")
+
+    # `_require` only fires on an id it has never seen, so it catches an ADDITION
+    # and nothing else: delete a role and the banner quietly draws fourteen tiles
+    # under a heading that reads FIFTEEN. The heading spells its counts out in
+    # words, so the counts are part of the drawing and belong under a guard.
+    if (len(company_ids), len(role_ids)) != (EXPECTED_COMPANIES, EXPECTED_ROLES):
+        raise SystemExit(
+            f"the vocabularies moved: {len(company_ids)} company types and {len(role_ids)} roles, "
+            f"but this script draws a heading for {EXPECTED_COMPANIES} and {EXPECTED_ROLES}. "
+            "Update HEAD_CAST, the expected counts and the captions together."
+        )
+
+    company_accents = _accents(CASES / "companyTypes.ts", "COMPANY_TYPE_META", company_ids)
+    role_accents = _accents(CASES / "roles.ts", "ROLE_META", role_ids)
+
+    companies, roles = [], []
+    for ident in company_ids:
+        _require(ident, COMPANY_CAPTIONS, COMPANY_STEM, "company type")
+        companies.append(
+            Cell(
+                ident,
+                COMPANY_CAPTIONS[ident],
+                PEOPLE / f"cmt-{COMPANY_STEM[ident]}.webp",
+                company_accents[ident],
+            )
+        )
+    for ident in role_ids:
+        _require(ident, ROLE_CAPTIONS, ROLE_STEM, "role")
+        roles.append(
+            Cell(
+                ident,
+                ROLE_CAPTIONS[ident],
+                PEOPLE / f"prf-{ROLE_STEM[ident]}.webp",
+                role_accents[ident],
+            )
+        )
+
+    if len({c.photo for c in roles}) != len(roles):
+        raise SystemExit("two roles share a portrait; give each its own face in ROLE_STEM")
+    for cell in companies + roles:
+        if not cell.photo.exists():
+            raise SystemExit(f"{cell.ident}: no photograph at {cell.photo}")
+    return companies, roles
+
+
+def _require(ident: str, captions: dict, stems: dict, kind: str) -> None:
+    """Fail loudly when a vocabulary grew and this file did not follow it."""
+    if ident not in captions:
+        raise SystemExit(f"new {kind} '{ident}' has no caption in this script")
+    if ident not in stems:
+        raise SystemExit(f"new {kind} '{ident}' has no photo stem in this script")
+
 
 # --------------------------------------------------------------------------- #
-# The tree, read
+# The modules, read from the manifests that own them
 # --------------------------------------------------------------------------- #
 
 
@@ -126,7 +367,7 @@ class Module:
 
 @dataclass
 class Survey:
-    """Everything the picture is drawn from, counted once."""
+    """Everything the lower comb is drawn from, counted once."""
 
     modules: list[Module]
     declared: set[tuple[str, str]]
@@ -215,23 +456,6 @@ def survey() -> Survey:
 # --------------------------------------------------------------------------- #
 
 
-def _bucket_index(category: str) -> int:
-    for i, (key, _, _) in enumerate(BUCKETS):
-        if key == category:
-            return i
-    return len(BUCKETS) - 1
-
-
-def _tint(base: tuple[int, int, int], t: float) -> tuple[int, int, int]:
-    """The bucket colour, from a pale wash at t=0 to the full colour at t=1."""
-    pale = [round(c + (255 - c) * RAMP_FLOOR) for c in base]
-    return (
-        round(pale[0] + (base[0] - pale[0]) * t),
-        round(pale[1] + (base[1] - pale[1]) * t),
-        round(pale[2] + (base[2] - pale[2]) * t),
-    )
-
-
 def _hexagon(x: float, y: float, w: float, h: float) -> list[tuple[float, float]]:
     """A pointy top hexagon in the box (x, y) to (x + w, y + h).
 
@@ -246,6 +470,22 @@ def _hexagon(x: float, y: float, w: float, h: float) -> list[tuple[float, float]
         (x, y + h * 3 / 4),
         (x, y + h / 4),
     ]
+
+
+def _hex_mask(w: int, h: int, inset: float) -> Image.Image:
+    """An antialiased alpha mask of a pointy top hexagon, drawn oversized.
+
+    `inset` shrinks the shape about its centre. Cells that share an edge and are
+    filled to that edge merge into one another, and a comb of photographs with no
+    wall between them is a collage; a hairline of paper is what makes the cells
+    read as cells while they still touch.
+    """
+    big = Image.new("L", (w * SS, h * SS), 0)
+    points = [
+        ((px - w / 2) * (1 - inset) + w / 2, (py - h / 2) * (1 - inset) + h / 2) for px, py in _hexagon(0, 0, w, h)
+    ]
+    ImageDraw.Draw(big).polygon([(px * SS, py * SS) for px, py in points], fill=255)
+    return big.resize((w, h), Image.Resampling.LANCZOS)
 
 
 def _font(size: int, weight: int) -> ImageFont.FreeTypeFont:
@@ -263,98 +503,208 @@ def _font(size: int, weight: int) -> ImageFont.FreeTypeFont:
     return face
 
 
-def draw_comb(data: Survey) -> Image.Image:
-    """The honeycomb, one cell per module, sorted by bucket and then by degree."""
-    order = sorted(
-        data.modules,
-        key=lambda m: (_bucket_index(m.category), -data.degree[m.ident], m.ident),
+def _tile(cell: Cell, mask: Image.Image) -> Image.Image:
+    """One hexagon: the photograph, cropped to fill, washed in the cell's accent."""
+    photo = Image.open(cell.photo).convert("RGB")
+
+    # Cover, then take the top middle rather than the centre: these are portraits
+    # and the head sits high in the frame, so a centred crop of a 340x480 lands on
+    # the chest.
+    scale = max(CAST_W / photo.width, CAST_H / photo.height)
+    grown = (max(1, round(photo.width * scale)), max(1, round(photo.height * scale)))
+    photo = photo.resize(grown, Image.Resampling.LANCZOS)
+    left = (photo.width - CAST_W) // 2
+    top = round((photo.height - CAST_H) * 0.10)
+    photo = photo.crop((left, top, left + CAST_W, top + CAST_H))
+
+    photo = Image.blend(photo, Image.new("RGB", photo.size, cell.accent), WASH)
+    photo = Image.blend(photo, Image.new("RGB", photo.size, (255, 255, 255)), LIFT)
+
+    # The caption sits on the picture now that the rows have closed up, so the
+    # bottom of the cell is darkened to carry white text. The ramp reaches most of
+    # its weight BEFORE the caption starts rather than at the bottom of the cell:
+    # text set on the first few percent of a gradient is text on the bare
+    # photograph, and half of these photographs are pale. It also starts above the
+    # caption band rather than at its edge, because a hard line across a face
+    # reads as damage to the photograph.
+    scrim = Image.new("L", (CAST_W, CAST_H), 0)
+    pen = ImageDraw.Draw(scrim)
+    fade_from, fade_to = round(CAST_H * 0.30), round(CAST_H * 0.56)
+    for y in range(fade_from, CAST_H):
+        ramp = min(1.0, (y - fade_from) / max(1, fade_to - fade_from))
+        pen.line((0, y, CAST_W, y), fill=round(225 * ramp**0.85))
+    photo = Image.composite(Image.new("RGB", photo.size, (9, 14, 26)), photo, scrim)
+
+    tile = Image.new("RGBA", (CAST_W, CAST_H), (0, 0, 0, 0))
+    tile.paste(photo, (0, 0), mask)
+    return tile
+
+
+def draw_cast(canvas: Image.Image, pen: ImageDraw.ImageDraw, rows: list[list[Cell]], top: int) -> int:
+    """Draw the photograph comb. Returns the bottom y."""
+    mask = _hex_mask(CAST_W, CAST_H, inset=0.018)
+    caption_font = _font(21, 600)
+    line_height = 25
+    for index, row in enumerate(rows):
+        indent = (CAST_W // 2) if index % 2 else 0
+        y = top + index * CAST_STEP
+        for column, cell in enumerate(row):
+            x = MARGIN + indent + column * CAST_W
+            tile = _tile(cell, mask)
+            canvas.paste(tile, (x, y), tile)
+
+            # The caption sits in the band where the hexagon is at full width.
+            # Below three quarter height the shape tapers to a point and text put
+            # there runs off both sides of it, which is the failure the captions
+            # were moved inside to avoid in the first place.
+            centre = x + CAST_W // 2
+            baseline = y + round(CAST_H * 0.745) - line_height * len(cell.caption)
+            for line in cell.caption:
+                pen.text((centre, baseline), line, font=caption_font, fill=(255, 255, 255), anchor="ma")
+                baseline += line_height
+    return top + (len(rows) - 1) * CAST_STEP + CAST_H
+
+
+def _bucket_index(category: str) -> int:
+    for i, (key, _, _) in enumerate(BUCKETS):
+        if key == category:
+            return i
+    return len(BUCKETS) - 1
+
+
+def _tint(base: tuple[int, int, int], t: float) -> tuple[int, int, int]:
+    """The bucket colour, from a pale wash at t=0 to the full colour at t=1."""
+    pale = [round(c + (255 - c) * RAMP_FLOOR) for c in base]
+    return (
+        round(pale[0] + (base[0] - pale[0]) * t),
+        round(pale[1] + (base[1] - pale[1]) * t),
+        round(pale[2] + (base[2] - pale[2]) * t),
     )
-    comb_w = COLS * HEX_W + HEX_W // 2
-    comb_h = (ROWS - 1) * ROW_STEP + HEX_H
+
+
+def draw_modules(data: Survey) -> Image.Image:
+    """The module honeycomb, sorted by bucket and then by how wired each one is."""
+    order = sorted(data.modules, key=lambda m: (_bucket_index(m.category), -data.degree[m.ident], m.ident))
+    if len(order) > MOD_COLS * MOD_ROWS:
+        raise SystemExit(
+            f"{len(order)} modules will not fit {MOD_ROWS} rows of {MOD_COLS}. "
+            f"Widen the comb rather than letting cells fall off the bottom."
+        )
+    comb_w = MOD_COLS * MOD_W + MOD_W // 2
+    comb_h = (MOD_ROWS - 1) * MOD_STEP + MOD_H
 
     canvas = Image.new("RGB", (comb_w * SS, comb_h * SS), PAPER)
     pen = ImageDraw.Draw(canvas)
     for index, module in enumerate(order):
-        row, col = divmod(index, COLS)
+        row, col = divmod(index, MOD_COLS)
         # Boustrophedon: every other row runs right to left, so the ordering is
-        # continuous across the turn. Filled strictly left to right instead, each
-        # category ends pale at the right margin and the next one starts dark at
-        # the left, which puts a hard vertical seam down the picture and reads as
-        # a rendering fault rather than as the category boundary it is.
+        # continuous across the turn. Filled strictly left to right, each category
+        # ends pale at the right margin and the next starts dark at the left,
+        # which puts a hard vertical seam down the picture and reads as a
+        # rendering fault rather than as the category boundary it is.
         if row % 2:
-            col = COLS - 1 - col
-        x = (col * HEX_W + (HEX_W // 2 if row % 2 else 0)) * SS
-        y = row * ROW_STEP * SS
+            col = MOD_COLS - 1 - col
+        x = (col * MOD_W + (MOD_W // 2 if row % 2 else 0)) * SS
+        y = row * MOD_STEP * SS
         t = min(1.0, (data.degree[module.ident] / RAMP_TOP) ** RAMP_GAMMA)
         fill = _tint(BUCKETS[_bucket_index(module.category)][2], t)
-        pen.polygon(_hexagon(x, y, HEX_W * SS, HEX_H * SS), fill=fill, outline=PAPER, width=2 * SS)
+        pen.polygon(_hexagon(x, y, MOD_W * SS, MOD_H * SS), fill=fill, outline=PAPER, width=2 * SS)
     return canvas.resize((comb_w, comb_h), Image.Resampling.LANCZOS)
 
 
-def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int, width: int) -> int:
+def draw_label(pen: ImageDraw.ImageDraw, text: str, top: int) -> int:
+    """A small letter spaced label over a comb, so the reader knows what it is."""
+    font = _font(19, 600)
+    x = float(MARGIN)
+    for character in text:
+        pen.text((x, top), character, font=font, fill=LABEL)
+        x += pen.textlength(character, font=font) + 1.6
+    return top + 23
+
+
+def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int) -> int:
     """A swatch and a count for each bucket, laid out across the full width."""
     counts = Counter(_bucket_index(m.category) for m in data.modules)
-    label_font = _font(23, 600)
-    count_font = _font(23, 400)
+    label_font = _font(22, 600)
+    count_font = _font(22, 400)
 
-    chip_w, chip_h = 21, 24
+    chip_w, chip_h = 20, 23
     entries = []
     for i, (_, label, colour) in enumerate(BUCKETS):
         count = str(counts[i])
-        span = chip_w + 11 + pen.textlength(label, font=label_font) + 8 + pen.textlength(count, font=count_font)
+        span = chip_w + 10 + pen.textlength(label, font=label_font) + 7 + pen.textlength(count, font=count_font)
         entries.append((label, count, colour, span))
 
-    gap = (width - sum(e[3] for e in entries)) / (len(entries) - 1)
+    gap = (CONTENT - sum(e[3] for e in entries)) / (len(entries) - 1)
     x = float(MARGIN)
-    for label, count, colour in ((e[0], e[1], e[2]) for e in entries):
+    for label, count, colour, _ in entries:
         pen.polygon(_hexagon(x, top + 1, chip_w, chip_h), fill=colour)
-        x += chip_w + 11
+        x += chip_w + 10
         pen.text((x, top), label, font=label_font, fill=INK)
-        x += pen.textlength(label, font=label_font) + 8
+        x += pen.textlength(label, font=label_font) + 7
         pen.text((x, top), count, font=count_font, fill=MUTED)
         x += pen.textlength(count, font=count_font) + gap
     return top + chip_h
 
 
-def render() -> None:
-    data = survey()
-    comb = draw_comb(data)
+def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
+    # Eight companies, then the fifteen roles as eight and seven, so each row is
+    # one group rather than a group boundary landing mid row.
+    cast_rows = [companies, roles[:8], roles[8:]]
+    cast_h = (len(cast_rows) - 1) * CAST_STEP + CAST_H
+    comb = draw_modules(data)
 
-    lead_font = _font(27, 500)
-    note_font = _font(24, 400)
-    top_pad, legend_gap, caption_gap, line_gap, bottom_pad = 22, 34, 24, 12, 28
-    height = top_pad + comb.height + legend_gap + 25 + caption_gap + 33 + line_gap + 30 + bottom_pad
+    lead_font = _font(26, 500)
+    note_font = _font(23, 400)
+    label_h, after_label = 23, 9
+    height = (
+        20
+        + label_h
+        + after_label
+        + cast_h
+        + 30
+        + label_h
+        + after_label
+        + comb.height
+        + 26
+        + 23
+        + 20
+        + 32
+        + 11
+        + 29
+        + 26
+    )
 
     canvas = Image.new("RGB", (WIDTH, height), PAPER)
-    canvas.paste(comb, (MARGIN, top_pad))
     pen = ImageDraw.Draw(canvas)
 
-    y = draw_legend(pen, data, top_pad + comb.height + legend_gap, WIDTH - 2 * MARGIN)
-
-    busiest = ", ".join(ident for ident, _ in data.degree.most_common(3))
-    # A module is a package the loader can find, which means one carrying a
-    # manifest. The rest of the cells are the shared libraries that sit in the
-    # same directory and are imported by name, so the headline counts modules
-    # and the line under it accounts for the difference rather than hiding it.
     modules = sum(1 for m in data.modules if m.manifest_name)
     libraries = len(data.modules) - modules
+
+    y = draw_label(pen, HEAD_CAST, 20) + after_label
+    y = draw_cast(canvas, pen, cast_rows, y) + 30
+    y = draw_label(pen, f"{modules} BACKEND MODULES, WIRED TO EACH OTHER", y) + after_label
+    canvas.paste(comb, (MARGIN, y))
+    y = draw_legend(pen, data, y + comb.height + 26)
+
+    busiest = ", ".join(ident for ident, _ in data.degree.most_common(3))
     lead = (
         f"{modules} backend modules  ·  {len(data.declared)} dependencies declared in their "
         f"manifests  ·  {len(data.imports)} imports between them"
     )
     note = (
-        f"{libraries} of the cells are shared libraries, not modules. Colour depth is how many "
+        f"{libraries} of the lower cells are shared libraries, not modules. Colour depth is how many "
         f"others each is wired to, deepest at {busiest}."
     )
-    pen.text((MARGIN, y + caption_gap), lead, font=lead_font, fill=INK)
-    pen.text((MARGIN, y + caption_gap + 33 + line_gap), note, font=note_font, fill=MUTED)
+    pen.text((MARGIN, y + 20), lead, font=lead_font, fill=INK)
+    pen.text((MARGIN, y + 20 + 32 + 11), note, font=note_font, fill=MUTED)
 
     # A caption that runs off the edge is a caption nobody finishes reading, and
     # the width it needs depends on the numbers, which change with the tree.
-    for label, text, face in (("lead", lead, lead_font), ("note", note, note_font)):
-        over = pen.textlength(text, font=face) - (WIDTH - 2 * MARGIN)
+    for name, text, face in (("lead", lead, lead_font), ("note", note, note_font)):
+        over = pen.textlength(text, font=face) - CONTENT
         if over > 0:
-            raise SystemExit(f"the {label} line overruns the banner by {over:.0f}px: {text}")
+            raise SystemExit(f"the {name} line overruns the banner by {over:.0f}px: {text}")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(OUT, optimize=True)
@@ -362,19 +712,19 @@ def render() -> None:
     degrees = [data.degree[m.ident] for m in data.modules]
     unmanifested = [m.ident for m in data.modules if m.manifest_name is None]
     print(f"wrote {OUT.relative_to(REPO)}  {canvas.width}x{canvas.height}  {OUT.stat().st_size // 1024} KB")
-    print(f"  cell {HEX_W}x{HEX_H}, row step {ROW_STEP}, {ROWS} rows of {COLS}")
-    print(f"  modules               {len(data.modules)}")
-    print(f"  declared dependencies {len(data.declared)}")
-    print(f"  import links          {len(data.imports)}")
-    print(f"  wired to at least one {sum(1 for d in degrees if d)}")
+    print(f"  cast   {len(companies)} companies + {len(roles)} roles, cell {CAST_W}x{CAST_H}, step {CAST_STEP}")
+    print(f"  comb   {len(data.modules)} cells in {MOD_ROWS} rows of {MOD_COLS}, cell {MOD_W}x{MOD_H}")
+    print(f"  modules with a manifest {modules}, shared libraries {libraries}")
+    print(f"  declared dependencies   {len(data.declared)}")
+    print(f"  import links            {len(data.imports)}")
+    print(f"  wired to at least one   {sum(1 for d in degrees if d)}")
     print(f"  degree median {statistics.median(degrees)}  mean {statistics.mean(degrees):.1f}  max {max(degrees)}")
-    print(f"  ramp saturates at {RAMP_TOP}, above {sum(1 for d in degrees if d < RAMP_TOP)} of {len(degrees)}")
     if unmanifested:
         # Said out loud rather than raised. The loader discovers modules by finding
         # a manifest, so a directory without one is invisible to it and drops out
         # with no error at all; that silence is the reason to print it.
-        print(f"  NO MANIFEST, drawn in the Other bucket: {', '.join(unmanifested)}")
+        print(f"  no manifest, drawn in the Other bucket: {', '.join(unmanifested)}")
 
 
 if __name__ == "__main__":
-    render()
+    render(*build_cells(), survey())
