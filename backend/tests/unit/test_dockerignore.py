@@ -20,6 +20,7 @@ much higher than a noisy test.
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -163,6 +164,52 @@ def test_root_context_keeps_source_files(root_spec: pathspec.PathSpec, path: str
     assert not root_spec.match_file(path), (
         f"{path} is required by the Dockerfile.unified build but the .dockerignore is excluding it"
     )
+
+
+def test_root_context_keeps_every_force_included_path(root_spec: pathspec.PathSpec) -> None:
+    """No path the wheel force-includes may be excluded from the build context.
+
+    The list above is written by hand, so it only ever covers the paths someone
+    thought to add. This one is derived from the force-include map, which is
+    the list that actually decides whether the image builds: the wheel is built
+    by pip inside the image, and hatchling aborts the whole build on the first
+    force-included path it cannot find.
+
+    scripts/check_docker_force_include_context.py holds that map and the
+    Dockerfile's COPY lines to each other, but a COPY can only copy what the
+    context contains. An entry that is present, copied and .dockerignored
+    satisfies that check and still fails the build, which is exactly the
+    position ``../frontend/dist`` is in and the reason it is exempt there. This
+    closes that gap, and it needs pathspec, which is why it lives here rather
+    than in the gate.
+    """
+    pyproject = tomllib.loads((BACKEND_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    force_include = pyproject["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]
+    # Only entries reaching outside backend/; everything else is covered by the
+    # stage's own ``COPY backend/ backend/``. frontend/dist is a build artefact
+    # that is deliberately ignored and supplied from the frontend-build stage.
+    outside = {key[len("../") :] for key in force_include if key.startswith("../")}
+    required = sorted(outside - {"frontend/dist"})
+    assert required, "no force-include entry points outside backend/, so this test proved nothing"
+
+    for relative in required:
+        assert not root_spec.match_file(relative), (
+            f"backend/pyproject.toml force-includes {relative}, and the root .dockerignore excludes it. "
+            f"The Dockerfile cannot copy what the build context does not carry, so the image will fail "
+            f"to build with 'Forced include not found'."
+        )
+        source = REPO_ROOT / relative
+        if not source.is_dir():
+            continue
+        for child in sorted(source.rglob("*")):
+            # Byte caches are ignored on purpose and are not part of what ships.
+            if child.is_dir() or "__pycache__" in child.parts or child.suffix in {".pyc", ".pyo"}:
+                continue
+            as_posix = child.relative_to(REPO_ROOT).as_posix()
+            assert not root_spec.match_file(as_posix), (
+                f"{as_posix} sits under force-included {relative} but the root .dockerignore excludes it, "
+                f"so the image would ship a pack or data directory missing a file it is supposed to carry."
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────
