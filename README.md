@@ -1,9 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/banner-cast-dark.png">
-  <img src="docs/screenshots/banner-cast-light.png" alt="OpenConstructionERP - a honeycomb of the eight company types and fifteen professional roles the platform is built around" width="900" />
-</picture>
+<img src="docs/screenshots/banner.png" alt="OpenConstructionERP - a honeycomb of the eight company types and fifteen professional roles the platform is built around, over a second honeycomb of its 192 backend modules shaded by how many of the others each one is wired to" width="900" />
 
 # OpenConstructionERP
 
