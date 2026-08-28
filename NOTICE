@@ -373,6 +373,38 @@ the descriptive text noted above comes from the public sector cost
 publications in the table, not from the classification standards.
 
 ------------------------------------------------------------------------
+Data Exchange Standards
+------------------------------------------------------------------------
+
+This software implements published data exchange formats. Element names,
+document structures and data types of an interchange format are facts about
+that format, and an implementation has to use them or it does not
+interoperate. The particular files a standards body publishes are a
+different matter, so none of them is redistributed here.
+
+GAEB DA XML. The reader, the writer, the validation rules, the profile
+schema in backend/app/modules/boq/gaeb_profile/ and the test fixtures under
+backend/tests/fixtures/gaeb/ are all our own work, written from the element
+model that the publicly available GAEB DA XML 3.3 Fachdokumentation
+describes. No schema file and no conformance file published by GAEB, DIN or
+BVBS is included in this repository, in the Python package, in the container
+image or in the desktop installers. The specification itself is copyrighted:
+its 3.3 Fachdokumentation carries "(c) 2023 by DIN Deutsches Institut fuer
+Normung e. V." on the title page. The schema files can be downloaded from the
+publisher without payment or registration, but no statement granting a right
+to redistribute them was found on the download pages, in the site imprint, in
+the Fachdokumentation or inside the files, so we treat redistribution as not
+permitted. Our test suite validates our output against the publisher's schema
+by fetching it at test time, which is use rather than redistribution.
+
+docs/standards/GAEB.md carries the full statement, including what we assert
+about conformance and what we do not. We hold no BVBS certification and make
+no certification claim.
+
+Classification standards (DIN 276, NRM, MasterFormat) are covered in the
+Data Sources section above.
+
+------------------------------------------------------------------------
 Cryptographic Notice
 ------------------------------------------------------------------------
 
@@ -782,7 +814,7 @@ Telling you the library is there, and giving you its text.
     is frozen into one executable and only what the build collects goes
     in; the published 16.0.0 Linux sidecar carries the psycopg2
     extension with fifteen native libraries beside it, the OpenCV
-    extension with fifteen more, and 365 dist-info directories of which
+    extension with fifteen more, and 365 dist-info entries of which
     neither psycopg2's nor OpenCV's is one. The code arrived and the
     licence did not. The three texts named above are committed inside
     the backend package for that reason, on the same route that already
