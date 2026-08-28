@@ -200,6 +200,41 @@ class TestGAEBEinheitspreisSanity:
         assert results == []
 
     @pytest.mark.asyncio
+    async def test_negative_rate_is_blocked_on_a_lump_sum_too(self) -> None:
+        """A negative Einheitspreis is invalid under every unit, lump sums included.
+
+        The unit used to be consulted first, so a lump sum was stepped over
+        before the negative check could run. That made the block unreachable on
+        X84, the only phase carrying bidder prices: its schema forbids QU on an
+        item, so the importer sees no unit and normalises the position to a lump
+        sum. Every position in such a file was skipped, and the one value this
+        rule exists to refuse could not be refused where it matters most.
+        """
+        rule = GAEBEinheitspreisSanity()
+        positions = [{"id": "p1", "ordinal": "012.01.0010", "unit": "lsum", "unit_rate": -1.0}]
+        results = await rule.validate(_ctx(positions))
+        assert len(results) == 1
+        assert not results[0].passed
+        assert results[0].severity == Severity.ERROR
+        assert "negative" in results[0].message.lower()
+
+    @pytest.mark.asyncio
+    async def test_a_lump_sum_with_no_unit_still_blocks_a_negative_rate(self) -> None:
+        """The X84 shape itself: no unit stated at all, priced, and negative."""
+        rule = GAEBEinheitspreisSanity()
+        positions = [{"id": "p1", "ordinal": "012.01.0010", "unit": "lsum", "unit_rate": "-0.01"}]
+        results = await rule.validate(_ctx(positions))
+        assert [r.severity for r in results] == [Severity.ERROR]
+
+    @pytest.mark.asyncio
+    async def test_a_positive_lump_sum_is_still_silent(self) -> None:
+        """The exemption itself is unchanged: only the negative case moved."""
+        rule = GAEBEinheitspreisSanity()
+        positions = [{"id": "p1", "ordinal": "012.01.0010", "unit": "lsum", "unit_rate": 1234.56}]
+        results = await rule.validate(_ctx(positions))
+        assert results == []
+
+    @pytest.mark.asyncio
     async def test_missing_rate_skipped(self) -> None:
         """Missing rate is owned by PositionHasUnitRate; rules should not overlap."""
         rule = GAEBEinheitspreisSanity()
@@ -486,19 +521,31 @@ class TestGAEBConformanceNoFalsePositives:
             # ran: without this, the check below is true of an empty list.
             assert price_results, "einheitspreis_sanity rule did not run"
         else:
-            # In an X84 it reaches nothing at all, and that is a gap in the rule
-            # rather than a property of this file. The published schema does not
+            # In an X84 this rule still says nothing, and half of that is now
+            # deliberate rather than accidental. The published schema does not
             # allow QU on an X84 item - tgItem there is NotOffered, Qty, UP, IT
-            # and no unit - so the importer sees an empty unit, normalises it to
-            # a lump sum, and this rule skips lump sums by design. A negative
-            # Einheitspreis, the one case the rule blocks, is therefore
-            # unreachable on the phase that actually carries bidder prices. The
-            # file this fixture replaced behaved the same way, so nothing
-            # regressed here; the emptiness is pinned so it cannot go back to
-            # satisfying the check below by being empty. Closing it means
-            # teaching the rule to tell an absent unit from a stated lump sum,
-            # and handling NotOffered, so it is not a one-line change.
-            assert not price_results, "einheitspreis_sanity now reaches X84 positions, update this claim"
+            # and no unit - so the importer sees an empty unit and normalises
+            # the position to a lump sum.
+            #
+            # The blocking half no longer depends on that. A negative
+            # Einheitspreis is refused on a lump sum as well, because it is
+            # invalid under every unit and in every phase and never needed the
+            # unit to decide. That check now reaches the only phase carrying
+            # bidder prices, which it could not before.
+            #
+            # What stays silent is the zero-rate WARNING, which does need a
+            # unit: on a shape where a lump sum cannot be stated it would flag
+            # every declined and every genuinely lump-sum line. Closing that
+            # half means letting the unit be genuinely absent instead of
+            # guessed at in the importer, and exempting NotOffered, and it is
+            # not a one-line change. This fixture carries no negative rate, so
+            # the list is empty and the emptiness is pinned: a finding here
+            # means the zero half started firing and this claim needs redoing.
+            assert not price_results, (
+                "einheitspreis_sanity now reports on X84 positions. If this fixture gained a "
+                "negative rate that is correct and expected; otherwise the zero-rate half "
+                "started firing and the comment above needs redoing."
+            )
         assert all(r.passed for r in price_results), [
             (r.element_ref, r.severity.value) for r in price_results if not r.passed
         ]

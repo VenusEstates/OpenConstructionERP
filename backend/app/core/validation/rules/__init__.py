@@ -1022,8 +1022,15 @@ class GAEBEinheitspreisSanity(ValidationRule):
             if pos_type == "section":
                 continue
             unit = str(pos.get("unit") or "").strip().lower()
-            if unit in self.LUMP_SUM_UNITS:
-                continue  # Lump-sum positions are allowed to have arbitrary pricing shape
+            # Lump sums are allowed an arbitrary pricing shape, but the skip
+            # is applied AFTER the negative check rather than before it. A
+            # negative Einheitspreis is invalid under every unit and in every
+            # phase, so it never needed the unit to decide. Skipping first
+            # made the block unreachable on X84, the one phase that actually
+            # carries bidder prices: its schema forbids QU on an item, so the
+            # importer sees no unit, normalises to a lump sum, and this rule
+            # stepped over every position in the file.
+            is_lump_sum = unit in self.LUMP_SUM_UNITS
             rate = pos.get("unit_rate")
             if rate is None:
                 # Missing rate is covered by PositionHasUnitRate; skip to keep signals orthogonal
@@ -1057,6 +1064,12 @@ class GAEBEinheitspreisSanity(ValidationRule):
                         suggestion=translate("gaeb.einheitspreis_sanity.suggestion", locale=locale),
                     )
                 )
+                continue
+
+            if is_lump_sum:
+                # Past the negative check, a lump sum is left alone exactly as
+                # before: a zero or an unusual figure on one carries no meaning
+                # this rule can read.
                 continue
 
             if rate_val == 0 and not _is_provisional_position(pos) and not _is_unpriced_phase(context, pos):
