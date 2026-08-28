@@ -32,11 +32,22 @@ portpicker = "0.1"
 # asking for it by name adds an edge and no download.
 uuid = { version = "1", features = ["v4"] }
 
-# Native Win32 MessageBox for the startup-failure fail-safe. windows-sys is
-# already pulled in transitively (e.g. via dirs-sys/errno) at 0.59, so this adds
-# no new major version to the dependency graph.
+# Native Win32 MessageBox for the startup-failure fail-safe, and ShellExecuteW
+# for opening links and files. windows-sys is already pulled in transitively
+# (e.g. via dirs-sys/errno) at 0.59, so this adds no new major version to the
+# dependency graph.
+#
+# Win32_UI_Shell is what carries ShellExecuteW, and Win32_System_Com is for the
+# CoInitializeEx around it: the shell may delegate an open to a shell extension
+# that requires an apartment, so the call is made on a thread that has one. Both
+# are features of a crate that is already a direct dependency, and cargo records
+# versions and edges rather than features, so neither changes Cargo.lock.
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.59", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_System_Com",
+] }
 
 [features]
 default = ["custom-protocol"]

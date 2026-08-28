@@ -74,116 +74,122 @@ struct AppState {
 
 /// How long to give the platform opener a chance to report failure.
 ///
-/// `cmd /c start` and `open` hand the target to the OS and exit within a few
-/// milliseconds, so a real failure lands well inside this window. `xdg-open`
-/// may exec the browser in place instead and stay alive for the whole desktop
+/// `ShellExecuteW` and `open` hand the target to the OS and answer within a few
+/// milliseconds, so a real failure lands well inside this window. `xdg-open` may
+/// exec the browser in place instead and stay alive for the whole desktop
 /// session, which is why the opener is never simply waited on: that would block
-/// the caller until the user closed their browser. Polling for an early
-/// non-zero exit catches the failures the OS does report and returns
-/// immediately on the normal path.
+/// the caller until the user closed their browser. Waiting only this long for an
+/// answer catches the failures the OS does report and returns immediately on the
+/// normal path.
 const OPENER_FAILURE_WINDOW: Duration = Duration::from_millis(400);
+
+/// Only the spawning arms poll; the Windows arm waits on a channel instead.
+#[cfg(not(target_os = "windows"))]
 const OPENER_POLL_INTERVAL: Duration = Duration::from_millis(20);
+
+/// The NUL-terminated wide string the Windows shell is handed, or a refusal.
+///
+/// This is the whole of the argument the opener receives. There is no command
+/// line, so nothing here is quoted, escaped or otherwise adjusted: the caller's
+/// string is converted to UTF-16 and a terminator is appended, and that is all.
+/// Keeping it a separate function is what lets a test assert that the bytes
+/// leaving us are the bytes that arrived.
+///
+/// An interior NUL is the one thing that must be refused. It is the string
+/// terminator, so the shell would silently see a prefix of the target and open
+/// something the user never asked for, which is the failure mode this whole
+/// change exists to remove. Rust strings may legally contain one; a URL that
+/// reached us honestly cannot.
+///
+/// Args:
+///     target: The URL or path about to be opened.
+///
+/// Returns:
+///     The wide string to pass as `lpFile`, or an error naming the refusal.
+#[cfg(target_os = "windows")]
+fn shell_target(target: &str) -> Result<Vec<u16>, String> {
+    use std::os::windows::ffi::OsStrExt;
+
+    if target.contains('\0') {
+        return Err("the link contains a null character".to_string());
+    }
+    Ok(std::ffi::OsStr::new(target)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect())
+}
+
+/// Ask the Windows shell to open one target, and report what it said.
+///
+/// Runs on its own thread with COM initialised, because the shell may hand the
+/// open to a shell extension that requires an apartment, and a Tauri command
+/// runs on whatever thread Tauri chose. A dedicated thread makes the pairing
+/// with `CoUninitialize` exact: it is taken and released around one call and the
+/// thread then ends, so there is no apartment left behind on a worker that
+/// something else will reuse.
+///
+/// The return value is an `HINSTANCE` for historical reasons and is not a
+/// handle. Anything above 32 means the request was accepted; at or below 32 it
+/// is an error code, and the few worth naming are named.
+///
+/// Args:
+///     file: The wide string from `shell_target`.
+///
+/// Returns:
+///     Ok when the shell accepted the request, otherwise what it refused with.
+#[cfg(target_os = "windows")]
+fn shell_execute(file: &[u16]) -> Result<(), String> {
+    use windows_sys::Win32::System::Com::{
+        CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE,
+    };
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let verb: Vec<u16> = "open".encode_utf16().chain(std::iter::once(0)).collect();
+
+    // S_OK and S_FALSE both mean this thread now holds an initialisation to
+    // release. Anything else, RPC_E_CHANGED_MODE in particular, means somebody
+    // else's apartment is already here and releasing it would not be ours to do.
+    let hr = unsafe {
+        CoInitializeEx(
+            std::ptr::null(),
+            (COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) as u32,
+        )
+    };
+    let owns_com = hr == 0 || hr == 1;
+
+    let outcome = unsafe {
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            verb.as_ptr(),
+            file.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            SW_SHOWNORMAL,
+        )
+    } as isize;
+
+    if owns_com {
+        unsafe { CoUninitialize() };
+    }
+
+    if outcome > 32 {
+        return Ok(());
+    }
+    Err(match outcome {
+        2 | 3 => "the system could not find an application to open it".to_string(),
+        5 => "the system refused access to the application that opens it".to_string(),
+        31 => "no application is associated with this kind of link".to_string(),
+        code => format!("the system opener refused it with code {code}"),
+    })
+}
 
 /// Start the platform opener for a URL or file path.
 ///
-/// Uses the platform opener directly (`cmd /c start` on Windows, `open` on
-/// macOS, `xdg-open` on Linux) rather than the tauri shell plugin's deprecated
-/// `open`: it is fully cross-platform and adds no dependency.
-///
-/// Split per platform by `cfg` attribute rather than by a runtime `cfg!`
-/// branch inside one body, because the Windows arm needs `CommandExt`, which
-/// only exists on Windows.
-#[cfg(target_os = "windows")]
-fn spawn_os_opener(target: &str) -> std::io::Result<std::process::Child> {
-    use std::os::windows::process::CommandExt;
-
-    /// `CREATE_NO_WINDOW`. A console subsystem process spawned from a GUI app
-    /// allocates and shows its own console, so without this every outbound
-    /// link put a black command window on screen ahead of the browser. It is
-    /// the launcher's window, not the browser's, and it is what made clicking
-    /// a link in the app look like it opened a separate window rather than a
-    /// page.
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-
-    // cmd.exe re-parses the command line it is handed, and Rust quotes an
-    // argument only when it contains a space or a tab. A target with neither,
-    // such as https://example.invalid/&calc, therefore arrives unquoted and
-    // cmd reads the & as a command separator: the second half runs as a
-    // program. The caller's scheme check does not stop it, because the string
-    // does begin with https://. So the target is quoted here, at the one place
-    // that builds the command line, rather than trusted to arrive safe.
-    //
-    // raw_arg rather than arg: Rust's own escaping would turn the quotes into
-    // \" for a program that parses its command line the C way, and cmd does
-    // not, so the quotes have to be written literally.
-    //
-    // The empty "" is start's title argument; without it a quoted target is
-    // mis-parsed as the window title and nothing opens.
-    if !target_is_safe_for_cmd(target) {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "The link contains characters that cannot be passed to the shell safely",
-        ));
-    }
-
-    let mut command = std::process::Command::new("cmd");
-    for piece in cmd_open_args(target) {
-        command.raw_arg(piece);
-    }
-    command.creation_flags(CREATE_NO_WINDOW).spawn()
-}
-
-/// The literal command-line pieces handed to cmd.exe to open one target.
-///
-/// Split out from the spawn so the quoting can be asserted rather than trusted.
-/// A test that only exercises `target_is_safe_for_cmd` would stay green if the
-/// quotes came back off, because refusing a quote character and quoting the
-/// target are two different halves of one guard and only the first has an
-/// obvious unit to test.
-///
-/// Args:
-///     target: A URL or path that `target_is_safe_for_cmd` has already accepted.
-///
-/// Returns:
-///     The four pieces, each written verbatim onto the command line.
-#[cfg(target_os = "windows")]
-fn cmd_open_args(target: &str) -> [String; 4] {
-    [
-        "/c".to_string(),
-        "start".to_string(),
-        // start's title argument. Without it a quoted target is read as the
-        // window title and nothing opens.
-        "\"\"".to_string(),
-        format!("\"{target}\""),
-    ]
-}
-
-/// Whether a target may be placed inside double quotes on a cmd.exe line.
-///
-/// Quoting neutralises the separators (`&`, `|`, `<`, `>`) and the escape
-/// character (`^`), so the only characters that still matter are the ones that
-/// can break out of the quoting itself: a double quote closes it, and a
-/// carriage return or newline ends the line. None of the three can appear in a
-/// URL that reached us honestly (they are percent-encoded there) or in a
-/// Windows path, where the double quote is not a legal filename character, so
-/// refusing them costs nothing a real caller wanted.
-///
-/// Deliberately NOT refused: `%`. cmd expands `%NAME%` even inside quotes, so a
-/// URL carrying a defined variable name between percent signs would open the
-/// wrong address. That is a wrong-link bug and not a way to run a program, and
-/// percent signs are how every encoded character in a URL is spelled, so
-/// refusing them would break far more links than it could protect.
-///
-/// Args:
-///     target: The URL or path about to be handed to the opener.
-///
-/// Returns:
-///     True when the target can be quoted safely.
-#[cfg(target_os = "windows")]
-fn target_is_safe_for_cmd(target: &str) -> bool {
-    !target.contains('"') && !target.contains('\r') && !target.contains('\n')
-}
-
+/// Uses the platform opener directly (`open` on macOS, `xdg-open` on Linux)
+/// rather than the tauri shell plugin's deprecated `open`, and adds no
+/// dependency. Windows does not come through here at all; see
+/// `open_with_os_default`.
 #[cfg(target_os = "macos")]
 fn spawn_os_opener(target: &str) -> std::io::Result<std::process::Child> {
     std::process::Command::new("open").arg(target).spawn()
@@ -204,9 +210,67 @@ fn spawn_os_opener(target: &str) -> std::io::Result<std::process::Child> {
 /// and the user was told nothing at all.
 ///
 /// This is not a complete detector, and callers should not present it as one.
-/// Windows `start` still exits 0 when it puts up the "How do you want to open
-/// this file?" chooser, so `Ok` here means the OS accepted the request, not
-/// that a browser window appeared.
+/// `Ok` means the OS accepted the request, not that a browser window appeared:
+/// the shell answers before the browser has drawn anything, and a "How do you
+/// want to open this file?" chooser is an acceptance too.
+///
+/// Windows takes an entirely different route from the other two, and that is
+/// the point of it. It used to run `cmd /c start "" "<target>"`, which meant the
+/// target became part of a command line that cmd.exe then re-parsed. Quoting
+/// held off the separators, but cmd expands `%NAME%` inside quotes as well as
+/// outside, so a link could carry a variable reference that cmd substituted on
+/// the way past. Measured on Windows 11: `%USERNAME%` in a link became the
+/// account name and `%CD%` became the full path of the working directory, both
+/// sent to whatever host the link named. Once the application page could invoke
+/// the link command, that link no longer had to come from one of our own string
+/// literals, and a value read out of a project could reach it.
+///
+/// No enumeration of what cmd does to a string was going to close that. The
+/// obvious rule of refusing two hex digits after a percent does not, because
+/// `%CD%` is a real variable and C and D are both hex digits. Refusing names
+/// that `std::env::var` resolves does not either, because cmd expands dynamic
+/// pseudo-variables that are not in the environment block at all: `CD`, `DATE`,
+/// `TIME`, `RANDOM` and `ERRORLEVEL` all expand while `std::env::var` reports
+/// them absent, and an undefined name survives literally, so testing such a rule
+/// with an obvious name produces a green that means nothing.
+///
+/// So the command line is gone. `ShellExecuteW` takes the target as one
+/// argument, and no shell parses it: percent signs, ampersands, quotes and line
+/// breaks are all just characters in a string. The JavaScript layer above never
+/// helped with this and should not be credited for it. `new URL` leaves invalid
+/// percent sequences exactly as written, so the browser hands the string through
+/// unchanged; it does encode a double quote and strip carriage returns and
+/// newlines, which is why those three were never the hole. Percent was the one
+/// thing that passed both layers.
+#[cfg(target_os = "windows")]
+fn open_with_os_default(target: &str) -> Result<(), String> {
+    let file = shell_target(target)?;
+
+    // The call is given the same grace the child process used to get. Opening a
+    // link is meant to feel instant, and a shell that has not answered inside
+    // the window has taken the request rather than refused it, so the caller is
+    // told the truth it has: nothing has gone wrong. A refusal arrives in
+    // microseconds, well inside this, because it is a lookup and not a launch.
+    //
+    // THIS TIMEOUT IS NOT GUARDING A RACE OF OURS AND MUST NOT BE READ AS ONE.
+    // Nothing here is shared, and the thread cannot be beaten to anything. What
+    // it bounds is somebody else's code: the shell may hand the open to a shell
+    // extension from any installed application, and such an extension is free to
+    // be slow or to block outright. Without the timeout that third party decides
+    // how long the window stays frozen. Remove it and links stay correct while
+    // the application occasionally stops responding on a machine whose shell
+    // extensions we have never seen.
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(shell_execute(&file));
+    });
+    match rx.recv_timeout(OPENER_FAILURE_WINDOW) {
+        Ok(outcome) => outcome,
+        Err(_) => Ok(()),
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
 fn open_with_os_default(target: &str) -> Result<(), String> {
     let mut child = spawn_os_opener(target).map_err(|e| e.to_string())?;
     let deadline = Instant::now() + OPENER_FAILURE_WINDOW;
@@ -268,11 +332,20 @@ fn open_app_in_browser(app: tauri::AppHandle, path: Option<String>) -> Result<()
 ///
 /// That scheme test is not on its own what makes this safe, and it used to be
 /// described as though it were. It bounds what the opener is asked to open; it
-/// says nothing about how the string survives the shell on the way there, and
-/// on Windows the opener goes through cmd.exe. https://example.invalid/&calc
-/// passes this check in full. The quoting in `spawn_os_opener` is what stops
-/// the tail of that string being run as a second command, and the two together
-/// are the guard.
+/// says nothing about what happens to the string on the way there. When this
+/// went through `cmd /c start`, https://example.invalid/&calc passed this check
+/// in full and the tail ran as a second command until quoting was added, and a
+/// link carrying %USERNAME% still had the account name substituted into it and
+/// sent to the host in the link. Neither was a scheme problem and neither could
+/// be fixed here.
+///
+/// It is now safe because there is no shell. `open_with_os_default` hands the
+/// target to `ShellExecuteW` as one argument, so this check does only the job
+/// it can actually do: deciding which schemes we are willing to open at all.
+///
+/// This command takes a caller-supplied destination, which `open_app_in_browser`
+/// does not, so it is the one to think hardest about before anything is added
+/// beside it.
 #[tauri::command]
 fn open_external_url(url: String) -> Result<(), String> {
     let target = url.trim();
@@ -2456,89 +2529,79 @@ fn show_startup_failure_dialog(_message: &str) {}
 mod tests {
     use super::*;
 
-    /// The separators cmd.exe honours outside quotes must survive as text.
+    /// The link the shell is given is the link the caller asked for.
     ///
-    /// These are the strings that pass `open_external_url`'s scheme test in
-    /// full, so nothing upstream of the opener refuses them. Each one is a URL
-    /// by every rule that function applies, and each one used to reach the
-    /// command line unquoted, because Rust adds quotes only around an argument
-    /// carrying a space or a tab and none of these carries either.
+    /// The whole claim of this opener is that nothing between the caller and
+    /// the operating system reinterprets the string, so the assertion is on the
+    /// exact wide buffer handed to `lpFile`, built independently of the code
+    /// under test. Every one of these used to be handled by cmd.exe: the
+    /// separators as text only because a later fix quoted them, and the percent
+    /// forms not at all, since cmd substitutes those inside quotes as readily as
+    /// outside.
+    ///
+    /// `%CD%` is in here as a case and not only as a sentence in a comment. The
+    /// tempting cheap guard, refusing a percent followed by two hex digits, does
+    /// not work precisely because of it: `CD` is a real variable that cmd
+    /// expands, and C and D are both hex digits, so that rule would have to
+    /// refuse it and would then also refuse every legitimately encoded
+    /// character. Refusing names that `std::env::var` resolves fails on the same
+    /// case for a different reason, since `CD` is a dynamic pseudo-variable that
+    /// cmd expands while the environment block does not contain it at all.
     #[cfg(target_os = "windows")]
     #[test]
-    fn a_shell_separator_in_a_link_is_still_only_a_link() {
+    fn the_shell_is_handed_the_link_exactly_as_written() {
         for target in [
             "https://example.invalid/&calc",
             "https://example.invalid/|calc",
-            "https://example.invalid/&&calc",
             "http://example.invalid/?a=1&b=2",
             "https://example.invalid/^calc",
             "mailto:info@datadrivenconstruction.io?subject=a&body=b",
-        ] {
-            assert!(
-                target_is_safe_for_cmd(target),
-                "{target} is quotable and must not be refused: the ampersand in a \
-                 query string is ordinary, and quoting is what makes it harmless"
-            );
-        }
-    }
-
-    /// Only what can break out of the quoting is refused.
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn a_target_that_could_close_the_quote_is_refused() {
-        for target in [
+            "https://example.invalid/a%20b?q=%D0%BC%D0%B5%D1%82%D1%80",
+            "https://example.invalid/?a=%CD%&b=%USERNAME%",
+            "https://example.invalid/?a=%RANDOM%&b=%TIME%&c=%DATE%",
             "https://example.invalid/\"&calc",
             "https://example.invalid/\r\ncalc",
-            "https://example.invalid/\ncalc",
         ] {
-            assert!(
-                !target_is_safe_for_cmd(target),
-                "{target:?} carries a quote or a line break and must be refused"
+            let handed = shell_target(target).expect("nothing here carries a null");
+            // Built from the literal rather than by calling the same helper.
+            // Two sides that share an implementation move together, and an
+            // assertion that cannot disagree with the code it checks is not
+            // checking it.
+            let mut expected: Vec<u16> = target.encode_utf16().collect();
+            expected.push(0);
+            assert_eq!(
+                handed, expected,
+                "{target:?} must reach the shell unmodified: no quoting, no \
+                 escaping and above all no substitution"
             );
         }
     }
 
-    /// The target reaches the command line inside quotes, which is the fix.
+    /// A null truncates the string the shell sees, so it is refused.
     ///
-    /// This is the half `target_is_safe_for_cmd` cannot speak for. That
-    /// predicate would go on returning true for an ampersand URL even if the
-    /// quotes were removed tomorrow, and an ampersand URL reaching cmd.exe
-    /// unquoted is the whole defect. So the assertion is on the text actually
-    /// written onto the line.
+    /// The one character that cannot be passed through. Everything else is
+    /// data to `ShellExecuteW`; this one ends the argument early and would open
+    /// a prefix of the target without saying so.
     #[cfg(target_os = "windows")]
     #[test]
-    fn the_target_is_written_onto_the_command_line_quoted() {
-        let target = "https://example.invalid/&calc";
-        let args = cmd_open_args(target);
-
-        assert_eq!(args[0], "/c");
-        assert_eq!(args[1], "start");
-        assert_eq!(
-            args[2], "\"\"",
-            "start still needs its empty title argument"
-        );
-        // Written out in full rather than rebuilt with the same format! the
-        // implementation uses. Mirroring the expression would make the two
-        // sides move together, and an assertion that cannot disagree with the
-        // code it checks is not checking it.
-        assert_eq!(
-            args[3], "\"https://example.invalid/&calc\"",
-            "the target must be wrapped in quotes: unquoted, cmd reads the & as a \
-             separator and runs the rest as a program"
-        );
+    fn a_target_carrying_a_null_is_refused() {
+        assert!(shell_target("https://example.invalid/\0evil").is_err());
+        assert!(shell_target("https://example.invalid/ok").is_ok());
     }
 
-    /// Percent signs stay allowed, and the reason is written down.
+    /// Percent-encoded links keep working, which is why the guard is not a
+    /// denylist.
     ///
-    /// Every encoded character in a URL is spelled with one, so refusing them
-    /// would break far more links than it could protect. This pins the decision
-    /// so a later tightening has to argue with it rather than pass silently.
+    /// The old opener allowed percent signs deliberately, on the grounds that
+    /// every encoded character in a URL is spelled with one. That reasoning was
+    /// right and the conclusion was wrong: the answer was never to choose
+    /// between encoded links and safe ones, it was to stop handing the string to
+    /// something that parses it.
     #[cfg(target_os = "windows")]
     #[test]
     fn a_percent_encoded_link_is_not_refused() {
-        assert!(target_is_safe_for_cmd(
-            "https://example.invalid/a%20b?q=%D0%BC%D0%B5%D1%82%D1%80"
-        ));
+        assert!(shell_target("https://example.invalid/a%20b?q=%D0%BC%D0%B5%D1%82%D1%80").is_ok());
+        assert!(shell_target("https://example.invalid/?path=%CD%").is_ok());
     }
 
     /// Parse a health body the way both judgements do, for the tests below.
