@@ -23,8 +23,10 @@
  * Run:  npx vitest run src/features/file-manager/components/__tests__/nameColumnWidth.test.tsx
  */
 
+import type { ReactElement } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -70,16 +72,28 @@ const ROWS = [
   },
 ] as unknown as FileRow[];
 
+/* FileList draws a tag pill per row, and it reads those tags through react
+   query, so a bare render of it throws "No QueryClient set" no matter what
+   the test is actually looking at. A fresh client per render rather than one
+   shared across the file: a shared cache carries one test's entries into the
+   next and turns a failure into something that depends on test order. */
+function withClient(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
+}
+
 function renderList() {
   return render(
-    <FileList
-      items={ROWS}
-      selectedIds={new Set()}
-      onSelect={() => undefined}
-      onOpen={() => undefined}
-      sort="name"
-      onSortChange={() => undefined}
-    />,
+    withClient(
+      <FileList
+        items={ROWS}
+        selectedIds={new Set()}
+        onSelect={() => undefined}
+        onOpen={() => undefined}
+        sort="name"
+        onSortChange={() => undefined}
+      />,
+    ),
   );
 }
 
@@ -128,16 +142,22 @@ describe('/files NAME column claims the leftover width (#171)', () => {
     // The loading skeleton draws its own cells. If the name column only
     // claims the slack once real rows arrive, the columns visibly resize
     // under the user at the moment the list loads.
+    // Wrapped like the loaded case even though the skeleton draws no tag
+    // cell and so needs no client today. Leaving the one bare render in the
+    // file means the next person to give the skeleton a tag column gets the
+    // same "No QueryClient set" the loaded rows already produced once.
     const { container } = render(
-      <FileList
-        items={[]}
-        selectedIds={new Set()}
-        onSelect={() => undefined}
-        onOpen={() => undefined}
-        sort="name"
-        onSortChange={() => undefined}
-        isLoading
-      />,
+      withClient(
+        <FileList
+          items={[]}
+          selectedIds={new Set()}
+          onSelect={() => undefined}
+          onOpen={() => undefined}
+          sort="name"
+          onSortChange={() => undefined}
+          isLoading
+        />,
+      ),
     );
 
     const firstSkeletonRow = container.querySelectorAll('tbody tr')[0]!;

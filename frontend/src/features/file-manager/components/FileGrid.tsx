@@ -13,6 +13,8 @@ import { SnippetHighlight } from '@/features/file-search/SnippetHighlight';
 import { CDEBadge } from './CDEBadge';
 import { favoriteKey, type FileRow, type FileKind } from '../types';
 import { fmtFixed } from '@/shared/lib/formatters';
+import { TagPill } from '@/features/file-tags/TagPill';
+import { useTagsByFile } from '@/features/file-tags/hooks';
 
 const KIND_ICON: Record<FileKind, typeof FileText> = {
   document: FileText,
@@ -60,6 +62,44 @@ function fmtBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${fmtFixed(bytes / 1024, 1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${fmtFixed(bytes / (1024 * 1024), 1)} MB`;
   return `${fmtFixed(bytes / (1024 * 1024 * 1024), 2)} GB`;
+}
+
+/**
+ * The tags assigned to one file, shown under its tile.
+ *
+ * Three at most, because a tile is narrower than a tag list can get and the
+ * fourth would push the card taller than its neighbours. The remainder is
+ * counted rather than hidden, so a file with eight tags does not read as a
+ * file with three.
+ *
+ * One request per visible tile. The bulk lookup exists on the server
+ * (`tags_by_files`) and has no client yet, so this is the shape the feature
+ * ships in: fine at a page of tiles, and the first thing to change if the page
+ * size grows. Stated rather than left for someone to discover in a network tab.
+ */
+function FileGridTagsRow({
+  projectId,
+  kind,
+  fileId,
+}: {
+  projectId: string;
+  kind: FileKind;
+  fileId: string;
+}) {
+  const { data: tags } = useTagsByFile(projectId, kind, fileId);
+  if (!tags || tags.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-0.5">
+      {tags.slice(0, 3).map((tag) => (
+        <TagPill key={tag.id} tag={tag} size="sm" />
+      ))}
+      {tags.length > 3 && (
+        <span className="text-[9px] text-content-tertiary tabular-nums self-center">
+          +{tags.length - 3}
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function FileGrid({
@@ -313,6 +353,7 @@ export function FileGrid({
                     )}
                   </div>
                 )}
+                <FileGridTagsRow projectId={row.project_id} kind={row.kind} fileId={row.id} />
               </div>
             </button>
 
