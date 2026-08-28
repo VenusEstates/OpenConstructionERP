@@ -1154,7 +1154,12 @@ _MORE_COUNTRY_TEMPLATES: list[dict[str, Any]] = [
         name="Romania",
         country_code="RO",
         currency="RON",
-        vat="19",
+        # 21 % since 1 August 2025; see ROMANIA_VAT_SOURCES in
+        # app/modules/i18n_foundation/romania_vat.py. Editing this literal
+        # changes what a *new* installation of the template carries. Project
+        # methodologies already cloned from it keep their own ``vat_rate``
+        # column and are not healed by this line.
+        vat="21",
         overhead="12",
         profit="8",
         tax_label="TVA",
