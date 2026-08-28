@@ -72,6 +72,17 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Cheap, stdlib only, and above the heavy installs on purpose: it reads
+      # two files. backend/NOTICE is a byte copy of the root NOTICE and the only
+      # thing enforcing that was a pytest in the backend lane, which reports
+      # after a push and to the wrong person. Two commits this morning edited
+      # the root copy alone and that lane stayed red until the copy was
+      # restored. Proven able to fail: with the root copy edited and the backend
+      # copy not, it exits 1 and prints the drifted line.
+      - name: Check NOTICE and backend/NOTICE have not drifted
+        if: ${{ !cancelled() }}
+        run: python scripts/check_notice_mirror.py
+
       - name: Check the tree for internal-only files
         if: ${{ !cancelled() }}
         run: python scripts/check_repo_hygiene.py

@@ -86,6 +86,24 @@ repos:
         pass_filenames: false
         files: ^(backend/pyproject\.toml|frontend/package\.json|CHANGELOG\.md|frontend/src/features/about/Changelog\.tsx)$
 
+      # backend/NOTICE is a byte copy of the root NOTICE, carried because PEP 639
+      # cannot reach outside the project root. Nothing local stopped an edit
+      # landing on one side alone: the enforcement was a pytest in the backend
+      # lane, which only speaks after a push, to whoever pushes next rather than
+      # to whoever caused it. Commits 9489d2b96 and 891d56ef0 each edited the
+      # root copy only and left that lane red until 863076d86 restored the copy.
+      #
+      # Scoped by files: so it costs nothing on a commit that touches neither.
+      # It compares the way the gating test does, normalising CRLF first, so a
+      # Windows checkout is not reported as drift the test would pass. Run it
+      # with --fix to copy the root file over the backend one.
+      - id: notice-mirror-check
+        name: Check NOTICE and backend/NOTICE have not drifted
+        entry: python scripts/check_notice_mirror.py
+        language: system
+        pass_filenames: false
+        files: ^(NOTICE|backend/NOTICE)$
+
       # Copyleft licence gate. Registered as a manual-stage hook on purpose, so
       # it is discoverable here and runs on request rather than on every commit:
       #
