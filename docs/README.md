@@ -35,6 +35,8 @@ Price, check, deliver:
 
 - [World cost bases and multi-base comparison](./user-guide/world-cost-bases.md) - what the national cost databases are and how currency-aware pricing and cross-region comparison work.
 - [Importing your own cost database](./cost-database-import.md) - load your rates from Excel or CSV, as a flat rate sheet or as resource-based assemblies, straight into the cost database.
+- [Building a regional cost database](./US_COST_DATABASE_METHODOLOGY.md) - the decisions to make before you collect any numbers, where rates come from, and how to tell whether the result is defensible.
+- [A worked example](./US_COST_DATABASE_PILOT.md) - the whole pipeline end to end on the two template files that ship in this repository, with figures you can reproduce.
 
 ## Modules
 
