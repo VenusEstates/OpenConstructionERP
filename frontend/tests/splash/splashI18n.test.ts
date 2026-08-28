@@ -143,4 +143,20 @@ describe('desktop splash translations', () => {
       }
     },
   );
+
+  it.each(['ar', 'fa', 'he', 'ur'])(
+    '%s keeps the log path reading left to right',
+    (code) => {
+      // A file path is a Latin run inside a right-to-left sentence, and the
+      // punctuation around it is directionally neutral, so the leading dot of
+      // ".openestimate" and the leading slash of a POSIX path take the
+      // paragraph's direction and render on the wrong side of the name they
+      // belong to. A left-to-right mark before the run settles it. These are
+      // invisible, so a later pass over this table could drop them and nothing
+      // on screen would say why the path had come apart.
+      const t = table[code]!;
+      expect(t.logFile, `${code}.logFile lost its mark`).toContain('\u200e{n}');
+      expect(t.errLog, `${code}.errLog lost its mark`).toContain('\u200e.openestimate');
+    },
+  );
 });
