@@ -63,7 +63,11 @@ class CostItem(Base):
         JSON, nullable=False, default=dict, server_default="{}"
     )
     unit: Mapped[str] = mapped_column(String(20), nullable=False)
-    rate: Mapped[str] = mapped_column(String(50), nullable=False)  # Stored as string for SQLite compatibility
+    # Money is stored as a string so JSON's float bridge cannot round a rate:
+    # see the DecimalMoney note in schemas.py. This comment used to give SQLite
+    # compatibility as the reason. SQLite left in v6.6.0 and the reason left with
+    # it, while the decision stayed correct for the other one.
+    rate: Mapped[str] = mapped_column(String(50), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="")
     source: Mapped[str] = mapped_column(
         String(50), nullable=False, default="cwicr", index=True
@@ -87,7 +91,7 @@ class CostItem(Base):
     # mass-basis rate when ``mass_basis`` is set:
     #   * ``mass_per_unit`` - linear mass in kg per ONE ``unit`` (e.g. 44.7
     #     for a 360UB at 44.7 kg/m). Stored as a Decimal-string for the same
-    #     SQLite/JSON precision reason as ``rate``. Empty / NULL = not set.
+    #     JSON precision reason as ``rate``. Empty / NULL = not set.
     #   * ``mass_basis`` - the denominator the ``rate`` is quoted against:
     #     ``"t"`` (rate is per tonne) or ``"kg"`` (rate is per kg). An empty
     #     string means mass pricing is OFF and the item behaves exactly as a
@@ -260,7 +264,8 @@ class ResourcePrice(Base):
     re-prices the region. Codeless bases (no ``resource_code``) key on
     ``resource_key`` = a normalized resource name, so the sheet works uniformly
     for coded and codeless bases. ``unit_price`` is a Decimal-as-string like
-    every other money column in the schema (SQLite/Numeric drift safety).
+    every other money column in the schema, for the JSON precision reason
+    given on ``CostItem.rate``.
     """
 
     __tablename__ = "oe_resource_price"
