@@ -78,6 +78,67 @@ WORKDIR /app
 # pip needs the app/ package present to build the wheel.
 COPY backend/ backend/
 
+# Everything else the wheel's force-include map names, because hatchling
+# resolves that map while pip builds the wheel and aborts the whole build on
+# the first entry it cannot find. Both stages below install from ./backend, so
+# these belong here in the shared base rather than in either one.
+#
+# This is not a precaution, it is a repair: v16.2.0 published to PyPI and to
+# the release page and shipped no image at all, because two 16.2.0 commits
+# added force-include entries pointing outside backend/ and nothing brought
+# them into the build context. The map's own frontend/dist entry had already
+# hit this and was worked around further down, so the failure mode was
+# understood and simply not applied to the entries that came later.
+#
+# ../frontend/dist is the one entry deliberately absent from this list. It
+# cannot be copied: .dockerignore excludes both `frontend/dist` and `**/dist`,
+# so it is never in the build context. It is satisfied instead by the
+# placeholder backend/hatch_build.py writes, plus the mkdir in the unified
+# stage, and its real bytes arrive from the frontend-build stage.
+#
+# scripts/check_docker_force_include_context.py holds these lines and the map
+# to each other, in both directions.
+#
+# data/match only, not the whole data tree. The unified stage still copies all
+# of data/ further down for seeding; this narrower line exists so the api
+# stage, which wants none of that, still installs.
+COPY data/match/ data/match/
+
+# The community packs, one line per pack, naming exactly the fifteen the map
+# names. Not `packs/` as a tree and not a glob, for two reasons that point the
+# same way.
+#
+# Licensing. Four packs in this repo are deliberately held out of the
+# community wheel: aus-nzs (deprecated, superseded by aus and nzs),
+# batimatech-ca and bimhessen-de (partnership agreements stated in their
+# licence sections), and doker-formwork (carries a named third party's logo,
+# partner name and URL). Copying the tree would bake all four into this layer
+# permanently, since deleting a file in a later layer does not remove it from
+# the layer that added it, and these images are published publicly to ghcr.io.
+# Listing the tree would also ship whichever pack lands in it next, which is
+# the wrong direction for that decision to fail in.
+#
+# Correctness. app/core/partner_pack/discovery.py finds a pack by globbing
+# */src/openconstructionerp_*/manifest.py under the packs directory, so the
+# src level has to survive into the image with its shape intact. A single
+# multi-source COPY flattens its sources into one destination directory and
+# would break that glob even for the packs that are meant to ship.
+COPY packs/aus/src/ packs/aus/src/
+COPY packs/brazil-sinapi/src/ packs/brazil-sinapi/src/
+COPY packs/china-gbt50500/src/ packs/china-gbt50500/src/
+COPY packs/india-cpwd/src/ packs/india-cpwd/src/
+COPY packs/mexico-mx/src/ packs/mexico-mx/src/
+COPY packs/modular-prefab/src/ packs/modular-prefab/src/
+COPY packs/nzs/src/ packs/nzs/src/
+COPY packs/renewables-epc/src/ packs/renewables-epc/src/
+COPY packs/retail-grocery-dach/src/ packs/retail-grocery-dach/src/
+COPY packs/saudi-vision2030/src/ packs/saudi-vision2030/src/
+COPY packs/south-africa/src/ packs/south-africa/src/
+COPY packs/uk-jct/src/ packs/uk-jct/src/
+COPY packs/us-california/src/ packs/us-california/src/
+COPY packs/us-costdata/src/ packs/us-costdata/src/
+COPY packs/us-texas/src/ packs/us-texas/src/
+
 # Persistent data volume. OE_DATA_DIR pins the unified data-dir resolver
 # (app.core.storage.resolve_data_dir) at /data so BIM geometry and other
 # artifacts land on the mounted volume, not the ephemeral container layer

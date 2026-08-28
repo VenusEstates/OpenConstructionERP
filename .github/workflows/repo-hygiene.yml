@@ -270,6 +270,31 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_bundled_font_licences.py
 
+      # The wheel's force-include map and the Docker build context, held to
+      # each other. The image installs the backend wheel inside the build, so
+      # every force-include entry pointing outside backend/ has to be copied
+      # into the context first or hatchling aborts the install. v16.2.0 shipped
+      # its PyPI package and its release page and no image at all, because two
+      # commits added entries and neither reached the Dockerfile.
+      #
+      # It has to be a guard here rather than a fixed Dockerfile, because
+      # release.yml is the only workflow that builds this image and it triggers
+      # on tags alone. The break is therefore invisible until the tag exists
+      # and PyPI has already published, which is the one ordering that cannot
+      # be walked back. This job runs on every push, so the disagreement is
+      # caught while it is still a working-tree change.
+      #
+      # The reverse direction is the quieter one and is checked too: a COPY
+      # with no map entry can bake a pack we deliberately hold back into a
+      # layer of a publicly published image, and nothing about that fails.
+      - name: Prove the Docker force-include gate can fail
+        if: ${{ !cancelled() }}
+        run: python scripts/check_docker_force_include_context.py --selftest
+
+      - name: Check the wheel's force-include paths reach the Docker context
+        if: ${{ !cancelled() }}
+        run: python scripts/check_docker_force_include_context.py
+
       # Python outside backend/. CI lints the backend by running ruff from
       # inside backend/ (ci.yml, "Lint with ruff"), which is where the
       # configuration lives, so scripts/ and tools/ were linted by nothing at
