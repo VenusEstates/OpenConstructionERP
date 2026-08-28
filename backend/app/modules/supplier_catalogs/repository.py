@@ -25,6 +25,7 @@ from app.modules.supplier_catalogs.models import (
     KYCDocument,
     POLine,
     PriceList,
+    PRLine,
     PurchaseOrder,
     PurchaseRequisition,
     StockBalance,
@@ -37,6 +38,30 @@ from app.modules.supplier_catalogs.models import (
     VendorScorecard,
     Warehouse,
 )
+
+
+async def _count_by_kind(
+    session: AsyncSession,
+    probes: list[tuple[str, Any, Any]],
+) -> dict[str, int]:
+    """Count rows per ``(kind, entity, condition)`` probe, dropping the zeros.
+
+    Used by the delete guards. Each probe is counted with its own explicit
+    ``select_from`` rather than letting the FROM be inferred, because an
+    inferred FROM is decided by the condition and would change silently if a
+    condition ever grew a join. Kinds that count zero are left out, so an
+    empty result reads as "nothing holds this row".
+    """
+    counts: dict[str, int] = {}
+    for kind, entity, condition in probes:
+        total = (
+            await session.execute(
+                select(func.count()).select_from(entity).where(condition),
+            )
+        ).scalar_one()
+        if total:
+            counts[kind] = int(total)
+    return counts
 
 
 class VendorRepository:
@@ -111,6 +136,42 @@ class VendorRepository:
         )
         await self.session.flush()
 
+    async def count_references(self, vendor_id: uuid.UUID) -> dict[str, int]:
+        """Count the rows in this module that point at one vendor.
+
+        Kinds with a zero count are dropped, so an empty mapping means
+        nothing holds the vendor. Purchase requisitions are absent because
+        they carry no ``vendor_id`` at all; they reach a vendor only through
+        the purchase order they convert into.
+
+        ``VendorScorecard`` also carries a ``vendor_id`` and is deliberately
+        NOT counted. It is ``ondelete="CASCADE"``, so deleting a vendor does
+        destroy its scorecards - but a scorecard is derived, not recorded. It
+        is recomputed from the orders, receipts and invoices by
+        ``recompute_scorecard``, so what goes with the vendor is a cached
+        figure rather than a record of anything that happened. A vendor with
+        scorecards but no orders, invoices, price lists or KYC documents was
+        never actually traded with, and blocking on a cache would make that
+        vendor permanently undeletable for no reason a buyer could act on.
+        """
+        return await _count_by_kind(
+            self.session,
+            [
+                ("price_list", PriceList, PriceList.vendor_id == vendor_id),
+                ("purchase_order", PurchaseOrder, PurchaseOrder.vendor_id == vendor_id),
+                ("vendor_invoice", VendorInvoice, VendorInvoice.vendor_id == vendor_id),
+                ("kyc_document", KYCDocument, KYCDocument.vendor_id == vendor_id),
+            ],
+        )
+
+    async def delete(self, vendor_id: uuid.UUID) -> bool:
+        vendor = await self.get(vendor_id)
+        if vendor is None:
+            return False
+        await self.session.delete(vendor)
+        await self.session.flush()
+        return True
+
 
 class ItemCategoryRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -172,6 +233,56 @@ class CatalogItemRepository:
         await self.session.flush()
         await self.session.refresh(item)
         return item
+
+    async def update(self, item_id: uuid.UUID, **fields: Any) -> None:
+        await self.session.execute(
+            update(CatalogItem).where(CatalogItem.id == item_id).values(**fields),
+        )
+        await self.session.flush()
+
+    async def count_references(self, item_id: uuid.UUID) -> dict[str, int]:
+        """Count the rows that point at one catalog item, zeros dropped.
+
+        ``stock_balance`` counts only balances that still carry quantity. A
+        balance that has been emptied is a row about a thing that is no
+        longer there and must not keep an item alive; a balance that still
+        holds stock is inventory, and its item may not vanish underneath it.
+
+        ``StockMovement`` is deliberately NOT counted, and the cost of that is
+        real: it is ``ondelete="CASCADE"``, so deleting an item destroys the
+        immutable movement rows that record every stock change it was ever
+        part of. Counting it would be the safer instinct, but it would also
+        make the decision above unreachable - an emptied balance only exists
+        because movements took the stock out, so any item that was ever
+        stocked would become permanently undeletable and the "emptied balance
+        does not block" rule would never fire. The rule chosen here is that an
+        item nothing currently holds may go; if that trade is wrong, the fix
+        is to retire the item with ``is_active`` rather than to delete it.
+        """
+        return await _count_by_kind(
+            self.session,
+            [
+                ("requisition_line", PRLine, PRLine.catalog_item_id == item_id),
+                ("order_line", POLine, POLine.catalog_item_id == item_id),
+                ("catalog_entry", CatalogEntry, CatalogEntry.catalog_item_id == item_id),
+                (
+                    "stock_balance",
+                    StockBalance,
+                    and_(
+                        StockBalance.catalog_item_id == item_id,
+                        StockBalance.quantity_on_hand != 0,
+                    ),
+                ),
+            ],
+        )
+
+    async def delete(self, item_id: uuid.UUID) -> bool:
+        item = await self.get(item_id)
+        if item is None:
+            return False
+        await self.session.delete(item)
+        await self.session.flush()
+        return True
 
 
 class PriceListRepository:
@@ -375,6 +486,55 @@ class WarehouseRepository:
         )
         return list((await self.session.execute(stmt)).scalars().all())
 
+    async def update(self, wh_id: uuid.UUID, **fields: Any) -> None:
+        await self.session.execute(
+            update(Warehouse).where(Warehouse.id == wh_id).values(**fields),
+        )
+        await self.session.flush()
+
+    async def count_references(self, wh_id: uuid.UUID) -> dict[str, int]:
+        """Count what holds one warehouse, zeros dropped.
+
+        ``stock_balance`` counts balances that still carry quantity: an empty
+        balance row is a record of stock that has gone, and it must not keep
+        an unused location on the books.
+
+        ``goods_receipt`` is here because the database says so. That foreign
+        key is ``ondelete="RESTRICT"``, so a receipt would make the delete
+        fail as an IntegrityError at flush time, which reaches the caller as
+        a 500 with nothing in it a buyer could act on. Counting it first
+        turns the same refusal into a sentence.
+
+        ``StockMovement`` is deliberately NOT counted here, for the same
+        reason as in :meth:`CatalogItemRepository.count_references`: it is
+        ``ondelete="CASCADE"``, so the movement history for this location is
+        destroyed with it, and counting it would make an emptied warehouse
+        permanently undeletable. A location with history that should be kept
+        is retired with ``is_active`` rather than deleted.
+        """
+        return await _count_by_kind(
+            self.session,
+            [
+                (
+                    "stock_balance",
+                    StockBalance,
+                    and_(
+                        StockBalance.warehouse_id == wh_id,
+                        StockBalance.quantity_on_hand != 0,
+                    ),
+                ),
+                ("goods_receipt", GoodsReceipt, GoodsReceipt.warehouse_id == wh_id),
+            ],
+        )
+
+    async def delete(self, wh_id: uuid.UUID) -> bool:
+        warehouse = await self.get(wh_id)
+        if warehouse is None:
+            return False
+        await self.session.delete(warehouse)
+        await self.session.flush()
+        return True
+
 
 class StockRepository:
     """Operations on stock balances + movements (no business rules here)."""
@@ -545,6 +705,30 @@ class TolerianceProfileRepository:
             update(TolerianceProfile).where(TolerianceProfile.id == profile_id).values(**fields),
         )
         await self.session.flush()
+
+    async def count_references(self, name: str) -> dict[str, int]:
+        """Count the vendors matched against a profile, by profile NAME.
+
+        ``Vendor.tolerance_profile_name`` is a name, not a foreign key, so
+        the database has nothing to enforce here and a delete would succeed
+        in silence. What the vendors would lose is not cosmetic: the profile
+        is what the three-way match compares an invoice against, so vendors
+        left pointing at a name that no longer resolves fall back to a
+        different set of tolerances, and invoices that used to raise a price
+        exception start passing.
+        """
+        return await _count_by_kind(
+            self.session,
+            [("vendor", Vendor, Vendor.tolerance_profile_name == name)],
+        )
+
+    async def delete(self, profile_id: uuid.UUID) -> bool:
+        profile = await self.get(profile_id)
+        if profile is None:
+            return False
+        await self.session.delete(profile)
+        await self.session.flush()
+        return True
 
 
 # ── KYC documents ────────────────────────────────────────────────────────────

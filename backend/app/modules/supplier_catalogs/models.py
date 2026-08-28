@@ -787,7 +787,28 @@ class StockBalance(Base):
 
 
 class StockMovement(Base):
-    """An immutable audit row for every stock change."""
+    """An append-only audit row for every stock change.
+
+    Never updated in place: a correction is a new movement in the opposite
+    direction, not an edit of the row that was wrong, so the history reads as
+    what happened rather than as what someone last decided it should say.
+
+    It is NOT permanent, and the difference matters to anyone deciding what
+    this table can be trusted to prove. Both foreign keys below are
+    ``ondelete="CASCADE"``, so deleting the catalog item or the warehouse a
+    movement refers to destroys the movement with it, and the delete guards in
+    ``CatalogItemRepository.count_references`` and
+    ``WarehouseRepository.count_references`` deliberately do not count these
+    rows as something that blocks. Counting them would read as the safer
+    choice, but it would make an item or a location that was ever stocked
+    permanently undeletable and so contradict the rule those guards do
+    enforce, which is that a balance emptied down to zero no longer holds
+    anything alive.
+
+    So the way to keep the movement history for something that has one is to
+    retire it with ``is_active=False`` rather than to delete it. Deleting is
+    for the row entered by mistake.
+    """
 
     __tablename__ = "oe_supplier_catalogs_stock_movement"
 

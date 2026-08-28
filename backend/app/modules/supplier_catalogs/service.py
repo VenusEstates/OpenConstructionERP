@@ -77,7 +77,9 @@ from app.modules.supplier_catalogs.repository import (
     WarehouseRepository,
 )
 from app.modules.supplier_catalogs.schemas import (
+    VALID_COMMODITY_SCHEMES,
     CatalogItemCreate,
+    CatalogItemUpdate,
     GoodsReceiptCreate,
     ItemCategoryCreate,
     KYCDocumentCreate,
@@ -98,6 +100,7 @@ from app.modules.supplier_catalogs.schemas import (
     VendorInvoiceCreate,
     VendorUpdate,
     WarehouseCreate,
+    WarehouseUpdate,
     normalise_floor_currency,
 )
 
@@ -277,6 +280,82 @@ def _resolve_absolute_floor(
     if profile_currency != order_currency:
         return Decimal("0"), ABS_TOLERANCE_DROPPED_MISMATCH
     return floor, ABS_TOLERANCE_APPLIED
+
+
+# ── Delete guards ────────────────────────────────────────────────────────────
+#
+# Most of what points at a vendor, a catalog item or a warehouse is permissive,
+# so for most kinds the database will not be the thing that says no. It is
+# permissive in one of two ways: CASCADE, which takes price lists, catalog
+# entries, KYC documents, balances and movement history down with the parent,
+# or SET NULL, which leaves a historical order line describing a purchase of
+# nothing. Neither raises. These helpers count the holders first and turn the
+# count into a sentence.
+#
+# Three foreign keys are NOT permissive, and a reader deciding whether a guard
+# is load-bearing needs to know which:
+#
+#   * SupplierPurchaseOrder.vendor_id    ondelete="RESTRICT"
+#   * VendorInvoice.vendor_id            ondelete="RESTRICT"
+#   * SupplierGoodsReceipt.warehouse_id  ondelete="RESTRICT"
+#
+# For those three the delete would fail on its own as an IntegrityError at
+# flush time, which reaches the caller as a 500 with nothing in it anybody
+# could act on. Counting them first is what turns that into a sentence, and it
+# also means a row created between the count and the delete is refused by the
+# database rather than lost - which is not true of the CASCADE kinds, where
+# losing that race destroys the row silently. There is no lock on this path.
+
+#: Singular and plural label for each holder kind the counters return. The
+#: refusal is read by a buyer deciding what to do next, so "2 purchase orders"
+#: has to read as English rather than as a key.
+_HOLDER_LABELS: dict[str, tuple[str, str]] = {
+    "price_list": ("price list", "price lists"),
+    "purchase_order": ("purchase order", "purchase orders"),
+    "vendor_invoice": ("vendor invoice", "vendor invoices"),
+    "kyc_document": ("KYC document", "KYC documents"),
+    "requisition_line": ("requisition line", "requisition lines"),
+    "order_line": ("purchase order line", "purchase order lines"),
+    "catalog_entry": ("catalog entry", "catalog entries"),
+    "stock_balance": ("stock balance with quantity on hand", "stock balances with quantity on hand"),
+    "goods_receipt": ("goods receipt", "goods receipts"),
+    "vendor": ("vendor", "vendors"),
+}
+
+
+def _describe_holders(holders: dict[str, int]) -> str:
+    """Render ``{"purchase_order": 2}`` as ``"2 purchase orders"``."""
+    parts = [
+        f"{count} {_HOLDER_LABELS.get(kind, (kind, kind))[0 if count == 1 else 1]}" for kind, count in holders.items()
+    ]
+    if len(parts) == 1:
+        return parts[0]
+    return f"{', '.join(parts[:-1])} and {parts[-1]}"
+
+
+def _in_use_conflict(
+    code: str,
+    message: str,
+    remediation: str,
+    holders: dict[str, int],
+) -> HTTPException:
+    """Build the 409 a blocked delete answers with.
+
+    The shape of a structured refusal: a machine-readable ``code``, a
+    sentence, and what to do instead. ``holders`` rides along for a caller
+    that wants the breakdown, but the counts are ALSO spelled out in
+    ``message``, because the browser client renders ``message`` plus
+    ``remediation`` and nothing else - a list nobody reads is not a reason.
+    """
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": code,
+            "message": message,
+            "remediation": remediation,
+            "holders": [{"kind": kind, "count": count} for kind, count in holders.items()],
+        },
+    )
 
 
 class SupplierCatalogsService:
@@ -491,7 +570,18 @@ class SupplierCatalogsService:
         vendor_id: uuid.UUID,
         rating: int,
         user_id: str | None = None,
+        comment: str | None = None,
     ) -> Vendor:
+        """Set a vendor's 1..5 rating.
+
+        ``comment`` is carried on the published event rather than stored:
+        ``Vendor`` has a rating column and no column to put a note in. The
+        request schema has accepted a comment since the route was written and
+        the service dropped it on the floor, which made the field on the form
+        look like it recorded something. Passing it to the event bus is not
+        the same as storing it, but it puts the note where the rest of this
+        module's audit trail already goes instead of nowhere.
+        """
         if rating < 1 or rating > 5:
             raise HTTPException(status_code=400, detail="Rating must be 1..5")
         vendor = await self.vendors.get(vendor_id)
@@ -500,12 +590,59 @@ class SupplierCatalogsService:
         await self.vendors.update(vendor_id, rating=rating)
         await _safe_publish(
             ev.VENDOR_RATED,
-            {"vendor_id": str(vendor_id), "rating": rating, "actor_id": user_id},
+            {
+                "vendor_id": str(vendor_id),
+                "rating": rating,
+                "actor_id": user_id,
+                "comment": comment,
+            },
         )
         # Re-select with price_lists eager-loaded inside async (see get_loaded).
         refreshed = await self.vendors.get_loaded(vendor_id)
         assert refreshed is not None
         return refreshed
+
+    async def delete_vendor(
+        self,
+        vendor_id: uuid.UUID,
+        user_id: str | None = None,
+    ) -> None:
+        """Delete a vendor nothing points at; refuse one that is referenced.
+
+        The honest answer for a vendor that has been traded with is not a
+        delete at all, it is the status lifecycle this module already has, so
+        the refusal says so. A vendor entered by mistake has nothing pointing
+        at it and is removed for real.
+        """
+        vendor = await self.vendors.get(vendor_id)
+        if vendor is None:
+            raise HTTPException(status_code=404, detail=translate("errors.vendor_not_found", locale=get_locale()))
+        # Read the scalars before the delete: afterwards the instance is gone
+        # and touching it would refresh a deleted row.
+        code = vendor.code
+        name = vendor.name
+        holders = await self.vendors.count_references(vendor_id)
+        if holders:
+            raise _in_use_conflict(
+                "vendor_in_use",
+                (f"Vendor '{code}' cannot be deleted because {_describe_holders(holders)} still reference it."),
+                (
+                    "Suspend the vendor to stop it being ordered from while the open records are "
+                    "settled, or blacklist it to close it permanently. Both keep the purchase "
+                    "history intact."
+                ),
+                holders,
+            )
+        await self.vendors.delete(vendor_id)
+        await _safe_publish(
+            ev.VENDOR_DELETED,
+            {
+                "vendor_id": str(vendor_id),
+                "code": code,
+                "name": name,
+                "actor_id": user_id,
+            },
+        )
 
     # ── Catalog ───────────────────────────────────────────────────────────────
 
@@ -556,6 +693,92 @@ class SupplierCatalogsService:
             },
         )
         return created
+
+    async def update_catalog_item(
+        self,
+        item_id: uuid.UUID,
+        data: CatalogItemUpdate,
+    ) -> CatalogItem:
+        """Correct a catalog item's own fields.
+
+        ``sku`` is not among them; see ``CatalogItemUpdate``. Everything else
+        on the item is a description of the thing, and a wrong unit or a
+        mistyped reorder point has to be fixable without deleting the item
+        out from under the orders that quote it.
+        """
+        item = await self.items.get(item_id)
+        if item is None:
+            raise HTTPException(status_code=404, detail="Catalog item not found")
+        payload = data.model_dump(exclude_unset=True)
+        if "spec" in payload:
+            payload["spec_json"] = dict(payload.pop("spec") or {})
+        scheme = payload.get("commodity_scheme")
+        if scheme is not None and scheme not in VALID_COMMODITY_SCHEMES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(f"Unknown commodity scheme '{scheme}'. Expected one of: {', '.join(VALID_COMMODITY_SCHEMES)}."),
+            )
+        was_active = item.active
+        if payload:
+            await self.items.update(item_id, **payload)
+        refreshed = await self.items.get(item_id)
+        assert refreshed is not None
+        await _safe_publish(
+            ev.MATERIAL_UPDATED,
+            {
+                "catalog_item_id": str(item_id),
+                "sku": refreshed.sku,
+                "name": refreshed.name,
+                "fields": sorted(payload.keys()),
+            },
+        )
+        # A SKU being switched off is its own fact downstream, not a field
+        # change among others: MATERIAL_DEACTIVATED is the topic for it and
+        # until now nothing raised it.
+        if was_active and refreshed.active is False:
+            await _safe_publish(
+                ev.MATERIAL_DEACTIVATED,
+                {"catalog_item_id": str(item_id), "sku": refreshed.sku},
+            )
+        return refreshed
+
+    async def delete_catalog_item(
+        self,
+        item_id: uuid.UUID,
+        user_id: str | None = None,
+    ) -> None:
+        """Delete a catalog item nothing quotes; refuse one that is quoted.
+
+        A requisition line, an order line or a vendor's price for the item
+        all describe a real commitment, and a balance still holding stock is
+        inventory that exists. Any of them holds the item.
+        """
+        item = await self.items.get(item_id)
+        if item is None:
+            raise HTTPException(status_code=404, detail="Catalog item not found")
+        sku = item.sku
+        name = item.name
+        holders = await self.items.count_references(item_id)
+        if holders:
+            raise _in_use_conflict(
+                "catalog_item_in_use",
+                (f"Catalog item '{sku}' cannot be deleted because {_describe_holders(holders)} still reference it."),
+                (
+                    "Clear those records first, or leave the item in place and switch it to inactive "
+                    "so it is marked as no longer bought."
+                ),
+                holders,
+            )
+        await self.items.delete(item_id)
+        await _safe_publish(
+            ev.MATERIAL_DELETED,
+            {
+                "catalog_item_id": str(item_id),
+                "sku": sku,
+                "name": name,
+                "actor_id": user_id,
+            },
+        )
 
     # ── Price lists & comparison ──────────────────────────────────────────────
 
@@ -1783,6 +2006,69 @@ class SupplierCatalogsService:
         )
         return await self.warehouses.create(wh)
 
+    async def update_warehouse(
+        self,
+        warehouse_id: uuid.UUID,
+        data: WarehouseUpdate,
+        user_id: str | None = None,
+    ) -> Warehouse:
+        """Correct a warehouse's own fields.
+
+        IDOR: gated on the warehouse's stored project, the same gate its
+        balances are read behind. ``project_id`` itself is not editable here,
+        so the gate has one project to check rather than two.
+        """
+        warehouse = await self.warehouses.get(warehouse_id)
+        if warehouse is None:
+            raise HTTPException(status_code=404, detail="Warehouse not found")
+        await self._guard_project(warehouse.project_id, user_id)
+        payload = data.model_dump(exclude_unset=True)
+        if payload:
+            await self.warehouses.update(warehouse_id, **payload)
+        refreshed = await self.warehouses.get(warehouse_id)
+        assert refreshed is not None
+        return refreshed
+
+    async def delete_warehouse(
+        self,
+        warehouse_id: uuid.UUID,
+        user_id: str | None = None,
+    ) -> None:
+        """Delete an empty, never-received-into warehouse; refuse the rest.
+
+        Stock on hand is the obvious holder. Goods receipts are the less
+        obvious one and matter just as much: their foreign key is RESTRICT,
+        so without this count the delete would surface as a database error
+        rather than as something a buyer can read.
+        """
+        warehouse = await self.warehouses.get(warehouse_id)
+        if warehouse is None:
+            raise HTTPException(status_code=404, detail="Warehouse not found")
+        await self._guard_project(warehouse.project_id, user_id)
+        code = warehouse.code
+        name = warehouse.name
+        holders = await self.warehouses.count_references(warehouse_id)
+        if holders:
+            raise _in_use_conflict(
+                "warehouse_in_use",
+                (f"Warehouse '{code}' cannot be deleted because {_describe_holders(holders)} still reference it."),
+                (
+                    "Issue or transfer the remaining stock out of this location first. A warehouse "
+                    "that goods were received into keeps its receipt history."
+                ),
+                holders,
+            )
+        await self.warehouses.delete(warehouse_id)
+        await _safe_publish(
+            ev.WAREHOUSE_DELETED,
+            {
+                "warehouse_id": str(warehouse_id),
+                "code": code,
+                "name": name,
+                "actor_id": user_id,
+            },
+        )
+
     async def list_warehouse_balances(
         self,
         warehouse_id: uuid.UUID,
@@ -1982,36 +2268,6 @@ class SupplierCatalogsService:
             )
         return movements
 
-    # ── Budget check (soft dependency) ────────────────────────────────────────
-
-    async def check_budget(self, po: PurchaseOrder) -> dict[str, Any]:
-        """Best-effort budget check against a project budget if available.
-
-        Returns ``{"available": True}`` if the budget module isn't installed,
-        else a dict with committed/budget/remaining figures.
-        """
-        try:
-            from app.modules.finance.models import (  # type: ignore[import-untyped]
-                ProjectBudget,
-            )
-        except Exception:  # noqa: BLE001
-            return {"available": False, "reason": "finance_module_not_present"}
-        from sqlalchemy import func as _func
-        from sqlalchemy import select as _select
-
-        try:
-            stmt = _select(_func.coalesce(_func.sum(ProjectBudget.amount), 0)).where(
-                ProjectBudget.project_id == po.project_id,
-            )
-            budget = (await self.session.execute(stmt)).scalar_one()
-        except Exception:  # noqa: BLE001
-            return {"available": False, "reason": "budget_query_failed"}
-        return {
-            "available": True,
-            "budget": str(budget),
-            "po_total": str(po.total),
-        }
-
     # ── Commodity codes ───────────────────────────────────────────────────────
 
     async def seed_commodity_codes(self) -> dict[str, int]:
@@ -2156,6 +2412,53 @@ class SupplierCatalogsService:
         refreshed = await self.tolerance_profiles.get(profile_id)
         assert refreshed is not None
         return refreshed
+
+    async def delete_tolerance_profile(self, profile_id: uuid.UUID) -> None:
+        """Delete a tolerance profile nothing is matched against.
+
+        Two things hold a profile, and neither is a foreign key, so neither
+        would stop a plain row removal.
+
+        Vendors point at a profile by NAME (``Vendor.tolerance_profile_name``,
+        resolved by name so the link survives renames). Delete a profile
+        vendors name and those vendors quietly fall back to different
+        tolerances, which changes which invoices the three-way match lets
+        through. That is money, so it is a refusal rather than a warning.
+
+        The tenant default is held for a second reason: it is what every
+        vendor that names nothing in particular is matched against, so
+        removing it moves every one of them at once. Another profile has to
+        be made default first.
+        """
+        profile = await self.tolerance_profiles.get(profile_id)
+        if profile is None:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        name = profile.name
+        if profile.is_default:
+            raise _in_use_conflict(
+                "tolerance_profile_is_default",
+                (
+                    f"Tolerance profile '{name}' cannot be deleted because it is the default "
+                    "every vendor without a profile of its own is matched against."
+                ),
+                "Make another profile the default first, then delete this one.",
+                {},
+            )
+        holders = await self.tolerance_profiles.count_references(name)
+        if holders:
+            raise _in_use_conflict(
+                "tolerance_profile_in_use",
+                (
+                    f"Tolerance profile '{name}' cannot be deleted because "
+                    f"{_describe_holders(holders)} are matched against it."
+                ),
+                (
+                    "Move those vendors to another profile first. Deleting this one would silently "
+                    "change the price and quantity tolerances their invoices are checked with."
+                ),
+                holders,
+            )
+        await self.tolerance_profiles.delete(profile_id)
 
     async def ensure_default_tolerance_profile(self) -> TolerianceProfile:
         """Idempotently ensure the ``default`` profile exists.
