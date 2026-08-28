@@ -21,7 +21,7 @@ Shape of a record
 -----------------
 One record is one line, terminated by CRLF, and describes one bending shape::
 
-    BF2D@HjTestPDF@r417@ia@p1@l1000@n10@e0.888@d12@gB500A@s48@v@Gl400@w90@l600@w0@C72@
+    BF2D@HjOCE-DEMO@r312@ib@p1@l1000@n10@e0.888@d12@gB500B@s48@v@Gl300@w90@l700@w0@C93@
 
 It opens with a super-group identifier (:data:`SUPER_GROUPS`) and then carries
 a sequence of blocks. A block starts with an uppercase block identifier and
@@ -191,10 +191,12 @@ def compute_checksum(prefix: str) -> int:
         The checksum value, always between 65 and 96 inclusive.
 
     Example:
-        The guideline works ``"abcde@C"`` through by hand and arrives at 78.
+        On the shortest prefix there is, a super-group identifier and the C
+        that opens the checksum block, the sum is 66 + 70 + 50 + 68 + 64 + 67,
+        which is 385. That is 32 * 12 with 1 left over, so the answer is 95.
 
-        >>> compute_checksum("abcde@C")
-        78
+        >>> compute_checksum("BF2D@C")
+        95
     """
     return _CHECKSUM_OFFSET - (sum(ord(char) for char in prefix) % _CHECKSUM_MODULUS)
 
