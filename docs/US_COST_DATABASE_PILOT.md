@@ -1,336 +1,160 @@
-# US Resource-Based Cost Database: Pilot Batch
-## Handoff Document for OpenConstructionERP
+# A worked example: a small resource-priced database
 
-**Project:** TCG Brentwood Sitework, Cost Database Build  
-**Market:** Nashville, Tennessee (USA_TENNESSEE)  
-**Scope:** 12 pilot items spanning demolition, excavation, stormwater, utilities  
-**Date written:** 2026-05-13  
-**State:** Ready for Execution  
-**Estimated Time:** 45 to 60 minutes  
+This walks the whole pipeline end to end on data that ships in this repository, so you can run it
+and compare against the figures below rather than trusting them. It takes a few minutes and it is
+the fastest way to understand what [the methodology](./US_COST_DATABASE_METHODOLOGY.md) is
+describing.
 
----
+Two files do the work, both under `data/templates/`:
 
-## Objective
+- `example_us_construction.csv` — 30 resources: nine labour categories, twelve materials, seven
+  equipment lines and two subcontractor lines, with a US dollar unit price each.
+- `cost_database_with_assemblies.json` — six work items, each with a recipe referencing those
+  resources by code.
 
-Stand up a US-specific, resource-based cost database for OpenConstructionERP with **full component breakdowns** (labor plus equipment plus material) aimed at sitework estimating. We open with a pilot batch of 12 items focused on the Nashville, Tennessee market.
+They are a matched pair. Every resource code the six recipes reference exists in the CSV, so the
+example has no gaps to paper over.
 
-This database makes the following possible:
-- Resource-based costing inside BOQs, so labor hours, equipment costs, and material costs are visible on each position.
-- Cross-validation against real TDOT bid prices.
-- A foundation for a complete US sitework cost database in future batches.
+Everything below assumes a running server on `localhost:8000` and a bearer token in `$TOKEN`.
+The region tag is `US_CUSTOM`, which is what the JSON file already declares.
 
----
+## Step 1: load the resource list
 
-## Scope: 12 Pilot Items
-
-### Demolition (4 items)
-| Code | Description | Unit |
-|------|-------------|------|
-| DEM-HSE-01 | House demolition (wood-frame residential) | SF |
-| DEM-GRG-01 | Garage demolition (detached structure) | SF |
-| DEM-CON-01 | Concrete removal (sidewalk/driveway/patio) | SF |
-| DEM-ASP-01 | Asphalt removal (pavement) | SF |
-
-### Excavation and Grading (4 items)
-| Code | Description | Unit |
-|------|-------------|------|
-| EXC-BLK-01 | Bulk excavation, common earth, machine | CY |
-| EXC-TRN-01 | Trench excavation (utility trench, up to 3ft) | LF |
-| GRD-SIT-01 | Site grading and leveling | SF |
-| FILL-CMP-01 | Fill import, placement, and compaction | CY |
-
-### Stormwater (2 items)
-| Code | Description | Unit |
-|------|-------------|------|
-| SW-FRN-01 | French drain installation | LF |
-| SW-INF-01 | Stormwater infiltration pit | EA |
-
-### Utilities (2 items)
-| Code | Description | Unit |
-|------|-------------|------|
-| UT-WTR-01 | Water service line installation | LF |
-| UT-SWR-01 | Sewer service line installation | LF |
-
----
-
-## Data Sources
-
-### 1. USACE EP 1110-1-8, Equipment Rates
-**URL:** https://www.usace.army.mil/Missions/Cost-Engineering/EP1110-1-8/
-
-- Download the **Southeastern US** volume (Region 5 covers TN/KY/GA/AL/MS/NC/SC).
-- Parse the PDF to pull hourly equipment rates for:
-  - Hydraulic excavators (various sizes)
-  - Bulldozers
-  - Wheel loaders
-  - Dump trucks
-  - Concrete breakers/jackhammers
-  - Graders
-  - Compactors/vibratory rollers
-  - Stump grinders
-  - Chippers
-  - Cold planers/milling machines
-
-**Output:** `data/usace_equipment_rates.json`
-```json
-[
-  {"equipment_code": "EXC-30T", "name": "Hydraulic excavator 30-ton",
-   "ownership_rate": 45.50, "operating_rate": 28.75,
-   "total_hourly_rate": 74.25, "unit": "hr", "region": "USA_SOUTHEAST"}
-]
+```bash
+curl -X POST http://localhost:8000/api/v1/costs/import/file/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@data/templates/example_us_construction.csv" \
+  -F "catalog_name=US_CUSTOM" \
+  -F "catalog_currency=USD"
 ```
 
-### 2. BLS OEWS, Labor Wages (Nashville MSA)
-**URL:** https://www.bls.gov/oes/tables.htm
+Expect `imported: 30`. These are ordinary cost items. At this point you have a flat rate sheet
+and nothing more, which is already a usable cost database.
 
-- Download May 2024 OEWS data for the **Nashville-Davidson-Murfreesboro-Franklin, TN** MSA (METRO 34980).
-- Pull hourly wages for:
-  - Construction Laborers (SOC 47-2061)
-  - Operating Engineers (SOC 47-2073)
-  - Pipelayers (SOC 47-2151)
-  - Cement Masons (SOC 47-2051)
-  - Tree Trimmers/Pruners (SOC 37-3013)
+## Step 2: fix the recipes, then load them
 
-**Output:** `data/bls_labor_wages.json`
-```json
-[
-  {"soc_code": "47-2061", "occupation": "Construction Laborers",
-   "mean_hourly_wage": 22.45, "unit": "hr", "region": "Nashville TN MSA"}
-]
+The shipped JSON writes each component's quantity under the key `factor`. Nothing reads `factor`.
+Load it as it stands and the recipes will store perfectly, price at zero, and report themselves
+as fully priced. Rename the key first:
+
+```bash
+python -c "
+import json, pathlib
+p = pathlib.Path('data/templates/cost_database_with_assemblies.json')
+items = json.loads(p.read_text(encoding='utf-8'))
+for item in items:
+    for comp in item['components']:
+        comp['quantity'] = comp.pop('factor')
+pathlib.Path('assemblies.json').write_text(json.dumps(items, indent=2), encoding='utf-8')
+print(len(items), 'work items written to assemblies.json')
+"
 ```
 
-### 3. Tennessee Material Rates (Market Estimates)
-**Sources:** Home Depot / Lowe's / local supplier pricing (reference only, no purchase)
+Then post them:
 
-- Concrete disposal: $65/ton
-- Asphalt disposal: $55/ton
-- Structural fill dirt: $12/CY
-- #57 stone: $45/CY
-- #8 stone: $55/CY
-- Sand bedding: $35/CY
-- Geotextile fabric: $0.85/SF
-- 4" PVC pipe: $3.50/LF
-- 6" PVC pipe: $5.25/LF
-- Dumpster rental (30yd): $650/EA
-- Silt fence fabric: $0.85/LF
-- Steel posts (6ft): $4.50/EA
-- Wire backing: $0.45/LF
-
-**Output:** `data/material_rates.json`
-```json
-[
-  {"material_code": "MAT-CON-DIS", "description": "Concrete disposal/recycling",
-   "unit": "ton", "rate": 65.00, "region": "USA_TENNESSEE"}
-]
+```bash
+curl -X POST http://localhost:8000/api/v1/costs/bulk/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  --data @assemblies.json
 ```
 
-### 4. TDOT Bid Prices, Validation
-**URL:** https://www.tn.gov/tdot/tdot-construction-division/transportation-construction-division-resources/transportation-construction-price-information.html
+Six items come back. Their rates are whatever the file said; those are about to be replaced.
 
-- Download the 2024-2025 Average Bid Prices PDF.
-- Pull real bid prices for items that line up with our 12 pilot items.
-- Use them for cross-validation once our rates are calculated.
+## Step 3: give the region a price sheet
 
-**Output:** `data/tdot_bid_prices.json`
-```json
-[
-  {"tdot_item_no": "2030100", "description": "Unclassified excavation",
-   "unit": "CY", "avg_bid_price": 9.50, "year": 2024}
-]
+Repricing multiplies a component quantity by a *resource price*, which lives in a separate
+per-region price sheet. The cost items you loaded in step 1 are not that sheet. Write it:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/costs/resource-prices/US_CUSTOM/bulk/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"items":[
+    {"resource_key":"LAB-CARP-01",   "unit_price":"68.50", "unit":"hr",  "resource_type":"labor"},
+    {"resource_key":"LAB-CARP-02",   "unit_price":"42.00", "unit":"hr",  "resource_type":"labor"},
+    {"resource_key":"LAB-MASON-01",  "unit_price":"72.00", "unit":"hr",  "resource_type":"labor"},
+    {"resource_key":"LAB-LAB-01",    "unit_price":"35.00", "unit":"hr",  "resource_type":"labor"},
+    {"resource_key":"LAB-FOREM-01",  "unit_price":"95.00", "unit":"hr",  "resource_type":"labor"},
+    {"resource_key":"MAT-CONC-3K",   "unit_price":"165.00","unit":"yd3", "resource_type":"material"},
+    {"resource_key":"MAT-REBAR-60",  "unit_price":"0.85",  "unit":"lb",  "resource_type":"material"},
+    {"resource_key":"MAT-CMU-8",     "unit_price":"2.85",  "unit":"ea",  "resource_type":"material"},
+    {"resource_key":"MAT-DRYW-58",   "unit_price":"0.95",  "unit":"sf",  "resource_type":"material"},
+    {"resource_key":"MAT-PAINT-INT", "unit_price":"1.85",  "unit":"sf",  "resource_type":"material"},
+    {"resource_key":"MAT-LUMB-2X4",  "unit_price":"5.85",  "unit":"ea",  "resource_type":"material"},
+    {"resource_key":"EQP-EXC-SML",   "unit_price":"125.00","unit":"hr",  "resource_type":"equipment"},
+    {"resource_key":"EQP-PUMP-CONC", "unit_price":"285.00","unit":"hr",  "resource_type":"equipment"},
+    {"resource_key":"SUB-ROOF-ASPH", "unit_price":"425.00","unit":"sq",  "resource_type":"subcontractor"}
+  ]}'
 ```
 
-### 5. DDC CWICR Reference (Existing OCERP Database)
-**URL:** https://github.com/datadrivenconstruction/OpenConstructionEstimate-DDC-CWICR
+Fourteen of the thirty resources, because that is all six recipes between them use. The prices are
+the CSV's own rates, so the figures in the next step follow from files you already have.
 
-- Reference existing CWICR items for structure and schema.
-- Compare our calculated rates against CWICR rates (for example, `EXC-BLK-1M` = $9.50/m3).
-- Note that CWICR is Eurasian and priced in EUR, so expect a 20 to 40% variance against US rates.
+`resource_key` is the component's `code`. Where a resource has no code, the key is its name
+lowercased and prefixed `name:`, which is why giving your resources codes is worth the trouble.
 
----
+`POST /resource-prices/US_CUSTOM/seed/` builds a sheet from the work items instead, and is the
+right call on a real base. It seeds observed prices, not the ones you intend, so this example
+sets them explicitly.
 
-## Resource-Based Calculation Method
+## Step 4: reprice, dry run first
 
-For each CostItem, the **total rate** equals the sum of all component costs:
-
-```python
-total_rate = sum(component["quantity"] * component["unit_rate"] for component in components)
+```bash
+curl -X POST "http://localhost:8000/api/v1/costs/resource-prices/US_CUSTOM/reprice/?dry_run=true" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-### Example: DEM-HSE-01 (House Demolition)
+You want `items_partially_priced: 0` and `missing_resource_count: 0` before committing. Then drop
+`dry_run` and run it again.
 
-| Component | Type | Qty | Unit Rate | Cost |
-|-----------|------|-----|-----------|------|
-| Demolition crew (3 workers) | labor | 0.12 hrs/SF | $22.45/hr | $2.69 |
-| Excavator with grapple attachment | equipment | 0.06 hrs/SF | $74.25/hr | $4.46 |
-| Dumpster rental (30yd) | material | 0.003 EA/SF | $650.00/EA | $1.95 |
-| Debris disposal and hauling | material | 0.015 ton/SF | $85.00/ton | $1.28 |
-| **TOTAL** | | | | **$10.38/SF** |
+## What you should see
 
-### Validation Rule
-```python
-assert abs(total_rate - sum(c["cost"] for c in components)) < 0.01, "Component math error"
-```
+Computed from the two template files:
 
----
+| Work item | Rate in the file | After repricing | Labour | Material | Equipment |
+|---|---:|---:|---:|---:|---:|
+| `WI-FOOT-STRIP-2X1` | 38.50 | **39.37** | 20.03 | 16.21 | 3.13 |
+| `WI-WALL-CIP-8` | 18.75 | **21.91** | 14.48 | 5.15 | 2.28 |
+| `WI-WALL-CMU-8` | 14.20 | **17.80** | 14.32 | 3.48 | — |
+| `WI-FRAM-WALL-2X4` | 7.85 | **13.04** | 6.90 | 6.14 | — |
+| `WI-DRYW-58-PNT` | 5.95 | **6.29** | 3.44 | 2.85 | — |
+| `WI-ROOF-ASPH-PITCH` | 485.00 | **442.10** | 17.10 | — | — |
 
-## JSON Schema for CostItems
+Take the first row apart, because it is the whole mechanism in one line. A linear foot of strip
+footing consumes 0.18 hours of carpenter at 68.50 and 0.22 hours of labourer at 35.00, which is
+20.03 of labour; 0.075 cubic yards of concrete at 165.00 and 4.5 pounds of rebar at 0.85, which
+is 16.21 of material; and 0.025 hours of small excavator at 125.00, which is 3.13. Total 39.37.
 
-Each item in `data/us_tn_sitework_costs.json` follows this schema:
+Change the carpenter's rate and rerun the reprice, and that number moves on its own. That is the
+entire point of the exercise.
 
-```json
-{
-  "code": "DEM-HSE-01",
-  "description": "Demolition of wood-frame residential structure",
-  "unit": "SF",
-  "rate": 10.38,
-  "currency": "USD",
-  "source": "manual",
-  "region": "USA_TENNESSEE",
-  "classification": {
-    "division": "02",
-    "section": "4100",
-    "category": "Selective Demolition"
-  },
-  "components": [
-    {
-      "type": "labor",
-      "name": "Demolition crew (3 workers)",
-      "quantity": 0.12,
-      "unit_rate": 22.45,
-      "cost": 2.69,
-      "unit": "hrs"
-    },
-    {
-      "type": "equipment",
-      "name": "Excavator with grapple attachment",
-      "quantity": 0.06,
-      "unit_rate": 74.25,
-      "cost": 4.46,
-      "unit": "hrs"
-    },
-    {
-      "type": "material",
-      "name": "Dumpster rental (30yd)",
-      "quantity": 0.003,
-      "unit_rate": 650.00,
-      "cost": 1.95,
-      "unit": "EA"
-    },
-    {
-      "type": "material",
-      "name": "Debris disposal and hauling",
-      "quantity": 0.015,
-      "unit_rate": 85.00,
-      "cost": 1.28,
-      "unit": "ton"
-    }
-  ],
-  "tags": ["demolition", "residential", "sitework", "nashville", "tn"]
-}
-```
+## Three things this example is quietly teaching
 
----
+**The rate in a recipe file is not the sum of its components.** Every one of the six moved, some
+by a third. A recipe file carries a nominal rate so the item is valid before it has a price
+sheet; it is not an assertion that the arithmetic agrees. On a real base, treat a large gap
+between the stated and the repriced rate as a signal to check the recipe rather than as a result.
 
-## File Structure
+**The last row does not add up, and it should tell you something.** `WI-ROOF-ASPH-PITCH` reprices
+to 442.10, but its labour breakdown shows only 17.10 and there is no material or equipment
+figure. The missing 425.00 is its subcontractor line. Repricing sums every component type into
+the rate, but the stored breakdown only records labour, material and equipment, so a
+`subcontractor` component is inside the price and absent from the explanation of it. If your
+recipes use types beyond those, the breakdown will not reconcile against the rate.
 
-```
-OCERP/
-├── data/
-│   ├── usace_equipment_rates.json   # Parsed from USACE PDF
-│   ├── bls_labor_wages.json         # Nashville MSA wages
-│   ├── material_rates.json           # TN market estimates
-│   ├── tdot_bid_prices.json          # TDOT validation prices
-│   └── us_tn_sitework_costs.json     # Final 12 CostItems (import this)
-├── scripts/
-│   └── import_cost_database.py       # Reusable import script
-├── docs/
-│   └── US_COST_DATABASE_PILOT.md     # This document
-└── IMPORT_INSTRUCTIONS.md             # Quick reference
-```
+**Extraction sees a different subset again.** `POST /api/v1/catalog/extract/` builds a resource
+catalogue from these components, and it only accepts types `material`, `equipment`, `labor` and
+`operator`. The subcontractor line is skipped there too. Five of the six recipes extract
+completely; the roofing one does not.
 
----
+## Where to go next
 
-## Execution Checklist
+Delete the region with `DELETE /api/v1/costs/actions/clear-region/US_CUSTOM` and you can run the
+whole thing again from a clean state, which is worth doing once with a deliberate mistake in it.
+Leave a `quantity` off one component and watch the reprice report success.
 
-- [ ] 1. Download the USACE EP 1110-1-8 Southeastern PDF
-- [ ] 2. Parse the USACE PDF into `data/usace_equipment_rates.json`
-- [ ] 3. Download the BLS OEWS Nashville Excel
-- [ ] 4. Parse the BLS data into `data/bls_labor_wages.json`
-- [ ] 5. Research TN material rates into `data/material_rates.json`
-- [ ] 6. Download the TDOT bid prices PDF
-- [ ] 7. Extract TDOT prices into `data/tdot_bid_prices.json`
-- [ ] 8. Build the 12 CostItems with component arrays
-- [ ] 9. Validate `rate == sum(components.cost)` for each item
-- [ ] 10. Import to OCERP: `POST /api/v1/costs/bulk/`
-- [ ] 11. Verify in OCERP: search for `USA_TENNESSEE` region items
-- [ ] 12. Create test BOQ positions using the cost items
-- [ ] 13. Compare OCERP totals against TDOT bid prices and the BedRock CSV
-- [ ] 14. Document the validation report in `docs/validation_report.md`
-
----
-
-## Known Risks and Mitigations
-
-| Risk | Mitigation |
-|------|-----------|
-| USACE PDF parsing is fiddly | Use `pdfplumber` or `tabula-py`; spot-check the extracted values by hand |
-| BLS data is annual (May 2024) | Use this data and record the date in metadata |
-| Material rates are estimates | Mark the source as `manual`; refine later with actual supplier quotes |
-| TDOT PDF format is unpredictable | Fall back to manual extraction if parsing fails |
-| Region mismatch | Use `USA_TENNESSEE` for all items; you can sub-divide later |
-
----
-
-## Reference: TCG BedRock Job Totals (For Comparison)
-
-Once the import is done, line your totals up against these BedRock values:
-
-| Job | BedRock Total |
-|-----|---------------|
-| Economy Level Site (01.01) | $79,784.44 |
-| Demolition (01.02) | $359,469.05 (bundle) |
-| French Drain (02.01) | $76,421.25 |
-
-Our calculated rates should land within plus or minus 30% for a first-pass validation.
-
----
-
-## Contact / Questions
-
-For issues or clarifications, look to:
-- OCERP cost module: `backend/app/modules/costs/`
-- CostItem schema: `backend/app/modules/costs/schemas.py`
-- Bulk import endpoint: `POST /api/v1/costs/bulk/`
-- File import endpoint: `POST /api/v1/costs/import/file/`
-
----
-
-## Next Steps (After Pilot Validation)
-
-After the 12-item pilot passes validation:
-
-**Batch 2** (around 15 items): Stormwater items
-- Drainage pipe (various sizes)
-- Catch basins/manholes
-- Headwalls
-- Rip rap
-
-**Batch 3** (around 15 items): Utilities
-- Gas line trench
-- Electrical conduit
-- Communications conduit
-
-**Batch 4** (around 15 items): Concrete and Paving
-- Concrete curb and gutter
-- Sidewalk
-- Asphalt paving
-
-**Batch 5** (around 10 items): Site Finishing
-- Erosion control blankets
-- Seeding
-- Straw mulch
-- Construction fencing
-
----
-
-*End of Handoff Document*
+For building a real database rather than replaying this one, the decisions that matter and the
+order to make them in are in [the methodology](./US_COST_DATABASE_METHODOLOGY.md). For the import
+paths and their failure modes, see [importing your own cost
+database](./cost-database-import.md).

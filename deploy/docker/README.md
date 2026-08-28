@@ -41,7 +41,7 @@ The nginx container expects to find the API at `http://backend:8000`. That means
 
 `nginx.conf` already handles the three items below. We document them here because anyone substituting a different proxy (Caddy, Traefik, a cloud load balancer) has to reproduce them or the app misbehaves.
 
-First is upload size. CAD files and drawings are large, so the request body limit is raised to `100M`. nginx ships with a `1M` default, and at that ceiling most takeoff and CAD uploads get rejected with a 413 before FastAPI ever sees them.
+First is upload size. CAD files and drawings are large, so the request body limit is raised to `2g`. nginx ships with a `1M` default, and at that ceiling most takeoff and CAD uploads get rejected with a 413 before FastAPI ever sees them.
 
 Second is `.mjs` module workers. The PDF takeoff viewer loads pdf.js as an ES module worker. nginx-alpine carries no MIME entry for `.mjs`, so by default it returns the file as `application/octet-stream`, the browser refuses to run it, and the viewer comes up blank. The config serves `.mjs` with the `application/javascript` content type instead.
 
