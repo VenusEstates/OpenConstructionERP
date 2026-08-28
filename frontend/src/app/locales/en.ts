@@ -141,6 +141,7 @@ const resource = {
     "modules.catalog.property_dev": "Property Development",
     "modules.catalog.punchlist": "Punch List",
     "modules.catalog.qms": "Quality Management System (QMS)",
+    "modules.catalog.rebar_schedule": "Rebar Schedule",
     "modules.catalog.reconciliation": "Event Reconciliation",
     "modules.catalog.record_publishing": "Record Publishing",
     "modules.catalog.reporting": "Reporting & Dashboards",
