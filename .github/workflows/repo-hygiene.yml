@@ -495,6 +495,31 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_no_brand_tokens.py
 
+      # The desktop launcher navigates its webview to http://127.0.0.1:<port>/,
+      # which Tauri classifies as a remote origin, so the access control list
+      # decides every command the application window invokes. With no
+      # permissions declared and no capability naming that origin the answer was
+      # no to all of them, and what that looked like on screen was every
+      # outbound link in the shipped product doing nothing at all when clicked.
+      # Nothing failed loudly, because the click was swallowed before the
+      # webview could navigate and the rejection was then dropped.
+      #
+      # This resolves the permission for real rather than grepping for the
+      # loopback pattern, since renaming the permission leaves that string in
+      # place and severs the grant. It also fails on a registered command that
+      # no capability grants, because declaring an application access control
+      # list turns the same check on for the launcher's own splash and failure
+      # screens, where app commands used to be unrestricted.
+      #
+      # What it does not check: whether the application window is granted the
+      # commands it happens to call beyond the link opener. Two are refused
+      # there today by choice, opening the app in a browser and the two
+      # update-notice buttons, and widening the remote grant is a decision to
+      # make deliberately rather than a threshold to move to get a lane green.
+      - name: Check the desktop app window can still open a link
+        if: ${{ !cancelled() }}
+        run: python scripts/check_desktop_link_acl.py
+
   i18n:
     name: Locale and i18n guards
     runs-on: ubuntu-latest
