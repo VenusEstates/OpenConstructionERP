@@ -199,6 +199,7 @@ from app.modules.boq.schemas import (
     TemplateInfo,
 )
 from app.modules.boq.service import MAX_NESTING_DEPTH, BOQService, resource_fx_factor
+from app.modules.boq.units import to_gaeb_unit_code
 from app.modules.costs.repository import CostItemRepository
 
 router = APIRouter(tags=["boq"])
@@ -4965,69 +4966,39 @@ def build_gaeb_xml(
             span = ET.SubElement(p, "span")
             span.text = line
 
-    # Map internal unit tokens → GAEB/DIN 276-compatible unit codes.
-    # Lexicon follows GAEB 3.3 Appendix B (standard short forms, German
-    # market conventions) - normalized entries prevent silent swapping
-    # during roundtrip (BUG-175).
-    _UNIT_MAP: dict[str, str] = {
-        # Length
-        "m": "m",
-        "cm": "cm",
-        "mm": "mm",
-        "km": "km",
-        # Area
-        "m2": "m2",
-        "m²": "m2",
-        "sqm": "m2",
-        # Volume
-        "m3": "m3",
-        "m³": "m3",
-        "cbm": "m3",
-        "l": "l",
-        "liter": "l",
-        # Mass
-        "kg": "kg",
-        "t": "t",
-        "g": "g",
-        "ton": "t",
-        # Count
-        "pcs": "Stk",
-        "piece": "Stk",
-        "stk": "Stk",
-        "stck": "Stk",
-        "st": "Stk",
-        "ea": "Stk",
-        # Lump sum
-        "lsum": "psch",
-        "psch": "psch",
-        "lump": "psch",
-        "ls": "psch",
-        # Time
-        "h": "h",
-        "hour": "h",
-        "d": "d",
-        "day": "d",
-        "month": "Mo",
-        "mo": "Mo",
-        "year": "Jahr",
-        "a": "Jahr",
-        # Volume flow
-        "m3/h": "m3/h",
-    }
-
     def _gaeb_unit(unit: str) -> str:
         """Convert internal unit to GAEB-compatible unit code.
 
         Falls back to the raw input when no mapping exists - preserves
         user-custom units instead of silently dropping them.
         """
-        if not unit:
-            return ""
-        key = unit.strip().lower()
-        mapped = _UNIT_MAP.get(key)
-        if mapped is not None:
-            return mapped
-        return unit.strip()
+        return to_gaeb_unit_code(unit)
+
+    def _unit_was_invented(pos: Any) -> bool:
+        """True when this row's unit was guessed at import, not read from a file.
+
+        A GAEB import records the source's own ``<QU>`` in
+        ``metadata['gaeb_unit_original']``, writing the empty string when the
+        file stated nothing - which an X84 item always does, since the unit
+        lives on the paired X83. The importer then guesses a unit so the row
+        can be stored at all, and that guess is indistinguishable from a
+        stated unit everywhere downstream. Writing it into an outgoing file
+        would turn our guess into somebody else's fact, so a row whose
+        original was empty is exported with no ``QU`` at all, which is what
+        the source actually said.
+
+        The distinction is membership, not truthiness. A key that is absent
+        means the row did not come from a GAEB import (manual entry, Excel,
+        an older row), and those keep the existing behaviour. Testing with
+        ``.get()`` would conflate absent with empty and start stripping the
+        unit from every hand-built BOQ we export.
+        """
+        meta = getattr(pos, "metadata_", None)
+        if not isinstance(meta, dict):
+            meta = getattr(pos, "metadata", None)
+        if not isinstance(meta, dict) or "gaeb_unit_original" not in meta:
+            return False
+        return not str(meta["gaeb_unit_original"] or "").strip()
 
     # ── X84 Nebenangebot (alternate-bid) rationale ─────────────────────────
     # The GAEB 3.3 schema has no <BoQBkUp>/<Recommendation> elements - the
@@ -5077,7 +5048,7 @@ def build_gaeb_xml(
         if is_priced:
             ET.SubElement(item, "UP").text = up_s
             ET.SubElement(item, "IT").text = it_s
-        else:
+        elif not _unit_was_invented(pos):
             ET.SubElement(item, "QU").text = _gaeb_unit(pos.unit)[:4]
         _set_description(item, str(getattr(pos, "description", "") or ""))
         # Schema order: BidComm follows Description in the X84 Item.
