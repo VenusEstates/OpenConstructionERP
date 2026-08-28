@@ -191,9 +191,13 @@ RUNTIME_BY_DESIGN: dict[tuple[str, str, str], str] = {
     ): (
         "The agent runner's LLM bridge. For a built-in agent the text is a module constant. For a "
         "user-authored custom agent it is CustomAgent.system_prompt, written by that agent's own "
-        "creator and visible only to them, so it is self-service authoring rather than an "
-        "instruction imposed on anyone else. The agent's tools re-check the creator's own "
-        "permissions, so it cannot reach data the creator could not read unaided."
+        "creator and visible only to them, so nobody has instruction text imposed on them by "
+        "another user. Each tool re-checks the invoking user's permission, so an agent cannot "
+        "reach data its creator could not read unaided. Its reach is not narrow, though: "
+        "base.py:361 gives an agent with no tools selected the whole registry rather than none, "
+        "so authored text can run over project documents via search_documents. A creator's own "
+        "reach includes text written by and about other people, which is the point at which a "
+        "prompt written here stops being purely self-service."
     ),
 }
 
