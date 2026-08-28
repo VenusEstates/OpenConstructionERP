@@ -21,7 +21,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.events import event_bus
 from app.modules.bi_dashboards import kpi_spec as _kpi_spec
 from app.modules.bi_dashboards import kpis as _kpis
-from app.modules.bi_dashboards.alert_dsl import evaluate_alert_expression
+from app.modules.bi_dashboards.alert_dsl import (
+    evaluate_alert_expression,
+    validate_alert_expression,
+)
 from app.modules.bi_dashboards.models import (
     AlertRule,
     Dashboard,
@@ -1314,6 +1317,25 @@ class BIDashboardsService:
     # ── Alerts ────────────────────────────────────────────────────
 
     async def create_alert(self, payload: AlertRuleCreate) -> AlertRule:
+        """Persist an alert rule, checking its expression on the way in.
+
+        The composite expression is validated here rather than when the
+        rule runs, for the same reason a custom KPI spec is (see
+        :meth:`create_custom_kpi`): a rule checked at evaluation time
+        fails once a cycle forever, in a log nobody is watching, and is
+        indistinguishable from a rule that simply has nothing to report.
+
+        Args:
+            payload: The submitted rule.
+
+        Returns:
+            The persisted :class:`AlertRule` row.
+
+        Raises:
+            AlertExpressionError: ``expression_json`` is a tree the
+                evaluator could only fail on.
+        """
+        validate_alert_expression(payload.expression_json)
         alert = AlertRule(
             name=payload.name,
             kpi_code=payload.kpi_code,

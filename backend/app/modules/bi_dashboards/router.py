@@ -53,6 +53,7 @@ from app.dependencies import (
     verify_project_access,
 )
 from app.modules.bi_dashboards import kpi_spec
+from app.modules.bi_dashboards.alert_dsl import AlertExpressionError
 from app.modules.bi_dashboards.models import (
     AlertRule,
     Dashboard,
@@ -1141,7 +1142,17 @@ async def create_alert(
     scope_pid = getattr(payload, "scope_project_id", None)
     if scope_pid is not None:
         await verify_project_access(scope_pid, user_id, session)
-    row = await service.create_alert(payload)
+    try:
+        row = await service.create_alert(payload)
+    except AlertExpressionError as exc:
+        # The composite expression is checked now rather than when the
+        # rule runs, so the author hears about it while they are still
+        # looking at what they wrote. The message names the path into the
+        # tree that was refused.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error": "invalid_alert_expression", "message": str(exc)},
+        ) from exc
     return AlertRuleRead.model_validate(row)
 
 
