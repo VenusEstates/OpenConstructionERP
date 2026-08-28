@@ -422,6 +422,17 @@ the Fachdokumentation or inside the files, so we treat redistribution as not
 permitted. Our test suite validates our output against the publisher's schema
 by fetching it at test time, which is use rather than redistribution.
 
+The conformance files are a separate question with a clearer answer. They are
+published by BVBS Bundesverband Software und Digitalisierung im Bauwesen e. V.,
+formerly Bundesverband Bausoftware, which runs the GAEB certification
+programme. That association is not the source of the rebar bending schedule
+format that shares the acronym; this product implements that separately in
+backend/app/modules/rebar_schedule/. Its files download freely, but its imprint
+states that distribution and any exploitation beyond the limits of copyright
+require written consent, and that downloads are permitted for private,
+non-commercial use only. We have no such consent, so those files are not here
+either. Fixtures we authored ourselves cover the same shapes.
+
 docs/standards/GAEB.md carries the full statement, including what we assert
 about conformance and what we do not. We hold no BVBS certification and make
 no certification claim.
