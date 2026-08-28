@@ -7,7 +7,9 @@ Tables:
     instruction, normalized into a dispute-ready record (canonical direction
     and channel, a clean party list, a reliable duration, a short summary, and
     the instruction-bearing sentences pulled out of the transcript) and tied to
-    a project. The raw transcript is kept verbatim as the underlying evidence.
+    a project. The raw transcript is kept verbatim as the underlying evidence,
+    and for a record ingested from a recording the audio itself is stored too
+    (see ``audio_storage_key`` for where it goes and how long it lives).
 """
 
 import uuid
@@ -54,9 +56,17 @@ class PhoneLog(Base):
         JSON, nullable=False, default=list, server_default="[]"
     )
     word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    # Reserved for a future transcription provider that also stores the raw
-    # audio. The transcript is the dispute-relevant artifact, so audio is
-    # optional and the column is empty until a provider populates it.
+    # Storage key of the recording this row was built from. Written by
+    # service.transcribe_recording at upload, before transcription runs, as
+    # "phonelog/<project_id>/<uuid>[.<ext>]", and populated whether or not
+    # transcription succeeds: a row with an empty transcript still has audio
+    # behind it. Empty only for rows captured by typing a transcript in.
+    # There is no time-based retention. service.delete_phone_log is the only
+    # thing that removes the object, and it does so with the record, so the
+    # recording lives exactly as long as this row. That delete is best-effort
+    # and swallows its failure at debug level, so an object can outlive its row
+    # unnoticed. Archiving a project does not reach either: PhoneLog is not in
+    # the cascade list in projects.service.delete_project.
     audio_storage_key: Mapped[str] = mapped_column(String(512), nullable=False, default="", server_default="")
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="logged", server_default="logged", index=True
