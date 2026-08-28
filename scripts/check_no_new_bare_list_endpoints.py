@@ -88,6 +88,20 @@ CANNOT_TRUNCATE: frozenset[str] = frozenset(
         # which statute their hours are recorded under has to see every statute
         # on offer, so a short answer would be a correctness bug, not a page.
         "field_time/router.py::list_working_time_regimes",
+        # An aggregate over a closed vocabulary, not a register. The route
+        # answers one row per bar diameter present in one import, produced by a
+        # GROUP BY in weight_by_diameter, so its length is the number of
+        # distinct diameters in that file: a handful, bounded by the diameters
+        # a mill rolls rather than by anything a user can add to. There is no
+        # query parameter, no LIMIT and no state in which it holds part of the
+        # answer. And a short answer here is not a page, it is the wrong steel:
+        # the summary exists to be ordered and cut from, so a caller that
+        # received the first few diameters and no sign there were more would
+        # order short and find out on site. An envelope would carry a total
+        # equal to len(items) by construction and an incomplete-page branch
+        # nothing could reach, while advertising a truncation this endpoint
+        # must never have.
+        "rebar_schedule/router.py::cutting_summary",
     }
 )
 
