@@ -872,7 +872,7 @@ env vars **before the first boot**:
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | Backend | Python 3.12+ / FastAPI | Async API, Pydantic v2 validation, modular architecture |
-| Frontend | React 18 / TypeScript / Vite | SPA with code splitting, 43 locale bundles |
+| Frontend | React 18 / TypeScript / Vite | SPA with code splitting, 43 locale files |
 | Database | PostgreSQL 16+ (only) | OLTP with JSON columns; an embedded PostgreSQL starts automatically for local dev, so there is no Docker, no separate database, and nothing to configure |
 | UI | Tailwind CSS / AG Grid | Professional data grid, responsive design, dark mode |
 | AI | Any LLM via REST API | Anthropic, OpenAI, Gemini, Mistral, Groq, DeepSeek |
