@@ -130,12 +130,139 @@ jobs:
           # missing because a build step was skipped.
           python scripts/check_bundled_font_licences.py --markdown >> THIRD_PARTY_LICENSES.md
 
+      # The written offer of source in NOTICE is what LGPL section 4 rests on
+      # for the libraries whose source we do not ship. It is a real offer to a
+      # real address, but an offer alone puts the whole burden on a recipient
+      # writing to us. Where the source is small enough to travel with the
+      # release it should, and this step attaches what it can.
+      #
+      # What it can and cannot do is worth stating, because the shape is not
+      # obvious. psycopg2-binary publishes an sdist and that sdist is the source
+      # of the LGPL work itself, so that one is a real discharge. OpenCV is not:
+      # the LGPL library inside the wheel is FFmpeg, and an opencv-python sdist
+      # is the source of the Python wrapper rather than of FFmpeg, so attaching
+      # it documents the build without discharging anything. Nor does opencv
+      # publish an sdist for every release; the version pinned for the desktop
+      # build is one of the ones without. So the manifest records what was
+      # attached AND what was not, and names what still rests on the offer. An
+      # asset that quietly omitted the second half would read as a discharge it
+      # is not.
+      - name: LGPL corresponding source
+        run: |
+          set -euo pipefail
+          mkdir -p lgpl-source
+
+          # Two views of every version, because they differ. The environment
+          # this job installed is what a wheel or container user resolves; the
+          # desktop lock is what the installers actually carry.
+          env_version() { pip show "$1" 2>/dev/null | awk '/^Version:/{print $2}'; }
+          lock_version() {
+            grep -iE "^$1==" backend/requirements-desktop.lock 2>/dev/null \
+              | head -1 | sed 's/.*==//' | tr -d '[:space:]'
+          }
+
+          {
+            echo "# LGPL Corresponding Source for ${TAG}"
+            echo
+            echo "The offer of source in NOTICE stands for every LGPL component in"
+            echo "every artefact of this release. This file records which sources are"
+            echo "attached here and which are not, so nobody has to guess."
+            echo
+            echo "## Attached"
+            echo
+          } > LGPL-SOURCES.md
+
+          attached=0
+          seen=""
+          for pkg in psycopg2-binary opencv-python-headless; do
+            for ver in "$(env_version "$pkg")" "$(lock_version "$pkg")"; do
+              [ -n "$ver" ] || continue
+              # the same version can come from both views, fetch it once
+              case " $seen " in *" ${pkg}==${ver} "*) continue ;; esac
+              seen="$seen ${pkg}==${ver}"
+
+              # Two shapes of failure to survive rather than abort on. A version
+              # that is not on PyPI at all answers 404, and a version with no
+              # sdist answers with an empty selection; both belong in the manifest
+              # rather than stopping a release. No head either: under pipefail a
+              # reader that closes early can fail a pipeline that produced the
+              # right answer.
+              meta=$(curl -sSfL "https://pypi.org/pypi/${pkg}/${ver}/json" || true)
+              url=""
+              if [ -n "$meta" ]; then
+                url=$(printf '%s' "$meta" \
+                      | jq -r 'first(.urls[] | select(.packagetype=="sdist") | .url) // empty')
+              fi
+              if [ -n "$url" ]; then
+                (cd lgpl-source && curl -sSfLO "$url")
+                echo "- ${pkg} ${ver}: source attached as $(basename "$url")" >> LGPL-SOURCES.md
+                attached=$((attached + 1))
+              else
+                {
+                  echo "- ${pkg} ${ver}: upstream publishes no source distribution for this"
+                  echo "  version. Write to info@datadrivenconstruction.io under the offer in"
+                  echo "  NOTICE, naming this release."
+                } >> LGPL-SOURCES.md
+              fi
+            done
+          done
+
+          {
+            echo
+            echo "## Still on the offer rather than attached"
+            echo
+            echo "FFmpeg, the LGPL-2.1 library inside every opencv-python wheel. An"
+            echo "opencv-python source distribution is the source of the Python wrapper"
+            echo "and not of FFmpeg, so it is not the corresponding source for that"
+            echo "library and is not offered here as though it were. The FFmpeg"
+            echo "libraries this release carries, from the installed package's own"
+            echo "file list:"
+            echo
+          } >> LGPL-SOURCES.md
+          # From the installed RECORD rather than from a build string, so these
+          # are the files that actually ship. An empty result is possible (a
+          # Windows environment bundles one ffmpeg DLL instead of these shared
+          # objects), and a heading followed by nothing reads like a generator
+          # that failed, so say which it is.
+          ffmpeg_libs=$(pip show -f opencv-python-headless 2>/dev/null \
+            | grep -oE 'lib(av|sw)[a-z]+[^ ]*\.(so|dylib)[0-9.]*' | sort -u || true)
+          if [ -n "$ffmpeg_libs" ]; then
+            printf '%s\n' "$ffmpeg_libs" | sed 's/^/- /' >> LGPL-SOURCES.md
+          else
+            {
+              echo "- not enumerable from the environment this inventory was built in."
+              echo "  They are inside the cv2 package directory of the wheel named above."
+            } >> LGPL-SOURCES.md
+          fi
+
+          {
+            echo
+            echo "The GTK 3 and WebKitGTK stack inside the Linux AppImage. Those sources"
+            echo "run to gigabytes, and they are published by the GNOME and WebKit"
+            echo "projects and in the source packages of the distribution the image is"
+            echo "built on. The offer covers them."
+          } >> LGPL-SOURCES.md
+
+          # Attaching nothing would leave a manifest promising sources next to
+          # no sources. psycopg2-binary has published an sdist for every release
+          # since 2.7, so zero attachments means something changed upstream, and
+          # that should stop the release rather than pass quietly.
+          if [ "$attached" -eq 0 ]; then
+            echo "No LGPL source was attached at all, refusing to publish a manifest that lists none." >&2
+            exit 1
+          fi
+          echo "attached $attached source archive(s)"
+          ls -la lgpl-source
+          cat LGPL-SOURCES.md
+        env:
+          TAG: ${{ inputs.tag }}
+
       - name: Confirm there is an inventory to publish
         run: |
           # The aggregate step always writes a header, so the file existing
           # proves nothing. An inventory with neither section is an empty
           # promise, and it is exactly what a silently failed generator leaves.
-          for f in THIRD_PARTY_LICENSES.md sbom-backend.cdx.json sbom-frontend.cdx.json; do
+          for f in THIRD_PARTY_LICENSES.md LGPL-SOURCES.md sbom-backend.cdx.json sbom-frontend.cdx.json; do
             if [ ! -s "$f" ]; then
               echo "$f is missing or empty, refusing to publish an inventory that lists nothing." >&2
               exit 1
@@ -163,6 +290,8 @@ jobs:
           name: licenses-and-sbom
           path: |
             THIRD_PARTY_LICENSES.md
+            LGPL-SOURCES.md
+            lgpl-source/
             sbom-*.json
             sbom-*.cdx.json
           retention-days: 365
@@ -184,5 +313,13 @@ jobs:
         run: |
           gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null
           for f in THIRD_PARTY_LICENSES.md sbom-backend.cdx.json sbom-frontend.cdx.json; do
+            gh release upload "$TAG" "$f" --repo "${{ github.repository }}" --clobber
+          done
+          # The LGPL manifest, and whatever source it managed to fetch. Globbed
+          # rather than named, because which archives exist depends on what
+          # upstream published for the pinned versions.
+          gh release upload "$TAG" LGPL-SOURCES.md --repo "${{ github.repository }}" --clobber
+          for f in lgpl-source/*; do
+            [ -e "$f" ] || continue
             gh release upload "$TAG" "$f" --repo "${{ github.repository }}" --clobber
           done
