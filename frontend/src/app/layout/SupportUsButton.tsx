@@ -45,7 +45,7 @@ const CASE_STUDY_MAILTO = `mailto:${CASE_STUDY_EMAIL}?subject=${encodeURICompone
 )}`;
 
 const SHARE_TEXT =
-  'OpenConstructionERP - free open-source construction cost estimation platform (BOQ, BIM takeoff, AI, 26 languages). Self-hosted. AGPL-3.0.';
+  'OpenConstructionERP - free open-source construction cost estimation platform (BOQ, BIM takeoff, AI, 41 languages). Self-hosted. AGPL-3.0.';
 
 const TWITTER_URL = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
   SHARE_TEXT,
