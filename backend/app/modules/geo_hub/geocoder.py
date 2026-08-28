@@ -10,13 +10,28 @@ anchoring without seeing an exception.
 Honoured environment variables:
 
 * ``OE_GEOCODER_DISABLED``  ``true`` → always return ``None`` (offline /
-  sanctioned regions / privacy-sensitive deploys).
+  sanctioned regions / privacy-sensitive deploys). Gates every outbound
+  path in this module, autocomplete included: ``suggest_addresses``
+  checks it before it consults Photon, so this one switch is sufficient
+  to stop all geocoding traffic. The Photon switch below is narrower.
 * ``OE_GEOCODER_BASE_URL``  e.g. ``https://nominatim.example.com`` →
   point at a self-hosted Nominatim mirror (defaults to the public
   service at ``https://nominatim.openstreetmap.org``).
+* ``OE_GEOCODER_PHOTON_URL``  e.g. ``https://photon.example.com`` →
+  point at a self-hosted Photon mirror (defaults to the public service
+  at ``https://photon.komoot.io``).
+* ``OE_GEOCODER_PHOTON_DISABLED``  ``true`` → skip Photon and use
+  Nominatim alone for autocomplete. Narrower than ``OE_GEOCODER_DISABLED``:
+  suggestions still leave, they just leave to one service instead of two.
 * ``OE_GEOCODER_USER_AGENT_CONTACT`` (optional) - extra contact info
   appended to the User-Agent header. The bundled default already satisfies
   Nominatim's UA policy with our project contact email.
+
+Operators read ``deploy/docker/.env.example`` rather than this docstring,
+so the same five are documented there. Keep the two in step: this list was
+short by the two Photon variables for as long as it existed, which is how
+a privacy review came to describe the module as contacting one service
+when it contacts two.
 
 Rate limiting
 -------------
