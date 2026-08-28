@@ -39,6 +39,7 @@ from app.modules.procurement.schemas import (
     GRCreate,
     GRListResponse,
     GRResponse,
+    POCancelRequest,
     POCreate,
     POInvoiceCreatedResponse,
     POListResponse,
@@ -484,6 +485,26 @@ async def create_invoice_from_po(
 
     _log = _logging.getLogger(__name__)
 
+    # Serialise against a concurrent removal of the same PO.
+    #
+    # The removal path (``cancel_po`` / ``delete_po``, and the guard they share)
+    # takes this same row lock before it counts what is holding the PO. For a
+    # goods receipt, a retainage release or a requisition that is enough on its
+    # own, because those carry a foreign key to the PO and PostgreSQL's
+    # referential-integrity trigger takes a conflicting ``FOR KEY SHARE`` on the
+    # parent row when one is inserted. An ``Invoice`` does NOT: finance is an
+    # optional module and its invoice carries no foreign key to a PO, only a
+    # ``metadata_["po_id"]`` stamp written below. So nothing in the database
+    # makes this insert wait, and without the lock here a payable invoice can be
+    # created against a PO that is being deleted in another transaction.
+    #
+    # Nothing is destroyed when that happens - there is no cascade to fire - but
+    # the invoice survives holding a ``po_id`` that no longer resolves, which is
+    # a payable record that cannot be traced back to what authorised it. Taking
+    # the lock here puts both sides on the same row: whichever transaction
+    # arrives second waits, and then sees the other's committed result.
+    await service.po_repo.lock_for_update(po_id)
+
     po = await service.get_po(po_id)
     await verify_project_access(po.project_id, str(user_id), session)
 
@@ -758,6 +779,55 @@ async def issue_purchase_order(
     await verify_project_access(existing.project_id, str(user_id), session)
     po = await service.issue_po(po_id)
     return await _po_response(service.session, po)
+
+
+@router.post(
+    "/{po_id}/cancel/",
+    response_model=POResponse,
+    dependencies=[Depends(RequirePermission("procurement.cancel"))],
+)
+async def cancel_purchase_order(
+    po_id: uuid.UUID,
+    data: POCancelRequest,
+    user_id: CurrentUserId,
+    session: SessionDep,
+    service: ProcurementService = Depends(_get_service),
+) -> POResponse:
+    """Void a purchase order, keeping the row and its number.
+
+    This is what "remove" means for a purchase order that has been approved or
+    issued: the record and its ``po_number`` survive, the status becomes
+    ``cancelled`` and the reason is stored beside it. Any goods receipt,
+    payable invoice, retainage release or requisition pointing at the PO
+    refuses the cancel with a 409 naming the holders by kind and count.
+    """
+    existing = await service.get_po(po_id)
+    await verify_project_access(existing.project_id, str(user_id), session)
+    po = await service.cancel_po(po_id, reason=data.reason, actor_id=str(user_id))
+    return await _po_response(service.session, po)
+
+
+@router.delete(
+    "/{po_id}",
+    status_code=204,
+    dependencies=[Depends(RequirePermission("procurement.delete"))],
+)
+async def delete_purchase_order(
+    po_id: uuid.UUID,
+    user_id: CurrentUserId,
+    session: SessionDep,
+    service: ProcurementService = Depends(_get_service),
+) -> None:
+    """Delete a draft purchase order that never left draft.
+
+    Deliberately narrow. Anything that has been approved or issued, has ever
+    been approved or issued, or is pointed at by another record is refused
+    with a 409 that names why - such a purchase order is cancelled, not
+    deleted, so its number stays out of circulation.
+    """
+    existing = await service.get_po(po_id)
+    await verify_project_access(existing.project_id, str(user_id), session)
+    await service.delete_po(po_id)
 
 
 # ── Retainage (Gap F) ────────────────────────────────────────────────────────

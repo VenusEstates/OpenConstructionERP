@@ -184,6 +184,63 @@ _PO_STATUS_TRANSITIONS: dict[str, set[str]] = {
 
 _VALID_PO_STATUSES = set(_PO_STATUS_TRANSITIONS.keys())
 
+#: Statuses from which cancelling still has to release a budget commitment.
+#: Budget is committed at ``approved`` and is NOT released by moving on to
+#: ``issued`` or ``partially_received`` - the money stays committed while the
+#: order is live. So a PO voided out of any of these still carries a
+#: ``committed_from_po`` marker in finance, and the compensating event has to
+#: fire for all three, not only for ``approved``.
+_PO_COMMITTED_STATUSES = frozenset({"approved", "issued", "partially_received"})
+
+#: Holder kinds a removal refusal can name, in the order a reader wants them:
+#: what was delivered, what was billed, what was paid out, what asked for it.
+#: The values are the repository method that counts each kind.
+_PO_HOLDER_COUNTERS = (
+    ("goods_receipt", "count_goods_receipts"),
+    ("payable_invoice", "count_payable_invoices"),
+    ("retainage_release", "count_retainage_releases"),
+    ("requisition", "count_requisitions"),
+)
+
+#: Human-readable singular names for the holder kinds, used to build the
+#: English fallback sentence carried in the 409 body. The UI renders its own
+#: translated text from the structured ``holders`` list; this sentence is for
+#: everything that is not this UI - an API client, a log line, a curl.
+_PO_HOLDER_LABELS = {
+    "goods_receipt": "goods receipt",
+    "payable_invoice": "payable invoice",
+    "retainage_release": "retainage release",
+    "requisition": "material requisition",
+}
+
+
+def _describe_holders(holders: dict[str, int]) -> str:
+    """Render ``{kind: count}`` as an English list, e.g. "2 goods receipts, 1 payable invoice"."""
+    parts: list[str] = []
+    for kind, count in holders.items():
+        label = _PO_HOLDER_LABELS.get(kind, kind.replace("_", " "))
+        parts.append(f"{count} {label}" if count == 1 else f"{count} {label}s")
+    return ", ".join(parts)
+
+
+def _holders_conflict(code: str, message: str, remediation: str, holders: dict[str, int]) -> HTTPException:
+    """Build the 409 a removal refusal returns.
+
+    The body is structured on purpose. ``holders`` lets a caller say "2 goods
+    receipts and 1 payable invoice" in its own language, and ``message`` is
+    the English fallback for every caller that will not. Both are always
+    present, so no reader has to parse prose to find out what is in the way.
+    """
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": code,
+            "message": message,
+            "remediation": remediation,
+            "holders": [{"kind": kind, "count": count} for kind, count in holders.items()],
+        },
+    )
+
 
 def _parse_decimal(value: str, field_name: str = "value") -> Decimal:
     """Parse a string to Decimal, raising a clear error on failure."""
@@ -769,6 +826,14 @@ class ProcurementService:
                         f"Allowed transitions: {', '.join(sorted(allowed)) or 'none'}"
                     ),
                 )
+            # Cancelling is a removal verb, so it runs the same holder guard
+            # as ``cancel_po``. There are two doors into ``cancelled`` - this
+            # PATCH and the dedicated verb - and a guard on only one of them
+            # is a guard anybody can walk around. Same failure the module
+            # already fixed for the two doors into ``approved``, and the same
+            # remedy: one check, called from both.
+            if new_status == "cancelled" and po.status != "cancelled":
+                await self._refuse_if_po_is_held(po, action="cancel")
 
         # Recompute total if subtotal or tax changed
         new_subtotal = fields.get("amount_subtotal", po.amount_subtotal)
@@ -953,13 +1018,22 @@ class ProcurementService:
                 },
             )
 
-        # Max-Audit #10: when a PO LEAVES the ``approved`` state its budget
+        # Max-Audit #10: when a PO leaves a COMMITTED state its budget
         # commitment must be reversed. The PO FSM allows ``approved -> draft``
-        # (revert) and ``approved -> cancelled``; publish a compensating event
-        # carrying ``amount_total`` so finance can decrement ``committed`` by
-        # exactly what this PO committed. Without this the commitment ledger
-        # only ever grows and phantom commitments corrupt the dashboard / EVM.
-        if prior_status == "approved" and updated.status != prior_status:
+        # (revert) and a cancel out of ``approved``, ``issued`` and
+        # ``partially_received``; publish a compensating event carrying
+        # ``amount_total`` so finance can decrement ``committed`` by exactly
+        # what this PO committed. Without this the commitment ledger only ever
+        # grows and phantom commitments corrupt the dashboard / EVM.
+        #
+        # The condition used to read ``prior_status == "approved"``, which is
+        # where the commitment is ADDED - but not the only state it is held
+        # in. ``approved -> issued`` does not release anything, so a PO
+        # cancelled out of ``issued`` or ``partially_received`` kept its
+        # commitment for good and the committed figure never came back down.
+        # ``_on_po_decommitted`` is idempotent on the marker it clears, so a
+        # widened condition cannot double-decrement.
+        if prior_status in _PO_COMMITTED_STATUSES and updated.status != prior_status:
             if updated.status == "cancelled":
                 _decommit_event = "procurement.po.cancelled"
             elif updated.status == "draft":
@@ -984,6 +1058,279 @@ class ProcurementService:
 
         logger.info("PO updated: %s", po_id)
         return updated
+
+    # ── Removal: cancel (void) and delete ────────────────────────────────────
+    #
+    # A purchase order is a commercial document, so "get rid of it" is three
+    # operations, not one, and which applies is decided by what the document
+    # has already done rather than by who is asking:
+    #
+    # * a draft PO that never left draft and that nothing points at may be
+    #   DELETED. Budget commits at ``approved``, so such a PO has no finance
+    #   marker to compensate, no audit trail hanging off it and no number any
+    #   supplier has seen. This is the duplicate, the mistyped one, the row
+    #   somebody opened by accident.
+    # * a PO that has been approved or issued is CANCELLED. The row stays, the
+    #   ``po_number`` stays, the status becomes ``cancelled`` and the reason is
+    #   recorded. The number is what the supplier quotes and a gap in the
+    #   sequence is what an auditor asks about, so it is never reused and never
+    #   reclaimed.
+    # * a PO that goods receipts, payable invoices, retainage releases or
+    #   requisitions point at is REFUSED, 409, naming every holder by kind and
+    #   count. Deleting it would take an audit trail with it; cancelling it
+    #   would void a commitment that other records are still measuring
+    #   themselves against.
+    #
+    # A PO that has been delivered against and now has to stop is closed, not
+    # voided: the FSM already allows ``issued -> completed`` and
+    # ``partially_received -> completed``, which records that the order ended
+    # where it ended. Cancelling would claim it never happened.
+
+    async def _collect_po_holders(self, po: PurchaseOrder) -> dict[str, int]:
+        """Count every record that points at this PO, by kind.
+
+        Only non-zero kinds are returned, so an empty dict means nothing is in
+        the way. Line items are deliberately absent: they belong to the PO
+        rather than referring to it, and they go wherever it goes.
+        """
+        holders: dict[str, int] = {}
+        for kind, method in _PO_HOLDER_COUNTERS:
+            counter = getattr(self.po_repo, method)
+            count = await (counter(po.id, po.project_id) if kind == "payable_invoice" else counter(po.id))
+            if count:
+                holders[kind] = int(count)
+        return holders
+
+    async def _refuse_if_po_is_held(self, po: PurchaseOrder, *, action: str) -> None:
+        """Raise 409 when anything still points at this PO.
+
+        Takes a row-level write lock on the PO first, so the count and the
+        removal that follows it are one critical section. Without the lock this
+        is a read followed by a write: the counts come back empty, a goods
+        receipt is inserted against the PO, and the delete then CASCADEs it away
+        without an error - ``GoodsReceipt.po_id`` and ``PORetainageRelease.po_id``
+        are both ``ondelete="CASCADE"``, so the database would not object, and a
+        retainage release is money already paid out.
+
+        What the lock buys, precisely. ``FOR UPDATE`` on the PO row conflicts
+        with the ``FOR KEY SHARE`` that PostgreSQL's referential-integrity
+        trigger takes on a parent row when a child carrying a foreign key to it
+        is inserted. So a concurrent insert of a goods receipt, a retainage
+        release or a material requisition either blocks until this transaction
+        ends, or committed before the lock was granted and is therefore visible
+        to the counts below. Both outcomes are correct; neither loses a row.
+
+        Payable invoices are the exception that the database cannot cover:
+        finance is an optional module and its ``Invoice`` carries no foreign
+        key to a PO, only a ``metadata_["po_id"]`` stamp, so inserting one
+        takes no lock on this row and no referential-integrity trigger fires.
+        That kind is serialised by cooperation instead - the invoice-creation
+        endpoint takes this same lock before it reads the PO, so whichever of
+        the two transactions arrives second waits and then sees the other's
+        committed result. If a second way to raise an invoice against a PO is
+        ever added, it has to take the lock too; nothing in the schema will
+        enforce it the way it does for the three kinds above.
+
+        The lock is taken here rather than in each caller so that no removal
+        door can be added later that counts without it - the same reasoning
+        that put the guard itself in one place and called it from all three.
+        Re-taking it in a transaction that already holds it is a no-op, so a
+        caller that locks earlier for its own reasons costs nothing.
+
+        Args:
+            po: The purchase order being cancelled or deleted.
+            action: ``"cancel"`` or ``"delete"`` - only shapes the wording, the
+                rule is the same for both. What holds a document holds it
+                regardless of which verb is trying to remove it.
+        """
+        await self.po_repo.lock_for_update(po.id)
+        holders = await self._collect_po_holders(po)
+        if not holders:
+            return
+        described = _describe_holders(holders)
+        raise _holders_conflict(
+            code="purchase_order_has_dependents",
+            message=(
+                f"Purchase order {po.po_number} cannot be {'cancelled' if action == 'cancel' else 'deleted'}: "
+                f"{described} still refer to it."
+            ),
+            remediation=(
+                "Reverse or detach those records first, or close the purchase order short "
+                "so the register keeps what was actually ordered and received."
+            ),
+            holders=holders,
+        )
+
+    async def cancel_po(
+        self,
+        po_id: uuid.UUID,
+        reason: str | None = None,
+        actor_id: str | None = None,
+    ) -> PurchaseOrder:
+        """Void a purchase order, keeping the row and its number.
+
+        Args:
+            po_id: The purchase order to void.
+            reason: Why it is being voided. Stored on the PO and in the audit
+                trail; optional, because a mandatory field only guarantees a
+                full stop gets typed.
+            actor_id: The user voiding it, for the audit row.
+
+        Returns:
+            The cancelled purchase order, re-read after the write.
+
+        Raises:
+            HTTPException: 404 if the PO does not exist, 409 if it is already
+                terminal or if any record still points at it.
+        """
+        # Same critical section as ``delete_po``: lock first, then read, so the
+        # status this cancel is decided on and the holders counted below are
+        # the same version the write lands on. ``prior_status`` in particular
+        # chooses which compensating event fires, and a stale read there would
+        # release a budget commitment twice or not at all.
+        await self.po_repo.lock_for_update(po_id)
+        po = await self.get_po(po_id)
+        prior_status = po.status
+        po_number = po.po_number
+        project_id = po.project_id
+        amount_total = po.amount_total
+        currency_code = po.currency_code or ""
+
+        if prior_status == "cancelled":
+            raise _holders_conflict(
+                code="purchase_order_already_cancelled",
+                message=f"Purchase order {po_number} is already cancelled.",
+                remediation="Nothing to do.",
+                holders={},
+            )
+        if "cancelled" not in _PO_STATUS_TRANSITIONS.get(prior_status, set()):
+            raise _holders_conflict(
+                code="purchase_order_not_cancellable",
+                message=(
+                    f"Purchase order {po_number} is in status '{prior_status}' and cannot be cancelled; "
+                    "a completed order records what was actually bought."
+                ),
+                remediation="Raise a credit note or a variation against it instead.",
+                holders={},
+            )
+
+        await self._refuse_if_po_is_held(po, action="cancel")
+
+        cancellation = {
+            "reason": reason or "",
+            "cancelled_at": datetime.now(UTC).isoformat(),
+            "cancelled_by": actor_id or "",
+            "prior_status": prior_status,
+        }
+        await self.po_repo.update(
+            po_id,
+            status="cancelled",
+            metadata_=merge_metadata(getattr(po, "metadata_", None), {"cancellation": cancellation}),
+        )
+
+        try:
+            from app.core.audit_log import log_activity
+
+            await log_activity(
+                self.session,
+                actor_id=actor_id,
+                entity_type="purchase_order",
+                entity_id=str(po_id),
+                action="status_changed",
+                from_status=prior_status,
+                to_status="cancelled",
+                reason=reason or "PO cancelled via cancel_po()",
+                metadata={"po_number": po_number},
+            )
+        except Exception:
+            # Same treatment as the approve and issue doors: a missing audit
+            # row on a voided commercial document is a compliance gap, and at
+            # production INFO a debug line is not there to be found.
+            logger.warning("FSM audit log FAILED for PO cancel (po_id=%s)", po_id, exc_info=True)
+
+        updated = await self.po_repo.get(po_id)
+        if updated is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Purchase order not found",
+            )
+
+        await _safe_publish(
+            "procurement.po.cancelled" if prior_status in _PO_COMMITTED_STATUSES else "procurement.po.updated",
+            {
+                "po_id": str(po_id),
+                "project_id": str(project_id),
+                "po_number": po_number,
+                "amount_total": amount_total,
+                "currency_code": currency_code,
+                "prior_status": prior_status,
+                "status": "cancelled",
+            },
+        )
+
+        logger.info("PO cancelled: %s (from %s)", po_number, prior_status)
+        return updated
+
+    async def delete_po(self, po_id: uuid.UUID) -> None:
+        """Delete a draft purchase order that never left draft.
+
+        Args:
+            po_id: The purchase order to delete.
+
+        Raises:
+            HTTPException: 404 if the PO does not exist, 409 if it is not a
+                never-issued draft or if any record still points at it.
+        """
+        # Lock before the first check rather than leaving it to the holder
+        # guard further down. Every question this method asks - the status, the
+        # audit trail, the holders - has to be answered about the same version
+        # of the PO that the delete then acts on, and ``has_left_draft`` reads
+        # the status-change trail that a concurrent approval writes. Locking
+        # here puts all three under one critical section; the guard takes the
+        # same lock again, which is free once this transaction holds it.
+        await self.po_repo.lock_for_update(po_id)
+        po = await self.get_po(po_id)
+
+        if po.status != "draft":
+            raise _holders_conflict(
+                code="purchase_order_not_deletable",
+                message=(
+                    f"Purchase order {po.po_number} is in status '{po.status}' and cannot be deleted; "
+                    "a purchase order that has been approved or issued keeps its record and its number."
+                ),
+                remediation="Cancel it instead - the row survives and the number stays out of circulation.",
+                holders={},
+            )
+
+        # Current status is not enough on its own. The FSM allows
+        # ``cancelled -> draft``, so a PO that was approved, issued, cancelled
+        # and reopened is sitting in ``draft`` with its number already in a
+        # supplier's inbox. The status-change audit trail is the record of
+        # that history and every door into ``approved`` and ``issued`` writes
+        # one.
+        if await self.po_repo.has_left_draft(po_id):
+            raise _holders_conflict(
+                code="purchase_order_not_deletable",
+                message=(
+                    f"Purchase order {po.po_number} has been approved or issued before and cannot be deleted, "
+                    "even though it is back in draft."
+                ),
+                remediation="Cancel it instead - the row survives and the number stays out of circulation.",
+                holders={},
+            )
+
+        await self._refuse_if_po_is_held(po, action="delete")
+
+        await self.po_repo.delete(po_id)
+        await _safe_publish(
+            "procurement.po.deleted",
+            {
+                "po_id": str(po_id),
+                "project_id": str(po.project_id),
+                "po_number": po.po_number,
+            },
+        )
+        logger.info("PO deleted: %s", po.po_number)
 
     # ── Validation ───────────────────────────────────────────────────────────
 
