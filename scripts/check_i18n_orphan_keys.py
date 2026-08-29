@@ -128,9 +128,7 @@ _KEY_LINE = re.compile(r'^\s*"([A-Za-z0-9_.\-]+)"\s*:', re.MULTILINE)
 # identical-fraction heuristic below, so a value this misses (wrapped across
 # lines, which the generator does not produce) only narrows that sample and
 # never affects which keys count as missing.
-_KEY_VALUE_LINE = re.compile(
-    r'^\s*"([A-Za-z0-9_.\-]+)"\s*:\s*"((?:[^"\\]|\\.)*)"', re.MULTILINE
-)
+_KEY_VALUE_LINE = re.compile(r'^\s*"([A-Za-z0-9_.\-]+)"\s*:\s*"((?:[^"\\]|\\.)*)"', re.MULTILINE)
 
 # `{ code: 'xx', ... }` entries inside SUPPORTED_LANGUAGES.
 _SUPPORTED_CODE = re.compile(r"code:\s*'([A-Za-z0-9\-]+)'")
@@ -152,9 +150,7 @@ _CALL_HEAD = re.compile(r"""\bt\(\s*(['"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\1\s*,\s
 # others. A second argument that is a variable, a call or an object is not a
 # default this guard can name, and `t(key)` alone is the loud case the scope
 # paragraph excludes on purpose.
-_CALL_HEAD_STRING_DEFAULT = re.compile(
-    r"""\bt\(\s*(['"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\1\s*,\s*['"`]"""
-)
+_CALL_HEAD_STRING_DEFAULT = re.compile(r"""\bt\(\s*(['"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\1\s*,\s*['"`]""")
 
 _CLDR_SUFFIXES = ("_zero", "_one", "_two", "_few", "_many", "_other")
 
@@ -344,9 +340,7 @@ def missing_locales(
     """
     reach = _reach(key, by_locale)
     return sorted(
-        stem
-        for stem in by_locale
-        if stem not in reach and bases[stem] not in reach and stem not in in_progress
+        stem for stem in by_locale if stem not in reach and bases[stem] not in reach and stem not in in_progress
     )
 
 
@@ -363,9 +357,7 @@ def downgraded_locales(
     reported with a number instead of disappearing from the guard's output.
     """
     reach = _reach(key, by_locale)
-    return sorted(
-        stem for stem in in_progress if stem not in reach and bases[stem] not in reach
-    )
+    return sorted(stem for stem in in_progress if stem not in reach and bases[stem] not in reach)
 
 
 def main() -> int:
@@ -424,9 +416,7 @@ def main() -> int:
         )
         return 1
     en_values = read_en_values()
-    in_progress, fractions, abandoned = classify_locales(
-        by_locale, supported, en_values
-    )
+    in_progress, fractions, abandoned = classify_locales(by_locale, supported, en_values)
 
     new_gaps: list[tuple[str, str, list[str]]] = []
     widened: list[tuple[str, list[str]]] = []
@@ -472,9 +462,7 @@ def main() -> int:
             f"{', '.join(sorted(abandoned))}"
         )
     else:
-        print(
-            "0 locale(s) outside SUPPORTED_LANGUAGES read as an abandoned, unoffered file."
-        )
+        print("0 locale(s) outside SUPPORTED_LANGUAGES read as an abandoned, unoffered file.")
 
     if new_gaps or widened:
         for key, first_file, missing in new_gaps:
@@ -513,17 +501,12 @@ def main() -> int:
     # and the message it prints would still read like an ordinary gap.
     print(
         "  regional variants resolving through a base language: "
-        + (
-            ", ".join(f"{stem} via {base}" for stem, base in sorted(variants.items()))
-            or "none"
-        )
+        + (", ".join(f"{stem} via {base}" for stem, base in sorted(variants.items())) or "none")
     )
     if healed:
         shown = ", ".join(healed[:12])
         more = f", and {len(healed) - 12} more" if len(healed) > 12 else ""
-        print(
-            f"  {len(healed)} baseline key(s) now fully answered, drop them: {shown}{more}"
-        )
+        print(f"  {len(healed)} baseline key(s) now fully answered, drop them: {shown}{more}")
     return 0
 
 
