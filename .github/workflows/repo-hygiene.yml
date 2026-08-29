@@ -965,3 +965,30 @@ jobs:
       - name: Scan commit messages for AI attribution trailers
         if: ${{ !cancelled() }}
         run: python scripts/check_commit_trailers.py
+
+      # Not a duplicate of the step above. These two scripts are the pair the
+      # local .git/hooks/commit-msg shim runs, and until this step existed only
+      # one of them had a second home: check_commit_trailers.py ran here,
+      # check_commit_subject.py ran in none of the twenty workflows. Measured
+      # 2026-08-30, it was the only one of the twenty-five scripts named in
+      # .pre-commit-config.yaml with no executor anywhere.
+      #
+      # What that cost: the shim is the only thing running it, and a hook is not
+      # something git can transport. It is not in the object store, nothing
+      # tracked installs it, and core.hooksPath is an absolute path in a
+      # per-clone .git/config. So the guard existed in exactly one copy, on one
+      # disk, and would have disappeared on any other checkout without anything
+      # going red, because there was nothing anywhere to go red.
+      #
+      # Population: no argument, so the script reads every commit reachable from
+      # HEAD, which is why the job checks out at fetch-depth 0. That is the same
+      # population the trailers step above scans. It is 5027 commits today and
+      # green. Twelve published commits carry the artefact already, one of them
+      # the v14.6.0 tag, and the script exempts those by sha; a thirteenth is a
+      # failure. Only the shell-artefact rule applies in this mode. The long-dash
+      # rule is deliberately confined to a message being written, because 2094
+      # existing messages use one and scanning history for them would report a
+      # decision nobody has taken.
+      - name: Scan commit subjects for shell quoting artefacts
+        if: ${{ !cancelled() }}
+        run: python scripts/check_commit_subject.py
