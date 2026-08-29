@@ -39,6 +39,7 @@ function spec(over: Partial<ModuleUiSpec> = {}): ModuleUiSpec {
     icon: 'Boxes',
     version: '0.1.0',
     author: '',
+    drafted_by: 'wizard',
     entity: {
       name: 'entry',
       display_name: 'Entry',

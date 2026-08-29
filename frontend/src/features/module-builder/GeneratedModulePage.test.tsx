@@ -84,6 +84,7 @@ const SPEC: ModuleUiSpec = {
   icon: 'Boxes',
   version: '0.1.0',
   author: '',
+  drafted_by: 'wizard',
   entity: {
     name: 'pour',
     display_name: 'Pour',

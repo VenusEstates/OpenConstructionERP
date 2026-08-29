@@ -78,8 +78,14 @@ describe('the builder endpoints', () => {
     await previewModule(SPEC);
     expect(post).toHaveBeenCalledWith('/v1/module-builder/preview', { spec: SPEC });
 
-    await installModule(SPEC);
-    expect(post).toHaveBeenCalledWith('/v1/module-builder', { spec: SPEC }, { longRunning: true });
+    // Install carries the token preview handed back, so the server can tell a
+    // reviewed spec from one that was never rendered for anybody to read.
+    await installModule(SPEC, 'review-token-from-preview');
+    expect(post).toHaveBeenCalledWith(
+      '/v1/module-builder',
+      { spec: SPEC, review_token: 'review-token-from-preview' },
+      { longRunning: true },
+    );
   });
 
   it('lists what is installed with no trailing slash', async () => {

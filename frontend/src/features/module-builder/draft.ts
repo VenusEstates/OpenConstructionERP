@@ -81,6 +81,7 @@ export function emptySpec(): ModuleSpec {
       project_scoped: true,
     },
     rules: [],
+    drafted_by: 'wizard',
   };
 }
 

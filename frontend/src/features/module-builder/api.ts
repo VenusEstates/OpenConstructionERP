@@ -107,6 +107,13 @@ export interface ModuleSpec {
   author: string;
   entity: ModuleEntitySpec;
   rules: ModuleRuleSpec[];
+  /**
+   * Who wrote the specification: `assistant` when a model drafted it from a
+   * sentence, `wizard` when a person filled the form in. Set by the server,
+   * which is what called the model, and kept through editing, since a draft a
+   * person then corrected was still drafted by a model.
+   */
+  drafted_by: 'assistant' | 'wizard';
 }
 
 /**
@@ -174,6 +181,12 @@ export interface PreviewResponse {
   total_lines: number;
   /** Known before the install rather than discovered after it. */
   base_path: string;
+  /**
+   * Proof that these files were rendered for this person to read. Install
+   * refuses a spec that arrives without it, which is what makes the review step
+   * a rule the server enforces rather than a screen the wizard happens to show.
+   */
+  review_token: string;
 }
 
 export interface InstalledModule {
@@ -233,8 +246,15 @@ export async function previewModule(spec: ModuleSpec): Promise<PreviewResponse> 
  * Either it is installed and serving when this resolves, or nothing was left
  * behind: there is no half-installed state for the caller to clean up.
  */
-export async function installModule(spec: ModuleSpec): Promise<InstalledModule> {
-  return apiPost<InstalledModule, { spec: ModuleSpec }>(BASE, { spec }, { longRunning: true });
+export async function installModule(
+  spec: ModuleSpec,
+  reviewToken: string,
+): Promise<InstalledModule> {
+  return apiPost<InstalledModule, { spec: ModuleSpec; review_token: string }>(
+    BASE,
+    { spec, review_token: reviewToken },
+    { longRunning: true },
+  );
 }
 
 /** Every module built on this instance. Readable by any signed-in user. */

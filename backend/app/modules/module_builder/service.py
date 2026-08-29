@@ -171,7 +171,13 @@ async def draft_spec(session: Any, user_id: str, description: str) -> ModuleSpec
     payload = extract_json(text)
     if not isinstance(payload, dict):
         raise DraftRefused("The assistant did not return a module description.", raw=text[:2000])
-    return spec_from_payload(payload)
+    spec = spec_from_payload(payload)
+    # Recorded here rather than in spec_from_payload, which also validates
+    # payloads that no model produced, and rather than in the router, so that
+    # the claim is made by the code that actually called the model. The model
+    # does not get to say this about itself: whatever it puts in the field is
+    # replaced.
+    return spec.model_copy(update={"drafted_by": "assistant"})
 
 
 def spec_from_payload(payload: dict[str, Any]) -> ModuleSpec:

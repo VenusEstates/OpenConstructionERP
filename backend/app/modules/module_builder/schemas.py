@@ -30,6 +30,14 @@ class PreviewFile(BaseModel):
     content: str
 
 
+class PreviewRequest(BaseModel):
+    """Ask what a spec would generate. Changes nothing on the server."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    spec: ModuleSpec
+
+
 class PreviewResponse(BaseModel):
     """Everything that would land on disk, before any of it does."""
 
@@ -39,12 +47,26 @@ class PreviewResponse(BaseModel):
     # Shown in the review step, so the URL is known before install rather than
     # discovered afterwards.
     base_path: str
+    # Proof, for the install call that follows, that these files were rendered
+    # for this person to read. Install will not write a spec that arrives
+    # without one, which is what makes the review step a rule rather than a
+    # screen. See :mod:`app.modules.module_builder.review_token`.
+    review_token: str
 
 
 class InstallRequest(BaseModel):
+    """Install a spec that has been previewed.
+
+    Deliberately not the same body as :class:`PreviewRequest`. The two endpoints
+    used to take an identical payload, so an install carried no evidence that
+    anyone had looked at the generated code; the extra field is that evidence,
+    and keeping the types apart is what stops them drifting back together.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     spec: ModuleSpec
+    review_token: str
 
 
 class InstalledModuleRead(BaseModel):

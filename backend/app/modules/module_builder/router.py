@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.dependencies import CurrentUserId, RequirePermission, SessionDep
-from app.modules.module_builder import service
+from app.modules.module_builder import review_token, service
 from app.modules.module_builder.schemas import (
     DraftRequest,
     DraftResponse,
@@ -24,6 +24,7 @@ from app.modules.module_builder.schemas import (
     InstalledModuleRead,
     InstallRequest,
     PreviewFile,
+    PreviewRequest,
     PreviewResponse,
     RuleKindInfo,
     UninstallResponse,
@@ -145,12 +146,16 @@ async def draft(
         spec = await service.draft_spec(db, user_id, payload.description)
     except service.DraftRefused as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.reason) from exc
-    return DraftResponse(spec=spec, source="assistant")
+    # Read off the spec rather than asserted again here: the envelope and the
+    # artefact were two independent statements of the same fact, and only the
+    # one on the spec survives to disk.
+    return DraftResponse(spec=spec, source=spec.drafted_by)
 
 
 @router.post("/preview", response_model=PreviewResponse, summary="See the module before it is written")
 async def preview(
-    payload: InstallRequest,
+    payload: PreviewRequest,
+    current_user_id: CurrentUserId,
     _perm: None = Depends(RequirePermission("module_builder.draft")),
 ) -> PreviewResponse:
     """Render every file the module would consist of, without writing any.
@@ -158,6 +163,9 @@ async def preview(
     The spec has already been validated by the time it arrives here: it is a
     typed body, so a description that cannot be built is refused by the request
     model rather than by the generator.
+
+    The response carries a review token for these exact files. Install requires
+    it, so the only way to write a module is to have asked to see it first.
     """
     files = [PreviewFile(**f) for f in service.preview(payload.spec)]
     return PreviewResponse(
@@ -165,6 +173,7 @@ async def preview(
         files=files,
         total_lines=sum(f.lines for f in files),
         base_path=payload.spec.url_prefix,
+        review_token=review_token.issue(payload.spec, current_user_id),
     )
 
 
@@ -172,13 +181,23 @@ async def preview(
 async def install(
     payload: InstallRequest,
     request: Request,
+    current_user_id: CurrentUserId,
     _perm: None = Depends(RequirePermission("module_builder.install")),
 ) -> InstalledModuleRead:
     """Write the module and load it into the running server.
 
     Either the module is installed and serving when this returns, or nothing
     was left behind. There is no state in between for the user to clean up.
+
+    Refuses a spec that does not arrive with the review token ``/preview``
+    issued for it. Writing Python into a running server is allowed because a
+    person reads it first, so the server checks that rather than trusting the
+    wizard to have shown it.
     """
+    try:
+        review_token.verify(payload.review_token, payload.spec, current_user_id)
+    except review_token.ReviewTokenInvalid as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     try:
         result = await service.install(payload.spec, request.app)
     except service.InstallRefused as exc:

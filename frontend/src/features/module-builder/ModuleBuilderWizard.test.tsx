@@ -78,6 +78,8 @@ const DRAFTED: ModuleSpec = {
   icon: 'Boxes',
   version: '0.1.0',
   author: '',
+  // This fixture is what /draft returns, so it carries the mark the wizard renders.
+  drafted_by: 'assistant',
   entity: {
     name: 'pour',
     display_name: 'Pour',
@@ -102,6 +104,7 @@ const PREVIEW: PreviewResponse = {
   ],
   total_lines: 171,
   base_path: '/api/v1/pour-register',
+  review_token: 'issued-for-this-preview',
 };
 
 const INSTALLED: InstalledModule = {
@@ -219,6 +222,17 @@ describe('the fields step', () => {
     expect(draft).toHaveBeenCalledWith('A register of every concrete pour on the job.');
     expect(screen.getByTestId('module-builder-field-label-0')).toHaveProperty('value', 'Reference');
     expect(screen.getByTestId('module-builder-field-label-1')).toHaveProperty('value', 'Volume');
+  });
+
+  it('marks a drafted specification and leaves a hand-built one unmarked', async () => {
+    const user = userEvent.setup();
+    renderWizard();
+    // Before anybody drafts, the spec is the user's own and there is nothing
+    // to say about where it came from.
+    await screen.findByTestId('module-builder-name');
+    expect(screen.queryByTestId('module-builder-ai-mark')).toBeNull();
+    await draftAndAdvance(user);
+    expect(screen.getByTestId('module-builder-ai-mark')).toBeTruthy();
   });
 
   it('offers exactly the field types the server said it may', async () => {
@@ -357,6 +371,9 @@ describe('the review step', () => {
 
     await screen.findByTestId('module-builder-done');
     expect(install).toHaveBeenCalledTimes(1);
+    // What gets written is the spec the review step rendered, carried with the
+    // token that proves it was rendered, rather than whatever the form holds.
+    expect(install).toHaveBeenCalledWith(PREVIEW.spec, 'issued-for-this-preview');
     expect(screen.getByText(/Installed and serving/)).toBeTruthy();
   });
 

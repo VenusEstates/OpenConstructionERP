@@ -157,10 +157,16 @@ export function ModuleBuilderWizard({ open, onClose, onInstalled }: ModuleBuilde
   };
 
   const handleInstall = async () => {
+    // Install what was reviewed, not what the form holds now: the token is
+    // bound to the previewed spec, so sending anything else is refused by the
+    // server rather than quietly writing code nobody read. Install is only
+    // reachable from the review step, so a missing preview is a bug, not a
+    // state a user can reach.
+    if (!preview) return;
     setInstalling(true);
     setRefusal(null);
     try {
-      const result = await installModule(normaliseSpec(spec));
+      const result = await installModule(preview.spec, preview.review_token);
       setInstalled(result);
       setStep('done');
       addToast({
@@ -219,6 +225,25 @@ export function ModuleBuilderWizard({ open, onClose, onInstalled }: ModuleBuilde
     >
       <div className="space-y-5" data-testid="module-builder-wizard">
         {step !== 'done' && <StepBar current={step} onJump={setStep} />}
+
+        {/* Marks the specification itself rather than the wizard, so it sits
+            beside StepBar and covers record, rules and review in one place.
+            A spec the user typed by hand carries drafted_by 'wizard' and shows
+            nothing, which is why there is no "not AI" counterpart here: on this
+            screen the by-hand path is the unremarkable one. Editing a drafted
+            spec does not clear it, because a model still wrote the first
+            version. */}
+        {step !== 'done' && spec.drafted_by === 'assistant' && (
+          <p className="flex flex-wrap items-center gap-1.5" data-testid="module-builder-ai-mark">
+            <span className="inline-flex items-center gap-1 rounded-full bg-oe-blue/10 px-2 py-0.5 text-xs font-medium text-oe-blue-text">
+              <Sparkles className="h-3 w-3" />
+              {t('module_builder.spec_ai_drafted')}
+            </span>
+            <span className="text-xs text-content-secondary">
+              {t('module_builder.spec_ai_drafted_hint')}
+            </span>
+          </p>
+        )}
 
         {refusal && (
           <p
