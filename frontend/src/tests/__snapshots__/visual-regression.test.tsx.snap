@@ -3828,6 +3828,14 @@ exports[`Visual Regression - DashboardPage > renders loading/skeleton state 1`] 
         </div>
       </div>
       <div
+        class="h-full [&>*]:h-full lg:col-span-2"
+      >
+        <div
+          aria-hidden="true"
+          class="h-full min-h-[8rem] w-full animate-pulse rounded-2xl border border-border-subtle bg-surface-muted/40"
+        />
+      </div>
+      <div
         class="h-full [&>*]:h-full lg:col-span-6"
       />
       <div
