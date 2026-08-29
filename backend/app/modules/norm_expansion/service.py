@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +32,12 @@ from app.modules.norm_expansion.schemas import (
     NormMaterialCreate,
     NormUpdate,
 )
+
+if TYPE_CHECKING:
+    # Type-only: the assemblies module is imported inside the function bodies
+    # that use it, so the runtime import graph is unchanged. The annotation is a
+    # string (``from __future__ import annotations``), so this never executes.
+    from app.modules.assemblies.models import Assembly
 
 
 class WorkKeyExistsError(ValueError):
@@ -310,6 +316,15 @@ async def _resolve_hourly_rate(
     the result carries ``None`` and the caller flags the line unpriced, so the
     assembly total is visibly incomplete rather than quietly missing a cost line.
 
+    Only a POSITIVE number is a rate. Zero and below are refused from either
+    source and reported as unpriced, because a non-positive number that reaches
+    the pricing is not a cheap rate, it is a missing one wearing a price: zero
+    prices the hours at nothing with full confidence while the assembly still
+    calls its total complete, and a negative rate takes money off the built-up
+    unit rate. The request schema already refuses a non-positive explicit rate
+    at the HTTP door (``BuildAssemblyRequest.labor_rate``); this is the same
+    rule applied to the template door and to direct callers of the service.
+
     Args:
         session: Active async DB session.
         explicit_rate: A rate per hour supplied directly on the request.
@@ -324,7 +339,14 @@ async def _resolve_hourly_rate(
     from app.modules.norm_expansion.price_math import EXPLICIT_RATE, LABOR_RATE_TEMPLATE, UNPRICED
 
     if explicit_rate is not None:
-        return _RateResolution(rate=explicit_rate, currency="", source=EXPLICIT_RATE)
+        if explicit_rate > 0:
+            return _RateResolution(rate=explicit_rate, currency="", source=EXPLICIT_RATE)
+        return _RateResolution(
+            rate=None,
+            currency="",
+            source=UNPRICED,
+            note=f"{kind} rate is not a positive number: {explicit_rate}",
+        )
     if template_id is None:
         return _RateResolution(
             rate=None,
@@ -344,6 +366,17 @@ async def _resolve_hourly_rate(
         template.base_wage,
         [rate_math.OnCost(label=c.label, kind=c.kind, value=c.value) for c in template.components],
     )
+    if rate <= 0:
+        # A template's base wage is positive on create, but an on-cost
+        # component's value carries no bound, so a -100 pct component cancels
+        # the wage exactly and a larger negative one inverts it. Neither result
+        # is a rate this build-up can use.
+        return _RateResolution(
+            rate=None,
+            currency="",
+            source=UNPRICED,
+            note=f"{kind} rate template builds up to a non-positive rate: {template.name or template_id}",
+        )
     return _RateResolution(
         rate=rate,
         currency=(template.currency or ""),
@@ -436,7 +469,7 @@ async def build_assembly_from_norm(
     region: str | None = None,
     currency: str | None = None,
     apply_waste: bool = True,
-) -> object:
+) -> Assembly:
     """Build and persist a priced Assembly from a production norm.
 
     Loads the norm, resolves an all-in labour rate (from ``labor_rate_template_id``
@@ -480,7 +513,8 @@ async def build_assembly_from_norm(
         session: Active async DB session.
         norm_id: The production norm to build from.
         labor_rate_template_id: Labour-rate template to price labour-hours; when
-            absent, labour is left unpriced and flagged.
+            absent - or when its on-costs build the template up to a
+            non-positive rate - labour is left unpriced and flagged.
         machine_rate_template_id: Labour-rate template used as the equipment
             rate to price machine-hours; when absent, machine time is left
             unpriced and flagged.
@@ -499,7 +533,8 @@ async def build_assembly_from_norm(
             quantities with no waste allowance (nothing is flagged unmatched).
 
     Returns:
-        The persisted :class:`Assembly` with its priced components loaded.
+        The persisted :class:`~app.modules.assemblies.models.Assembly` with its
+        priced components and recomputed ``total_rate`` loaded.
 
     Raises:
         NormNotFoundError: If ``norm_id`` does not resolve to a norm.

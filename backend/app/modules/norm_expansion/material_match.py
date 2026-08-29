@@ -18,6 +18,11 @@ in this order:
    proposal: it prices the line but is reported with its score and flagged for
    human review.
 
+Neither tier is offered a material whose name reduces to an empty comparison
+key. The exact tier would refuse it anyway, but the lexical one scores a
+punctuation-only placeholder as a full match against any description carrying
+the same punctuation, so the score floor never sees a low number to reject.
+
 The ordering is the fix, not a stricter fuzzy threshold. A threshold change only
 moves which wrong answers appear; putting an exact identity match ahead of a
 lexical one removes the class of "a different product priced this line while the
@@ -41,7 +46,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.costs.models import CostItem
@@ -83,6 +88,26 @@ _NON_ALNUM = re.compile(rf"(?:[^\w{re.escape(_DECIMAL_MARK)}]|_)+")
 # letters are not Latin has to produce tokens, or two of the three candidate
 # passes below return early and only the byte-exact literal one is left.
 _TOKEN = re.compile(r"[^\W_]+")
+
+# The localized descriptions, rendered as text so a token pass can search them.
+# A catalogue localized into the estimator's language carries the name the norm
+# actually uses under ``descriptions['es']`` and its siblings, and
+# ``_candidate_keys`` already recognises a row by those names - but recognising
+# a row is worthless if no candidate pass ever loads it. The JSON column is
+# matched as one blob rather than key by key: a pass only has to WIDEN the set
+# of rows looked at, and the key comparison in Python still decides every match,
+# so a stray hit on a JSON key name or another language's value costs a row in
+# the window and nothing else. The column is NOT NULL, so no coalesce is needed.
+#
+# One limit, because the blob is JSON and nothing overrides the engine's
+# serializer: ``json.dumps`` escapes every non-ASCII character, so an accented
+# localized name is stored with that letter replaced by a backslash-u escape
+# and no ILIKE spelling of the word - accented or not - finds it in the blob.
+# Such a row is still reachable through any fully-ASCII sibling token of the
+# same name, which is the same accent-insensitivity gap the last-resort window
+# below already exists for. So the capability holds outright for ASCII
+# localized names and degrades to that window, never to a wrong answer.
+_LOCALIZED_TEXT = cast(CostItem.descriptions, Text)
 
 
 def normalize_material_name(text: str | None) -> str:
@@ -243,20 +268,39 @@ async def _rows_by_literal_description(session: AsyncSession, name: str) -> list
     return list(result.scalars().all())
 
 
+def _carries_token(token: str):
+    """Predicate: this row's description OR one of its localized names has the token.
+
+    Searching both is what makes the localized-name capability real rather than
+    accidental. A row described in English whose Spanish name is the one the
+    norm uses shares no token with the query, so a description-only pass cannot
+    see it, the exact tier reports no match, and the material falls through to
+    the lexical tier - which then prices it off whatever product happens to
+    score best. The right row sitting in the same table is exactly the class of
+    wrong answer this module exists to remove.
+    """
+    like = f"%{token}%"
+    return or_(CostItem.description.ilike(like), _LOCALIZED_TEXT.ilike(like))
+
+
 async def _rows_by_all_tokens(session: AsyncSession, tokens: list[str]) -> list[CostItem]:
-    """Rows whose description contains EVERY distinctive token of the name.
+    """Rows carrying EVERY distinctive token of the name, in name or localized name.
 
     ``AND`` rather than the lexical matcher's ``OR``: a row that carries all of
     ``lamina``, ``gypsum`` and ``blanca`` is a genuine candidate for that
     material, while a row carrying only ``gypsum`` is noise. The narrower
-    predicate is what lets this pass run without a ranking window.
+    predicate is what lets this pass run without a ranking window. Each token
+    may be carried by either the primary description or the localized ones, so a
+    row named in one language and described in another is still a candidate -
+    for an ASCII localized name outright, and for an accented one through its
+    unaccented sibling tokens (see ``_LOCALIZED_TEXT``).
     """
     if not tokens:
         return []
     stmt = (
         select(CostItem)
         .where(CostItem.is_active.is_(True))
-        .where(and_(*[CostItem.description.ilike(f"%{tok}%") for tok in tokens]))
+        .where(and_(*[_carries_token(tok) for tok in tokens]))
         .limit(_EXACT_CAP)
     )
     result = await session.execute(stmt)
@@ -269,16 +313,17 @@ async def _rows_by_any_token(session: AsyncSession, tokens: list[str]) -> list[C
     Reached only when the literal and all-token passes are empty, which happens
     when the stored description differs from the material name by an accented
     character: SQL ``ILIKE`` is not accent-insensitive, so ``'%lamina%'`` does
-    not find ``'Lámina'`` even though the two share a comparison key. The keys
-    are still compared in Python, so this pass only widens what is looked at, it
-    never loosens what counts as a match.
+    not find ``'Lámina'`` even though the two share a comparison key. Like the
+    all-token pass it reads the localized names as well as the description. The
+    keys are still compared in Python, so this pass only widens what is looked
+    at, it never loosens what counts as a match.
     """
     if not tokens:
         return []
     stmt = (
         select(CostItem)
         .where(CostItem.is_active.is_(True))
-        .where(or_(*[CostItem.description.ilike(f"%{tok}%") for tok in tokens]))
+        .where(or_(*[_carries_token(tok) for tok in tokens]))
         .order_by(CostItem.code)
         .limit(_WINDOW_CAP)
     )
@@ -353,6 +398,20 @@ async def resolve_material_cost_item(
     import uuid as _uuid
 
     from app.modules.costs.matcher import match_cwicr_items
+
+    # A name with no comparison key has nothing to match on, in EITHER tier.
+    # The exact tier refuses it on its own (an empty key equals no candidate's),
+    # but the lexical one does not: a punctuation-only placeholder like "- - -"
+    # is not whitespace, so it gets scored, and ``token_set_ratio`` calls it a
+    # full match against any description carrying a standalone hyphen - its
+    # token set is a subset of the candidate's. Measured against a single
+    # "Sand - washed" row, "- - -" and "-" both resolved at confidence 1.0 and
+    # "n/a" at 0.35, all above the caller's floor, so sand's rate landed on a
+    # nameless material and read as a confident price. The floor cannot hold
+    # these lines because the score is not low; the guard belongs here, next to
+    # the exact tier's own.
+    if not normalize_material_name(name):
+        return None
 
     exact = await find_exact_cost_item(session, name, unit=unit, region=region)
     if exact is not None:

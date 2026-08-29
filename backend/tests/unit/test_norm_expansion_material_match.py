@@ -26,11 +26,18 @@ row, and the guarantee that the lexical tier does not merely lose but never runs
 - uses the shared ``oe_test_unit`` database via ``tests._pg`` (rolled back on
 teardown).
 
-Some tests are ``xfail(strict=True)``: they pin properties the module does not
-hold today (see their reasons), so whoever fixes the module is told by a failing
-XPASS to drop the marker. Each one costs real money while it stands - a wrong
-rate on a priced line, not a cosmetic gap - so read the reason before assuming
-the marker is decoration.
+Two of these used to stand as ``xfail(strict=True)`` - a localized product name
+that no candidate pass could reach, and a nameless material the lexical tier
+priced at full confidence. Both cost real money while they stood (a wrong rate
+on a priced line, not a cosmetic gap) and both are now closed; their tests carry
+the measurement that made the case, so the reason survives the marker.
+
+One ``xfail(strict=True)`` still stands: a placeholder name that carries a
+comparison key (``'n/a'`` reduces to ``'na'``) is not held by either guard and
+is still priced off an unrelated row. Closing it needs a placeholder vocabulary
+settled across the platform's locales, not a code change here, so it is left
+measured rather than guessed at - and a failing XPASS will tell whoever settles
+it to drop the marker. Read the reason before assuming it is decoration.
 """
 
 from __future__ import annotations
@@ -489,17 +496,14 @@ async def test_a_localized_description_can_carry_the_match(session) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "All three candidate passes query CostItem.description only, so a row "
-        "is reachable by its descriptions['es'] key only when the primary "
-        "description happens to share a distinctive token with it. The "
-        "localized-name capability _candidate_keys documents therefore does "
-        "not hold in general."
-    ),
-)
 async def test_a_localized_description_matches_with_no_shared_token(session) -> None:
+    """The localized name alone reaches the row - no shared token needed.
+
+    The row before this one shares the token ``yeso`` between its primary
+    description and its Spanish one, so the description-only passes could reach
+    it by accident. Here nothing is shared: the row is reachable only because
+    the candidate passes search the localized names too.
+    """
     item = await _seed(
         session,
         code="LOC-002",
@@ -1100,29 +1104,48 @@ async def test_a_blank_material_name_is_never_priced(session, name) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("name", ["- - -", "-", "--", "---", "/,.-"])
+async def test_a_placeholder_material_name_is_never_priced(session, name) -> None:
+    """A name with no comparison key is refused by the lexical tier too.
+
+    The exact tier refuses it on its own - ``normalize_material_name('- - -')``
+    is ``""``, and an empty key equals no candidate's - but the same nameless
+    string used to be handed straight to the lexical matcher, which does not
+    refuse it: it is not whitespace, so it gets scored. ``token_set_ratio``
+    reports a full match against any description carrying a standalone hyphen,
+    because the query's token set ``{'-'}`` is a subset of the candidate's.
+    Measured against a single ``'Sand - washed'`` row at unit m3, ``'- - -'``
+    and ``'-'`` both resolved at confidence 1.0, far above the shipped 0.30
+    floor, so sand's rate landed on a nameless material at full confidence.
+    ``'--'`` and ``'---'`` scored 0.2333 and 0.225 - held by the floor rather
+    than by the design, which is why they are parametrized here alongside the
+    ones the floor let through: the guard, not the threshold, is what holds
+    them now.
+    """
+    await _seed(session, code="SND-001", description="Sand - washed", unit="m3", rate="18.00")
+
+    assert await resolve_material_cost_item(session, name, unit="m3", min_fuzzy_score=0.30) is None
+
+
+@pytest.mark.asyncio
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "A punctuation-only material name is priced off a row it has nothing in "
-        "common with. The exact tier refuses it correctly - "
-        "normalize_material_name('- - -') is '', so find_exact_cost_item returns "
-        "None - and resolve_material_cost_item then hands the same nameless "
-        "string to the lexical matcher, which does not refuse it: it is not "
-        "whitespace, so it gets scored. rapidfuzz token_set_ratio scores it "
-        "against any description carrying a standalone hyphen as if it were a "
-        "full match, because the query's token set {'-'} is a subset of the "
-        "candidate's. Measured through this resolver against a single 'Sand - "
-        "washed' row at unit m3: '- - -' resolves at confidence 1.0 and '-' at "
-        "1.0, both far above the shipped 0.30 floor "
-        "(norm_expansion/service.py:256), so the floor does not hold these "
-        "lines - sand's rate lands on a nameless material at full confidence. "
-        "('n/a' measures 0.35, also above the floor; '--' and '---' measure "
-        "0.2333 and 0.225 and are held by the floor rather than by the design.) "
-        "The fix belongs next to the exact tier's own guard: a name with no "
-        "comparison key has nothing to match on, in either tier."
+        "'n/a' is a placeholder that carries a comparison key, so neither the "
+        "keyless guard nor the exact tier holds it: normalize_material_name "
+        "reduces it to 'na', a real key that simply matches nothing. It reaches "
+        "the lexical matcher and scores 0.35 against 'Sand - washed' at unit m3 "
+        "- above the shipped 0.30 floor - so sand's rate prices a material "
+        "nobody named. Holding it needs a decision this module cannot make on "
+        "its own: raising the floor is the lever the module docstring rules out "
+        "(it only moves which wrong answers appear), and the alternative is a "
+        "vocabulary of placeholder names, which has to be settled across the "
+        "platform's locales ('n/a', 's/d', and their siblings) before it can be "
+        "written down. Left standing rather than closed with a guess, because "
+        "the line still costs real money: a wrong rate, flagged needs_review."
     ),
 )
-async def test_a_placeholder_material_name_is_never_priced(session) -> None:
+async def test_a_placeholder_that_carries_a_key_is_still_priced(session) -> None:
     await _seed(session, code="SND-001", description="Sand - washed", unit="m3", rate="18.00")
 
-    assert await resolve_material_cost_item(session, "- - -", unit="m3", min_fuzzy_score=0.30) is None
+    assert await resolve_material_cost_item(session, "n/a", unit="m3", min_fuzzy_score=0.30) is None

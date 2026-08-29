@@ -122,7 +122,7 @@ async def match_cwicr_items(
     semantic: bool = False,
     mode: str = "lexical",
     region: str | None = None,
-    source: str = "cwicr",
+    source: str | None = "cwicr",
 ) -> list[MatchResult]:
     """Return up to ``top_k`` :class:`MatchResult` rows ranked by relevance.
 

@@ -63,6 +63,20 @@ async def _seed_labor_template(s) -> LaborRateTemplate:
     return template
 
 
+async def _seed_rate_template(s, *, name: str, base_wage: str, kind: str, value: str) -> LaborRateTemplate:
+    """A template with one on-cost component, to drive its all-in rate anywhere.
+
+    ``base_wage`` is positive (the create schema requires it), but a component's
+    ``value`` carries no bound, so a percentage of -100 cancels the wage exactly
+    and a larger negative one inverts it.
+    """
+    template = LaborRateTemplate(name=name, base_wage=D(base_wage), currency="EUR")
+    template.components.append(OnCostComponent(label="Adjustment", kind=kind, value=D(value), sort_order=0))
+    s.add(template)
+    await s.flush()
+    return template
+
+
 async def _seed_cost_item(
     s,
     *,
@@ -529,6 +543,75 @@ def test_an_explicit_rate_of_zero_is_refused_by_the_request() -> None:
         BuildAssemblyRequest(labor_rate=D("0"))
     with pytest.raises(ValidationError):
         BuildAssemblyRequest(machine_rate=D("0"))
+
+
+@pytest.mark.asyncio
+async def test_a_template_that_computes_to_zero_leaves_labour_unpriced(session):
+    # The same silent zero the request refuses at the door, arriving through the
+    # template door instead. base_wage is positive on create, but an on-cost
+    # component's value is unbounded, so a -100 pct component cancels the wage
+    # and the template's all-in rate is exactly 0. Passed on as a rate it would
+    # price the hours at nothing with confidence 1 while the assembly still
+    # called its total complete - indistinguishable from a real 0-cost trade.
+    from app.modules.labor_rates import rate_math
+
+    norm = await _seed_plastering_norm(session)
+    template = await _seed_rate_template(
+        session, name="Cancelled trade", base_wage="30", kind="percentage", value="-100"
+    )
+    # Measure the premise rather than assume it.
+    assert rate_math.all_in_rate(
+        template.base_wage,
+        [rate_math.OnCost(label=c.label, kind=c.kind, value=c.value) for c in template.components],
+    ) == D("0.00")
+
+    assembly = await build_assembly_from_norm(session, norm.id, labor_rate_template_id=template.id)
+
+    labour = next(c for c in assembly.components if c.resource_type == "labor")
+    assert labour.metadata_["priced"] is False
+    assert labour.metadata_["price_source"] == "unpriced"
+    assert labour.metadata_["match_confidence"] is None
+    assert D(str(labour.unit_cost)) == D("0")
+    assert D(str(labour.total)) == D("0")
+    assert "Labour" in assembly.metadata_["unpriced"]
+    assert assembly.metadata_["total_rate_complete"] is False
+    assert assembly.metadata_["labor_rate_source"] == "unpriced"
+
+
+@pytest.mark.asyncio
+async def test_a_template_that_computes_below_zero_never_reaches_the_build(session):
+    # Worse than the zero above, and differently so. A fixed on-cost of -50 on a
+    # 30 base wage builds up to -20/h, and measured before the guard existed
+    # that number did not quietly subtract from the unit rate - it never got
+    # that far. ComponentCreate.unit_cost carries ge=0, so the build raised
+    # ValidationError at service.py's add_component, out of service code rather
+    # than request parsing, which the router does not catch: the endpoint
+    # answered 500. So the template door hid a crash, not only a wrong figure.
+    # The equipment door is the same resolver as the labour one, so it is
+    # covered here.
+    from app.modules.labor_rates import rate_math
+
+    norm = await _seed_plastering_norm(session)
+    template = await _seed_rate_template(session, name="Inverted plant", base_wage="30", kind="fixed", value="-50")
+    assert rate_math.all_in_rate(
+        template.base_wage,
+        [rate_math.OnCost(label=c.label, kind=c.kind, value=c.value) for c in template.components],
+    ) == D("-20.00")
+
+    assembly = await build_assembly_from_norm(session, norm.id, machine_rate_template_id=template.id)
+
+    machine = next(c for c in assembly.components if c.resource_type == "equipment")
+    assert machine.metadata_["priced"] is False
+    assert machine.metadata_["price_source"] == "unpriced"
+    assert D(str(machine.unit_cost)) == D("0")
+    assert D(str(machine.total)) == D("0")
+    assert assembly.metadata_["machine_rate_source"] == "unpriced"
+    assert assembly.metadata_["total_rate_complete"] is False
+    # Belt and braces rather than the assertion that was red: nothing in the
+    # build-up is negative, so an unpriced line reads as a gap and never as a
+    # discount, whatever ComponentCreate's own bound would have done.
+    assert all(D(str(c.total)) >= D("0") for c in assembly.components)
+    assert D(str(assembly.total_rate)) >= D("0")
 
 
 @pytest.mark.asyncio
