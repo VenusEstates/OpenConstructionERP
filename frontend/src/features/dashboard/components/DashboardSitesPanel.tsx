@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
 import { ProjectWeather } from '@/shared/ui/ProjectWeather/ProjectWeather';
+import { useWidgetSettingsStore } from '@/stores/useWidgetSettingsStore';
 import { resolveProjectCoords, type ProjectPin } from './DashboardProjectsMap';
 
 interface DashboardSitesPanelProps {
@@ -28,10 +29,19 @@ interface SiteRow {
  * Coordinates come from the shared `resolveProjectCoords` helper (explicit
  * lat/lng, then the geocode cache the map fills, then a region centroid),
  * so weather appears without waiting on the map's async geocoder.
+ *
+ * The forecast is opt-in and this panel honours the opt-in, the same way the
+ * project list and the project detail page do. It is not a presentation
+ * preference: each cell's forecast is a request the browser makes to a public
+ * weather service naming that site's coordinates, so rendering one for a user
+ * who never enabled the widget sends a site's location to a third party on
+ * their behalf. The cities, their counts and their links do not depend on it
+ * and stay.
  */
 export function DashboardSitesPanel({ projects }: DashboardSitesPanelProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const weatherEnabled = useWidgetSettingsStore((s) => s.projectWeatherEnabled);
 
   const groups = useMemo(() => {
     const otherLabel = t('dashboard.sites_other', { defaultValue: 'Other locations' });
@@ -93,13 +103,15 @@ export function DashboardSitesPanel({ projects }: DashboardSitesPanelProps) {
                 )}
               </span>
               {coords ? (
-                <ProjectWeather
-                  lat={coords.lat}
-                  lng={coords.lng}
-                  locale={i18n.language}
-                  variant="summary"
-                  className="pl-6"
-                />
+                weatherEnabled && (
+                  <ProjectWeather
+                    lat={coords.lat}
+                    lng={coords.lng}
+                    locale={i18n.language}
+                    variant="summary"
+                    className="pl-6"
+                  />
+                )
               ) : (
                 <span className="pl-6 text-[10px] text-content-quaternary">
                   {t('dashboard.sites_no_location', { defaultValue: 'No location set' })}

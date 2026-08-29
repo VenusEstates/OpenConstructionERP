@@ -13,6 +13,24 @@
  * weather so clicking around projects doesn't spam the API.  The hourly
  * TTL is intentional: daily aggregates don't shift significantly within
  * an hour and the average user session is shorter.
+ *
+ * When the network refuses — HTTP 429 from the shared public endpoint, no
+ * route out of the site, an answer we cannot read — the widget renders
+ * nothing at all.  A forecast is decoration: an empty card headed
+ * "15-day forecast" and footed "refreshed hourly" is worse than no card,
+ * because it names data it does not have.  The refusal is cached under a
+ * far shorter TTL than a forecast so a dashboard of sites stops asking a
+ * host that just said no, instead of repeating the burst on every load.
+ *
+ * Note for anyone auditing outbound traffic: this call is made by the
+ * browser, directly, and no operator switch stops it.  `OE_GEOCODER_DISABLED`
+ * gates the address geocoder, which is server-side (see
+ * `backend/app/modules/geo_hub/geocoder.py`); it is read from `os.environ`
+ * and never reaches this component.  The daily-diary module already calls
+ * the same Open-Meteo host from the server
+ * (`backend/app/modules/daily_diary/weather.py`), which is where this one
+ * belongs too — same move `UpdateChecker` made when it stopped calling
+ * api.github.com from the browser.
  */
 import { useEffect, useState } from 'react';
 import {
@@ -55,10 +73,15 @@ interface DailyForecast {
 interface ForecastCache {
   at: number;
   days: DailyForecast[];
+  /** The last attempt for these coordinates was refused.  Held under
+   *  `FAILURE_TTL_MS`, not `CACHE_TTL_MS`: it describes the network right
+   *  now, not the weather. */
+  refused?: boolean;
 }
 
 const CACHE_PREFIX = 'oe.weather.';
 const CACHE_TTL_MS = 1000 * 60 * 60; // 1h
+const FAILURE_TTL_MS = 1000 * 60 * 10; // 10min
 
 function cacheKey(lat: number, lng: number): string {
   // Round to 2 decimals — 1km precision is plenty for a building site and
@@ -66,12 +89,16 @@ function cacheKey(lat: number, lng: number): string {
   return `${CACHE_PREFIX}${lat.toFixed(2)}_${lng.toFixed(2)}`;
 }
 
-function readCache(lat: number, lng: number): DailyForecast[] | null {
+/** The days on a hit, `'refused'` when the last attempt for these
+ *  coordinates was recently turned down, `null` when we know nothing. */
+function readCache(lat: number, lng: number): DailyForecast[] | 'refused' | null {
   try {
     const raw = localStorage.getItem(cacheKey(lat, lng));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ForecastCache;
-    if (Date.now() - parsed.at > CACHE_TTL_MS) return null;
+    const age = Date.now() - parsed.at;
+    if (parsed.refused) return age > FAILURE_TTL_MS ? null : 'refused';
+    if (age > CACHE_TTL_MS) return null;
     return parsed.days;
   } catch {
     return null;
@@ -87,12 +114,25 @@ function writeCache(lat: number, lng: number, days: DailyForecast[]) {
   }
 }
 
+/** Remember that this location was refused, so the next render doesn't ask
+ *  again inside the back-off window.  Only ever overwrites a cache entry we
+ *  already decided was too stale to use. */
+function writeRefusal(lat: number, lng: number) {
+  try {
+    const entry: ForecastCache = { at: Date.now(), days: [], refused: true };
+    localStorage.setItem(cacheKey(lat, lng), JSON.stringify(entry));
+  } catch {
+    /* quota full, ignore */
+  }
+}
+
 async function fetchForecast(
   lat: number,
   lng: number,
   signal?: AbortSignal,
 ): Promise<DailyForecast[] | null> {
   const cached = readCache(lat, lng);
+  if (cached === 'refused') return null;
   if (cached) return cached;
 
   // Open-Meteo's free /v1/forecast endpoint hard-caps forecast_days at 16
@@ -110,7 +150,12 @@ async function fetchForecast(
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
       signal,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // 429 is the one that actually happens: the public endpoint is shared
+      // and a dashboard asks once per site on every load.
+      writeRefusal(lat, lng);
+      return null;
+    }
     const body = (await res.json()) as {
       daily?: {
         time: string[];
@@ -121,7 +166,10 @@ async function fetchForecast(
       };
     };
     const d = body.daily;
-    if (!d || !d.time?.length) return null;
+    if (!d || !d.time?.length) {
+      writeRefusal(lat, lng);
+      return null;
+    }
     const days: DailyForecast[] = d.time.map((date, i) => ({
       date,
       weatherCode: d.weather_code[i] ?? 0,
@@ -132,6 +180,9 @@ async function fetchForecast(
     writeCache(lat, lng, days);
     return days;
   } catch {
+    // An abort is a navigation, not a refusal - caching it would blank the
+    // widget for a location nothing is actually wrong with.
+    if (!signal?.aborted) writeRefusal(lat, lng);
     return null;
   }
 }
@@ -186,17 +237,27 @@ export function ProjectWeather({
   const { t, i18n } = useTranslation();
   const [days, setDays] = useState<DailyForecast[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refused, setRefused] = useState(false);
 
   useEffect(() => {
     if (typeof lat !== 'number' || typeof lng !== 'number') {
       setDays(null);
+      setRefused(false);
       return;
     }
     const controller = new AbortController();
+    // Clear as each location starts, not only when one answers: otherwise a
+    // widget refused for one project stays blank through the whole loading
+    // window of the next, which reads as a widget that has given up.
+    setRefused(false);
     setLoading(true);
     fetchForecast(lat, lng, controller.signal)
       .then((d) => {
-        if (!controller.signal.aborted) setDays(d);
+        // An aborted effect has been superseded; its answer says nothing
+        // about the location now on screen.
+        if (controller.signal.aborted) return;
+        setDays(d);
+        setRefused(d === null);
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -205,6 +266,10 @@ export function ProjectWeather({
   }, [lat, lng]);
 
   if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  // Decoration that the network turned down renders as nothing, in either
+  // variant. No error copy, no empty card - the page reads as if the widget
+  // had never been asked for.
+  if (refused) return null;
 
   const resolvedLocale = locale || i18n.language || 'en';
   const dayFmt = new Intl.DateTimeFormat(resolvedLocale, { weekday: 'short' });
