@@ -1,0 +1,224 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+/**
+ * The sibling gate, localesNameTheBillTheWayTheTradeDoes, holds six locales to
+ * a name chosen for them: German writes LV, French DQE, Italian computo
+ * metrico. That gate cannot grow past those six without someone deciding what
+ * the rest should say, and deciding that is inventing terminology rather than
+ * restoring it.
+ *
+ * This gate asks a question that needs no such decision. Every locale already
+ * answers "what is this object called" in its own file: the label the module
+ * catalogue puts in the navigation. So the question is not whether the locale
+ * uses the right name, it is whether the locale uses the SAME name twice. A
+ * file that calls the object one thing in the navigation and a second, equally
+ * plausible thing two screens later has the disease the sibling gate was
+ * written for, and it has it in a language nobody here can adjudicate.
+ *
+ * It is a floor, not a standard. The twenty one divergences that predate it,
+ * across eighteen locales and three keys, are recorded below with the locale
+ * named, and the baseline may only shrink: a new one goes red, and so does a
+ * fixed one, because a fixed locale has to leave the list. Recording a locale here does not say its catalogue label is
+ * the right name. In several it is the other way round - Czech výkaz výměr and
+ * Dutch hoeveelhedenstaat are the settled trade terms while the catalogue
+ * label reads closer to "budget" - and which of the two moves is a question
+ * for a native speaker, not for a test.
+ *
+ * What the containment rule cannot see: where the catalogue label is a generic
+ * word for money on a page - Raming, Rozpočet, Kosztorys, Presupuesto - any
+ * occurrence of that word anywhere in the value satisfies the check, including
+ * in a sentence that also names the bill something else. Those are exactly the
+ * locales whose label is most likely to be the wrong half of the pair. This
+ * gate locks the floor where it found it; it does not prove that the locales
+ * outside the baseline name the object once.
+ */
+
+const LOCALES_DIR = ['src/app/locales', 'frontend/src/app/locales']
+  .map((p) => resolve(process.cwd(), p))
+  .find(existsSync);
+
+/** `  "key": "value",` - the shape every line in a locale file has. */
+const PAIR = /^\s*"((?:[^"\\]|\\.)*)"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,?\s*$/;
+
+/** The locale's own answer to what the object is called. */
+const CATALOGUE = 'modules.catalog.boq';
+
+/**
+ * Keys that name the object rather than refer to it. Deliberately short.
+ * Most keys mentioning the bill in English do not name it in translation -
+ * they say "it", or drop the noun - so containment there measures sentence
+ * shape and not naming: of the 880 keys whose English value says BOQ or bill
+ * of quantities, containment would call 23679 of 35977 translated values a
+ * divergence. Measured, not estimated. These three are the keys where the
+ * locale names the object instead of referring to it.
+ */
+const NAMING_KEYS = ['nav.boq', 'boq.title', 'validation.subtitle'] as const;
+
+/**
+ * The short form a locale uses where the full catalogue label would be
+ * clumsy. Only the six locales the sibling gate already holds to a reviewed
+ * name are here, and this is a division of labour rather than a loophole:
+ * those six are checked far more tightly next door, including for rival names
+ * and for the grammar the name governs. Each pattern is pinned below to still
+ * match its own catalogue label, so a locale that renames the object in the
+ * navigation cannot leave a stale short form behind.
+ */
+const SHORT_FORMS: Record<string, RegExp> = {
+  de: /\bLV\b|LV-|Leistungsverzeichnis/,
+  fr: /\bDQE\b|devis quantitatifs?/i,
+  it: /comput[oi] metric[io]/i,
+  zh: /工程量清单/,
+  ja: /内訳書/,
+  ko: /내역서/,
+};
+
+/**
+ * Locales already naming the object twice when this gate landed, per key,
+ * with what the divergent value calls it. Shrinks only, and every line needs
+ * the second name written out: a divergence nobody described is indefensible
+ * to remove later, because the next reader cannot tell whether it was fixed
+ * or merely reworded.
+ *
+ * Arabic, Persian and Urdu carry their second name in a right-to-left script,
+ * and pasting it into a comment reorders the whole line in most editors, so
+ * those three are described in English instead of quoted.
+ */
+const BASELINE: Record<(typeof NAMING_KEYS)[number], Record<string, string>> = {
+  'nav.boq': {
+    // The navigation itself disagrees with the catalogue two entries away.
+    ky: 'Смета ведомосу against the catalogue Иш көлөмдөрүнүн тизмеси',
+  },
+  'boq.title': {
+    // Not a second name for the same object: this one says list of materials.
+    ky: 'Материалдардын тизмеси, which is the bill of materials',
+    ro: 'Antemăsurătoare, the settled Romanian trade term',
+    th: 'ปริมาณงาน, the catalogue label with its first word dropped',
+  },
+  'validation.subtitle': {
+    ar: 'a statement of quantities where the catalogue says a table of quantities',
+    bn: 'পরিমাণ তালিকা where the catalogue transliterates the English name',
+    cs: 'výkaz výměr, the settled Czech trade term, against the catalogue Rozpočet',
+    da: 'mængdefortegnelse against the catalogue Tilbudsliste',
+    el: 'Επιμέτρηση Ποσοτήτων against the catalogue Πίνακας Ποσοτήτων',
+    fa: 'a progress-statement word in front of quantities, a third name in this file',
+    hi: 'बिल ऑफ क्वांटिटीज़, the English name transliterated',
+    id: 'daftar volume pekerjaan against the catalogue Daftar Kuantitas',
+    kk: 'Жұмыс көлемдерінің тізілімі against the catalogue Көлемдер Ведомостісі',
+    ky: 'көлөм ведомосу, a third name in this file',
+    mn: 'Тоо хэмжээний жагсаалт against the catalogue Ажил материалын жагсаалт',
+    nl: 'hoeveelhedenstaat, the settled Dutch trade term, against the catalogue Raming',
+    no: 'mengdebeskrivelse against the catalogue Mengdefortegnelse',
+    pl: 'przedmiar robót, the settled Polish trade term, against the catalogue Kosztorys',
+    pt: 'mapa de quantidades against the catalogue Planilha Orçamentária',
+    th: 'บัญชีแสดงปริมาณงาน against the catalogue บัญชีปริมาณงาน',
+    ur: 'the English name, left in Latin script inside the sentence',
+  },
+};
+
+function read(code: string): Map<string, string> {
+  const values = new Map<string, string>();
+  for (const line of readFileSync(resolve(LOCALES_DIR as string, `${code}.ts`), 'utf8').split(/\r?\n/)) {
+    const pair = PAIR.exec(line);
+    if (pair) values.set(pair[1], pair[2]);
+  }
+  return values;
+}
+
+/**
+ * Every locale but the source. en is what the others are translated from, so
+ * it cannot disagree with itself; en-US stays in, because it is a 1580 key
+ * overlay that renames this very object to Bid Schedule and is exactly the
+ * kind of file where half a rename would survive unnoticed.
+ */
+const CODES = readdirSync(LOCALES_DIR as string)
+  .filter((file) => file.endsWith('.ts'))
+  .map((file) => file.replace(/\.ts$/, ''))
+  .filter((code) => code !== 'en')
+  .sort();
+
+const VALUES = new Map(CODES.map((code) => [code, read(code)] as const));
+
+/** A bracket holding only the loan word glosses the name, it is not the name. */
+const LOAN_GLOSS = /\s*[（(]\s*[Bb][Oo][Qq]s?\s*[)）]\s*/g;
+
+const normalise = (value: string) =>
+  value.normalize('NFC').replace(LOAN_GLOSS, ' ').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+
+function namesTheBill(code: string, value: string, catalogue: string): boolean {
+  const short = SHORT_FORMS[code];
+  if (short) return short.test(value);
+  return normalise(value).includes(normalise(catalogue));
+}
+
+function divergent(key: string): string[] {
+  const found: string[] = [];
+  for (const [code, values] of VALUES) {
+    const catalogue = values.get(CATALOGUE);
+    const value = values.get(key);
+    if (!catalogue || !value) continue;
+    if (!namesTheBill(code, value, catalogue)) found.push(code);
+  }
+  return found.sort();
+}
+
+const carrying = (key: string) => CODES.filter((code) => VALUES.get(code)?.has(key)).length;
+
+describe('every locale names the bill one way inside its own file', () => {
+  it('reads a population big enough for the answer to mean anything', () => {
+    // A gate that quietly narrows its question passes on every tree. The
+    // numbers are floors, not counts, because locales get added.
+    expect(CODES.length).toBeGreaterThanOrEqual(40);
+    expect(NAMING_KEYS.length).toBeGreaterThanOrEqual(3);
+    const thin = NAMING_KEYS.filter((key) => carrying(key) < 30).map(
+      (key) => `${key}: only ${carrying(key)} of ${CODES.length} locales carry it`,
+    );
+    expect(thin).toEqual([]);
+  });
+
+  it('has a catalogue label to compare against in every locale', () => {
+    // The whole gate hangs off this key. A locale missing it is not consistent,
+    // it is unmeasured, and divergent() would skip it in silence.
+    expect(CODES.filter((code) => !VALUES.get(code)?.get(CATALOGUE))).toEqual([]);
+  });
+
+  for (const key of NAMING_KEYS) {
+    it(`${key} calls the bill what the module catalogue calls it`, () => {
+      // Exact set, not subset. A locale that gets fixed has to leave the
+      // baseline, or the list stops describing the tree and starts excusing it.
+      expect(divergent(key)).toEqual(Object.keys(BASELINE[key]).sort());
+    });
+  }
+
+  it('keeps every short form pinned to the label it is short for', () => {
+    const stale = Object.entries(SHORT_FORMS)
+      .filter(([code, pattern]) => {
+        const catalogue = VALUES.get(code)?.get(CATALOGUE);
+        return !catalogue || !pattern.test(catalogue);
+      })
+      .map(([code]) => code);
+    expect(stale).toEqual([]);
+  });
+
+  it('sees a locale that swaps in a second name of its own', () => {
+    // The Dutch shape, which is what eleven of the eighteen look like.
+    expect(namesTheBill('nl', 'Controleer een hoeveelhedenstaat tegen de regelsets.', 'Raming')).toBe(false);
+    expect(namesTheBill('nl', 'Controleer een raming tegen de regelsets.', 'Raming')).toBe(true);
+  });
+
+  it('sees a locale that drops its own name for the loan word', () => {
+    expect(namesTheBill('pl', 'Sprawdź BOQ względem zestawów reguł.', 'Kosztorys')).toBe(false);
+    // A bracket holding only the loan word is a gloss on the name, and the
+    // name is still there in front of it.
+    expect(namesTheBill('pl', 'Sprawdź kosztorys (BOQ) względem zestawów reguł.', 'Kosztorys')).toBe(true);
+  });
+
+  it('lets the six locales the sibling gate holds use their short form', () => {
+    expect(namesTheBill('de', 'Projekt und LV auswählen', 'Leistungsverzeichnis')).toBe(true);
+    expect(namesTheBill('it', 'Controlla un computo metrico', 'Computo metrico estimativo')).toBe(true);
+    // And it is a short form, not a free pass: a rival name still fails.
+    expect(namesTheBill('de', 'Projekt und Kostengruppe auswählen', 'Leistungsverzeichnis')).toBe(false);
+  });
+});
