@@ -1,6 +1,6 @@
 # Repo hygiene gate.
 #
-# Guards: 58. They run on every push and pull request, grouped into three
+# Guards: 59. They run on every push and pull request, grouped into three
 # jobs. A guard is a named step that is not a tooling install, and that rule is
 # not a matter of taste: it is the one that reproduces both counts this header
 # carried when it was written on 2026-08-24 - twenty-one guards, over jobs of
@@ -99,6 +99,36 @@ jobs:
       - name: Check the tree for internal-only files
         if: ${{ !cancelled() }}
         run: python scripts/check_repo_hygiene.py
+
+      # Both kinds of file are already parsed on the way through CI, and stating
+      # that precisely matters, because the first version of this finding said
+      # nothing checked them at all and that was wrong. Workflow YAML is loaded
+      # by five unit tests: test_ci_lane_coverage.py,
+      # test_workflow_expressions_are_legal_where_they_stand.py,
+      # test_release_signing_trigger.py, test_desktop_windows_packaging.py and
+      # test_pre_commit_declares_what_the_lanes_run.py, the last of which also
+      # loads .pre-commit-config.yaml. On the JSON side 25 scripts and 80 files
+      # under backend/tests call a JSON loader over the trees they own.
+      #
+      # Every one of those readers is addressed at a named file or at a single
+      # directory glob, so the coverage is per file and not per category. A
+      # malformed file written where no reader happens to look is parsed by
+      # nothing and turns nothing red. This step closes that, and only that.
+      #
+      # For YAML the failure it prevents is the quiet kind. GitHub does not run
+      # a workflow whose YAML will not parse, and reports nothing when it
+      # declines: no job, no log, no annotation. The lane goes silent rather
+      # than red, and silence from a lane we read as authoritative is
+      # indistinguishable from consent.
+      #
+      # PyYAML is installed in the step because the guards above this line are
+      # stdlib only on purpose and nothing else in this workflow imports yaml.
+      # The constraint is the backend's own, from backend/pyproject.toml.
+      - name: Check every tracked YAML and JSON file parses
+        if: ${{ !cancelled() }}
+        run: |
+          python -m pip install --quiet "pyyaml>=6.0"
+          python scripts/check_config_file_syntax.py
 
       # The version literals are a repo-level invariant, not a backend concern, so
       # they belong beside the other whole-tree guards rather than in a test lane.

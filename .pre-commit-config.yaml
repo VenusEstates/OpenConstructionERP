@@ -184,6 +184,23 @@ repos:
         language: system
         pass_filenames: false
 
+      # Parse every tracked YAML and JSON file, as a category. check-yaml and
+      # check-json above are the per-file version of this and are scoped to
+      # whatever is staged; this one takes the whole tracked set from git, so a
+      # malformed file in a directory no reader is addressed at still fails.
+      # That is the actual gap: both kinds are already parsed in plenty of
+      # places, five unit tests over the workflows and 25 scripts over the JSON
+      # trees they own, but every one of those is addressed at a named file or
+      # one directory glob. The four tsconfig files are skipped because they
+      # are JSONC and tsc reads them in npm run typecheck:e2e, and a fifth one
+      # appearing fails until somebody decides about it.
+      - id: config-file-syntax
+        name: Parse every tracked YAML and JSON file
+        entry: python scripts/check_config_file_syntax.py
+        language: system
+        pass_filenames: false
+        files: \.(ya?ml|json)$
+
       # Forbid recording an AI assistant as a commit contributor. Runs at
       # commit-msg time on the message being written and rejects a
       # "Co-authored-by:" trailer or "Generated with ..." footer that names an
