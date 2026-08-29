@@ -1,7 +1,17 @@
 # Repo hygiene gate.
 #
-# Twenty-one guards run on every push and pull request, grouped into three
-# jobs. They were nineteen separate jobs until 2026-08-24, eighteen of which
+# Guards: 55. They run on every push and pull request, grouped into three
+# jobs. A guard is a named step that is not a tooling install, and that rule is
+# not a matter of taste: it is the one that reproduces both counts this header
+# carried when it was written on 2026-08-24 - twenty-one guards, over jobs of
+# ten, ten and one steps, with no install steps in the file yet. The count
+# above is no longer maintained by hand. scripts/check_workflow_guard_count.py
+# recounts it on every run of this workflow and fails when the line and the
+# file drift apart; it said twenty-one for five days while the file grew past
+# fifty, and a number nobody recounts does not merely go stale, it dates the
+# file falsely.
+#
+# They were nineteen separate jobs until 2026-08-24, eighteen of which
 # ran exactly one step, each doing its own checkout of an 8764-file tree and
 # its own Python install to run a script that finishes in seconds. That is
 # nineteen runner slots for about two minutes of actual work, competing for
@@ -641,6 +651,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_desktop_link_acl.py
 
+      # The header of this file counts its own guards, and for five days the
+      # count was wrong by more than half. Nothing was broken by it and that is
+      # the point: a stale number in a comment produces no failure, no diff and
+      # no complaint, it just quietly tells every later reader that the gate is
+      # a third of its real size. This step is the reader the number never had.
+      # It self-tests before it counts, so a run that passes has also just
+      # shown it can refuse.
+      - name: Check this file's header still counts its own guards correctly
+        if: ${{ !cancelled() }}
+        run: python scripts/check_workflow_guard_count.py
+
   i18n:
     name: Locale and i18n guards
     runs-on: ubuntu-latest
@@ -913,7 +934,10 @@ jobs:
   # needs fetch-depth: 0. Folding it into either job above would hand it the
   # default shallow checkout, where it would scan the single commit it can see,
   # find nothing, and pass - a green tick for a guard that had stopped running.
-  # A one-step job next to two ten-step jobs looks like an oversight; it is not.
+  # A one-step job next to the two large ones looks like an oversight; it is not.
+  # (This said "two ten-step jobs" until 2026-08-29, which was true the day it
+  # was written and had not been true for a while. No number here now, because
+  # nothing recounts this one.)
   commit-history:
     name: Commit history guards
     runs-on: ubuntu-latest
