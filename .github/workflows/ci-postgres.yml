@@ -1004,17 +1004,25 @@ jobs:
           tests/unit/teams/test_teams_access_control.py
           tests/modules/requirements/test_matrix_and_traceability.py
           -q -p no:cacheprovider
-      # Named one file at a time because nothing else runs them. Measured
-      # 2026-08-29: tests/modules/property_dev holds 254 tests, the marker and
-      # the -k chain in ci.yml between them select 59, and 195 are run by no
-      # lane at all. What does get selected is selected by spelling rather than
-      # by subject. test_admin_tenant_boundary.py is covered 8 of 8 because its
-      # filename contains "tenant", while test_currency_mixing.py beside it is
-      # covered 0 of 16. The three files below carry the guards for the
-      # property_dev.owner_scoped_delete split and none of them wins that
-      # lottery, so without this step the newest ownership guards in the module
-      # are green only on the machine that wrote them. This does not close the
-      # remaining 192; it stops these three from being decorative.
+      # Named one file at a time because no push gate runs them. Measured
+      # 2026-08-29: tests/modules/property_dev holds 254 tests, and the two
+      # selectors that reach tests/modules on a push, the tenant_isolation
+      # marker and the frozen -k chain in ci.yml, select 59 of them between
+      # them. What they select is selected by spelling rather than by subject.
+      # test_admin_tenant_boundary.py is covered 8 of 8 because its filename
+      # contains "tenant", which is a chain term, while test_currency_mixing.py
+      # beside it is covered 0 of 16. The three files below carry the guards for
+      # the property_dev.owner_scoped_delete split and none of them wins that
+      # lottery.
+      #
+      # The other 195 are not unrun. ci-full.yml collects the whole tree nightly
+      # across 32 shards, so they do execute once a day. What they do not have
+      # is a signal anyone can act on: that nightly has come back completed and
+      # red on eight consecutive nights (checked 2026-08-30, latest run 23 of 32
+      # shards green, 9 shards plus the macOS and Windows jobs red). A lane that
+      # is red every night reports a new breakage exactly as loudly as it
+      # reports the eight old ones, which is not at all. Naming these three here
+      # puts them where a push can turn them red on their own.
       - name: Run property_dev delete-permission guards
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: >-
