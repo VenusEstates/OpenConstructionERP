@@ -268,6 +268,37 @@ def test_lock_goes_red_when_a_baseline_module_vanishes(tmp_path: Path) -> None:
     assert "no_such_module" in result.stdout and "stopped watching" in result.stdout, result.stdout
 
 
+def test_a_missing_baseline_is_a_verdict_and_not_a_traceback() -> None:
+    """The script and its baseline ship in one commit; this is what happens if they do not.
+
+    A gate whose data file is absent does not fail in a defined way unless
+    somebody defines one - it fails however the loader happens to fail, and a
+    traceback and a red verdict read very differently in a log. Every other
+    data-backed gate under scripts/ answers an absent file with a defined
+    outcome; this one did not until this test existed.
+
+    Asserted on stderr AND on the exit code, because "it printed something" is
+    not the same claim as "it failed".
+    """
+    result = _run_lock("--baseline", "scripts/definitely_not_here.json")
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Traceback" not in result.stderr, "the loader still picks the failure mode:" + result.stderr
+    assert "is missing" in result.stderr, result.stderr
+
+
+def test_a_corrupt_baseline_is_a_verdict_and_not_a_traceback(tmp_path: Path) -> None:
+    """Same contract for a file that exists and cannot be parsed."""
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text("{ this is not json", encoding="utf-8")
+
+    result = _run_lock("--baseline", str(baseline_path))
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Traceback" not in result.stderr, result.stderr
+    assert "not valid JSON" in result.stderr, result.stderr
+
+
 def test_lock_refuses_an_interpreter_that_cannot_parse_the_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     """Running under 3.11 made the probe report a healthy file as a SyntaxError.
 

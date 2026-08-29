@@ -394,7 +394,30 @@ def measure(app_root: Path = APP_ROOT) -> list[dict[str, object]]:
 
 
 def load_baseline(path: Path = BASELINE_PATH) -> dict[str, list[str]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    """Read the baseline, or say plainly why it could not be read.
+
+    A missing baseline used to reach the caller as a bare FileNotFoundError
+    traceback. That is still red, so it is not the worst failure available, but
+    a crash and a verdict read very differently in a log and only one of them
+    tells the reader what to do. Every other data-backed gate in scripts/
+    answers an absent file with a defined outcome; this one was the exception.
+
+    Deliberately NOT treated as an empty baseline. Empty would also be red, but
+    red for the wrong reason: it would report sixteen known and accepted
+    lookups as brand-new regressions and send someone hunting a change nobody
+    made. A gate whose reds cannot be trusted is a gate that gets switched off.
+    """
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"{path} is missing, so this lock cannot say anything about anything. It ships in "
+            "the same commit as this script; if you are seeing this, the two were separated."
+        ) from None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"{path} is not valid JSON ({exc}); regenerate with --write-baseline") from None
     if "known_unstripped" not in payload:
         raise RuntimeError(f"{path} has no 'known_unstripped' key; regenerate it with --write-baseline")
     return {module: list(names) for module, names in payload["known_unstripped"].items()}
@@ -498,7 +521,11 @@ def main() -> int:
             print(f"  {module}: {known[module]}")
         return 0
 
-    exit_code, lines = check(baseline_path=args.baseline)
+    try:
+        exit_code, lines = check(baseline_path=args.baseline)
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     print("\n".join(lines))
     return exit_code
 
