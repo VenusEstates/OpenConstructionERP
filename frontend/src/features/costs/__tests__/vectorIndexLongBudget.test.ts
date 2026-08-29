@@ -396,9 +396,15 @@ function productionFiles(): string[] {
 // neither, the screen stops and says nothing, which is worse than the
 // contradiction this fixes.
 describe('only the vector calls that own their reporting opt out of the toast', () => {
-  const EXPECTED_OPT_OUTS = 12;
+  // Was 12 until 62c64bed2 deleted fetchVectorReadiness, which was exported and
+  // called from nowhere and carried one of the two match-elements probes with
+  // it. The deletion was right and this census simply did not follow it, which
+  // is the failure mode the closing sentence below asks a reader to avoid: a
+  // number that names a population stops being true the moment the population
+  // moves, and nothing about deleting dead code makes a census recount itself.
+  const EXPECTED_OPT_OUTS = 11;
 
-  it('suppresses the global toast at exactly the twelve sites that replace it', () => {
+  it('suppresses the global toast at exactly the eleven sites that replace it', () => {
     const sites: string[] = [];
     for (const file of productionFiles()) {
       const where = relative(SRC, file).split(sep).join('/');
@@ -412,7 +418,7 @@ describe('only the vector calls that own their reporting opt out of the toast', 
       sites.length,
       `Expected ${EXPECTED_OPT_OUTS} opt-out sites, found ${sites.length}:\n  ${sites.join('\n  ')}\n` +
         'Seven vector-index POSTs, the status read the poll makes while it is ' +
-        'proving the index landed, the two match-elements readiness probes ' +
+        'proving the index landed, the one match-elements readiness probe ' +
         'whose card renders nothing on failure by design, and the two ' +
         'snapshot-restore POSTs, which answer their own abort by saying the ' +
         'restore is still running on the server. A new one belongs here only if ' +
