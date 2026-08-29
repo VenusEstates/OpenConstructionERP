@@ -15,6 +15,8 @@ Covers two correctness properties the module must hold:
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import uuid
 from types import SimpleNamespace
@@ -326,3 +328,76 @@ async def test_verify_project_access_admin_bypass() -> None:
             project_id=project_id,
             user_id=admin_id,
         )
+
+
+# ── 3. collect_project_state distinguishes cancellation from failure ──────
+
+
+@pytest.mark.asyncio
+async def test_collect_project_state_does_not_let_a_cancelled_collector_reach_the_merge() -> None:
+    """A cancelled collector must not be mistaken for one that answered.
+
+    ``collect_project_state`` fans its 14 ``_collect_*`` domain collectors
+    out through one ``asyncio.gather(..., return_exceptions=True)`` and then
+    unpacks the result tuple, substituting a domain default wherever a slot
+    holds an exception. ``asyncio.CancelledError`` has been a
+    ``BaseException`` rather than an ``Exception`` since Python 3.8, so a
+    check written as ``isinstance(x, Exception)`` does not catch it: a
+    cancelled collector's ``CancelledError`` instance would be handed to
+    ``ProjectState`` in place of the domain object every downstream reader
+    expects, and the crash would surface wherever that object's attributes
+    are first read - nowhere near the cancellation that produced it.
+
+    ``_collect_boq`` is replaced with a coroutine that raises
+    ``CancelledError`` directly, which is exactly the object
+    ``asyncio.gather`` places in the results tuple for a genuinely
+    cancelled task - the unpacking code this test exercises cannot tell the
+    two apart. Every other collector is replaced with a fast stub, and
+    ``_with_own_session`` is bypassed entirely, so the test needs no
+    database.
+    """
+    from app.modules.project_intelligence import collector
+
+    async def _cancelled(_session: Any, _project_id: str) -> Any:
+        raise asyncio.CancelledError()
+
+    async def _ok_dict(_session: Any, _project_id: str) -> dict[str, Any]:
+        return {}
+
+    def _ok_state(cls: type) -> Any:
+        async def _inner(_session: Any, _project_id: str) -> Any:
+            return cls()
+
+        return _inner
+
+    async def _fake_with_own_session(fn: Any, project_id: str) -> Any:
+        return await fn(None, project_id)
+
+    patches = [
+        patch.object(collector, "_collect_project_info", _ok_dict),
+        patch.object(collector, "_collect_boq", _cancelled),
+        patch.object(collector, "_collect_schedule", _ok_state(collector.ScheduleState)),
+        patch.object(collector, "_collect_takeoff", _ok_state(collector.TakeoffState)),
+        patch.object(collector, "_collect_validation", _ok_state(collector.ValidationState)),
+        patch.object(collector, "_collect_risk", _ok_state(collector.RiskState)),
+        patch.object(collector, "_collect_tendering", _ok_state(collector.TenderingState)),
+        patch.object(collector, "_collect_documents", _ok_state(collector.DocumentsState)),
+        patch.object(collector, "_collect_reports", _ok_state(collector.ReportsState)),
+        patch.object(collector, "_collect_cost_model", _ok_state(collector.CostModelState)),
+        patch.object(collector, "_collect_requirements", _ok_state(collector.RequirementsState)),
+        patch.object(collector, "_collect_bim", _ok_state(collector.BIMState)),
+        patch.object(collector, "_collect_tasks", _ok_state(collector.TasksState)),
+        patch.object(collector, "_collect_assemblies", _ok_state(collector.AssembliesState)),
+        patch.object(collector, "_with_own_session", _fake_with_own_session),
+    ]
+
+    with contextlib.ExitStack() as stack:
+        for p in patches:
+            stack.enter_context(p)
+        state = await collector.collect_project_state(
+            SimpleNamespace(),  # type: ignore[arg-type]
+            str(uuid.uuid4()),
+        )
+
+    assert state.boq == collector.BOQState()
+    assert not isinstance(state.boq, BaseException)

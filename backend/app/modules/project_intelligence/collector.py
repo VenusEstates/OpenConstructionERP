@@ -1287,21 +1287,30 @@ async def collect_project_state(
         return_exceptions=True,
     )
 
-    # Unpack results, replacing exceptions with defaults
-    project_info = results[0] if not isinstance(results[0], Exception) else {}
-    boq = results[1] if not isinstance(results[1], Exception) else BOQState()
-    schedule = results[2] if not isinstance(results[2], Exception) else ScheduleState()
-    takeoff = results[3] if not isinstance(results[3], Exception) else TakeoffState()
-    validation = results[4] if not isinstance(results[4], Exception) else ValidationState()
-    risk = results[5] if not isinstance(results[5], Exception) else RiskState()
-    tendering = results[6] if not isinstance(results[6], Exception) else TenderingState()
-    documents = results[7] if not isinstance(results[7], Exception) else DocumentsState()
-    reports = results[8] if not isinstance(results[8], Exception) else ReportsState()
-    cost_model = results[9] if not isinstance(results[9], Exception) else CostModelState()
-    requirements = results[10] if not isinstance(results[10], Exception) else RequirementsState()
-    bim = results[11] if not isinstance(results[11], Exception) else BIMState()
-    tasks_state = results[12] if not isinstance(results[12], Exception) else TasksState()
-    assemblies = results[13] if not isinstance(results[13], Exception) else AssembliesState()
+    # Unpack results, replacing exceptions with defaults. Checked against
+    # BaseException, not Exception: asyncio.gather(..., return_exceptions=True)
+    # captures a cancelled sub-task's CancelledError the same way it captures
+    # an ordinary failure, and CancelledError has been a BaseException rather
+    # than an Exception since Python 3.8. isinstance(..., Exception) does not
+    # narrow that, so a cancelled collector would fail this check, be treated
+    # as "not an exception", and its CancelledError instance would be handed
+    # to the caller in place of the real state - a state object without any
+    # of the attributes downstream code reads off it, so the crash surfaces
+    # far from the cancellation that caused it.
+    project_info = results[0] if not isinstance(results[0], BaseException) else {}
+    boq = results[1] if not isinstance(results[1], BaseException) else BOQState()
+    schedule = results[2] if not isinstance(results[2], BaseException) else ScheduleState()
+    takeoff = results[3] if not isinstance(results[3], BaseException) else TakeoffState()
+    validation = results[4] if not isinstance(results[4], BaseException) else ValidationState()
+    risk = results[5] if not isinstance(results[5], BaseException) else RiskState()
+    tendering = results[6] if not isinstance(results[6], BaseException) else TenderingState()
+    documents = results[7] if not isinstance(results[7], BaseException) else DocumentsState()
+    reports = results[8] if not isinstance(results[8], BaseException) else ReportsState()
+    cost_model = results[9] if not isinstance(results[9], BaseException) else CostModelState()
+    requirements = results[10] if not isinstance(results[10], BaseException) else RequirementsState()
+    bim = results[11] if not isinstance(results[11], BaseException) else BIMState()
+    tasks_state = results[12] if not isinstance(results[12], BaseException) else TasksState()
+    assemblies = results[13] if not isinstance(results[13], BaseException) else AssembliesState()
 
     return ProjectState(
         project_id=project_id,

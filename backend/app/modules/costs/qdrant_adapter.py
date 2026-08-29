@@ -1624,7 +1624,16 @@ async def cross_language_search(
 
     merged: list[QdrantHit] = []
     for c, res in zip(unique_countries, results, strict=False):
-        if isinstance(res, Exception):
+        # BaseException, not Exception: asyncio.CancelledError has been a
+        # BaseException rather than an Exception since Python 3.8, so
+        # isinstance(res, Exception) does not narrow it. A cancelled
+        # collection's CancelledError instance would fall through this
+        # guard and reach merged.extend(res) below, raising TypeError on a
+        # non-iterable - a crash at the merge with no visible connection to
+        # the cancellation that caused it. One collection being cancelled
+        # or failing has a legitimate default here, the same as any other
+        # collection with no results: skip it, the others still contribute.
+        if isinstance(res, BaseException):
             logger.debug("cross_language_search: %s failed (%s)", c, res)
             continue
         merged.extend(res)

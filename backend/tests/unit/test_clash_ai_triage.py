@@ -28,9 +28,11 @@ execute against that PostgreSQL instance.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -319,3 +321,65 @@ async def test_triage_clash_happy_path_persists_verdict_with_cost(
     # The wire response goes through _to_response in the router; here we
     # just verify the returned row is the persisted one.
     assert row is persisted
+
+
+@pytest.mark.asyncio
+async def test_triage_batch_propagates_a_cancelled_workers_cancellation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A cancelled worker must not be indistinguishable from a skipped clash.
+
+    ``triage_batch`` fans out one ``asyncio.gather(..., return_exceptions=True)``
+    per clash. Every genuine per-clash failure is already caught and logged
+    inside the batch's own ``_one()`` helper, so the only things that can
+    reach the per-outcome loop are ``ClashTriageUnavailable`` (handled) and,
+    if a worker is cancelled rather than failing on its own terms,
+    ``asyncio.CancelledError`` - a ``BaseException`` that ``except Exception``
+    does not catch. Before this fix nothing checked for that case: a
+    cancelled worker's row was simply absent from ``results_by_id`` and the
+    method returned the rows that did complete, exactly as if the cancelled
+    clash had been quietly skipped. Cancellation has to propagate instead.
+
+    ``ClashTriageService.triage_clash`` is replaced directly rather than
+    exercised through a fake session, since the DB and LLM round trip inside
+    it is not what this test is about - only what ``triage_batch`` does with
+    a worker that never gets to return.
+    """
+
+    class _FakeWorkerSession:
+        async def commit(self) -> None:
+            return None
+
+        def expunge(self, _obj: Any) -> None:
+            return None
+
+    class _FakeWorkerSessionCM:
+        async def __aenter__(self) -> _FakeWorkerSession:
+            return _FakeWorkerSession()
+
+        async def __aexit__(self, *_exc: Any) -> bool:
+            return False
+
+    monkeypatch.setattr("app.database.async_session_factory", lambda: _FakeWorkerSessionCM())
+
+    cancelled_id = uuid.uuid4()
+    ok_id = uuid.uuid4()
+
+    async def fake_triage_clash(
+        self: ClashTriageService,
+        cid: uuid.UUID,
+        *,
+        user_id: uuid.UUID,
+        force_refresh: bool = False,
+        allowed_project_ids: set[uuid.UUID] | None = None,
+    ) -> Any:
+        if cid == cancelled_id:
+            raise asyncio.CancelledError()
+        return SimpleNamespace(id=cid)
+
+    monkeypatch.setattr(triage_service.ClashTriageService, "triage_clash", fake_triage_clash)
+
+    svc = ClashTriageService(session=object())  # type: ignore[arg-type]
+
+    with pytest.raises(asyncio.CancelledError):
+        await svc.triage_batch([ok_id, cancelled_id], user_id=uuid.uuid4())

@@ -562,6 +562,22 @@ class ClashTriageService:
         for outcome in gathered:
             if isinstance(outcome, ClashTriageUnavailable):
                 raise outcome
+            # This second check is not the isinstance(x, Exception) mistake
+            # made elsewhere in this class of bug, and it is not the fix for
+            # that mistake either - it is a third variant: a guard naming a
+            # narrow subtype (ClashTriageUnavailable, above) drops everything
+            # wider in silence. Before this check, a cancelled worker's
+            # CancelledError satisfied neither branch, so it fell through and
+            # was simply absent from results_by_id below - indistinguishable
+            # from a clash that was merely skipped, with no log and no raise.
+            # _one() only ever lets a BaseException-not-Exception through
+            # when a worker was cancelled rather than failing on its own
+            # terms - every genuine per-clash failure is already caught and
+            # logged inside _one(). A cancelled worker must propagate like
+            # any other cancellation, not be dressed as a normal per-clash
+            # skip.
+            if isinstance(outcome, BaseException) and not isinstance(outcome, Exception):
+                raise outcome
         # Preserve input order in the result list.
         return [results_by_id[cid] for cid in clash_ids if cid in results_by_id]
 

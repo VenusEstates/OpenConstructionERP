@@ -14,6 +14,8 @@ Spanish collection can carry rates for ES + MX + AR.
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from app.config import get_settings
@@ -1109,6 +1111,43 @@ async def test_cross_language_search_swallows_per_collection_failures(
     assert "R-DE_BERLIN" in rate_codes
     assert "R-GB_LONDON" in rate_codes
     # RU collection's failure is swallowed
+    assert not any("RU" in c for c in rate_codes)
+
+
+@pytest.mark.asyncio
+async def test_cross_language_search_swallows_a_cancelled_collection_too(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A cancelled collection must be skipped exactly like a failed one.
+
+    asyncio.gather(..., return_exceptions=True) captures a cancelled
+    sub-task's CancelledError the same way it captures an ordinary
+    RuntimeError, and CancelledError has been a BaseException rather than
+    an Exception since Python 3.8. isinstance(res, Exception) does not
+    narrow that, so before this fix the RU collection's CancelledError
+    would fall through the guard and reach merged.extend(res) - a TypeError
+    on a non-iterable, raised at the merge with no visible connection to
+    the cancellation that caused it. Raising CancelledError directly here
+    reproduces exactly the object gather() would place in results for a
+    genuinely cancelled task; the merge code cannot tell the two apart.
+    """
+
+    async def fake_search(*, country, **_: object):
+        if country == "RU_MOSCOW":
+            raise asyncio.CancelledError()
+        return [QdrantHit(rate_code=f"R-{country}", country=country, score=0.9)]
+
+    monkeypatch.setattr("app.modules.costs.qdrant_adapter.search", fake_search)
+
+    out = await cross_language_search(
+        primary_country="DE_BERLIN",
+        additional_countries=["GB_LONDON", "RU_MOSCOW"],
+        core_query="x",
+    )
+    rate_codes = [h.rate_code for h in out]
+    assert "R-DE_BERLIN" in rate_codes
+    assert "R-GB_LONDON" in rate_codes
+    # RU collection's cancellation is skipped, same as an ordinary failure.
     assert not any("RU" in c for c in rate_codes)
 
 

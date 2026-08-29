@@ -188,6 +188,15 @@ async def stop_scheduler() -> None:
     if _SHUTDOWN_EVENT is not None:
         _SHUTDOWN_EVENT.set()
     if _RUNNING_TASKS:
+        # return_exceptions=True result is deliberately discarded: every task
+        # here only ever stops by observing _SHUTDOWN_EVENT inside
+        # _run_periodically, which never raises (its own except Exception
+        # already logs and swallows per-iteration failures), and nothing in
+        # this module ever calls .cancel() on a running task. Safe only as
+        # long as both of those stay true - the moment something starts
+        # cancelling these tasks, or the result here starts being read, a
+        # cancelled task's CancelledError is a BaseException that would need
+        # its own check, not a plain isinstance(x, Exception) one.
         await asyncio.gather(*_RUNNING_TASKS, return_exceptions=True)
     _RUNNING_TASKS.clear()
     _SHUTDOWN_EVENT = None
