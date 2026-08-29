@@ -12,9 +12,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { apiGet, apiPost } from '@/shared/lib/api';
+import { apiDelete, apiGet, apiPost } from '@/shared/lib/api';
 
 import {
+  cancelPurchaseOrder,
+  deletePurchaseOrder,
   getPOMatchStatus,
   getSupplierScorecard,
   getVendorEligibility,
@@ -23,16 +25,56 @@ import {
   getRetainageReconciliation,
 } from './api';
 
-vi.mock('@/shared/lib/api', () => ({
-  apiGet: vi.fn(() => Promise.resolve({})),
-  apiPost: vi.fn(() => Promise.resolve({})),
-}));
+// The mock has to carry every binding `./api` imports, not only the ones
+// asserted below: an import the factory does not define is a hard error at
+// module load, so a client added to `api.ts` would break this file rather
+// than the one it belongs to. `ApiError` is the real class - it is a value
+// used with `instanceof`, and a stub would make every refusal parse fail.
+vi.mock('@/shared/lib/api', async () => {
+  const actual = await vi.importActual<typeof import('@/shared/lib/api')>('@/shared/lib/api');
+  return {
+    ApiError: actual.ApiError,
+    apiGet: vi.fn(() => Promise.resolve({})),
+    apiPost: vi.fn(() => Promise.resolve({})),
+    apiDelete: vi.fn(() => Promise.resolve(undefined)),
+  };
+});
 
 const mockGet = vi.mocked(apiGet);
 const mockPost = vi.mocked(apiPost);
+const mockDelete = vi.mocked(apiDelete);
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('cancelPurchaseOrder', () => {
+  it('POSTs the cancel path with the reason in the body', () => {
+    cancelPurchaseOrder('po-5', 'ordered in error');
+    expect(mockPost).toHaveBeenCalledWith('/v1/procurement/po-5/cancel/', {
+      reason: 'ordered in error',
+    });
+  });
+
+  it('sends null rather than an empty string when no reason is given', () => {
+    // The backend field is optional and a blank string is not a reason. Null
+    // is what "nobody said why" looks like on the wire; an empty string would
+    // be stored beside the cancelled PO as a reason that says nothing.
+    cancelPurchaseOrder('po-5', '');
+    expect(mockPost).toHaveBeenCalledWith('/v1/procurement/po-5/cancel/', {
+      reason: null,
+    });
+  });
+});
+
+describe('deletePurchaseOrder', () => {
+  it('DELETEs the bare PO path, with no trailing slash', () => {
+    // The router registers DELETE on `/{po_id}`, the same shape its GET and
+    // PATCH use - only the sub-resource verbs (approve, issue, cancel) carry
+    // the trailing slash. A slash here would leave the call on a redirect.
+    deletePurchaseOrder('po-5');
+    expect(mockDelete).toHaveBeenCalledWith('/v1/procurement/po-5');
+  });
 });
 
 describe('getPOMatchStatus', () => {

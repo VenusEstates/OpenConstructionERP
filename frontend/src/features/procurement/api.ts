@@ -9,7 +9,93 @@
  * landing pad for the new clients and any future additions.
  */
 
-import { apiGet, apiPost } from '@/shared/lib/api';
+import { ApiError, apiDelete, apiGet, apiPost } from '@/shared/lib/api';
+
+/* ── Removing a purchase order ────────────────────────────────────────── */
+
+/**
+ * The kinds of record the backend will name when it refuses to remove a PO.
+ *
+ * Mirrors `_PO_HOLDER_LABELS` in `procurement/service.py`. The wire carries
+ * the kind, not a sentence, so the UI can say it in the reader's language
+ * instead of showing an English string the server happened to build.
+ */
+export type POHolderKind =
+  | 'goods_receipt'
+  | 'payable_invoice'
+  | 'retainage_release'
+  | 'requisition';
+
+export interface RemovalHolder {
+  kind: string;
+  count: number;
+}
+
+/**
+ * The structured 409 body a refused cancel or delete returns:
+ *
+ *     {"detail": {"code", "message", "remediation", "holders": [...]}}
+ *
+ * `holders` is empty when the refusal is about the PO's own state (already
+ * cancelled, already issued) rather than about something pointing at it.
+ */
+export interface RemovalRefusal {
+  code: string;
+  message: string;
+  remediation: string;
+  holders: RemovalHolder[];
+}
+
+/**
+ * Pull the structured refusal out of a thrown error, or null if this is not
+ * one.
+ *
+ * Anything that is not a 409 carrying the agreed shape returns null and the
+ * caller falls back to `getErrorMessage`, which already renders `detail.message`
+ * readably. So a caller that forgets to handle the structure still shows a
+ * sentence rather than "[object Object]".
+ */
+export function parseRemovalRefusal(err: unknown): RemovalRefusal | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const body = err.body as { detail?: unknown } | null | undefined;
+  const detail = body?.detail;
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return null;
+  const d = detail as Record<string, unknown>;
+  if (typeof d.code !== 'string' || typeof d.message !== 'string') return null;
+  const holders = Array.isArray(d.holders)
+    ? d.holders.flatMap((h): RemovalHolder[] => {
+        if (!h || typeof h !== 'object') return [];
+        const entry = h as Record<string, unknown>;
+        if (typeof entry.kind !== 'string' || typeof entry.count !== 'number') return [];
+        return [{ kind: entry.kind, count: entry.count }];
+      })
+    : [];
+  return {
+    code: d.code,
+    message: d.message,
+    remediation: typeof d.remediation === 'string' ? d.remediation : '',
+    holders,
+  };
+}
+
+/**
+ * Void a purchase order. The row and its `po_number` survive; the status
+ * becomes `cancelled`. This is the removal verb for anything that has been
+ * approved or issued - the number stays out of circulation because a gap in
+ * the sequence is what an auditor asks about.
+ */
+export function cancelPurchaseOrder(poId: string, reason: string): Promise<unknown> {
+  return apiPost(`/v1/procurement/${poId}/cancel/`, { reason: reason || null });
+}
+
+/**
+ * Delete a draft purchase order that never left draft. The backend refuses
+ * with 409 for anything else, including a draft that was once issued and
+ * later reopened.
+ */
+export function deletePurchaseOrder(poId: string): Promise<void> {
+  return apiDelete(`/v1/procurement/${poId}`);
+}
 
 /* ── 3-way match status ───────────────────────────────────────────────── */
 

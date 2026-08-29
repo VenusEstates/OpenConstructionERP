@@ -18,6 +18,7 @@ import {
   Pencil,
   Send,
   CheckCircle2,
+  Ban,
 } from 'lucide-react';
 import {
   Button,
@@ -43,6 +44,7 @@ import { useProjectContextStore } from '@/stores/useProjectContextStore';
 import { useActiveProjectId } from '@/shared/hooks/useActiveProjectId';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getPOMatchStatus, type POLineMatchTag } from './api';
+import { PORemovalDialog, removalVerbFor } from './PORemovalDialog';
 import { procurementGuide } from './procurementGuide';
 import { SupplierScorecardModal } from './SupplierScorecardModal';
 import { InsightsPanel, InsightsToggleButton, useModuleInsights } from '@/features/insights';
@@ -584,6 +586,11 @@ function PurchaseOrdersTab({
   >(null);
   // Retainage panel (Gap F) - opened from a PO row's "Retainage" action.
   const [retainagePO, setRetainagePO] = useState<PurchaseOrder | null>(null);
+  // Removal confirm - opened from a PO row's delete / cancel action. Which of
+  // the two verbs it offers is decided from the row's status by
+  // `removalVerbFor`; the backend has the final say and refuses with a 409
+  // that the dialog renders as readable text.
+  const [removingPO, setRemovingPO] = useState<PurchaseOrder | null>(null);
 
   // Resolve the project's currency from the finance dashboard so new POs
   // default to it instead of a hardcoded EUR (task #217). Empty string when
@@ -794,11 +801,12 @@ function PurchaseOrdersTab({
   });
 
   /* ── PO edit ──
-     Backend `update_po` blocks only the `status` field from PATCH; every
-     other field is freely editable. Status transitions go through the
-     dedicated workflow actions (issue / create-invoice), so we deliberately
-     omit `status` from this body. There is no DELETE endpoint for a PO, so
-     no delete control is offered (a 405 button would be worse UX). */
+     Every field except `status` is freely editable here. Status transitions go
+     through the dedicated workflow actions (approve / issue / cancel /
+     create-invoice), so we deliberately omit `status` from this body.
+     Removal is its own affordance: `PORemovalDialog` deletes a never-issued
+     draft and cancels anything else, and both are refused with a 409 when
+     another record still points at the order. */
   const editPOMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: POFormState }) => {
       // Only what the user actually edited goes back. The baseline is the state
@@ -1604,6 +1612,36 @@ function PurchaseOrdersTab({
                         {t('procurement.retainage_short', { defaultValue: 'Retainage' })}
                       </Button>
                     )}
+                    {/* Removal. A draft offers Delete, anything approved or
+                        issued offers Cancel, and a completed or already
+                        cancelled order offers neither - a completed PO records
+                        what was actually bought and there is nothing left to
+                        take back. The confirm step says which verb it is about
+                        to use and what goes with it. */}
+                    {(() => {
+                      const verb = removalVerbFor(po.status);
+                      if (!verb) return null;
+                      const isDelete = verb === 'delete';
+                      const label = isDelete
+                        ? t('procurement.remove_po_action_delete', {
+                            defaultValue: 'Delete purchase order',
+                          })
+                        : t('procurement.remove_po_action_cancel', {
+                            defaultValue: 'Cancel purchase order',
+                          });
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setRemovingPO(po)}
+                          title={label}
+                          aria-label={label}
+                          className="!p-1.5 text-content-tertiary hover:text-semantic-error"
+                        >
+                          {isDelete ? <Trash2 size={14} /> : <Ban size={14} />}
+                        </Button>
+                      );
+                    })()}
                   </div>
                   )}
                 </td>
@@ -1646,6 +1684,13 @@ function PurchaseOrdersTab({
         canRelease={isManager}
       />
     )}
+
+    {/* Removal confirm - delete a never-issued draft, or void anything else */}
+    <PORemovalDialog
+      po={removingPO}
+      projectId={projectId}
+      onClose={() => setRemovingPO(null)}
+    />
     </>
   );
 }
