@@ -596,5 +596,31 @@
       "fail": "Die Schätzung auf diesem Antrag lautet {estimate}, das kalkulierte LV ergibt jedoch {priced}",
       "suggestion": "Übernehmen Sie die kalkulierte Summe auf den Antrag oder korrigieren Sie das LV, damit eine Zahl gilt"
     }
+  },
+  "cases": {
+    "has_steps": {
+      "fail": "Dieser Fall hat noch keine Schritte, sodass ein Leser nichts zum Nachvollziehen hat.",
+      "suggestion": "Fügen Sie mindestens einen Schritt hinzu, der den zu öffnenden Bildschirm und die auszuführende Aktion benennt."
+    },
+    "step_titled": {
+      "fail": "{count} Schritte haben keinen Titel oder keinen zu öffnenden Bildschirm.",
+      "suggestion": "Geben Sie jedem Schritt einen kurzen Titel und legen Sie den Bildschirm fest, den er öffnet."
+    },
+    "step_purpose": {
+      "fail": "{count} von {total} Schritten wird nicht erklärt, warum sie wichtig sind, sodass der Fall wie eine Klickliste statt wie eine Erklärung wirkt.",
+      "suggestion": "Fügen Sie zu jedem Schritt eine Zeile hinzu, wozu er dient - genau das braucht jemand, der neu einsteigt."
+    },
+    "distinct_screens": {
+      "fail": "{count} Schritte öffnen denselben Bildschirm wie der jeweils vorherige Schritt, sodass der Leser keine Veränderung sieht und die Schritte nicht unterscheiden kann.",
+      "suggestion": "Fassen Sie sie zu einem Schritt zusammen, oder verweisen Sie den zweiten auf den Bildschirm, zu dem die Arbeit tatsächlich wechselt."
+    },
+    "duration_plausible": {
+      "fail": "Dieser Fall gibt {minutes} Minuten für {steps} Schritte an. Ein Leser, der nicht mitkommt, verliert das Vertrauen in die restliche Schätzung.",
+      "suggestion": "Erhöhen Sie die Schätzung auf mindestens {minimum} Minuten oder streichen Sie einige Schritte."
+    },
+    "described": {
+      "fail": "Dieser Fall hat keine Zusammenfassung, sodass die Liste nur einen Titel und sonst nichts zeigt.",
+      "suggestion": "Fügen Sie einen Satz hinzu, was der Leser am Ende erledigt haben wird."
+    }
   }
 }

@@ -251,5 +251,31 @@
       "fail": "La estimación de esta solicitud es {estimate}, pero su presupuesto valorado suma {priced}",
       "suggestion": "Adopte el total valorado en la solicitud o corrija el presupuesto para que quede una sola cifra"
     }
+  },
+  "cases": {
+    "has_steps": {
+      "fail": "Este caso todavía no tiene pasos, así que no hay nada que un lector pueda seguir.",
+      "suggestion": "Añada al menos un paso indicando la pantalla que hay que abrir y qué hacer en ella."
+    },
+    "step_titled": {
+      "fail": "{count} pasos no tienen título o pantalla que abrir.",
+      "suggestion": "Dé a cada paso un título breve y elija la pantalla que abre."
+    },
+    "step_purpose": {
+      "fail": "{count} de {total} pasos no explican para qué sirven, así que el caso se lee como una lista de clics y no como una explicación.",
+      "suggestion": "Añada una línea por paso explicando para qué sirve; eso es lo que necesita alguien nuevo."
+    },
+    "distinct_screens": {
+      "fail": "{count} pasos abren la misma pantalla que el paso anterior, así que el lector no ve ningún cambio y no puede distinguir los pasos.",
+      "suggestion": "Fusiónelos en un solo paso, o haga que el segundo apunte a la pantalla a la que realmente pasa el trabajo."
+    },
+    "duration_plausible": {
+      "fail": "Este caso indica {minutes} minutos para {steps} pasos. Un lector que no puede seguir el ritmo deja de confiar en el resto de la estimación.",
+      "suggestion": "Suba la estimación a al menos {minimum} minutos o elimine algunos pasos."
+    },
+    "described": {
+      "fail": "Este caso no tiene resumen, así que en la lista solo se ve el título y nada más.",
+      "suggestion": "Añada una frase sobre lo que el lector habrá hecho al terminar."
+    }
   }
 }

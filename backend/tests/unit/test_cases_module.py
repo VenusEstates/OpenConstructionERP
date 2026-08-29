@@ -23,7 +23,9 @@ import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import load_translations, set_locale
 from app.core.validation.engine import RuleCategory, Severity, rule_registry
+from app.core.validation.messages import available_locales, is_key_present
 from app.modules.cases import schemas, service
 from app.modules.cases.models import CASE_CATEGORIES, CasePin, UserCase
 from app.modules.cases.permissions import register_cases_permissions
@@ -410,6 +412,72 @@ class TestCaseValidation:
         register_cases_rules()
         findings = await evaluate_case(_case_body(steps=[{"id": "s1", "title": "", "to": "/boq"}]))
         assert "cases.step_titled" in {f.rule_id for f in blocking_findings(findings)}
+
+
+class TestCaseMessageCoverage:
+    """The rule set's messages must be reachable in every locale the bundle ships.
+
+    ``rule_registry`` reads the registered rule classes, which is not the JSON
+    catalog this test checks, so a rule dropped from the bundle is caught. The
+    locale axis cannot lean on that same trick: ``available_locales()`` reads
+    whatever ``*.json`` files exist on disk, which *is* the thing under test,
+    so a whole locale file going missing would shrink both the loop and its
+    own would-be failure together and this test would stay green. The
+    required set below is a literal, independent of what is actually on disk,
+    so that failure mode is closed.
+    """
+
+    #: The four locales ``cases`` rules are translated into, matching every
+    #: rule set added since ``es.json`` shipped (2026-07-01): variations,
+    #: subcontract, submittal, rfq, procurement, sheet_completeness, mexico.
+    #: A literal, not ``available_locales()`` - see the class docstring.
+    _REQUIRED_LOCALES = {"en", "de", "ru", "es"}
+
+    def test_every_cases_rule_has_fail_and_suggestion_in_every_shipped_locale(self):
+        register_cases_rules()
+        rules = rule_registry.get_rules_for_sets([CASES_RULE_SET])
+        assert rules, "no cases rules registered; the coverage check below would be vacuous"
+        locales = available_locales()
+        assert set(locales) >= self._REQUIRED_LOCALES, sorted(self._REQUIRED_LOCALES - set(locales))
+        missing: list[str] = []
+        for rule in rules:
+            for locale in self._REQUIRED_LOCALES:
+                for suffix in ("fail", "suggestion"):
+                    key = f"{rule.rule_id}.{suffix}"
+                    if not is_key_present(key, locale):
+                        missing.append(f"{locale}:{key}")
+        assert missing == []
+
+    async def test_a_finding_actually_changes_text_with_locale(self):
+        """Coverage in the JSON is not enough - the rule has to read it."""
+        register_cases_rules()
+        empty_case = _case_body(steps=[], description="")
+        english = await evaluate_case(empty_case, locale="en")
+        german = await evaluate_case(empty_case, locale="de")
+        en_message = next(f.message for f in english if f.rule_id == "cases.has_steps")
+        de_message = next(f.message for f in german if f.rule_id == "cases.has_steps")
+        assert en_message != de_message
+
+    async def test_the_request_locale_is_used_when_the_caller_names_none(self):
+        """The router never passes ``locale=`` explicitly; it relies on this default.
+
+        Before this fix the metadata locale defaulted to an empty string, which
+        the rules read as English no matter what the accept-language middleware
+        had already resolved for the request.
+        """
+        register_cases_rules()
+        # SUPPORTED_LOCALES gates set_locale(); idempotent if the app already
+        # loaded it, but a bare unit test process never has on its own.
+        load_translations()
+        set_locale("de")
+        try:
+            findings = await evaluate_case(_case_body(steps=[], description=""))
+        finally:
+            set_locale("en")
+        with_context_locale = next(f.message for f in findings if f.rule_id == "cases.has_steps")
+        english = await evaluate_case(_case_body(steps=[], description=""), locale="en")
+        en_message = next(f.message for f in english if f.rule_id == "cases.has_steps")
+        assert with_context_locale != en_message
 
 
 # ── Permissions ──────────────────────────────────────────────────────────────

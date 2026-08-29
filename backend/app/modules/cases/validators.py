@@ -31,6 +31,7 @@ import logging
 from dataclasses import replace
 from typing import Any
 
+from app.core.i18n import get_locale
 from app.core.validation.engine import (
     RuleCategory,
     RuleResult,
@@ -40,6 +41,7 @@ from app.core.validation.engine import (
     rule_registry,
     validation_engine,
 )
+from app.core.validation.messages import translate
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +72,17 @@ def _steps(context: ValidationContext) -> list[dict[str, Any]]:
 
 def _text(value: Any) -> str:
     return str(value).strip() if value is not None else ""
+
+
+def _ok(locale: str) -> str:
+    """Shared "OK" string, the same key every built-in rule uses."""
+    return translate("common.ok", locale=locale)
+
+
+def _locale(context: ValidationContext) -> str:
+    """The caller's locale, defaulting to English."""
+    meta = getattr(context, "metadata", None) or {}
+    return str(meta.get("locale") or "en")
 
 
 def _result(
@@ -104,15 +117,16 @@ class CaseHasSteps(ValidationRule):
     description = "A case with no steps teaches nothing and cannot be followed."
 
     async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _locale(context)
         steps = _steps(context)
         if steps:
-            return [_result(self, True, "OK", details={"step_count": len(steps)})]
+            return [_result(self, True, _ok(locale), details={"step_count": len(steps)})]
         return [
             _result(
                 self,
                 False,
-                "This case has no steps yet, so there is nothing for a reader to follow.",
-                suggestion="Add at least one step naming the screen to open and what to do there.",
+                translate("cases.has_steps.fail", locale=locale),
+                suggestion=translate("cases.has_steps.suggestion", locale=locale),
                 details={"step_count": 0},
             )
         ]
@@ -127,19 +141,20 @@ class CaseStepTitled(ValidationRule):
     description = "Every step needs a title and a screen to open, or it cannot be rendered as a step."
 
     async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _locale(context)
         broken = [
             step.get("id") or f"#{index + 1}"
             for index, step in enumerate(_steps(context))
             if not _text(step.get("title")) or not _text(step.get("to"))
         ]
         if not broken:
-            return [_result(self, True, "OK")]
+            return [_result(self, True, _ok(locale))]
         return [
             _result(
                 self,
                 False,
-                f"{len(broken)} step(s) are missing a title or a screen to open.",
-                suggestion="Give every step a short title and pick the screen it opens.",
+                translate("cases.step_titled.fail", locale=locale, count=len(broken)),
+                suggestion=translate("cases.step_titled.suggestion", locale=locale),
                 details={"steps": [str(ref) for ref in broken]},
             )
         ]
@@ -154,21 +169,19 @@ class CaseStepPurpose(ValidationRule):
     description = "A step with no reason given is a click instruction rather than a walkthrough."
 
     async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _locale(context)
         steps = _steps(context)
         if not steps:
             return []
         silent = [step.get("id") or f"#{index + 1}" for index, step in enumerate(steps) if not _text(step.get("why"))]
         if not silent:
-            return [_result(self, True, "OK")]
+            return [_result(self, True, _ok(locale))]
         return [
             _result(
                 self,
                 False,
-                (
-                    f"{len(silent)} of {len(steps)} step(s) do not say why they matter, so the case reads as "
-                    "a list of clicks rather than an explanation."
-                ),
-                suggestion="Add one line per step on what it is for; that is the part a new starter needs.",
+                translate("cases.step_purpose.fail", locale=locale, count=len(silent), total=len(steps)),
+                suggestion=translate("cases.step_purpose.suggestion", locale=locale),
                 details={"steps": [str(ref) for ref in silent], "step_count": len(steps)},
             )
         ]
@@ -183,9 +196,10 @@ class CaseDistinctScreens(ValidationRule):
     description = "Consecutive steps pointing at the same screen read as one step to the follower."
 
     async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _locale(context)
         steps = _steps(context)
         if len(steps) < 2:
-            return [_result(self, True, "OK")]
+            return [_result(self, True, _ok(locale))]
         repeats: list[str] = []
         for index in range(1, len(steps)):
             previous = _text(steps[index - 1].get("to"))
@@ -193,16 +207,13 @@ class CaseDistinctScreens(ValidationRule):
             if previous and previous == current:
                 repeats.append(str(steps[index].get("id") or f"#{index + 1}"))
         if not repeats:
-            return [_result(self, True, "OK")]
+            return [_result(self, True, _ok(locale))]
         return [
             _result(
                 self,
                 False,
-                (
-                    f"{len(repeats)} step(s) open the same screen as the step before them, so the reader "
-                    "sees no change and cannot tell the steps apart."
-                ),
-                suggestion="Merge them into one step, or point the second at the screen the work actually moves to.",
+                translate("cases.distinct_screens.fail", locale=locale, count=len(repeats)),
+                suggestion=translate("cases.distinct_screens.suggestion", locale=locale),
                 details={"steps": repeats},
             )
         ]
@@ -217,6 +228,7 @@ class CaseDurationPlausible(ValidationRule):
     description = "The stated duration should survive contact with the number of steps."
 
     async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _locale(context)
         steps = _steps(context)
         if not steps:
             return []
@@ -226,16 +238,14 @@ class CaseDurationPlausible(ValidationRule):
             minutes = 0
         floor = _MIN_MINUTES_PER_STEP * len(steps)
         if minutes >= floor:
-            return [_result(self, True, "OK", details={"est_minutes": minutes, "step_count": len(steps)})]
+            return [_result(self, True, _ok(locale), details={"est_minutes": minutes, "step_count": len(steps)})]
+        minimum = int(floor + 0.5)
         return [
             _result(
                 self,
                 False,
-                (
-                    f"This case claims {minutes} minute(s) for {len(steps)} step(s). "
-                    "A reader who cannot keep up stops trusting the rest of the estimate."
-                ),
-                suggestion=f"Raise the estimate to at least {int(floor + 0.5)} minutes or drop some steps.",
+                translate("cases.duration_plausible.fail", locale=locale, minutes=minutes, steps=len(steps)),
+                suggestion=translate("cases.duration_plausible.suggestion", locale=locale, minimum=minimum),
                 details={"est_minutes": minutes, "step_count": len(steps), "suggested_minimum": floor},
             )
         ]
@@ -250,14 +260,15 @@ class CaseDescribed(ValidationRule):
     description = "A case needs a one-line summary or nobody browsing the list will open it."
 
     async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _locale(context)
         if _text(_case(context).get("description")):
-            return [_result(self, True, "OK")]
+            return [_result(self, True, _ok(locale))]
         return [
             _result(
                 self,
                 False,
-                "This case has no summary, so the list shows a title and nothing else.",
-                suggestion="Add one sentence on what the reader will have done by the end.",
+                translate("cases.described.fail", locale=locale),
+                suggestion=translate("cases.described.suggestion", locale=locale),
             )
         ]
 
@@ -338,7 +349,11 @@ async def evaluate_case(case: dict[str, Any], *, case_id: str = "", locale: str 
             rule_sets=[CASES_RULE_SET],
             target_type="case",
             target_id=case_id,
-            metadata={"locale": locale},
+            # The router never names a locale explicitly - it relies on the
+            # request-scoped locale the accept-language middleware already
+            # resolved, exactly as ``variations`` and ``boq_markup`` do at
+            # their own call into the engine.
+            metadata={"locale": locale or get_locale()},
         )
     except Exception:  # noqa: BLE001 - validation augments the save; never break it
         logger.warning("cases validation failed for case %s", case_id, exc_info=True)

@@ -596,5 +596,31 @@
       "fail": "The headline estimate on this request is {estimate}, but its priced bill totals {priced}",
       "suggestion": "Adopt the priced total onto the request, or correct the bill, so one figure is the answer"
     }
+  },
+  "cases": {
+    "has_steps": {
+      "fail": "This case has no steps yet, so there is nothing for a reader to follow.",
+      "suggestion": "Add at least one step naming the screen to open and what to do there."
+    },
+    "step_titled": {
+      "fail": "{count} step(s) are missing a title or a screen to open.",
+      "suggestion": "Give every step a short title and pick the screen it opens."
+    },
+    "step_purpose": {
+      "fail": "{count} of {total} step(s) do not say why they matter, so the case reads as a list of clicks rather than an explanation.",
+      "suggestion": "Add one line per step on what it is for; that is the part a new starter needs."
+    },
+    "distinct_screens": {
+      "fail": "{count} step(s) open the same screen as the step before them, so the reader sees no change and cannot tell the steps apart.",
+      "suggestion": "Merge them into one step, or point the second at the screen the work actually moves to."
+    },
+    "duration_plausible": {
+      "fail": "This case claims {minutes} minute(s) for {steps} step(s). A reader who cannot keep up stops trusting the rest of the estimate.",
+      "suggestion": "Raise the estimate to at least {minimum} minutes or drop some steps."
+    },
+    "described": {
+      "fail": "This case has no summary, so the list shows a title and nothing else.",
+      "suggestion": "Add one sentence on what the reader will have done by the end."
+    }
   }
 }
