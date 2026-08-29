@@ -586,6 +586,26 @@ async def test_reservation_cancel(http_client, tenant_a):
 
 
 @pytest.mark.asyncio
+async def test_reservation_cancel_twice_conflicts(http_client, tenant_a):
+    """A repeated cancel is a conflict, not a silent second no-op.
+
+    The FSM helper returns early when the target equals the current status,
+    so the repeat used to answer 200 and publish a second
+    ``reservation.cancelled`` event for one cancellation.
+    """
+    lead_id = await _fresh_lead(http_client, tenant_a)
+    plot_id = await _fresh_plot(http_client, tenant_a, "cancel-twice")
+    reservation = await _convert_lead_to_reservation(http_client, tenant_a, lead_id, plot_id)
+    url = f"/api/v1/property-dev/reservations/{reservation['id']}/cancel"
+
+    first = await http_client.post(url, headers=tenant_a["headers"])
+    assert first.status_code == 200, first.text
+
+    second = await http_client.post(url, headers=tenant_a["headers"])
+    assert second.status_code == 409, second.text
+
+
+@pytest.mark.asyncio
 async def test_reservation_terminal_state_is_read_only(http_client, tenant_a):
     lead_id = await _fresh_lead(http_client, tenant_a)
     plot_id = await _fresh_plot(http_client, tenant_a, "terminal-state")
@@ -624,6 +644,59 @@ async def test_reservation_expire_overdue_batch(http_client, tenant_a):
     body = res.json()
     assert body["expired_count"] >= 1
     assert reservation["id"] in body["expired_ids"]
+
+
+@pytest.mark.asyncio
+async def test_reservation_expire_twice_conflicts(http_client, tenant_a):
+    """A repeated expire is a conflict, not a silent second no-op.
+
+    _ensure_transition() returns early when the target equals the current
+    status, so the repeat used to answer 200 and publish a second
+    ``reservation.expired`` event for one expiry.
+    """
+    lead_id = await _fresh_lead(http_client, tenant_a)
+    plot_id = await _fresh_plot(http_client, tenant_a, "expire-twice")
+    reservation = await _convert_lead_to_reservation(http_client, tenant_a, lead_id, plot_id)
+    url = f"/api/v1/property-dev/reservations/{reservation['id']}/expire"
+
+    first = await http_client.post(url, headers=tenant_a["headers"])
+    assert first.status_code == 200, first.text
+
+    second = await http_client.post(url, headers=tenant_a["headers"])
+    assert second.status_code == 409, second.text
+
+
+@pytest.mark.asyncio
+async def test_expire_overdue_batch_survives_an_already_expired_row(http_client, tenant_a):
+    """The batch keeps going when an already-expired reservation is present.
+
+    expire_overdue_reservations() catches HTTPException per row and skips,
+    and find_expired() selects ``status == "active"`` only, so the conflict
+    guard on expire_reservation() cannot abort the sweep. This pins that:
+    one overdue row is still expired while an already-expired row sits
+    beside it, and the already-expired one is not expired a second time.
+    """
+    lead_a = await _fresh_lead(http_client, tenant_a)
+    plot_a = await _fresh_plot(http_client, tenant_a, "batch-already-expired")
+    already = await _convert_lead_to_reservation(http_client, tenant_a, lead_a, plot_a, expires_at="2020-01-01")
+    done = await http_client.post(
+        f"/api/v1/property-dev/reservations/{already['id']}/expire",
+        headers=tenant_a["headers"],
+    )
+    assert done.status_code == 200, done.text
+
+    lead_b = await _fresh_lead(http_client, tenant_a)
+    plot_b = await _fresh_plot(http_client, tenant_a, "batch-still-active")
+    overdue = await _convert_lead_to_reservation(http_client, tenant_a, lead_b, plot_b, expires_at="2020-01-01")
+
+    res = await http_client.post(
+        "/api/v1/property-dev/reservations/expire-overdue",
+        headers=tenant_a["headers"],
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert overdue["id"] in body["expired_ids"], body
+    assert already["id"] not in body["expired_ids"], body
 
 
 @pytest.mark.tenant_isolation
@@ -762,6 +835,19 @@ async def test_spa_cancel(http_client, tenant_a):
     )
     assert res.status_code == 200, res.text
     assert res.json()["status"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_spa_cancel_twice_conflicts(http_client, tenant_a):
+    """Same conflict rule as the reservation path, so the two agree."""
+    spa = await _spa_from_lead(http_client, tenant_a, "spa-cancel-twice")
+    url = f"/api/v1/property-dev/sales-contracts/{spa['id']}/cancel"
+
+    first = await http_client.post(url, headers=tenant_a["headers"])
+    assert first.status_code == 200, first.text
+
+    second = await http_client.post(url, headers=tenant_a["headers"])
+    assert second.status_code == 409, second.text
 
 
 @pytest.mark.asyncio

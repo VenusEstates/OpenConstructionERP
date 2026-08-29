@@ -3474,6 +3474,18 @@ class PropertyDevService:
 
     async def cancel_reservation(self, r_id: uuid.UUID) -> Reservation:
         res = await self.get_reservation(r_id)
+        # Cancelling an already-cancelled reservation is a conflict, not a
+        # no-op. _ensure_transition() returns early when target == current,
+        # so without this guard the repeat fell through to update_fields()
+        # and published a duplicate reservation.cancelled event. Guarded
+        # here rather than in _ensure_transition() because that helper has
+        # 22 call sites, including PATCH handlers where re-submitting the
+        # current status must stay idempotent. Mirrors cancel_buyer().
+        if res.status == "cancelled":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Reservation in status '{res.status}' cannot be cancelled",
+            )
         _ensure_transition(
             "reservation",
             res.status,
@@ -3498,6 +3510,17 @@ class PropertyDevService:
 
     async def expire_reservation(self, r_id: uuid.UUID) -> Reservation:
         res = await self.get_reservation(r_id)
+        # Same conflict guard as cancel_reservation(): _ensure_transition()
+        # returns early when target == current, so a repeat used to fall
+        # through and publish a second reservation.expired event for one
+        # expiry. The batch caller below is unaffected -- find_expired()
+        # selects status == "active" only, and the loop already treats a
+        # transition conflict as a skip rather than an abort.
+        if res.status == "expired":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Reservation in status '{res.status}' cannot be expired",
+            )
         _ensure_transition(
             "reservation",
             res.status,
@@ -3823,6 +3846,13 @@ class PropertyDevService:
 
     async def cancel_spa(self, spa_id: uuid.UUID) -> SalesContract:
         spa = await self.get_spa(spa_id)
+        # Same conflict guard as cancel_reservation(): a repeat cancel would
+        # otherwise re-suspend the schedule and publish spa.cancelled twice.
+        if spa.status == "cancelled":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"SPA in status '{spa.status}' cannot be cancelled",
+            )
         _ensure_transition("spa", spa.status, "cancelled", allowed_spa_transitions)
         plot_id_snap = spa.plot_id
         await self.sales_contracts.update_fields(spa_id, status="cancelled")
