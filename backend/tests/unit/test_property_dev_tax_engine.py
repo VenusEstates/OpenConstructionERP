@@ -646,29 +646,51 @@ def test_one_contract_answered_at_one_class_and_refused_at_the_other() -> None:
     ("jurisdiction", "rate_class", "opens_on", "on_the_day"),
     [
         ("AE", "standard", date(2018, 1, 1), "5000.00"),
+        ("AE", "zero_rated", date(2018, 1, 1), "0.00"),
+        ("SA", "zero_rated", date(2020, 10, 4), "0.00"),
         ("AT", "standard", date(1984, 1, 1), "20000.00"),
         ("AT", "reduced", date(1984, 1, 1), "10000.00"),
         ("GB", "zero", date(1973, 4, 1), "0.00"),
+        ("AU", "standard", date(2000, 7, 1), "10000.00"),
+        ("IN", "affordable", date(2019, 4, 1), "1000.00"),
+        ("IN", "premium", date(2019, 4, 1), "5000.00"),
     ],
-    ids=["ae-vat-begins", "at-standard", "at-reduced", "gb-zero-since-vat-began"],
+    ids=[
+        "ae-vat-begins",
+        "ae-zero-rated-arrives-with-the-law",
+        "sa-zero-rated-arrives-with-the-2020-reform",
+        "at-standard",
+        "at-reduced",
+        "gb-zero-since-vat-began",
+        "au-gst-replaces-the-wholesale-sales-tax",
+        "in-affordable-no-itc",
+        "in-premium-no-itc",
+    ],
 )
 def test_a_dated_single_mapping_refuses_the_day_before_it_opens(
     jurisdiction: str, rate_class: str, opens_on: date, on_the_day: str
 ) -> None:
     """A rate that never moved is one period, and one period is still a history.
 
-    These four classes are written as a single mapping carrying
-    ``effective_from`` rather than as a one-item list, because there is one
-    rate and one day it began. The shape has to behave exactly like a list of
-    length one: priced on the opening day, refused the day before. Nothing at
-    load checks it - :func:`_validate_rate_histories` walks lists and skips
-    mappings - so this is the only place the shipped table's newest shape is
-    measured.
+    These classes are written as a single mapping carrying ``effective_from``
+    rather than as a one-item list, because there is one rate and one day it
+    began. The shape has to behave exactly like a list of length one: priced
+    on the opening day, refused the day before. Nothing at load checks it -
+    :func:`_validate_rate_histories` walks lists and skips mappings - so this
+    is the only place the shipped table's newest shape is measured.
 
-    ``GB.zero`` is the one to read twice. Its rate is 0.00 either side of the
-    boundary, so a refusal that quietly became a zero would look identical in
-    every amount a caller compares, and only the raised error tells a supply
-    that is genuinely zero-rated from a date this table cannot speak for.
+    Three of these rows are zero rates and they are the ones to read twice,
+    because 0.00 is what a refusal that quietly became an answer would also
+    produce. No amount a caller compares can tell those apart; only the raised
+    error separates a supply that is genuinely zero-rated from a date this
+    table cannot speak for.
+
+    ``SA.zero_rated`` is the one where that difference was costing money
+    rather than only meaning. It answered 0.00 for every date until this
+    commit, and residential sales in Saudi Arabia were standard-rated at 5 %
+    and then 15 % until the 2020 reform, so a 2019 first sale was quoted at
+    nothing on a contract that owed the full rate. It now refuses that date
+    instead, which is the honest answer for a period this table cannot price.
     """
     assert compute_vat(Decimal("100000"), jurisdiction, rate_class=rate_class, effective_on=opens_on) == (
         Decimal(on_the_day)
@@ -760,36 +782,179 @@ def test_a_rate_that_stood_still_while_its_neighbour_moved_reports_the_older_day
 
 
 @pytest.mark.parametrize(
+    ("moves_on", "before", "on_and_after"),
+    [
+        (date(2003, 1, 1), "3000.00", "4000.00"),
+        (date(2004, 1, 1), "4000.00", "5000.00"),
+        (date(2007, 7, 1), "5000.00", "7000.00"),
+        (date(2023, 1, 1), "7000.00", "8000.00"),
+        (date(2024, 1, 1), "8000.00", "9000.00"),
+    ],
+    ids=["sg-3-to-4", "sg-4-to-5", "sg-5-to-7", "sg-7-to-8", "sg-8-to-9"],
+)
+def test_the_gst_history_that_had_been_living_in_a_comment_prices_every_step(
+    moves_on: date, before: str, on_and_after: str
+) -> None:
+    """Five boundaries, and the reason all five had to be written at once.
+
+    Singapore is the longest history in this table and the only one whose
+    start date was already in the file when the defect was found - as a
+    comment, ``GST 9 % from 2024-01-01``, sitting beside a rate that no quote
+    could read it against. Prose in the right file is not data.
+
+    All five steps are here rather than the newest one because of what this
+    shape can and cannot say. It can express "unknown before X", since a date
+    earlier than the oldest period is refused. It cannot express "unknown
+    between X and Y": a missing middle period does not read as missing, the
+    period before it stretches forward and prices the hole at a rate nobody
+    chose. Dating Singapore from 2023 alone would have been tidier and would
+    have quoted every contract from 1994 to 2022 at 8 per cent.
+    """
+    assert compute_vat(Decimal("100000"), "SG", effective_on=moves_on - timedelta(days=1)) == Decimal(before)
+    assert compute_vat(Decimal("100000"), "SG", effective_on=moves_on) == Decimal(on_and_after)
+
+
+def test_an_undated_class_had_been_charging_every_year_at_the_newest_rate() -> None:
+    """What the two ``gst`` blocks were worth undated, in money.
+
+    An undated class is in force for every date, so before this commit a 2005
+    Singapore contract was quoted at the 9 per cent that began in 2024, three
+    times the 3 per cent that ran from 1994 and nearly twice the 5 per cent
+    actually in force in 2005. Australia is the quieter half of the same
+    defect: 10 per cent has been right since 2000 and was being applied to
+    1990 as well, where there was no GST at all to charge.
+    """
+    assert compute_vat(Decimal("100000"), "SG", effective_on=date(2005, 6, 1)) == Decimal("5000.00")
+    assert compute_vat(Decimal("100000"), "SG", effective_on=date(1997, 5, 1)) == Decimal("3000.00")
+
+    for jurisdiction, opens_on in (("SG", date(1994, 4, 1)), ("AU", date(2000, 7, 1))):
+        with pytest.raises(RateNotInForceError) as exc:
+            compute_vat(Decimal("100000"), jurisdiction, effective_on=opens_on - timedelta(days=1))
+        assert exc.value.effective_from == opens_on
+
+
+def _shipped_rate_classes() -> dict[tuple[str, str], bool]:
+    """Every rate-carrying class in the shipped table, and whether it is dated.
+
+    Walks the structure and names no block, deliberately. The population this
+    file measured for two waves was "whatever is under ``vat``", which is a
+    scope defined by a key name, and it was blind to the six classes under
+    ``gst`` carrying the same defect. A sibling key holding the same shape is
+    exactly what a name-scoped population cannot see, so this one asks what a
+    node IS rather than where it lives.
+
+    Band tables are not rate classes for this purpose, and they are excluded
+    here rather than silently: they carry ``up_to`` bounds and they are dated
+    by a ``band_history`` beside them rather than by an ``effective_from``
+    inside them, so they are a second population with a second mechanism. The
+    test below pins that exclusion so it cannot drift into a silence.
+    """
+    table = tax_engine._load_table()
+    found: dict[tuple[str, str], bool] = {}
+
+    def walk(code: str, path: str, node: Any) -> None:
+        if isinstance(node, dict):
+            if isinstance(node.get("bands"), list):
+                return
+            if "rate" in node and not isinstance(node["rate"], (dict, list)):
+                found[(code, path)] = "effective_from" in node
+                return
+            for key, value in node.items():
+                walk(code, f"{path}.{key}" if path else key, value)
+            return
+        if isinstance(node, list) and node and all(isinstance(item, dict) and "rate" in item for item in node):
+            if any("up_to" in item for item in node):
+                return
+            found[(code, path)] = all("effective_from" in item for item in node)
+
+    for code, jurisdiction in (table.get("jurisdictions") or {}).items():
+        if not isinstance(jurisdiction, dict):
+            continue
+        for key, value in jurisdiction.items():
+            if key != "name":
+                walk(code, key, value)
+    return found
+
+
+def test_the_only_undated_rate_classes_left_are_the_two_that_say_why() -> None:
+    """The population, not the pair, and equality rather than absence.
+
+    Set equality fails in both directions and both directions are wanted. A
+    new undated class added anywhere in the table fails here, which is the
+    ratchet. Dating one of these two also fails here, which is the other half:
+    the yaml explains at length why each is undated on purpose, and that
+    reasoning has to leave in the same commit as the date rather than stay
+    behind contradicting it.
+
+    The classes are found by walking the structure rather than by naming
+    ``vat`` and ``gst``. That distinction is not theoretical - the scope was
+    the bug that hid the ``gst`` blocks for two waves.
+    """
+    classes = _shipped_rate_classes()
+    assert ("GB", "vat.standard") in classes, "the walker found nothing recognisable, so the assertion below is empty"
+    assert len(classes) >= 18, f"only {len(classes)} rate classes found, so the walker has stopped seeing most of them"
+
+    undated = {key for key, is_dated in classes.items() if not is_dated}
+    assert undated == {("IN", "gst.commercial"), ("IN", "gst.ready_to_move")}
+
+
+def test_the_ratchet_counts_rate_classes_and_stops_at_the_band_tables() -> None:
+    """Where the population above ends, asserted rather than described.
+
+    Band tables hold rates too, and rates in them move - the UK reshaped its
+    SDLT bands in 2024, and stamp duty is usually the larger number on a
+    property contract than VAT is. They are out of this ratchet because they
+    are dated differently: a band table takes a ``band_history`` beside it,
+    since an ``effective_from`` inside a band would sit on the same mapping as
+    ``up_to`` and the two axes this module keeps apart, price and time, would
+    read alike in the data.
+
+    Pinned because a walker that quietly started returning band tables would
+    fail the set comparison above for a reason that has nothing to do with an
+    undated VAT class, and whoever met that failure would go looking in the
+    wrong place.
+    """
+    band_roots = {"stamp_duty", "bsd", "itbi"}
+    strays = {key for key in _shipped_rate_classes() if key[1].split(".")[0] in band_roots}
+    assert strays == set(), f"the rate-class walk reached into band tables: {sorted(strays)}"
+
+
+@pytest.mark.parametrize(
     ("jurisdiction", "rate_class", "expected"),
     [
-        ("SG", "standard", "9000.00"),
-        ("AU", "standard", "10000.00"),
-        ("AE", "zero_rated", "0.00"),
+        ("IN", "commercial", "12000.00"),
+        ("IN", "ready_to_move", "0.00"),
         ("AE", "exempt", "0.00"),
     ],
-    ids=["sg-gst", "au-gst", "ae-zero-rated", "ae-exempt-no-rate-key"],
+    ids=["in-commercial-computed-rate", "in-ready-to-move-outside-gst", "ae-exempt-no-rate-key"],
 )
 def test_a_single_mapping_rate_class_answers_exactly_as_it_did_before(
     jurisdiction: str, rate_class: str, expected: str
 ) -> None:
-    """What is left of the undated shape, and why so little of it is left.
+    """What is left of the undated shape, and why each of the three is left.
 
     Two properties at once, on a date far outside any history. The rate is
     unchanged, and the class still answers rather than refusing: an undated
-    mapping is in force for every date, so SG ``standard`` prices a 1900
-    contract at 9 per cent.
+    mapping is in force for every date, so IN ``commercial`` prices a 1900
+    contract at 12 per cent.
 
-    This list keeps shrinking and that is the point rather than a tidy-up.
-    GB ``reduced``, DE ``reduced``, GB ``zero``, AT ``reduced`` and RU
-    ``standard`` were all rows here until their histories were written; each
-    had a documented past, and an undated class is honest only while nothing
-    is known about the rate's past. What remains is the two ``gst`` blocks,
-    which nobody has dated yet and which are candidates rather than
-    decisions, and the zero-rated classes, whose 0 per cent no source dates.
+    This list kept shrinking and has now stopped, which is the difference
+    worth pinning. GB ``reduced``, GB ``zero``, DE ``reduced``, AT ``reduced``,
+    RU ``standard``, SG ``standard``, AU ``standard`` and both zero-rated
+    classes were rows here until their histories were written; each had a
+    documented past, and an undated class is honest only while nothing is
+    known about the rate's past. The three that remain are not waiting for
+    anyone.
 
-    ``AE.exempt`` is in the list because it carries ``applies_to`` and no
-    ``rate`` key at all, so it measures the "no rate means zero" default that
-    the normaliser must not turn into a missing-key error.
+    IN ``commercial`` carries 12 per cent, which is 18 per cent after the
+    one-third deduction for land and is therefore a rate this table computed
+    rather than read. Dating it would put a start day on a number no source
+    published. IN ``ready_to_move`` is zero because completed property is
+    outside GST altogether rather than because a zero rate began on a day, and
+    an ``effective_from`` would model a non-supply as a rate. ``AE.exempt``
+    carries ``applies_to`` and no ``rate`` key at all, so it measures the
+    "no rate means zero" default that the normaliser must not turn into a
+    missing-key error.
     """
     assert compute_vat(Decimal("100000"), jurisdiction, rate_class=rate_class, effective_on=date(1900, 1, 1)) == (
         Decimal(expected)
@@ -1257,14 +1422,16 @@ def test_three_classes_of_one_jurisdiction_report_three_different_days() -> None
     next to the number it describes.
 
     The null now has to be fetched from another jurisdiction entirely, and
-    that is this test's other half. GB used to supply it from ``zero``; every
-    GB class is dated today, so the contrast comes from a ``gst`` block.
+    that is this test's other half. GB used to supply it from ``zero`` and
+    then SG from its GST; every GB class is dated, and so is every Singapore
+    period, so the contrast comes from the one class this table has decided to
+    leave undated.
     """
     signed_on = date(1997, 5, 1)
     standard = _quote("GB", effective_on=signed_on)
     reduced = _quote("GB", rate_class="reduced", effective_on=signed_on)
     zero = _quote("GB", rate_class="zero", effective_on=signed_on)
-    undated = _quote("SG", effective_on=signed_on)
+    undated = _quote("IN", rate_class="commercial", effective_on=signed_on)
 
     assert standard["vat_rate_effective_from"] == date(1991, 4, 1)
     assert reduced["vat_rate_effective_from"] == date(1994, 4, 1)
@@ -1273,7 +1440,7 @@ def test_three_classes_of_one_jurisdiction_report_three_different_days() -> None
     assert standard["vat"] == Decimal("17500.00")
     assert reduced["vat"] == Decimal("8000.00")
     assert zero["vat"] == Decimal("0.00")
-    assert undated["vat"] == Decimal("9000.00")
+    assert undated["vat"] == Decimal("12000.00")
 
 
 def test_the_date_describes_the_rate_and_not_the_question_that_was_asked() -> None:
@@ -1291,23 +1458,24 @@ def test_the_date_describes_the_rate_and_not_the_question_that_was_asked() -> No
 def test_three_quotes_reporting_no_date_are_three_different_situations() -> None:
     """The join this field deliberately does not do on its own.
 
-    An undated class (SG, whose GST this table has never dated), a
+    An undated class (IN ``commercial``, which this table has decided not to
+    date because its 12 per cent was computed rather than published), a
     jurisdiction that levies no VAT, and a jurisdiction this table does not
     model all report no date, because none of them has a dated period. Only
-    the first has a rate at all, and it is a rate of 9 per cent rather than
+    the first has a rate at all, and it is a rate of 12 per cent rather than
     of zero: ``vat_provenance`` is what says so, and a date cannot describe a
     rate that does not exist.
 
     Pinned rather than left to the docstring, so that a later attempt to make
     this field self-sufficient has to change a test that says why it is not.
     """
-    undated = _quote("SG")
+    undated = _quote("IN", rate_class="commercial")
     no_vat_in_law = _quote("US")
     not_modelled = _quote("BR")
 
     quotes = (undated, no_vat_in_law, not_modelled)
     assert [q["vat_rate_effective_from"] for q in quotes] == [None, None, None]
-    assert undated["vat"] == Decimal("9000.00"), "the undated quote is priced; only its date is missing"
+    assert undated["vat"] == Decimal("12000.00"), "the undated quote is priced; only its date is missing"
     assert [q["vat_provenance"].source for q in quotes] == [
         Source.DECLARED,
         Source.FALLBACK,
@@ -1337,7 +1505,7 @@ def test_the_date_crosses_the_wire_as_an_iso_string_or_as_null() -> None:
     states, through the model the endpoint actually returns.
     """
     dated = ContractTaxQuote.model_validate(_quote("GB", effective_on=date(2015, 6, 1)))
-    undated = ContractTaxQuote.model_validate(_quote("SG"))
+    undated = ContractTaxQuote.model_validate(_quote("IN", rate_class="commercial"))
 
     assert dated.model_dump(mode="json")["vat_rate_effective_from"] == "2011-01-04"
     assert undated.model_dump(mode="json")["vat_rate_effective_from"] is None
@@ -1490,3 +1658,169 @@ def test_total_taxes_currency_passthrough() -> None:
     assert quote["currency"] == "AED"
     assert quote["jurisdiction"] == "AE"
     assert quote["transfer_fee"] == Decimal("4000.00")
+
+
+# ── 9. Stamp duty learns to ask about a date ─────────────────────────────
+#
+# compute_stamp_duty previously had no effective_on parameter at all - not an
+# undated table a caller could learn to date, a signature that could not be
+# asked. These tests cover the plumbing: the parameter exists, the one real
+# caller's date reaches it, a synthetic band_history resolves and refuses the
+# same way a VAT rate history already does, and every shipped jurisdiction
+# (none of which has written a band_history yet) is unaffected byte for byte.
+
+
+def test_compute_stamp_duty_accepts_effective_on_and_shipped_tables_ignore_it() -> None:
+    """The parameter exists now; no shipped table has a band_history yet.
+
+    Before this change, passing effective_on raised TypeError - the
+    signature had no such parameter. Every jurisdiction below is unaffected
+    by whatever date is asked, because none carries a band_history: the
+    plumbing exists without inventing a single date.
+    """
+    assert compute_stamp_duty(Decimal("400000"), "GB", effective_on=date(1990, 1, 1)) == compute_stamp_duty(
+        Decimal("400000"), "GB"
+    )
+    assert compute_stamp_duty(Decimal("400000"), "GB", effective_on=date(2030, 1, 1)) == compute_stamp_duty(
+        Decimal("400000"), "GB"
+    )
+    assert compute_stamp_duty(Decimal("2000000"), "SG", effective_on=date(2000, 1, 1)) == compute_stamp_duty(
+        Decimal("2000000"), "SG"
+    )
+    assert compute_stamp_duty(Decimal("10000000"), "BR", effective_on=date(1950, 1, 1)) == compute_stamp_duty(
+        Decimal("10000000"), "BR"
+    )
+    assert compute_stamp_duty(
+        Decimal("300000"), "AU", region_subcode="NSW", effective_on=date(1950, 1, 1)
+    ) == compute_stamp_duty(Decimal("300000"), "AU", region_subcode="NSW")
+
+
+def _stamp_duty_history_table() -> dict[str, Any]:
+    """A well-formed table whose GB stamp duty carries a two-period band_history."""
+    table = _well_formed()
+    table["jurisdictions"]["GB"]["stamp_duty"] = {
+        "band_history": [
+            {
+                "effective_from": "2000-01-01",
+                "bands": [{"up_to": None, "rate": 0.01}],
+            },
+            {
+                "effective_from": "2020-01-01",
+                "bands": [{"up_to": None, "rate": 0.05}],
+            },
+        ]
+    }
+    return table
+
+
+def test_a_synthetic_stamp_duty_history_loads_and_resolves(tmp_path: Path) -> None:
+    """The control for the refusals below, the stamp-duty sibling of
+    test_a_synthetic_history_loads_and_resolves.
+    """
+    with _table_on_disk(tmp_path, _stamp_duty_history_table()):
+        tax_engine.reload_tax_table()
+        assert compute_stamp_duty(Decimal("100000"), "GB", effective_on=date(2010, 1, 1)) == Decimal("1000.00")
+        assert compute_stamp_duty(Decimal("100000"), "GB", effective_on=date(2021, 1, 1)) == Decimal("5000.00")
+
+
+def test_stamp_duty_before_the_earliest_band_history_period_refuses(tmp_path: Path) -> None:
+    """The stamp-duty sibling of test_vat_before_the_earliest_band_refuses_rather_than_returning_zero."""
+    with _table_on_disk(tmp_path, _stamp_duty_history_table()):
+        tax_engine.reload_tax_table()
+        with pytest.raises(RateNotInForceError) as exc:
+            compute_stamp_duty(Decimal("100000"), "GB", effective_on=date(1999, 12, 31))
+        assert exc.value.jurisdiction == "GB"
+        assert exc.value.effective_on == date(1999, 12, 31)
+        assert exc.value.effective_from == date(2000, 1, 1)
+
+
+def test_total_taxes_reports_stamp_duty_effective_from_independently_of_vat(tmp_path: Path) -> None:
+    """The two dated axes must not collapse onto one answer.
+
+    GB's synthetic table carries a dated VAT rate (well-formed's undated one,
+    replaced here with a history) and a dated stamp-duty band_history that
+    begins on a different day, so a quote naming both fields must not report
+    the same date for both, or the same None for both, by accident.
+    """
+    table = _stamp_duty_history_table()
+    table["jurisdictions"]["GB"]["vat"]["standard"] = [
+        {"rate": 0.175, "effective_from": "1991-04-01"},
+        {"rate": 0.20, "effective_from": "2011-01-04"},
+    ]
+    with _table_on_disk(tmp_path, table):
+        tax_engine.reload_tax_table()
+        quote = compute_total_taxes_for_contract(
+            {"net": Decimal("100000"), "currency": "GBP"},
+            "GB",
+            effective_on=date(2015, 6, 1),
+        )
+        assert quote["vat_rate_effective_from"] == date(2011, 1, 4)
+        assert quote["stamp_duty_effective_from"] == date(2000, 1, 1)
+        assert quote["vat_rate_effective_from"] != quote["stamp_duty_effective_from"]
+        assert quote["stamp_duty"] == Decimal("1000.00")
+
+
+def test_every_shipped_jurisdiction_has_no_stamp_duty_history_yet() -> None:
+    """No shipped table has written a band_history yet - a data gap, not a bug.
+
+    Scans the raw loaded table rather than calling
+    compute_total_taxes_for_contract for every jurisdiction, because several
+    (DE, IN, AU, US, CH) require a region_subcode this test has no opinion
+    about. The day a band_history is actually written for one of them, this
+    test is the one that has to be told, not silently sidestepped.
+    """
+    table = tax_engine._load_table()
+    for code, jur in (table.get("jurisdictions") or {}).items():
+        if not isinstance(jur, dict):
+            continue
+        sd = jur.get("stamp_duty")
+        if isinstance(sd, dict):
+            assert "band_history" not in sd, f"{code}.stamp_duty now has a band_history; narrow this test"
+            relief = sd.get("first_home_relief")
+            if isinstance(relief, dict):
+                assert "band_history" not in relief, (
+                    f"{code}.stamp_duty.first_home_relief now has one; narrow this test"
+                )
+            by_state = sd.get("by_state")
+            if isinstance(by_state, dict):
+                for sub, entry in by_state.items():
+                    if isinstance(entry, dict):
+                        assert "band_history" not in entry, f"{code}.stamp_duty.{sub} now has one; narrow this test"
+        for key in ("bsd", "itbi"):
+            block = jur.get(key)
+            if isinstance(block, dict):
+                assert "band_history" not in block, f"{code}.{key} now has one; narrow this test"
+
+
+def test_a_malformed_band_history_is_refused_at_load(tmp_path: Path) -> None:
+    """_validate_band_histories actually runs, the same proof
+    test_a_history_written_newest_first_is_refused_at_load gives for VAT.
+    """
+    table = _stamp_duty_history_table()
+    history = table["jurisdictions"]["GB"]["stamp_duty"]["band_history"]
+    table["jurisdictions"]["GB"]["stamp_duty"]["band_history"] = list(reversed(history))
+    with _table_on_disk(tmp_path, table):
+        with pytest.raises(TaxEngineError, match="ascending date order"):
+            tax_engine.reload_tax_table()
+
+
+def test_price_bands_are_still_not_mistaken_for_a_band_history(tmp_path: Path) -> None:
+    """The stamp-duty sibling of test_price_bands_are_not_mistaken_for_a_rate_history.
+
+    A plain ``bands`` list, with no ``band_history`` key beside it, must load
+    and compute exactly as it always has - _validate_band_histories only
+    ever looks at the literal key ``band_history``, never at "is this a list
+    of mappings".
+    """
+    table = _well_formed()
+    table["jurisdictions"]["GB"]["stamp_duty"] = {
+        "bands": [
+            {"up_to": 250000, "rate": 0.0},
+            {"up_to": None, "rate": 0.05},
+        ]
+    }
+    with _table_on_disk(tmp_path, table):
+        tax_engine.reload_tax_table()
+        assert compute_stamp_duty(Decimal("400000"), "GB") == Decimal("7500.00")
+        quote = compute_total_taxes_for_contract({"net": Decimal("400000"), "currency": "GBP"}, "GB")
+        assert quote["stamp_duty_effective_from"] is None

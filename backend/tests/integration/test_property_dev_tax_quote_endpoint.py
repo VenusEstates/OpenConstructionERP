@@ -536,14 +536,16 @@ async def test_tax_quote_says_whether_the_rate_it_used_was_one_the_table_dated(h
     ``vat_rate_effective_from`` follows the period that priced the quote
     rather than the jurisdiction it was quoted in.
 
-    The null comes from a second contract under Singapore law, whose GST this
-    table has never dated. It used to come from GB ``zero`` on this same
-    contract; every GB class is dated now, and the field still has to be able
-    to report a rate the table dates from nothing. It is asserted as a key
-    that is present and empty rather than as a missing key: the response model
-    has to declare the field for either state to reach a client at all, and a
-    schema that dropped it would leave the dated half of this test passing on
-    its own.
+    The null comes from a second contract under Indian law, quoted at the
+    commercial GST rate. That rate is the one class the table has decided to
+    leave undated, because its 12 % is 18 % after the deemed deduction for land
+    and so is a number this table computed rather than read. It used to come
+    from GB ``zero`` and then from Singapore's GST; both are dated now, and the
+    field still has to be able to report a rate the table dates from nothing.
+    It is asserted as a key that is present and empty rather than as a missing
+    key: the response model has to declare the field for either state to reach
+    a client at all, and a schema that dropped it would leave the dated half of
+    this test passing on its own.
     """
     ids = await _seed_spa(
         http_client,
@@ -571,14 +573,14 @@ async def test_tax_quote_says_whether_the_rate_it_used_was_one_the_table_dated(h
     undated_ids = await _seed_spa(
         http_client,
         tenant_a["headers"],
-        governing_law="SG",
+        governing_law="IN",
         total_value="500000.00",
-        currency="SGD",
+        currency="INR",
         signing_date="1997-05-01",
     )
     undated_res = await http_client.post(
         f"/api/v1/property-dev/sales-contracts/{undated_ids['spa_id']}/tax-quote",
-        json={"jurisdiction": "SG"},
+        json={"jurisdiction": "IN", "vat_rate_class": "commercial", "region_subcode": "MH"},
         headers=tenant_a["headers"],
     )
     assert undated_res.status_code == 200, undated_res.text
@@ -596,7 +598,7 @@ async def test_tax_quote_says_whether_the_rate_it_used_was_one_the_table_dated(h
     assert _rate(quotes["standard"]) == Decimal("0.1750")
     assert _rate(quotes["reduced"]) == Decimal("0.0800")
     assert Decimal(quotes["zero"]["vat"]) == Decimal("0.00")
-    # And the undated quote was priced too, at the 9 % it carries today, so
-    # its null says the table never dated that rate rather than that it has
-    # no rate to date.
-    assert _rate(undated) == Decimal("0.0900")
+    # And the undated quote was priced too, at the 12 % it carries for every
+    # date, so its null says the table dates that rate from nothing rather than
+    # that there is no rate to date.
+    assert _rate(undated) == Decimal("0.1200")

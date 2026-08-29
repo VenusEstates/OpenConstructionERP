@@ -4,7 +4,9 @@ The platform carries VAT rates in three unrelated places:
 
 * ``app/core/tax.py`` - a Python dict, 22 countries, read by the country packs.
 * ``app/modules/property_dev/data/tax_rates.yaml`` - 12 jurisdictions, and the
-  one that actually feeds the property development tax quote panel.
+  one that actually feeds the property development tax quote panel. Its rate
+  classes live under ``vat`` and, for SG, AU and IN, under ``gst``; both are
+  read here, because a rate is a rate whatever the block it sits in is called.
 * ``app/modules/i18n_foundation/seed_data/tax_configurations.json`` - 40
   countries, effective-dated, and the only one with any history.
 
@@ -187,13 +189,28 @@ def _current_yaml_rate(entry: object) -> Decimal | None:
     return None
 
 
+#: The yaml keys that hold rate classes. ``gst`` is here because leaving it
+#: out was a real hole rather than a hypothetical one: SG and AU carry their
+#: standard rate under ``gst``, the other two tables carry the same rate for
+#: the same country, and this comparison never put the pairs together. A scope
+#: written as a key name is blind to the sibling key holding the same thing,
+#: which is the defect this whole file exists to catch, one layer up.
+_RATE_BLOCKS = ("vat", "gst")
+
+
 def _yaml_rates() -> dict[tuple[str, str], Decimal]:
     doc = yaml.safe_load(_YAML.read_text(encoding="utf-8"))
     out: dict[tuple[str, str], Decimal] = {}
     for country, block in (doc.get("jurisdictions") or {}).items():
-        for cls, entry in ((block or {}).get("vat") or {}).items():
-            rate = _current_yaml_rate(entry)
-            if rate is not None:
+        for block_key in _RATE_BLOCKS:
+            for cls, entry in ((block or {}).get(block_key) or {}).items():
+                rate = _current_yaml_rate(entry)
+                if rate is None:
+                    continue
+                assert (country, cls) not in out, (
+                    f"{country}.{cls} is declared under more than one of {_RATE_BLOCKS}, so one "
+                    f"of them would silently win here. Decide which block owns it."
+                )
                 out[(country, cls)] = rate
     return out
 
@@ -268,7 +285,7 @@ def test_the_compared_population_is_not_empty() -> None:
     )
 
 
-def test_every_yaml_vat_class_is_either_compared_or_states_no_rate() -> None:
+def test_every_yaml_rate_class_is_either_compared_or_states_no_rate() -> None:
     """A class this reader cannot parse must fail here rather than drop out quietly.
 
     The reader used to accept a single mapping only. When GB and DE standard
@@ -278,8 +295,12 @@ def test_every_yaml_vat_class_is_either_compared_or_states_no_rate() -> None:
     vacuous pass the module docstring is about, arriving through the shape of
     the data rather than through the tax-code mapping, and nothing here noticed.
 
-    The rule: every VAT class in the yaml is either compared or states no rate
-    at all, which is the only honest reason to have nothing to compare.
+    The rule: every rate class in the yaml is either compared or states no rate
+    at all, which is the only honest reason to have nothing to compare. Both
+    blocks are walked. Reading ``vat`` alone was the same defect in a second
+    form - it did not lose a class to a shape it could not parse, it never
+    looked at six of them, and a population that is never looked at cannot
+    report that it is missing.
     """
     doc = yaml.safe_load(_YAML.read_text(encoding="utf-8"))
     compared = set(_yaml_rates())
@@ -287,7 +308,8 @@ def test_every_yaml_vat_class_is_either_compared_or_states_no_rate() -> None:
     unread = sorted(
         f"{country}.{cls}"
         for country, block in (doc.get("jurisdictions") or {}).items()
-        for cls, entry in ((block or {}).get("vat") or {}).items()
+        for block_key in _RATE_BLOCKS
+        for cls, entry in ((block or {}).get(block_key) or {}).items()
         if (country, cls) not in compared and _declares_a_rate(entry)
     )
 
@@ -295,10 +317,12 @@ def test_every_yaml_vat_class_is_either_compared_or_states_no_rate() -> None:
         f"{unread} state a rate the yaml reader did not return, so they have dropped out of the "
         f"drift comparison rather than failing it. Teach _current_yaml_rate the shape they use."
     )
-    # Named as well as covered by the rule above: these two are the classes the
+    # Named as well as covered by the rule above: these are the classes the
     # rule was written for, and a reader that lost them again would otherwise
-    # only be caught by a count.
-    assert {("GB", "standard"), ("DE", "standard")} <= compared
+    # only be caught by a count. SG and AU are here because they are what the
+    # ``vat``-only reader could not see, and a rule stated in the abstract is
+    # worth less than one instance of it that used to be missing.
+    assert {("GB", "standard"), ("DE", "standard"), ("SG", "standard"), ("AU", "standard")} <= compared
 
 
 def test_every_seed_country_still_has_an_open_period() -> None:
