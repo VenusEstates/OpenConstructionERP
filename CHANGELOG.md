@@ -5,6 +5,493 @@ All notable changes to OpenConstructionERP are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.3.0] - 2026-08-29
+
+Three things worth knowing before you upgrade.
+
+PostgreSQL 16 is the floor and it is checked at startup now. Until this release
+the application built its schema and took writes without ever asking the server
+what it was, so an unsupported or unidentifiable server surfaced much later as a
+broken query with nothing pointing back at the cause. It now reads the version
+number the server itself computes and refuses to start against anything below
+16, and equally against anything that will not answer with a number at all,
+which is what some connection poolers and wire protocol proxies do. If you have
+one of those in front of your database, this is the first thing you will meet
+after upgrading. The failure message names the server as the server described
+itself. Installs on SQLite are not affected.
+
+Working weeks are repaired on the way in, and dates move because of it. Saudi
+Arabia was stored as a week containing a day number that the code reading that
+column never produces, so one day of the week matched nothing and the country
+counted a four day week. The week of 4 January 2026 came back as four working
+days where it should be five, and nothing reported a problem, because a short
+week is a perfectly ordinary answer. Separately, a country whose calendar
+shipped after a database was seeded never received it, so six countries were
+resolving through the Monday to Friday fallback rather than their own week, and
+four of those six work Sunday to Thursday, which means the fallback was
+answering with confident wrong dates rather than declining. Both are corrected
+in place on the databases that carry them, and Qatar, Kuwait, Bahrain and Oman
+get a calendar of their own with their 2026 public holidays, having had none at
+all before. Any schedule or deadline computed in those countries changes, and it
+changes towards the right answer. A deliberate four day week that somebody
+configured is left alone: the repair keys on the impossible value rather than on
+the shape of the week.
+
+Figures on the cost database screens move, and there is a paragraph further down
+explaining why. In short, a recipe component carrying no readable quantity used
+to price to nothing while reporting the work item as fully priced, and it no
+longer does.
+
+A row nobody has typed into is no longer a position. Add Position in the editor
+creates the row on the server straight away and puts the cursor in its
+description cell, which is the right behaviour and is not changing, so a bill
+legitimately holds rows carrying nothing yet. What was wrong is that such a row
+was counted, inflating the position tally on the bill's card and again in its
+detail, and that it reached every export, so a delivered bill could carry a line
+with no description, no quantity and no rate. Section headers had the same
+problem from the other side. They are stored under one of two spellings of a
+position's unit, the seeded bills using one and every file importer the other,
+and the list of bills counted in SQL against a single spelling while the bill's
+own detail view classified in Python, so an imported 27 position document read
+39 on its card. Both readers now take their vocabulary from one place, and an
+empty row is neither counted nor exported until something is typed into it.
+
+The GAEB import in the bill editor reads the file. It had been running an inline
+walker rather than the registered importer, and that walker could not read a
+conformant file at all: GAEB DA XML 3.3 keeps an item's wording nested several
+elements deep, every text helper in the walker read only an element's own text,
+so it found whitespace, fell back to a second element that is whitespace for the
+same reason, and skipped the item for having no description. Every item, every
+file. Uploading a bill through the editor therefore appeared to work and
+imported nothing. It goes through the real importer now.
+
+Files this platform writes stop stating units the source never stated. An X84
+item cannot carry a unit at all, so the importer guesses one in order to store
+the row and records the source's silence beside it. The X83 export then wrote
+that guess out as a real GAEB code, so a file that said nothing about units came
+back out of here saying something on every line: measured on the conformance
+fixture, 27 of 27 items carried psch, which a bidder reads as a lump sum
+position somebody chose. Those items now carry no unit element, which is what
+the source said. The claim also retires properly when a person edits the row,
+because an estimator who corrects an invented unit to cubic metres has stated a
+unit and the file no longer gets to assert that nobody did. On the model
+exchange side, the exported document was writing our internal tokens into a
+field that takes GAEB codes, so a lump sum left as lsum and a piece as pcs,
+neither of which a reader working from the GAEB lexicon can resolve. They are
+now psch and Stk. That same export was also carrying section headers through as
+measurable positions, priced and measured in pieces, sitting beside the work
+they were only meant to head.
+
+A negative unit price is refused on the exchange phase that actually carries
+prices. The rule that blocks one consulted the unit first and stepped over
+anything that looked like a lump sum, and every X84 position looks like one,
+because the published schema does not allow a unit there and the importer
+normalises what it sees. So the single value that rule exists to refuse could be
+transferred freely on the one file format bidders price in. We also now ship our
+own schema profile for reading and writing GAEB, and the third party schema and
+conformance files the repository used to carry verbatim are gone from it.
+
+There is a module for reinforcement bending schedules. It reads and writes the
+ABS interchange format described by the BVBS guideline for the exchange of
+reinforcement data, covering the shape, mesh, coupler and general record groups,
+and it keeps each record's exact source line so that what leaves for the bending
+shop is the bytes that arrived rather than our reading of them. That matters
+because the format's checksum covers exact characters, and a line rebuilt from
+parsed columns is a different record even when every value in it is identical.
+The codec is written from the published specification and checked against the
+guideline's own worked examples. The module also appears in the module catalogue
+by name, which it did not at first.
+
+Four attribute names were wrong in four different places, and two of them had a
+whole feature on the floor. Every one of the reinforcement module's seven
+endpoints answered with a server error, because the access check was called with
+its arguments in the wrong order at all seven call sites. Worth being exact,
+because a mis-called access check sounds like a bypass and this is the opposite:
+the check could not run, every request failed before it reached any data, and
+nobody ever saw a project they should not have. The module was unusable rather
+than unsafe, and it was unusable completely. The assistant's schedule tool read
+progress off a field that does not exist on the schema it was handed, so any
+project with a schedule carrying at least one activity got an error card back
+instead of its programme. The ISO 19650 naming scan guarded on a column name the
+photo model does not have, and a guard written against a name that is not there
+does not fail, it narrows the scan, so site diary photos were missing from every
+naming report with nothing raised anywhere. And the bill completeness analysis
+read positions through the paginated call, which caps at a thousand rows, so a
+large tender was summarised from the first thousand lines and reported a
+position total to match.
+
+A variation request can be priced as its own bill of quantities. A request used
+to carry an estimated value with nothing underneath it, so the number a client
+was asked to approve had no priced scope behind it, and nothing tied the
+eventual work back to the request that authorised it. The request now owns a
+bill whose lines trace back to it, and the screen shows those lines, what they
+come to, and the estimate the request was raised with, so the gap between what
+was asked for and what it costs is on the page. Two validation rules cover it,
+one holding that every line traces to its request and one that the priced total
+agrees with the estimate, and both report rather than block, because a quantity
+surveyor is expected to see a difference and decide about it rather than be
+stopped by it. The rule messages ship in all four validation languages. The card
+listing those checks also stopped printing the same finding twice.
+
+A KPI can be defined from the screen. The 16.2.0 notes said in as many words
+that creating one went through the API and that there was no form for it in the
+interface, and this is that form. The dialog builds the same declarative
+specification the server already accepted, an entity, an aggregation, a field
+and any filters, with every option in it coming from the server's own catalogue
+of what it will accept, so nothing a person types is free text that has to be
+trusted. In the same module, an alert threshold now has to be a number when the
+rule is written. The coercion in front of the comparison fell back to zero only
+when a value failed to parse, and not a number, signalling not a number and
+infinity all parse perfectly well in any spelling, so what they met was the
+comparison itself, and an ordering comparison against not a number raises out of
+the evaluator once every cycle for as long as the rule exists.
+
+Records that could not be removed can be removed. This is the largest single
+theme in the release and it ran across six registers. A storage location or a
+stock item on the site inventory, a lead in the pipeline, a vendor, a catalogue
+item, a warehouse or a tolerance profile in the supplier catalogues, a labour
+rate template, and a purchase order raised by mistake were all permanent once
+created. In most of those the endpoint had been there the whole time and no
+screen called it, so the gap was the control rather than the capability, and the
+workaround people actually used was to edit the row into meaninglessness and
+leave it in the list, which is how a supplier list ends up with three spellings
+of the same firm. The supplier catalogue screen also gained editing, since
+everything on it could be created and nothing could be changed, and renaming a
+tolerance profile used to answer with success and the old name, because the
+update schema never declared a name field and the request was discarded during
+validation before anything saw it.
+
+Where a record is held, the product now says what is holding it. Removing a site
+inventory item would have taken its whole movement ledger with it and removing a
+location would have turned a record of where something went into a record of
+nowhere, both silently and both reported as success, so those deletes are
+refused with the reason rather than performed. Site records in construction
+control are checked twice, once for whether their own status permits removal and
+once for whether anything still points at them, and the refusal names the report
+to deal with rather than only saying no. A purchase order is held still while
+the decision to remove it is made. The refusals are translated into every
+language rather than answering in English prose, and where a count is quoted the
+verb agrees with it.
+
+Deleting a lead used to take its whole activity log with it, silently. The
+delete was two lines, fetch the row and remove it, and the foreign key
+underneath cascades, so a lead with twenty logged calls, emails and meetings on
+it neither refused nor warned. The lead went, the database took the trail, and
+the caller got a success. That is now surfaced before anything is destroyed.
+
+The dashboard no longer sends every site's coordinates to a weather service on
+behalf of someone who never asked for a forecast. The forecast widget is opt in
+and the project list and the project detail page both honour that; the sites
+panel did not, and rendered a forecast for every located site on every load
+whatever the setting said. Each of those cells is a request the browser makes
+directly to a public weather host naming that site's latitude and longitude, so
+this was disclosing where a customer's sites are, not ignoring a display
+preference. The panel reads the same setting the other two surfaces read now,
+and the cities, their counts and their links do not depend on the forecast, so
+the panel keeps working with the widget off. The widget itself also stopped
+drawing an empty card headed with a forecast title when the network refused it,
+and it remembers a refusal for a short while so a dashboard full of sites stops
+hammering a host that has just turned it away.
+
+External links work again in the desktop application, and they no longer travel
+through a command shell on the way out. Opening a link on Windows used to run it
+through the command interpreter, which re-parses its own variable syntax inside
+quotes as readily as outside, so a link carrying a variable reference had it
+substituted on the way past. Measured on Windows 11 with the exact command line
+the old code produced, the account name and the full working directory path were
+both expanded and sent to whatever host the link named, while the user saw an
+ordinary page load. That path is gone. Separately, every external link in the
+shipped desktop product had stopped doing anything at all when clicked, along
+with the menu item and toolbar button that open the running application in a
+browser and both buttons on the update notice, because the launcher serves the
+interface from a local address that the desktop framework classifies as remote,
+and nothing had granted those commands. All of them work now. The update notice
+also stopped claiming a choice had been saved before it had been told that it
+was: the opt out link used to rewrite its own label to say update checks were
+off and then ask for them to be turned off, and on the path where the request
+was refused the label said a setting had been written that had not been.
+
+A desktop installation can be pointed at a server the organisation already runs.
+The application has only ever talked to a server it starts itself, which is
+right for one person on one machine and wrong for an office, because every desk
+then keeps its own separate database and nobody sees anybody else's work. Four
+places can now say where the server is, the setting inside the application, an
+environment variable, a file an administrator deploys, and the default of
+starting one locally, and the first that says anything wins. The user's own
+choice sits on top of that order deliberately, so somebody whose configured
+server is unreachable can always get back to a working local start without
+having to be told where to look.
+
+The desktop startup screen speaks the language the machine is set to. It is the
+first thing every desktop user sees and every word on it was English, the boot
+checklist, the first run wait, the failure message and the one time question
+about opening in an application window or a browser. It cannot use the
+application's translation stack, because it runs before the bundle it would load
+exists, so it carries its own tables, and it now has one for every language the
+picker offers. One of those mattered more than the rest: Brazilian Portuguese
+used to fall through to European Portuguese, so a Brazilian user read one word
+for file on the first screen of the product and a different one on every screen
+after it. The log path also stays readable on the right to left layouts, where
+it had been reordered into something no operator could paste.
+
+The Windows installer is about 19 MB smaller and carries less of somebody else's
+code. The bundle shipped both programs out of the upstream converter folder, the
+one this codebase actually runs and a graphical one nothing here opens, and the
+second dragged a user interface toolkit and its plugin folders along with it.
+Those are dropped from the release and from the runtime installer that repairs a
+broken converter, and the build fails if one of them survives.
+
+The sign-in screen stops telling people their password is wrong when the service
+is down. A failed attempt was sorted into two boxes, either no answer at all,
+which produced a connection message, or a response that came back not ok, which
+was read as the server having checked the credentials and rejected them. A
+gateway error in front of us is a response, so it landed in the second box and
+the user was told their email or password was wrong when nothing had ever
+reached the part of the system that could have an opinion about it. The newer of
+the two sign-in screens also stopped advertising a demo account under a name no
+seeder anywhere creates.
+
+Search results carry a real score, and a contact found by their email comes back
+with a name on the row. The score was not lost on the way to the screen, it was
+never computed: the helper that builds a result declares it with a default of
+zero and every one of the roughly fifteen places that calls the helper omitted
+the argument, so every result on every search read zero percent relevance.
+Separately, the label built for a result stopped at company name or person name
+with no third fallback, so a contact who has only an email address was findable
+by typing that address and then came back as a row with an empty title. That
+same display rule was written out by hand in four places, three of which read a
+column that does not exist, and it now lives in one. The retainage report was
+hitting the same fault and losing every vendor name on the page while recording
+the fact at debug level, which is not where a report that has stopped naming its
+counterparties belongs.
+
+The workspace stops counting its estimates by counting projects. The header chip
+and the estimates tile sat on the same screen showing thirteen against twenty
+five for the same thing, because the chip was counting a list built one entry
+per project and wearing an estimate's label.
+
+The dashboard says what the active regional pack actually set up. A pack is the
+largest piece of setup this product does on anyone's behalf, loading a market's
+cost database, setting the currency, wiring the tax template, turning on that
+market's validation standards, choosing the starting modules and switching the
+interface into that market's language, and until now the only thing any screen
+said about it was its name on a badge. An estimator could work for weeks on one
+market's prices and another market's tax treatment with nothing on screen to
+check against. In the same area, a case study now says which regional pack
+serves its market, naming packs this deployment actually has rather than ones it
+does not; the first run wizard offers a market preset for countries where no
+pack exists, instead of offering nothing at all as though the product had
+nothing to say about that market, which was the experience in three of the
+markets with the most case studies; the Brazilian pack now moves a user into
+Brazilian Portuguese rather than European Portuguese, which it had been renaming
+their own dialect out from under them; and a pack no longer advertises a logo it
+does not carry, which had the client fetching a file that was not there.
+
+Fifty two controls highlight when you point at them. Read that as a behaviour
+change rather than a colour rename: those buttons, menu rows and list items were
+written as though they had a hover state, using two colour names this theme does
+not define, and the answer to an unknown colour name is to emit no rule at all,
+so nothing ever happened when the pointer crossed them. Thirty more elements
+across fifteen files were painting nothing whatsoever for a related reason, a
+colour that cannot take a transparency modifier being given one, which also
+drops the declaration silently. There is no missing key to report and no type to
+fail in either case, because the class sits in the source spelled exactly the
+way the palette would have spelled it if the palette had that word.
+
+An unexpected answer from the projects list no longer blanks the entire
+application. The header's project picker asked for a list and trusted what came
+back, and when the endpoint answered successfully with an object rather than an
+array the picker called a list method on it, threw, and left the browser holding
+an empty document. Not a fallback, not an error card, nothing at all: no
+application shell and no text on the page.
+
+A check that crashed while looking at a case is now shown as a crash. Case rules
+run behind a guard, because a broken rule must not stop somebody saving their
+work, and that guard returned an empty list, which is also exactly what a case
+that has been checked and found clean returns. One value carried two meanings,
+and the caller that mattered was the publish gate, which asked for blocking
+findings, got none and shared the case with the team. So a case nobody could
+validate was published as validated. Downstream of that, the editor was not
+reading the flag that distinguishes a remark about the case from a rule that
+fell over while looking at it, so both went into one list under the same heading
+with the crash wearing the same badge as the advice, and an outage read as an
+opinion about somebody's work.
+
+Rates that come out of a cost recipe change, and this is the one to read if you
+keep a cost database. Repricing read a component's quantity through a helper
+that answers zero for a missing key, so a component carrying no quantity
+contributed nothing, counted as a priced line, and left the work item reported
+as fully priced. The rate was then overwritten with zero and every figure in the
+response agreed the run had gone well. A rate of zero that announces itself as
+fully priced is indistinguishable from a measurement, and the person who finds
+out is whoever bid on it. A quantity is now read by something that can answer
+that there isn't one, blank, unparseable, negative and non finite values
+included, and a component with no usable quantity stops the item being repriced
+at all rather than being priced at nothing. An explicit zero is still a real
+quantity and is kept. Three outcomes now leave an existing rate alone and are
+reported separately rather than folded into one number: nothing priced at all, a
+recipe that cannot be read, and a fully priced recipe that computes to nothing
+while the item already carries a rate. Only an item whose rate was actually
+recomputed counts towards coverage. The stored breakdown also adds up to the
+rate it explains now, where costs used to be accumulated over every component
+type and published under three, so a subcontractor line sat inside the rate and
+was missing from its explanation: one shipped roofing recipe reprices to 442.10
+and stored a breakdown showing 17.10. Finally, the recipe template we ship wrote
+its quantities under a key nothing in the pricing engine reads, so the six work
+items in it priced to nothing while reporting themselves complete. That key is
+accepted as a legacy alias on the way in, since files written against our own
+documentation exist and have to keep working, but a file carrying both spellings
+with different values is refused rather than resolved by precedence.
+
+A material is matched by name before it is scored. It used to go to the lexical
+matcher alone, so a name present in the catalogue word for word could still be
+answered by a different row that merely scored well. An exact tier runs first
+now and only an exact identity is returned without review, everything else
+staying a scored proposal marked as needing one. Two related faults on the same
+endpoint are closed with it. A material whose name reduces to nothing, a lone
+hyphen for instance, was scoring a perfect confidence against any catalogue row,
+because a query with one token is trivially a subset of everything, which the
+confidence floor cannot catch since the score is not low, it is perfect. And a
+negative labour rate answered with a server error rather than a refusal.
+Separately, on the matching side, two Chinese count units meaning the same thing
+as a piece were being matched two different ways, one taking the count branch
+and the one beside it the unknown unit branch, and a bill priced in one was
+penalised against a catalogue priced in the other.
+
+A confirmed rate names the person who confirmed it. A group marked confirmed or
+overridden is what gets written into a customer's bill and what the estimate
+preview reports to validation as human confirmed, which makes the low confidence
+rule pass however weak the match was, and the endpoint let a caller set either
+status directly through the same permission that generates the suggestion, with
+nobody recorded as having agreed to anything.
+
+Installing a generated module now requires evidence that it was reviewed.
+Installing writes Python to disk and loads it into the running server, which is
+allowed because a person reads every generated file first, and until now the
+server could not tell a reviewed specification from an unreviewed one, since
+preview and install took an identical request body. The review step was enforced
+by the screen rather than by the interface behind it.
+
+The running product can show the licence texts it ships. Those texts have
+travelled inside every published artefact for the life of the product and
+nothing in the backend could read them, so the only route to one was a link to
+an external site, which on a desktop install with no network is a link to
+nothing, and that is precisely the deployment where somebody is most likely to
+be looking. The About page also stops naming our own licence and stopping there.
+The build redistributes components under two lesser general public licences, one
+of which asks that a combined work displaying copyright notices while it runs
+include a notice for the library among them and point the reader at the texts,
+and the page now lists those components and opens each text in place from the
+copy inside the artefact.
+
+There is a container image again. 16.2.0 published its package and its release
+page and no image at all, because the image build installs the package from
+inside itself and the packaging list had grown two sets of entries pointing at
+files the build was never told to copy in, so it stopped at the first one it
+could not find. Those files are copied now, and a check refuses a packaging
+entry the image build cannot satisfy, since the failure has to be caught where
+it is cheap rather than at the end of a release.
+
+What we tell a commercial licensee has been corrected, and a reader who acted on
+the old wording should know what changed. Both the readme and the attribution
+notice offered commercial licensing without the obligations of our open licence.
+That was written when it was true and it is not true now: PyMuPDF, the library
+we read and write PDF with, is separately licensed under the same terms, it is a
+base dependency present in the wheel, the container image and all four desktop
+installers, and no agreement we sign can lift obligations on code we do not own.
+That sentence survived a search for false claims about PyMuPDF precisely because
+it never mentioned PyMuPDF, which is why it is named here. The notice now says
+which features actually use it, so a customer can tell whether their deployment
+is affected at all, and what replacing it would involve. The obligations
+attached to the lesser licensed libraries in our binaries are written down in
+the same pass, the licence texts they refer to travel with the artefacts, the
+release attaches the corresponding source we are able to attach and names the
+part it cannot, and the attribution list is now resolved from the dependency
+closure rather than read off the declared list, which is a different and larger
+set.
+
+The privacy statement describes what the software does. The transfer section
+said no personal data leaves the European Economic Area except under standard
+contractual clauses put in place by us, and neither half of that held. The
+clauses half could not hold, because the inference features run on a key the
+operator supplies, which makes the account and the agreement one between the
+operator and the provider with us not a party to it. On the same subject,
+setting a project address geocodes it against a public third party service on
+save, and the five switches that turn that off had been documented only inside a
+source file, which is not where an operator reads. They are in the deployment
+environment example now, under a heading that says the feature is on by default
+rather than leaving that to be discovered.
+
+Every module that performs inference declares what it does with it. The first
+question a buyer or a regulator asks is which of the things you ship performs
+inference and on what, and until now that could only be answered by a person
+reading every module and forming an opinion, which is how a sweep of this
+platform's own inference surface finished without having opened the module that
+posts call audio to a speech to text service. A module answers for itself now,
+out of a closed vocabulary rather than free text, and a scanner checks the
+declarations against the code, because a register nobody checks drifts and this
+one gets quoted outside the project.
+
+A file shows its tags where the file is listed. They could be assigned and then
+only seen by opening the file, which is the wrong way round for the thing they
+exist to do, so a row in the list and a tile in the grid now carry them under
+the name with a count standing in for the rest.
+
+A validation finding about a person or a team says who it is about. Three team
+rules reported a finding whose details carried an identifier and nothing else,
+which reads well enough on screen next to the message but is what an export, an
+interface consumer and a validation report actually carry, and there a row
+saying a roster member is past their last day is useless without the name. The
+name travels with the identifier now, and the identifier stays, because one is
+for the reader and the other is what anything acting on the finding needs.
+
+Long text in a property development document wraps inside its column instead of
+running off the page, which had a long escrow line leaving the paper and a long
+signatory name printing over the date beside it.
+
+Romanian projects seeded from the country template price at 21 percent value
+added tax, the rate since 1 August 2025, rather than the 19 it still carried.
+This reaches new installations only. A project methodology already cloned from
+the template keeps its own rate, which is the right behaviour for a document
+somebody may have deliberately overridden.
+
+Six smaller faults where what the product said about itself was wrong. Creating
+a labour rate template with no on cost components attached, which is the
+ordinary case for a new one, died after passing validation and saved nothing.
+The endpoint the interface uses to report its own errors failed whenever the
+browser closed the connection before finishing sending, which happens routinely
+because the reporter fires as the page navigates away, so errors caught that way
+were lost and appeared in the log as something unrelated. A raster overlay whose
+header declares an implausible surface, thirty thousand pixels a side, was
+refused deliberately and said so with an unexplained error rather than a
+refusal. A frontend bundle that goes missing under a running server, a redeploy
+wiping the build directory or a volume that unmounts after boot, told the
+operator the server had crashed when the server was fine, and now answers with a
+not found that names the file. A project with no currency policy stopped being
+filed as an error on every visit to the currencies screen, since having no
+policy yet is the ordinary state. And the demonstration data stopped writing a
+bill status that nothing in the product can produce or move a bill out of.
+
+The share text says 41 languages, which is what the picker offers, rather than
+the 26 it had been claiming.
+
+The cost database documentation is rewritten from the code it describes rather
+than from what it was once meant to do, and the method and the worked example
+are listed in the documentation index so they can be found without knowing they
+exist. The counts the documentation states as fact are recounted again, the rule
+count, the module count and the number of locale files, which are three numbers
+that go stale every time the product grows and had gone stale in several places
+at once.
+
+Two internal states stop being reported wrongly. A column the boot repair had to
+add as nullable, so that it could land over rows that predate it, is now
+backfilled and tightened afterwards, which is what stops the model and the
+database disagreeing quietly and the health check reporting a divergence nobody
+can act on. And the divergence warning prints the whole list rather than the
+first five entries, which had two separate instruments agreeing on five when
+nine had diverged, and looking like corroboration rather than the same
+truncation reached twice.
+
 ## [16.2.0] - 2026-08-28
 
 Maps work again. Every map surface had been drawing tiles with API KEY REQUIRED
