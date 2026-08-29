@@ -10,6 +10,13 @@ import { test, expect } from '@playwright/test';
 import { login } from './helpers';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'node:url';
+
+// __dirname does not exist under "type": "module". Deriving it from
+// import.meta.url is what the neighbours in this directory already do, and it
+// is the same fix the canonical copy of this spec under tests/e2e took.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SCREENSHOT_DIR = path.resolve(__dirname, '..', 'tests', 'e2e', 'screenshots');
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });

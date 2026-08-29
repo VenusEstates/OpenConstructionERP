@@ -28,7 +28,13 @@
  */
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
 import { injectFakeAuth } from './helpers';
+
+// __dirname does not exist under "type": "module"; derived from import.meta.url
+// the same way the neighbours in this directory do it.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ARTIFACT_DIR = path.resolve(
   __dirname,
