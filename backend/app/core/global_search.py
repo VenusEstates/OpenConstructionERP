@@ -72,7 +72,16 @@ async def global_search(
 
     # --- Contacts ---
     try:
+        # ``contact_display_name`` is the one place that knows how to name a
+        # contact, and it lives in a module while this is core. Imported here
+        # rather than at module scope because that is the same lazy, fail-soft
+        # shape every other core-to-module reference uses, and this handler
+        # already relies on it for ``Contact`` itself. Worth naming the cost:
+        # if the finance module is ever absent this import raises and the whole
+        # contacts branch is skipped, so contacts would drop out of search
+        # rather than merely lose a label.
         from app.modules.contacts.models import Contact
+        from app.modules.finance.einvoice_parties import contact_display_name
 
         stmt = (
             select(Contact)
@@ -88,7 +97,7 @@ async def global_search(
         )
         rows = (await session.execute(stmt)).scalars().all()
         for row in rows:
-            label = row.company_name or f"{row.first_name or ''} {row.last_name or ''}".strip()
+            label = contact_display_name(row)
             score = _score(query, label, row.primary_email or "")
             results.append(
                 {
