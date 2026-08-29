@@ -7,11 +7,12 @@
 // The second half of the same hole tsconfig.e2e.json closed. That one covers
 // tests/e2e, 38 files. This covers e2e, 86 - the older of the two Playwright
 // trees (first commit 2026-03-26 against 2026-05-12) and not a dead one: both
-// were edited on 2026-08-29. Eight of the sixteen playwright*.config.ts files
-// point testDir at this half of the tree, so half our e2e configurations were
-// driving code that nothing type checked. We only found that out because a
-// spec had to be checked through a scratchpad config, there being nothing in
-// the repository able to check it.
+// were edited on 2026-08-29. Six of the sixteen playwright*.config.ts files
+// point testDir into this tree, and two more at e2e-match and playwright, which
+// stay outside every project: eight of our sixteen e2e configurations were
+// driving code that nothing type checked, and this closes six of the eight. We
+// only found that out because a spec had to be checked through a scratchpad
+// config, there being nothing in the repository able to check it.
 //
 // A third project rather than another entry in tsconfig.e2e.json's include,
 // and definitely not in the base include, for the reason recorded in
