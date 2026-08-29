@@ -452,20 +452,6 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Verify every Playwright project still selects tests
-        # A project whose grep matches no spec is the one kind of dead test
-        # lane Playwright reports nothing about: it contributes no failures and
-        # the summary reads as a pass. This lists the suite without launching
-        # anything, so it needs no browsers and takes about a second.
-        # OE_E2E_VERIFY_CONFIG_ONLY drops the companion check that each
-        # project's browser is on disk, which is true of a machine rather than
-        # of the config and would fail everything on a runner that installs no
-        # browsers. That half belongs to whoever is about to run the tests, and
-        # runs by default for them.
-        env:
-          OE_E2E_VERIFY_CONFIG_ONLY: "1"
-        run: npm run test:e2e:verify-projects
-
       - name: Type check
         # tsc --noEmit whole-program check OOMs at the old 6 GB ceiling
         # ("Reached heap limit Allocation failed", exit 134). ubuntu and windows
@@ -504,6 +490,40 @@ jobs:
       - name: Run tests (no build output on this runner)
         if: matrix.os == 'macos-latest'
         run: npm run test -- --exclude "tests/pwa/**"
+
+      - name: Verify every Playwright project still selects tests
+        # A project whose grep matches no spec is the one kind of dead test
+        # lane Playwright reports nothing about: it contributes no failures and
+        # the summary reads as a pass. This lists the suite without launching
+        # anything, so it needs no browsers and takes about a second.
+        # OE_E2E_VERIFY_CONFIG_ONLY drops the companion check that each
+        # project's browser is on disk, which is true of a machine rather than
+        # of the config and would fail everything on a runner that installs no
+        # browsers. That half belongs to whoever is about to run the tests, and
+        # runs by default for them.
+        #
+        # Placed last on purpose, and it earned the position. It sat between
+        # Lint and Type check, and it is currently failing for a real reason:
+        # every configured project selects zero tests. Because a failing step
+        # aborts the job, Type check, Build and the unit tests were all reported
+        # as skipped on all three runners, which meant `npm run build` - the one
+        # gate the frontend actually answers to - had not executed in CI at all
+        # while this was red. A secondary check that masks the primary one costs
+        # more than it catches. Nothing is weakened by moving it: the step still
+        # runs on every push and still fails the job on the same defect. It just
+        # no longer decides whether the compiler gets to speak. Order the steps
+        # so that the most load-bearing gate reports first and the cheapest
+        # advisory reports last, because a red that hides four other verdicts
+        # tells you less than the four verdicts would have.
+        # `!cancelled()` rather than `always()`: this has to report even when an
+        # earlier step failed, which is the entire point of moving it, but it
+        # should not keep running after somebody cancels the run or after a
+        # superseding push. That is also the form the rest of this file already
+        # uses, on twenty-one other steps.
+        if: ${{ !cancelled() }}
+        env:
+          OE_E2E_VERIFY_CONFIG_ONLY: "1"
+        run: npm run test:e2e:verify-projects
 
   backend-cross-os:
     name: Backend CI (${{ matrix.os }}, embedded PG, shard ${{ matrix.shard }}/3)
