@@ -61,11 +61,22 @@ export default defineConfig({
   // dedicated configs (playwright.boq-tour.config.ts, ...) and are
   // intentionally ignored by this harness.
   testMatch: ['**/*.spec.ts'],
+  // Every pattern here is anchored with `tests/e2e/`, and that prefix is
+  // load-bearing rather than decorative. Playwright matches testIgnore against
+  // the ABSOLUTE path of each file and the match is not anchored at the start,
+  // so a bare `**/runner/**` also matches any checkout that happens to live
+  // under a directory called `runner`. GitHub's Linux and macOS runners check
+  // out into /home/runner/work/... and /Users/runner/work/..., so that one
+  // pattern ignored EVERY spec in the repository and all five projects
+  // selected zero tests. Windows runners use D:\a\..., which is why this was
+  // green on Windows and red on the other two, and why it could not be
+  // reproduced by reading the config. The directory this line is really about
+  // is tests/e2e/runner/, so it now says so.
   testIgnore: [
-    '**/fixtures/**',
-    '**/helpers/**',
-    '**/runner/**',
-    '**/reporters/**',
+    '**/tests/e2e/fixtures/**',
+    '**/tests/e2e/helpers/**',
+    '**/tests/e2e/runner/**',
+    '**/tests/e2e/reporters/**',
     '**/node_modules/**',
     // Legacy specs sitting directly under tests/e2e/ (one-level deep)
     // are invoked via their dedicated configs at the repo root.
