@@ -17,6 +17,7 @@
  */
 
 import { apiGet, apiPost, API_BASE, getAuthToken } from '@/shared/lib/api';
+import { packCountryCode } from '@/shared/lib/regionalPack';
 
 // ── Installed packs ──────────────────────────────────────────────────────────
 
@@ -288,32 +289,23 @@ export async function fullInstallPackStream(
 /**
  * Derive an ISO-3166 alpha-2 country code for a pack.
  *
- * Prefers ``metadata.country`` (the reference packs set it), then the region
- * subtag of ``default_locale`` (``fr-CA`` → ``ca``). Returns ``null`` when
- * neither is available so the caller can fall back to a generic glyph.
+ * The implementation moved to ``@/shared/lib/regionalPack`` when the dashboard
+ * and the cases runner started asking the same question. Features here do not
+ * import from one another, so the alternative was a second copy in ``shared``
+ * and this one drifting away from it. Re-exported rather than renamed so the
+ * dozen call sites in this feature keep reading the way they read.
  */
-export function packCountryCode(pack: InstalledPartnerPack): string | null {
-  const metaCountry = pack.metadata?.country;
-  if (typeof metaCountry === 'string' && metaCountry.length === 2) {
-    return metaCountry.toLowerCase();
-  }
-  const region = pack.default_locale.split('-')[1];
-  if (region && region.length === 2) {
-    return region.toLowerCase();
-  }
-  return null;
-}
+export { packCountryCode };
 
-/**
- * Human-readable country/market name for a pack card title.
- *
- * Prefers ``metadata.country_name_en``; falls back to the partner name.
+/*
+ * ``packCountryName`` used to live here and read ``metadata.country_name_en``.
+ * It is gone rather than deprecated, on purpose. That field is English by its
+ * own name, so every one of its eleven callers rendered English in all
+ * forty-one languages, and us-california, us-costdata and us-texas share one
+ * "United States" between them in it. A function still exported is a function
+ * the next screen will reach for. The replacement is ``packDisplayName`` in
+ * OnboardingWizard, which reads the translated ``modules.pp_name_<slug>``.
  */
-export function packCountryName(pack: InstalledPartnerPack): string {
-  const name = pack.metadata?.country_name_en;
-  if (typeof name === 'string' && name.trim()) return name.trim();
-  return pack.partner_name;
-}
 
 /**
  * A 1–2 character monogram for a pack's logo badge.

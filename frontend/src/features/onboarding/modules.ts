@@ -282,6 +282,11 @@ export const ALL_MODULES: ModuleDef[] = [
   // ── Regional Packs (extended) ────────────────────────────────────────
   { key: 'mexico_pack', labelKey: 'onboarding.mod_mexico_pack', descriptionKey: 'onboarding.mod_mexico_pack_desc', group: 'regional' },
   { key: 'sa_pack', labelKey: 'onboarding.mod_sa_pack', descriptionKey: 'onboarding.mod_sa_pack_desc', group: 'regional' },
+  // backend/app/modules/china_pack has shipped since before this list was
+  // written and was the only one of the thirteen regional modules with no
+  // line here, so the picker offered twelve and China could not be chosen at
+  // the one moment a new user is asked what they work on.
+  { key: 'china_pack', labelKey: 'onboarding.mod_china_pack', descriptionKey: 'onboarding.mod_china_pack_desc', group: 'regional' },
 ];
 
 export const CORE_MODULE_KEYS = new Set(ALL_MODULES.filter((m) => m.core).map((m) => m.key));
