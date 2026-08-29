@@ -207,7 +207,7 @@ export default function GlobalSearchModal() {
                       : `${FACET_COLOR[typeMeta.name] ?? 'bg-surface-secondary text-content-secondary border-border-light'} hover:opacity-80`
                   }`}
                 >
-                  {typeMeta.label}
+                  {collectionLabel(t, typeMeta.name)}
                   {facetCount > 0 && (
                     <span className="tabular-nums opacity-80">
                       {facetCount}
@@ -288,44 +288,59 @@ export default function GlobalSearchModal() {
                     <span className="flex-1 h-px bg-border-light" />
                   </div>
                   <ul className="space-y-0.5">
-                    {hits.map((hit) => (
-                      <li key={`${hit.collection}:${hit.id}`}>
-                        <button
-                          type="button"
-                          onClick={() => handleHitClick(hit)}
-                          className="w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-start hover:bg-oe-blue/5 focus-visible:bg-oe-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oe-blue/40 border border-transparent hover:border-oe-blue/30 transition-colors group"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[13px] font-medium text-content-primary truncate">
-                                {hitLabel(
-                                  hit,
-                                  (c) => collectionLabel(t, c),
-                                  (kind, ref) =>
-                                    t('global_search.unnamed_hit', {
-                                      defaultValue: '{{kind}} {{ref}}',
-                                      kind,
-                                      ref,
-                                    }),
-                                )}
-                              </span>
-                              <span className="text-[10px] text-content-tertiary tabular-nums shrink-0">
-                                {Math.round(hit.score * 100)}%
-                              </span>
-                            </div>
-                            {hit.snippet && (
-                              <div className="text-[11px] text-content-tertiary line-clamp-2 mt-0.5 leading-snug">
-                                {hit.snippet}
+                    {hits.map((hit) => {
+                      // A collection the backend has grown and this build has
+                      // not heard of has no route, and a row that looks
+                      // clickable and then does nothing is worse than one
+                      // that says so. Every collection the backend can return
+                      // today is routed, so this is for the next one.
+                      const navigable = hitToHref(hit) !== '#';
+                      return (
+                        <li key={`${hit.collection}:${hit.id}`}>
+                          <button
+                            type="button"
+                            onClick={() => handleHitClick(hit)}
+                            disabled={!navigable}
+                            className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-start border border-transparent transition-colors group ${
+                              navigable
+                                ? 'hover:bg-oe-blue/5 focus-visible:bg-oe-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oe-blue/40 hover:border-oe-blue/30'
+                                : 'cursor-default opacity-60'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[13px] font-medium text-content-primary truncate">
+                                  {hitLabel(
+                                    hit,
+                                    (c) => collectionLabel(t, c),
+                                    (kind, ref) =>
+                                      t('global_search.unnamed_hit', {
+                                        defaultValue: '{{kind}} {{ref}}',
+                                        kind,
+                                        ref,
+                                      }),
+                                  )}
+                                </span>
+                                <span className="text-[10px] text-content-tertiary tabular-nums shrink-0">
+                                  {Math.round(hit.score * 100)}%
+                                </span>
                               </div>
+                              {hit.snippet && (
+                                <div className="text-[11px] text-content-tertiary line-clamp-2 mt-0.5 leading-snug">
+                                  {hit.snippet}
+                                </div>
+                              )}
+                            </div>
+                            {navigable && (
+                              <ArrowUpRight
+                                size={13}
+                                className="text-content-quaternary group-hover:text-oe-blue shrink-0 mt-0.5"
+                              />
                             )}
-                          </div>
-                          <ArrowUpRight
-                            size={13}
-                            className="text-content-quaternary group-hover:text-oe-blue shrink-0 mt-0.5"
-                          />
-                        </button>
-                      </li>
-                    ))}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))}

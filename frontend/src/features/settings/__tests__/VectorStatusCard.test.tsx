@@ -24,7 +24,12 @@ vi.mock('@/shared/lib/api', () => ({
   apiPost: (...args: unknown[]) => apiPost(...args),
 }));
 
-vi.mock('@/features/search/api', () => ({
+// Partial: only the network call is stubbed. The card also imports
+// `collectionLabel` to name each collection in the reader's language, and
+// that one is a pure function this test wants the real behaviour of - a
+// whole-module mock would have to restate the label table to say anything.
+vi.mock('@/features/search/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/search/api')>()),
   fetchSearchStatus: (...args: unknown[]) => fetchSearchStatus(...args),
 }));
 

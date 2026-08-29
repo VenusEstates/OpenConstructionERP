@@ -39,8 +39,15 @@ export interface UnifiedSearchResponse {
 }
 
 export interface SearchTypeMeta {
+  /** Full collection key, e.g. `oe_boq_positions`. Label it with
+   *  `collectionLabel`, which reads the reader's locale. */
   name: string;
+  /** The server's own English name for the collection, from
+   *  `COLLECTION_LABELS` in `backend/app/core/vector_index.py`. The server
+   *  cannot know the reader's language, so nothing in this app renders it;
+   *  it stays on the wire for other API consumers. */
   label: string;
+  /** `name` without its `oe_` prefix; what `GET /search/?types=` accepts. */
   short: string;
 }
 
@@ -176,8 +183,24 @@ export async function fetchSimilarItems(
  *    /bim?element=<element_id>               → BIMPage
  *    /validation?id=<report_id>              → ValidationPage
  *    /chat?session=<session_id>              → ERP Chat full page
+ *    /changeorders?highlight=<order_id>      → ChangeOrdersPage
+ *    /variations                             → VariationsPage
+ *    /moc                                    → MoCPage
+ *    /costs                                  → CostsPage
  *
- *  Returns ``#`` for unknown collections so the click is a safe no-op.
+ *  The last three land on the register rather than on the record. Neither
+ *  page can select one from the URL - they read no search param at all - so
+ *  a parameter here would be a link that looks precise and is not, which is
+ *  the shape `linkedRecordDeepLink.test.tsx` already settled for the same
+ *  question: the bare register is the honest destination until the page can
+ *  read an id, and a test says which ones are still waiting.
+ *
+ *  Returns ``#`` for unknown collections so the click is a safe no-op. Every
+ *  collection in ALL_COLLECTIONS (backend/app/core/vector_index.py:112) is
+ *  answered above, so today that branch is only reachable by a collection
+ *  the backend has grown and this build has not heard of yet - which is
+ *  exactly how the four cases above came to be missing. The modal marks such
+ *  a row non-navigable rather than letting the click do nothing in silence.
  */
 export function hitToHref(hit: UnifiedSearchHit): string {
   switch (hit.collection) {
@@ -222,6 +245,16 @@ export function hitToHref(hit: UnifiedSearchHit): string {
         ? `/chat?session=${encodeURIComponent(sessionId)}`
         : '/chat';
     }
+    case 'oe_change_orders':
+      // `?highlight=` is the house convention for list screens, and
+      // ChangeOrdersPage reads it (ChangeOrdersPage.tsx:2107).
+      return `/changeorders?highlight=${encodeURIComponent(hit.id)}`;
+    case 'oe_variations':
+      return '/variations';
+    case 'oe_moc':
+      return '/moc';
+    case 'oe_cost_items':
+      return '/costs';
     default:
       return '#';
   }

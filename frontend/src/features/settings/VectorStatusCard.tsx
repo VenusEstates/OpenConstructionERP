@@ -24,7 +24,11 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button } from '@/shared/ui';
 import { apiPost } from '@/shared/lib/api';
-import { fetchSearchStatus, type SearchStatusCollection } from '@/features/search/api';
+import {
+  collectionLabel,
+  fetchSearchStatus,
+  type SearchStatusCollection,
+} from '@/features/search/api';
 import { useToastStore } from '@/stores/useToastStore';
 import { getNumberLocale } from '@/stores/usePreferencesStore';
 
@@ -216,7 +220,9 @@ export default function VectorStatusCard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-content-primary">
-                            {col.label}
+                            {/* `col.label` is the server's English; the
+                                collection key is what this app can localise. */}
+                            {collectionLabel(t, col.collection)}
                           </span>
                           {col.ready ? (
                             <CheckCircle2

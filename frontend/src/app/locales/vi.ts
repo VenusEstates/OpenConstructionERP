@@ -36504,7 +36504,7 @@ const resource = {
     "cases.set_up_the_common_data_environment.step.simulate-route.in.roles": "Phân công vai trò",
     "cases.set_up_the_common_data_environment.step.simulate-route.out.outcome": "Kết quả đường dẫn thuận lợi",
     "cases.set_up_the_common_data_environment.step.simulate-route.out.warnings": "Cảnh báo thiết kế",
-    "nav.correspondence": "Tương ứng",
+    "nav.correspondence": "Thư từ",
     "nav.closeout": "Đóng",
     "nav.federations": "Liên đoàn",
     "nav.clash": "Phát hiện xung đột",
