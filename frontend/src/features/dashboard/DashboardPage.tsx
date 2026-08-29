@@ -1701,12 +1701,20 @@ function ProjectMetricCards({
 
 function SystemStatusSummary({
   projects,
-  boqs,
+  boqCount,
   boqsLoading = false,
 }: {
   projects?: ProjectSummary[];
-  boqs?: BOQWithTotal[];
-  /** True while the dashboard rollup that feeds `boqs` is still in flight. */
+  /**
+   * Non-archived BOQs across the whole workspace, straight from
+   * ``boq_summary.active_boqs``. Do NOT derive this from the synthesized
+   * ``allBoqs`` stubs - those hold ONE entry per project rather than one
+   * per BOQ, so a workspace with 13 projects and 25 BOQs would show "13"
+   * here (same root cause KpiRibbon's activeEstimates tile hit, see the
+   * comment there).
+   */
+  boqCount?: number;
+  /** True while the dashboard rollup that feeds `boqCount` is still in flight. */
   boqsLoading?: boolean;
 }) {
   const { t } = useTranslation();
@@ -1738,7 +1746,7 @@ function SystemStatusSummary({
   // pulse instead of a misleading "0" on a cold server. `null` = pending.
   const moduleCount = modules ? modules.modules?.length ?? 0 : null;
   const projectCount = projects ? projects.length : null;
-  const boqCount = boqsLoading ? null : boqs?.length ?? 0;
+  const boqBadgeCount = boqsLoading ? null : boqCount ?? 0;
   const userCount = canListUsers ? (usersList ? usersList.length : null) : 0;
 
   const badges = [
@@ -1752,7 +1760,7 @@ function SystemStatusSummary({
     },
     {
       icon: <FileSpreadsheet size={12} strokeWidth={2} />,
-      value: boqCount,
+      value: boqBadgeCount,
       label: t('dashboard.ss_boqs', { defaultValue: 'BOQs' }),
       color: 'text-[#7c3aed]',
       bg: 'bg-[#7c3aed]/10',
@@ -2769,7 +2777,11 @@ function DashboardPageInner() {
         <span aria-hidden className="h-3 w-px bg-border-light" />
 
         {/* System status pills */}
-        <SystemStatusSummary projects={projects} boqs={allBoqs} boqsLoading={rollup.isLoading} />
+        <SystemStatusSummary
+          projects={projects}
+          boqCount={boqSummary?.active_boqs}
+          boqsLoading={rollup.isLoading}
+        />
       </div>
 
       {/* Start here: Cases (learn by example) is now a registry widget

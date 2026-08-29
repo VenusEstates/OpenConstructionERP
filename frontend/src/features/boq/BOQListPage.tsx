@@ -56,6 +56,11 @@ interface BOQWithProject extends BOQ {
 
 const ITEMS_PER_PAGE = 12;
 
+// Stable display order for the status stat badges: known statuses in their
+// natural workflow order first, then any unrecognised value alphabetically
+// so a new backend status doesn't reshuffle the row it lands in.
+const STATUS_DISPLAY_ORDER = ['draft', 'in_review', 'final', 'approved', 'archived'];
+
 /**
  * A whole-number amount in the reader's language.
  *
@@ -707,17 +712,35 @@ export function BOQListPage() {
       .map(([currency, total]) => ({ currency, total }))
       .sort((a, b) => b.total - a.total);
     const totalPositions = filtered.reduce((s, b) => s + b.positionCount, 0);
-    const drafts = filtered.filter((b) => b.status === 'draft').length;
-    const finals = filtered.filter((b) => b.status === 'final').length;
+    // Tally every status value present in the filtered set rather than a
+    // hardcoded draft/final pair - the backend status column is a free
+    // string (models.py), and seeding already writes 'approved' straight
+    // to the DB alongside the 'draft' -> 'final' router transition, so a
+    // fixed pair silently drops whatever else shows up.
+    const byStatus = new Map<string, number>();
+    for (const b of filtered) {
+      byStatus.set(b.status, (byStatus.get(b.status) ?? 0) + 1);
+    }
     return {
       totalsByCurrency,
       multiCurrency: byCurrency.size > 1,
       totalPositions,
-      drafts,
-      finals,
+      byStatus,
       count: filtered.length,
     };
   }, [allBoqs, filtered]);
+
+  const statusEntries = useMemo(() => {
+    if (!stats) return [];
+    return [...stats.byStatus.entries()].sort(([a], [b]) => {
+      const ia = STATUS_DISPLAY_ORDER.indexOf(a);
+      const ib = STATUS_DISPLAY_ORDER.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  }, [stats]);
 
   /* ── Mutations ────────────────────────────────────────────────────── */
 
@@ -757,6 +780,7 @@ export function BOQListPage() {
   function statusVariant(status: string): 'success' | 'blue' | 'warning' | 'neutral' {
     switch (status) {
       case 'final': return 'success';
+      case 'approved': return 'success';
       case 'draft': return 'blue';
       case 'in_review': return 'warning';
       default: return 'neutral';
@@ -932,9 +956,12 @@ export function BOQListPage() {
           </div>
           <div className="flex flex-col justify-start rounded-xl border border-slate-200/70 dark:border-slate-700/50 bg-gradient-to-b from-slate-50/70 to-slate-100/45 dark:from-slate-800/50 dark:to-slate-900/35 p-4 shadow-xs transition-shadow duration-normal ease-oe hover:shadow-sm">
             <div className="text-2xs font-medium text-content-tertiary uppercase tracking-wide">{t('boq.status', { defaultValue: 'Status' })}</div>
-            <div className="mt-1 flex items-center gap-2">
-              <Badge variant="blue" size="sm" dot>{stats.drafts} {t('boq.draft', { defaultValue: 'draft' })}</Badge>
-              <Badge variant="success" size="sm" dot>{stats.finals} {t('boq.final', { defaultValue: 'final' })}</Badge>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {statusEntries.map(([status, n]) => (
+                <Badge key={status} variant={statusVariant(status)} size="sm" dot>
+                  {n} {statusLabel(status)}
+                </Badge>
+              ))}
             </div>
           </div>
         </div>
