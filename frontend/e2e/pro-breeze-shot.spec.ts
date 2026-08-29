@@ -1,6 +1,6 @@
 import { test } from '@playwright/test';
 
-test.use({ reducedMotion: 'no-preference' });
+test.use({ contextOptions: { reducedMotion: 'no-preference' } });
 
 test('module tiles screenshot', async ({ page }) => {
   test.setTimeout(90000);

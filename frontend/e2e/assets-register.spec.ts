@@ -95,9 +95,10 @@ test.describe('Asset Register', () => {
     });
     const body = await projectsRes.json();
     const items: { id: string; name: string }[] = Array.isArray(body) ? body : body.items;
-    if (!items?.length) throw new Error('No demo projects to use as E2E fixture');
-    REAL_PROJECT_ID = items[0].id;
-    REAL_PROJECT_NAME = items[0].name;
+    const firstProject = items?.[0];
+    if (!firstProject) throw new Error('No demo projects to use as E2E fixture');
+    REAL_PROJECT_ID = firstProject.id;
+    REAL_PROJECT_NAME = firstProject.name;
   });
 
   test.beforeEach(async ({ page }) => {

@@ -206,8 +206,7 @@ test.describe('R5 audit — Mobile responsive (iPhone 13)', () => {
     await page.setViewportSize({ width: 375, height: 812 });
   });
 
-  for (let i = 0; i < ROUTES.length; i++) {
-    const route = ROUTES[i];
+  for (const [i, route] of ROUTES.entries()) {
     const idx = String(i + 1).padStart(2, '0');
     test(`mobile ${route.path}`, async ({ page }) => {
       test.setTimeout(60_000);
@@ -258,8 +257,7 @@ test.describe('R5 audit — Tablet (iPad portrait)', () => {
     await page.setViewportSize({ width: 768, height: 1024 });
   });
 
-  for (let i = 0; i < ROUTES.length; i++) {
-    const route = ROUTES[i];
+  for (const [i, route] of ROUTES.entries()) {
     const idx = String(i + 1).padStart(2, '0');
     test(`tablet ${route.path}`, async ({ page }) => {
       test.setTimeout(60_000);
@@ -305,8 +303,7 @@ test.describe('R5 audit — Keyboard + focus visibility (desktop)', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
   });
 
-  for (let i = 0; i < KEYBOARD_ROUTES.length; i++) {
-    const route = KEYBOARD_ROUTES[i];
+  for (const [i, route] of KEYBOARD_ROUTES.entries()) {
     const idx = String(i + 1).padStart(2, '0');
     test(`keyboard ${route.path}`, async ({ page }) => {
       test.setTimeout(60_000);

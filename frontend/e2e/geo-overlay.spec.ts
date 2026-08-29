@@ -247,7 +247,7 @@ test.describe('Geo Hub raster overlays', () => {
     const canvas = page.locator('canvas').first();
     const box = await canvas.boundingBox();
     if (box) {
-      const pts = [
+      const pts: Array<[number, number]> = [
         [box.width * 0.4, box.height * 0.4],
         [box.width * 0.6, box.height * 0.4],
         [box.width * 0.65, box.height * 0.55],

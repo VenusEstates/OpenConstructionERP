@@ -112,7 +112,6 @@ test.describe('v1.9.4 broad-nav sweep', () => {
   for (const route of ROUTES) {
     test(`Route ${route.path} renders with no overlap + no console errors`, async ({ page }) => {
       const stop = attachConsoleErrorWatcher(page);
-      const pad = route.name.padStart(20, '_');
       const slug = route.name;
       await page.goto(route.path);
       // Some routes redirect; give them a chance

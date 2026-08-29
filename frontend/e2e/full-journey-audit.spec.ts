@@ -19,7 +19,7 @@
  *     --workers=1 --reporter=line --timeout=120000
  */
 
-import { test, expect, type Page, type Request, type Response, type ConsoleMessage } from '@playwright/test';
+import { test, expect, type Page, type Response, type ConsoleMessage } from '@playwright/test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';

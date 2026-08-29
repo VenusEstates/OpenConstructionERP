@@ -215,12 +215,6 @@ test.describe('Accommodation calendar — rooms × dates grid', () => {
     expect(checkInValue).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     // Set a 4-night stay so the block clearly spans multiple columns.
-    const checkOutIso = isoNDaysFromToday(
-      Number(checkInValue.slice(-2)) + 4 > 28
-        ? Number(checkInValue.slice(-2)) - 2 + 4
-        : 3 + 4,
-    );
-    // Simpler: just add +4 to whatever check-in is.
     const ci = new Date(checkInValue + 'T00:00:00');
     ci.setDate(ci.getDate() + 4);
     const computedCheckOut = ci.toISOString().slice(0, 10);

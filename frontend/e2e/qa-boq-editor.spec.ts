@@ -4,7 +4,7 @@
  * Logs in with demo account, dismisses onboarding tour, navigates to project -> BOQ,
  * and thoroughly tests the BOQ Editor page.
  */
-import { test, expect, type Page } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 
 const SCREENSHOT_DIR = '../screenshots/qa-boq-editor';
 const DEMO_EMAIL = 'demo@openconstructionerp.com';

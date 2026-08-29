@@ -6,7 +6,7 @@
  * flow description.
  */
 
-import { test, expect, type BrowserContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { login } from './helpers';
 import path from 'path';
 import fs from 'fs';
@@ -18,13 +18,7 @@ const SHARE_PASSWORD = 'testpw';
 const WRONG_PASSWORD = 'wrongpw';
 
 test.describe('Password-protected share links', () => {
-  test('owner mints a share link, recipient unlocks it', async ({
-    page,
-    browser,
-  }: {
-    page: Awaited<ReturnType<BrowserContext['newPage']>>;
-    browser: BrowserContext['browser'];
-  }) => {
+  test('owner mints a share link, recipient unlocks it', async ({ page, browser }) => {
     await login(page);
     await page.goto('/files');
     await page.waitForLoadState('networkidle');
@@ -62,7 +56,7 @@ test.describe('Password-protected share links', () => {
     const shareUrl = (await urlBlock.textContent())?.trim() ?? '';
     expect(shareUrl).toMatch(/\/share\/[A-Za-z0-9_-]{20,}/);
 
-    const incognito = await browser!.newContext();
+    const incognito = await browser.newContext();
     const guestPage = await incognito.newPage();
     const shareUrlPath = shareUrl.replace(/^https?:\/\/[^/]+/, '');
     await guestPage.goto(shareUrlPath);

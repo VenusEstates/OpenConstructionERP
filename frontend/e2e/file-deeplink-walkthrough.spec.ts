@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { loginV19 } from './v1.9/helpers-v19';
 import path from 'node:path';
 import fs from 'node:fs';

@@ -23,14 +23,13 @@
 import { expect, test } from '@playwright/test';
 import {
   bootstrapDevelopmentGraph,
-  createBuyer,
   createLead,
   convertLeadToReservation,
   convertReservationToSpa,
   teardownDevelopment,
   uniqueSuffix,
 } from './helpers/api-bootstrap';
-import { demoLogin, hydrateAuth } from './helpers/auth';
+import { demoLogin } from './helpers/auth';
 import { Shooter } from './helpers/screenshots';
 
 test.describe.configure({ mode: 'serial' });

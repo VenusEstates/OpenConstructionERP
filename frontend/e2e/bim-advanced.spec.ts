@@ -226,10 +226,9 @@ test.describe('Group A: BIM Upload + Processing', () => {
     await page.waitForTimeout(1000);
     await page.screenshot({ path: 'test-results/a4-global-upload-indicator.png', fullPage: true });
 
-    // The GlobalUploadIndicator is rendered in AppLayout, check if it exists in DOM
-    // even if the store injection failed (store not exposed)
-    const indicator = page.locator('.fixed.bottom-20, [class*="upload-indicator"]');
-    // This is expected to exist only if store was accessible
+    // Nothing is asserted here: the GlobalUploadIndicator only mounts when the
+    // store is reachable, and this spec cannot reach it. The screenshot above
+    // is the whole of what this test produces.
   });
 });
 
@@ -251,13 +250,9 @@ test.describe('Group B: BIM Filter Deep Tests', () => {
 
     await page.screenshot({ path: 'test-results/b5-filter-panel.png', fullPage: true });
 
-    // Check if filter panel has search, storey, and type sections
-    const filterPanel = page.locator('[class*="filter"], [data-testid="bim-filter-panel"]');
-    const searchInput = page.locator('input[placeholder*="earch" i], input[placeholder*="filter" i], input[placeholder*="find" i]');
-
-    // At least the search input should be visible if the filter panel is open
-    const panelVisible = (await filterPanel.count()) > 0 || (await searchInput.count()) > 0;
-    // Filter may only be available when a model is loaded — this is acceptable
+    // The filter panel's search, storey and type sections are not asserted on:
+    // the panel is only present once a model is loaded, which this spec does not
+    // do. The screenshot above is the whole of what this test produces.
   });
 
   test('B6: Search input in filter panel accepts text', async ({ page }) => {
@@ -287,9 +282,8 @@ test.describe('Group B: BIM Filter Deep Tests', () => {
 
     await page.screenshot({ path: 'test-results/b7-building-elements-toggle.png', fullPage: true });
 
-    // Look for the "Building elements only" toggle
-    const toggle = page.locator('text=/building.*elements|hide.*noise|filter.*annotation/i');
-    // This is only visible when a model with elements is loaded
+    // Nothing is asserted here: the "Building elements only" toggle is only
+    // visible when a model with elements is loaded.
   });
 });
 
@@ -306,9 +300,8 @@ test.describe('Group C: BIM cross-module', () => {
     await page.waitForTimeout(2000);
     await page.screenshot({ path: 'test-results/c10-boq-page.png', fullPage: true });
 
-    // Check for "View in BIM" or BIM link buttons
-    const bimLinks = page.locator('text=/BIM|3D|View in BIM/i, button:has(svg.lucide-box), [data-testid*="bim"]');
-    // BOQ page should load without crashing
+    // The BIM links themselves are not asserted on; what this test holds the
+    // page to is that it renders at all.
     const pageContent = await page.content();
     expect(pageContent).toContain('</html>');
   });
@@ -332,9 +325,8 @@ test.describe('Group C: BIM cross-module', () => {
 
     await page.screenshot({ path: 'test-results/c13-element-props.png', fullPage: true });
 
-    // Check for properties panel tabs (Key/All/Links/Validation)
-    const tabs = page.locator('button:has-text("Key"), button:has-text("All"), button:has-text("Links"), button:has-text("Validation")');
-    // These only appear when an element is selected in a loaded model
+    // Nothing is asserted here: the Key/All/Links/Validation tabs only appear
+    // once an element is selected in a loaded model.
   });
 });
 
@@ -359,10 +351,8 @@ test.describe('Group D: General UX', () => {
       await page.waitForTimeout(500);
       await page.screenshot({ path: 'test-results/d14-dark-mode.png', fullPage: true });
 
-      // Verify the html element has dark class or data-theme
-      const htmlClass = await page.locator('html').getAttribute('class');
-      const htmlDataTheme = await page.locator('html').getAttribute('data-theme');
-      const isDark = (htmlClass || '').includes('dark') || htmlDataTheme === 'dark';
+      // The dark class and data-theme were read here and never checked; the
+      // screenshot above is what this test leaves behind.
       // Toggle back
       await themeToggle.click();
       await page.waitForTimeout(300);

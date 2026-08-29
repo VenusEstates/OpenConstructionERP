@@ -33,7 +33,7 @@ async function createProject(page: Page): Promise<string> {
 
   const url = page.url();
   const match = url.match(/\/projects\/([0-9a-f-]{36})/);
-  return match ? match[1] : '';
+  return match?.[1] ?? '';
 }
 
 // ── BOQ list page ─────────────────────────────────────────────────────────────

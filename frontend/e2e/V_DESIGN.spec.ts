@@ -78,6 +78,7 @@ interface RouteReport {
   colorContrast: number;
   bySeverity: { critical: number; serious: number; moderate: number; minor: number };
   ruleSummary: Array<{ id: string; impact: string | null; nodeCount: number }>;
+  colorContrastNodes: Array<{ target: string; html: string; failureSummary: string }>;
 }
 
 function summarize(

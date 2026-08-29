@@ -1,0 +1,50 @@
+// Type checking for frontend/e2e.
+//
+// "root" here means the e2e tree that sits at the frontend root, not the
+// repository's root-level config files, which deliberately stay out; see the
+// boundary note below.
+//
+// The second half of the same hole tsconfig.e2e.json closed. That one covers
+// tests/e2e, 38 files. This covers e2e, 86 - the older of the two Playwright
+// trees (first commit 2026-03-26 against 2026-05-12) and not a dead one: both
+// were edited on 2026-08-29. Eight of the sixteen playwright*.config.ts files
+// point testDir at this half of the tree, so half our e2e configurations were
+// driving code that nothing type checked. We only found that out because a
+// spec had to be checked through a scratchpad config, there being nothing in
+// the repository able to check it.
+//
+// A third project rather than another entry in tsconfig.e2e.json's include,
+// and definitely not in the base include, for the reason recorded in
+// tsconfig.e2e.json and ci.yml: the whole-program check over src already OOM'd
+// at a 6 GB heap, runs at 9 GB now, and macOS skips it outright because 9 GB
+// exceeds that runner's RAM. Nothing here imports from src (measured: zero
+// files in either e2e tree import `@/` or reach into ../src), so this program
+// stays at its own 86 files and costs seconds. Separate from tests/e2e as well
+// so that each tree can be checked on its own, and so a failure names which
+// half it came from.
+//
+// It extends the base config and overrides no compiler option, on purpose.
+// Exempting this directory from strictness would leave the same hole under a
+// nicer name.
+//
+// The boundary, written down because the count is easy to misread: this covers
+// e2e only. After it lands, 25 tracked .ts/.tsx files are still outside every
+// project - 17 root-level config and setup files, e2e-match (2), playwright
+// (2), tests/pwa (2), tests/splash (1) and scripts (1). Closing 86 of 111 is
+// not closing 111.
+//
+// The exclude is not a strictness exemption, it is what keeps this gate reading
+// the repository rather than the disk. Both patterns are copied from .gitignore
+// lines 70 and 71: throwaway debug and diagnostic specs live in this directory
+// untracked, and 18 of them were sitting here when this was written. Without the
+// exclude, tsc reads them - the first run over this tree reported 43 errors, of
+// which 3 came from files no checkout will ever contain, so the same command
+// would have answered differently here and in CI, and a developer mid-debug
+// would meet a red gate over a file they were about to delete. If a new ignore
+// rule for this directory is added to .gitignore, it belongs here too; these two
+// lists are kept in step by hand and nothing checks that they are.
+{
+  "extends": "./tsconfig.json",
+  "include": ["e2e"],
+  "exclude": ["e2e/_*.spec.ts", "e2e/*-diagnostic.spec.ts"]
+}
