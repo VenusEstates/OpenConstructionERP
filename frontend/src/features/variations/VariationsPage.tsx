@@ -1814,9 +1814,9 @@ function PricedScope({
             </p>
           )}
 
-          {boq.checks.map((check) => (
+          {boq.checks.map((check, index) => (
             <p
-              key={check.rule_id}
+              key={`${check.rule_id}:${index}`}
               className="flex items-start gap-1.5 text-xs text-content-secondary"
             >
               <AlertTriangle size={13} className="mt-0.5 shrink-0" />
