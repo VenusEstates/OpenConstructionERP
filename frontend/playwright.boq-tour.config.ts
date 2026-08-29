@@ -16,6 +16,14 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // Every other dedicated config in this directory names its own spec, and this
+  // one did not. Without it `testDir` sweeps the whole harness, so listing this
+  // config collected the vitest test under reporters/ and two specs that use
+  // `__dirname` in ES module scope, and it reported three collection errors and
+  // zero tests. It only ever appeared to work because the documented invocation
+  // above passes the spec path on the command line, which narrows the sweep by
+  // hand; anything that ran the config on its own got nothing.
+  testMatch: 'boq-tour.spec.ts',
   fullyParallel: false,
   retries: 0,
   workers: 1,
