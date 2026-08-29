@@ -44,6 +44,11 @@ logger = logging.getLogger(__name__)
 
 CASES_RULE_SET = "cases"
 
+# The finding raised when the engine itself could not run. Named so that a
+# caller can tell "we checked and this is wrong" from "we could not check",
+# which is the distinction an empty list used to swallow.
+VALIDATION_UNAVAILABLE = "cases.validation_unavailable"
+
 # Below this many minutes per step the estimate stops being believable. A step
 # is "open this screen, read it, do the thing" - half a minute is the floor a
 # reader could actually keep up with.
@@ -281,7 +286,20 @@ async def evaluate_case(case: dict[str, Any], *, case_id: str = "", locale: str 
     """Run the case rules and return every finding, passing ones dropped.
 
     Guarded: a validation failure must not stop somebody saving their work, so
-    a broken rule degrades to "no findings" and a log line rather than a 500.
+    the engine dying degrades to a finding and a log line rather than a 500.
+
+    That finding is the point. This used to return an empty list, which is the
+    same value a case gets when it has been checked and nothing is wrong, so
+    one value carried two meanings and no caller could tell them apart. A case
+    nobody had been able to validate therefore passed the publish gate looking
+    exactly like a clean one. Validation is not optional here, and being unable
+    to run it is a reason to withhold publication rather than to grant it.
+
+    The row is DIAGNOSTIC because it records an infrastructure failure and not
+    something wrong with the case, and ERROR because it must stop the case
+    being shared. It deliberately does not set ``is_engine_error``: that flag
+    marks rows which are reported alongside a verdict without changing it, and
+    this row is the verdict.
     """
     try:
         report = await validation_engine.validate(
@@ -293,7 +311,21 @@ async def evaluate_case(case: dict[str, Any], *, case_id: str = "", locale: str 
         )
     except Exception:  # noqa: BLE001 - validation augments the save; never break it
         logger.warning("cases validation failed for case %s", case_id, exc_info=True)
-        return []
+        return [
+            RuleResult(
+                rule_id=VALIDATION_UNAVAILABLE,
+                rule_name="Case validation could not be run",
+                severity=Severity.ERROR,
+                category=RuleCategory.DIAGNOSTIC,
+                passed=False,
+                message=(
+                    "This case could not be checked, so it cannot be shared yet. "
+                    "Your work is saved. Try again, and tell an administrator if it keeps happening."
+                ),
+                details={"case_id": case_id},
+                suggestion="Save the case as a private draft and share it once validation is working again.",
+            )
+        ]
     return [result for result in report.results if not result.passed and not result.is_engine_error]
 
 
@@ -304,6 +336,7 @@ def blocking_findings(results: list[RuleResult]) -> list[RuleResult]:
 
 __all__ = [
     "CASES_RULE_SET",
+    "VALIDATION_UNAVAILABLE",
     "blocking_findings",
     "evaluate_case",
     "register_cases_rules",

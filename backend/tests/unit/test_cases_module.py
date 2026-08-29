@@ -20,12 +20,19 @@ from typing import get_args
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.validation.engine import RuleCategory
 from app.modules.cases import schemas, service
 from app.modules.cases.models import CASE_CATEGORIES, CasePin, UserCase
 from app.modules.cases.permissions import register_cases_permissions
-from app.modules.cases.validators import blocking_findings, evaluate_case, register_cases_rules
+from app.modules.cases.validators import (
+    VALIDATION_UNAVAILABLE,
+    blocking_findings,
+    evaluate_case,
+    register_cases_rules,
+)
 from app.modules.projects.models import Project
 from app.modules.users.models import User
 from tests._pg import transactional_session
@@ -452,3 +459,75 @@ async def test_case_and_pin_tables_are_named_by_convention():
     assert UserCase.__tablename__ == "oe_cases_user_case"
     assert CasePin.__tablename__ == "oe_cases_pin"
     assert isinstance(uuid.uuid4(), uuid.UUID)
+
+
+@pytest.mark.asyncio
+async def test_a_case_whose_validation_engine_died_does_not_look_publishable(monkeypatch):
+    """An engine failure must not read as a clean bill of health.
+
+    ``evaluate_case`` is guarded so that a broken rule cannot stop somebody
+    saving their work, which is a real requirement. The guard returned an
+    empty list, and an empty list already meant "checked, nothing wrong". One
+    value carrying both meanings is the defect: ``blocking_findings`` saw
+    nothing to block on and the router shared the case, so a case nobody had
+    been able to check went out to the team marked as validated.
+
+    Validation is not optional in this product. Not being able to run it is a
+    reason to withhold publication, never a reason to grant it.
+    """
+    from app.modules.cases import validators
+
+    async def _die(**_kwargs):
+        raise RuntimeError("rule registry exploded")
+
+    monkeypatch.setattr(validators.validation_engine, "validate", _die)
+
+    findings = await evaluate_case(_case_body(), case_id="c1")
+
+    # The save itself must still work, so this call may not raise.
+    assert [f.rule_id for f in findings] == [VALIDATION_UNAVAILABLE]
+    assert [f.rule_id for f in blocking_findings(findings)] == [VALIDATION_UNAVAILABLE]
+    # DIAGNOSTIC records that the infrastructure failed rather than the case.
+    assert findings[0].category is RuleCategory.DIAGNOSTIC
+
+
+@pytest.mark.asyncio
+async def test_a_case_that_validates_clean_is_still_publishable():
+    """The negative control: the fix must not make every case unpublishable.
+
+    Without this, returning a blocking finding unconditionally would satisfy
+    the test above while making it impossible to share any case at all.
+    """
+    register_cases_rules()
+    findings = await evaluate_case(_case_body(), case_id="c2")
+    assert VALIDATION_UNAVAILABLE not in {f.rule_id for f in findings}
+    assert blocking_findings(findings) == []
+
+
+@pytest.mark.asyncio
+async def test_sharing_is_refused_while_validation_is_down_but_a_draft_still_saves(monkeypatch):
+    """The two halves of the requirement, at the gate that enforces them.
+
+    Saving privately must keep working, because a validation outage is not the
+    author's fault and losing their work would be the worse failure. Sharing
+    must not, because sharing is the claim that the case was checked.
+    """
+    from app.modules.cases import router as cases_router
+    from app.modules.cases import validators
+
+    async def _die(**_kwargs):
+        raise RuntimeError("rule registry exploded")
+
+    monkeypatch.setattr(validators.validation_engine, "validate", _die)
+
+    # A private draft saves: no exception, and the finding is reported back.
+    draft = schemas.CaseCreateRequest(**_case_body(is_shared=False))
+    findings = await cases_router._validated(draft)
+    assert [f.rule_id for f in findings] == [VALIDATION_UNAVAILABLE]
+
+    # Sharing the same case is refused rather than granted.
+    shared = schemas.CaseCreateRequest(**_case_body(is_shared=True))
+    with pytest.raises(HTTPException) as exc:
+        await cases_router._validated(shared)
+    assert exc.value.status_code == 422
+    assert exc.value.detail["findings"][0]["rule_id"] == VALIDATION_UNAVAILABLE
