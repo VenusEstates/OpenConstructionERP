@@ -51,19 +51,18 @@ same rule the orphan guard applies to a literal. Plural forms are not
 consulted: a module name is never a counted string, so the bare key is the
 whole question here.
 
-There is no baseline. Of 137 distinct chip keys, 134 are answered by every
-locale, and a baseline written today would record the three that are not,
-which is the defect this script was written to surface rather than debt it
-inherited. If a gap ever has to ship, the entry belongs in the same shape the
-sibling baselines use, key to the set of locales that cannot answer it, and
-it may only shrink.
+There is no baseline, and there is nothing for one to hold: all 137 distinct
+chip keys are answered by all 43 locale files. The three this script was
+written to surface, nav.payment_clock, nav.tax_withholding and
+nav.einvoice_clearance, have since been translated. If a gap ever has to
+ship, the entry belongs in the same shape the sibling baselines use, key to
+the set of locales that cannot answer it, and it may only shrink.
 
-For the same reason this is deliberately not wired into repo-hygiene.yml yet.
-It fails today on nav.payment_clock, nav.tax_withholding and
-nav.einvoice_clearance, which are absent from 31 of the 43 locale files, and a
-blocking lane that stops work it was not written to stop gets switched off by
-whoever it inconveniences. Add the step once those three are translated, so it
-starts green and every later failure means a chip really did regress.
+The step is wired into repo-hygiene.yml, added once those three went green so
+that it started green and every later failure means a chip really did
+regress. A blocking lane that stops work it was not written to stop gets
+switched off by whoever it inconveniences, which is why the order was that
+way round and not the other.
 
 Parser desync is a failure, not a pass, on the same reasoning as the sibling
 guards: no playbooks, no chips or no locale keys exits 2 rather than
