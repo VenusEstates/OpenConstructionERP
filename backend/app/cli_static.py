@@ -17,9 +17,47 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import FileResponse, Response
+from starlette.responses import FileResponse, JSONResponse, Response
 
 logger = logging.getLogger(__name__)
+
+# What an operator is told when a UI path cannot be served because there is no
+# bundle to serve it from. Two different states, and the answer says which,
+# because the way out differs: one is fixed before the next start, the other is
+# a build that went missing under a server that is otherwise healthy.
+#
+# A bare 404 on every path of a running server is its own kind of confusing - it
+# reads as "wrong URL" when the truth is "this deployment has no UI in it" - so
+# the body names the deployment problem. Deliberately plain text in a JSON
+# envelope and not a styled page: the reader is whoever is looking at a curl or
+# a browser's network tab during a failed deploy.
+_NO_BUNDLE_DETAIL = (
+    "This server started without a frontend bundle and is serving the API only. "
+    "Build the UI with 'npm run build' in frontend/, or install the openconstructionerp wheel. "
+    "The API itself is up, under /api."
+)
+_LOST_BUNDLE_DETAIL = (
+    "The frontend bundle this server mounted at startup is no longer on disk, so the UI cannot be served. "
+    "The build directory was removed or replaced while the server was running; restore it and restart. "
+    "The API itself is up, under /api."
+)
+
+
+def _bundle_missing_404(detail: str) -> Response:
+    """Build the 404 sent when a UI path has no bundle behind it.
+
+    Args:
+        detail: Which of the two missing-bundle states this is, in the
+            operator's terms.
+
+    Returns:
+        A JSON 404 in the same ``{"detail": ...}`` shape FastAPI's own 404 uses,
+        so anything already parsing one parses this. Server-side paths stay in
+        the log rather than the body - the reader of a 404 is not always the
+        operator.
+    """
+    return JSONResponse(status_code=404, content={"detail": detail})
+
 
 # Set by ``mount_frontend`` so health checks can report on the dist this
 # process actually serves. A live ``get_frontend_dir()`` probe is not enough:
@@ -75,20 +113,52 @@ def get_frontend_dir() -> Path:
     Raises:
         FileNotFoundError: If no frontend build is found.
     """
+    # ``is_file`` rather than ``exists``: the entry point is handed to
+    # ``FileResponse``, which raises on anything that is not a regular file, so
+    # a directory named index.html would pass resolution here and then 500 on
+    # the first request. Resolution has to gate on what the server will need.
+
     # Option 1: installed as package (pip install openconstructionerp)
     pkg_dir = Path(__file__).parent / "_frontend_dist"
-    if pkg_dir.is_dir() and (pkg_dir / "index.html").exists():
+    if pkg_dir.is_dir() and (pkg_dir / "index.html").is_file():
         return pkg_dir
 
     # Option 2: development - frontend/dist relative to repo root
     repo_root = Path(__file__).resolve().parent.parent.parent  # backend/app/../../
     dev_dist = repo_root / "frontend" / "dist"
-    if dev_dist.is_dir() and (dev_dist / "index.html").exists():
+    if dev_dist.is_dir() and (dev_dist / "index.html").is_file():
         return dev_dist
 
+    # Name both places. "Missing" means something different in each - an empty
+    # wheel in the first, an unbuilt checkout in the second - and an operator
+    # who cannot see which one was expected debugs the wrong one.
     raise FileNotFoundError(
-        "Frontend dist not found. Run 'npm run build' in frontend/ or install the openconstructionerp wheel."
+        f"Frontend dist not found. Looked for index.html in {pkg_dir} (wheel bundle) "
+        f"and {dev_dist} (dev build). Run 'npm run build' in frontend/ or install "
+        f"the openconstructionerp wheel."
     )
+
+
+def _mount_api_only_404(app: FastAPI) -> None:
+    """Answer UI paths with a 404 that says this server has no bundle.
+
+    Registered instead of the SPA fallback when no frontend was found. It
+    replaces the bare ``{"detail":"Not Found"}`` that a route-less path would
+    otherwise get, which reads as a mistyped URL when the truth is that the
+    deployment shipped without a UI. The startup warning states this once, and
+    an operator who reaches the server through a browser never sees the log.
+
+    Args:
+        app: The FastAPI application to register the handler on.
+    """
+    from fastapi.exception_handlers import http_exception_handler
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+
+    @app.exception_handler(404)
+    async def _api_only_404(request: Request, exc: StarletteHTTPException) -> Response:
+        if request.url.path.startswith("/api"):
+            return await http_exception_handler(request, exc)
+        return _bundle_missing_404(_NO_BUNDLE_DETAIL)
 
 
 def mount_frontend(app: FastAPI) -> None:
@@ -106,11 +176,18 @@ def mount_frontend(app: FastAPI) -> None:
     resolved first by FastAPI's normal router.  Only genuinely unmatched
     paths fall through to the 404 handler, which serves ``index.html``
     for non-API paths (SPA client-side routing).
+
+    When no frontend is found at all, a 404 handler is registered anyway (see
+    ``_mount_api_only_404``) so UI paths say why they have nothing to serve
+    instead of denying the path and leaving the operator to guess.
     """
     try:
         frontend_dir = get_frontend_dir()
-    except FileNotFoundError:
-        logger.warning("Frontend dist not found - serving API only")
+    except FileNotFoundError as exc:
+        # The message carries both candidate directories, so the log says which
+        # kind of install this is rather than only that something is absent.
+        logger.warning("Frontend dist not found - serving API only. %s", exc)
+        _mount_api_only_404(app)
         return
 
     global _mounted_frontend_dir
@@ -118,11 +195,50 @@ def mount_frontend(app: FastAPI) -> None:
 
     logger.info("Serving frontend from %s", frontend_dir)
 
+    # Everything below is wired against a dist checked once, here, at mount
+    # time. That dist can go away under a running server - a redeploy that wipes
+    # the build directory, a volume that unmounts, a container image rebuilt in
+    # place - and every reader of it reacts by raising rather than 404ing, which
+    # the ASGI stack turns into a bare 500 in plain text. That tells the operator
+    # the server crashed when the server is fine and a directory is not, and
+    # sends them to read application logs for a filesystem problem.
+    #
+    # Logged once rather than per request: the state is permanent until someone
+    # restores the directory, and a line per page load buries it.
+    bundle_loss_logged = False
+
+    def _note_bundle_loss() -> None:
+        nonlocal bundle_loss_logged
+        if not bundle_loss_logged:
+            bundle_loss_logged = True
+            logger.error(
+                "Frontend bundle mounted from %s is gone - answering 404 for UI paths until it is restored",
+                frontend_dir,
+            )
+
     # Serve hashed assets (JS, CSS) with year-long immutable caching.
     # Vite emits content-hash suffixes (e.g. index-9MyhyuSS.js) so the
     # URL changes whenever the file changes - repeat visits can serve
     # straight from the browser cache without revalidation.
     class _ImmutableStaticFiles(StaticFiles):
+        async def check_config(self) -> None:
+            """Do not turn a vanished assets directory into a 500.
+
+            StaticFiles stats its directory once and raises RuntimeError if it
+            is not there, and that check runs on the FIRST REQUEST rather than
+            at construction. The directory is verified below before mounting, so
+            the only thing this check can still catch is the dist disappearing
+            afterwards - which ``lookup_path`` already answers honestly as a 404.
+
+            The lazy timing is why this was easy to miss: a server that had
+            served one asset before the dist vanished answered 404, because the
+            flag gating the check was already set, while a server whose dist
+            went missing before its first asset request answered 500. Same
+            deployment, opposite diagnosis, decided by traffic order.
+            """
+            if not Path(str(self.directory)).is_dir():
+                _note_bundle_loss()
+
         async def get_response(self, path: str, scope):  # noqa: ANN001, ANN202
             response = await super().get_response(path, scope)
             if response.status_code == 200:
@@ -142,10 +258,13 @@ def mount_frontend(app: FastAPI) -> None:
 
     for static_name in ("favicon.svg", "logo.svg"):
         static_path = frontend_dir / static_name
-        if static_path.exists():
+        if static_path.is_file():
             # Use a factory to capture the correct path in the closure
             def _make_static_handler(fpath: Path):  # noqa: ANN202
-                async def _handler():  # noqa: ANN202
+                async def _handler() -> Response:
+                    if not fpath.is_file():
+                        _note_bundle_loss()
+                        return _bundle_missing_404(_LOST_BUNDLE_DETAIL)
                     return FileResponse(str(fpath))
 
                 return _handler
@@ -257,6 +376,13 @@ def mount_frontend(app: FastAPI) -> None:
             looks_like_a_file = candidate.suffix in _root_static_extensions or path.startswith("/assets/")
             if looks_like_a_file:
                 return await http_exception_handler(request, exc)
+
+        # The app shell has to still be there. See the note beside
+        # ``_note_bundle_loss`` above: without this the answer is a 500, and a
+        # deployment mistake reads as a crashed server.
+        if not index_path.is_file():
+            _note_bundle_loss()
+            return _bundle_missing_404(_LOST_BUNDLE_DETAIL)
 
         # Everything else: SPA client-side routing → index.html. Force
         # the browser to revalidate the entry on every reload - a stale
