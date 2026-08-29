@@ -319,6 +319,14 @@ def test_localize_covers_every_category():
         assert localize(category, "category", "de")
 
 
+def test_localize_resolves_a_regional_code_through_its_base_language():
+    # de-AT has no table of its own; it must read the de translation, not
+    # silently fall to en the way an exact-string match would.
+    assert localize("critical", "band", "de-AT") == localize("critical", "band", "de")
+    assert localize("critical", "band", "de-AT") != localize("critical", "band", "en")
+    assert localize("monitoring", "status", "ru_RU") == localize("monitoring", "status", "ru")
+
+
 # ── Explainers ──────────────────────────────────────────────────────────────
 
 
@@ -331,6 +339,14 @@ def test_explainers_are_nonempty_and_localized():
 
 def test_explain_risk_score_mentions_the_score():
     assert "12" in explain_risk_score(3, 4)
+
+
+def test_explainers_resolve_a_regional_code_through_its_base_language():
+    assert explain_risk_score(3, 4, lang="de-AT") == explain_risk_score(3, 4, lang="de")
+    assert explain_rating_band(3, 4, lang="de-AT") == explain_rating_band(3, 4, lang="de")
+    assert explain_exposure("0.5", "1000", currency="EUR", lang="de-AT") == explain_exposure(
+        "0.5", "1000", currency="EUR", lang="de"
+    )
 
 
 # ── Full assessment ─────────────────────────────────────────────────────────

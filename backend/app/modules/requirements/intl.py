@@ -10,6 +10,11 @@ helpers give that a localized, guarded surface with no database, ORM, or
 
 Priorities follow the MoSCoW convention (must / should / could / will not have),
 an international requirements-management standard, not any one product.
+
+Labels are looked up by base language via :func:`_norm_lang`. A lookup that
+matched a regional code such as ``de-AT`` only by exact string would have
+silently answered in English - the same result a language nobody has
+translated at all gives, and nothing downstream can tell the two apart.
 """
 
 from __future__ import annotations
@@ -47,11 +52,22 @@ BAND_PARTIAL = "partial"
 BAND_COMPLETE = "complete"
 
 
+def _norm_lang(lang: str) -> str:
+    """Reduce a locale hint like ``de-AT`` or ``de_AT`` to its base language.
+
+    Both catalogs below are keyed by base language only (``en``, ``de``,
+    ``ru``). Without this, a regional code missed the dict by exact string
+    match and silently fell to English - the same result as a language
+    nobody has translated at all, and indistinguishable from it.
+    """
+    return str(lang).strip().lower().replace("_", "-").split("-", 1)[0]
+
+
 def _label(catalog: dict[str, dict[str, str]], key: str, lang: str) -> str:
     per_lang = catalog.get(key)
     if per_lang is None:
         return key
-    return per_lang.get(lang) or per_lang["en"]
+    return per_lang.get(_norm_lang(lang)) or per_lang["en"]
 
 
 def deliverable_status_label(status: str, lang: str = "en") -> str:

@@ -33,6 +33,12 @@ Formulas
     normalized score    = (score - 1) / (scale*scale - 1) (0 .. 1)
     rating band         = first band whose upper cut-point >= normalized score
     monetary exposure   = probability (0..1) x cost impact (expected value)
+
+Every label and explainer below is looked up by base language via
+:func:`_norm_lang`. A lookup that matched a regional code such as ``de-AT``
+only by exact string would have silently answered in English - the same
+result a language nobody has translated gives, and nothing downstream can
+tell the two apart.
 """
 
 from __future__ import annotations
@@ -153,6 +159,17 @@ def _fallback_label(term: str) -> str:
     return cleaned[0].upper() + cleaned[1:]
 
 
+def _norm_lang(lang: str) -> str:
+    """Reduce a locale hint like ``de-AT`` or ``de_AT`` to its base language.
+
+    Every table in this module is keyed by base language only (``en``,
+    ``de``, ``ru``). Without this, a regional code missed a table by exact
+    string match and silently fell to English - the same answer a language
+    nobody has translated gives, and indistinguishable from it.
+    """
+    return str(lang).strip().lower().replace("_", "-").split("-", 1)[0]
+
+
 def localize(term: str, kind: str, lang: str = "en") -> str:
     """Localize a controlled-vocabulary ``term`` into ``lang``.
 
@@ -171,6 +188,7 @@ def localize(term: str, kind: str, lang: str = "en") -> str:
     entry = table.get(term)
     if entry is None:
         return _fallback_label(term)
+    lang = _norm_lang(lang)
     return entry.get(lang) or entry.get("en") or _fallback_label(term)
 
 
@@ -520,7 +538,7 @@ def explain_risk_score(
         ),
         "ru": (f"Otsenka riska {score} = veroyatnost x vozdeystvie po shkale 1-{scale_int}. Chem vyshe, tem srochnee."),
     }
-    return templates.get(lang) or templates["en"]
+    return templates.get(_norm_lang(lang)) or templates["en"]
 
 
 def explain_rating_band(
@@ -539,7 +557,7 @@ def explain_rating_band(
         "de": f"Bewertungsstufe: {label}. Aus dem normierten Wert und den Stufengrenzen abgeleitet.",
         "ru": f"Uroven otsenki: {label}. Poluchen sravneniem normirovannoy otsenki s porogami.",
     }
-    return templates.get(lang) or templates["en"]
+    return templates.get(_norm_lang(lang)) or templates["en"]
 
 
 def explain_exposure(
@@ -566,7 +584,7 @@ def explain_exposure(
             f"stoimostnoe vozdeystvie {exposure.cost_impact} (ozhidaemoe znachenie)."
         ),
     }
-    return templates.get(lang) or templates["en"]
+    return templates.get(_norm_lang(lang)) or templates["en"]
 
 
 @dataclass(frozen=True)

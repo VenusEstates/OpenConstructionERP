@@ -32,6 +32,14 @@ def test_priority_label_moscow_localized():
     assert priority_label("nope") == "nope"
 
 
+def test_labels_resolve_a_regional_code_through_its_base_language():
+    # de-AT has no table of its own; it must read the de translation, not
+    # silently fall to en the way an exact-string match would.
+    assert deliverable_status_label("accepted", "de-AT") == deliverable_status_label("accepted", "de")
+    assert deliverable_status_label("accepted", "de-AT") != deliverable_status_label("accepted", "en")
+    assert priority_label("must", "ru_RU") == priority_label("must", "ru")
+
+
 def test_priority_rank_orders_moscow():
     ranks = [priority_rank(p) for p in ("must", "should", "could", "wont")]
     assert ranks == [0, 1, 2, 3]
