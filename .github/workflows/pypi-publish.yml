@@ -154,6 +154,76 @@ jobs:
               f'load and which therefore ship as dead bytes: {without_manifest}'
           )
 
+          # The same question asked of the packs, because a manifest does not
+          # only configure: it NAMES files. One JSON per additional_locales
+          # entry, a logo, a favicon, an onboarding script, one reference
+          # document per validation_rule_packs id. Nothing anywhere resolved one
+          # of those names against a file, and four of them pointed at nothing.
+          #
+          # That is the captions.json defect below, forty lines from the check
+          # that catches it. Worth saying plainly rather than just fixing: the
+          # captions fix was written correctly and scoped to captions.json, and
+          # nobody asked what else in the same archive names files it might not
+          # carry. The answer was the packs, sitting twelve lines above it.
+          #
+          # backend/tests/unit/test_community_packs_ship.py asks this of the
+          # tree on every run, which is where it can still stop a commit. This
+          # asks it of the artefact, which is the only place that can say the
+          # bytes actually arrived - force-include copies from the working tree,
+          # and a build machine's tree is not a clean checkout.
+          #
+          # This reader skips a declaration it cannot evaluate statically rather
+          # than failing on it. The tree-side gate refuses those outright, and
+          # runs first, so an unreadable declaration is caught before a tag is
+          # ever cut; duplicating that machinery into YAML would cost more than
+          # it buys.
+          import ast
+
+          _SCALAR = ('logo_path', 'favicon_path', 'onboarding_script_path')
+          _CALLS = ('PartnerPackManifest', 'PartnerBranding')
+          declared = []
+          with zipfile.ZipFile(path) as zp:
+              for member in sorted(manifests):
+                  pkg = member.rsplit('/', 1)[0]
+                  for node in ast.walk(ast.parse(zp.read(member).decode('utf-8'), member)):
+                      if not isinstance(node, ast.Call):
+                          continue
+                      called = getattr(node.func, 'id', None) or getattr(node.func, 'attr', '')
+                      if called not in _CALLS:
+                          continue
+                      for kw in node.keywords:
+                          value = kw.value
+                          if kw.arg in _SCALAR:
+                              if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                                  declared.append(f'{pkg}/{value.value}')
+                          elif kw.arg == 'additional_locales' and isinstance(value, ast.Dict):
+                              declared += [
+                                  f'{pkg}/{p.value}' for p in value.values
+                                  if isinstance(p, ast.Constant) and isinstance(p.value, str)
+                              ]
+                          elif kw.arg == 'validation_rule_packs' and isinstance(value, ast.List):
+                              declared += [
+                                  f'{pkg}/rule_packs/{e.value}.json' for e in value.elts
+                                  if isinstance(e, ast.Constant) and isinstance(e.value, str)
+                              ]
+
+          # Guard the instrument before the comparison that leans on it. The
+          # assertion below sweeps clean over an empty list, so a reader that
+          # quietly stopped matching would report every pack perfect. The floor
+          # sits far under the real count, which is well over a hundred, because
+          # it is a check on this reader and not a target for the packs.
+          assert len(declared) >= 50, (
+              f'read only {len(declared)} declared asset path(s) from {len(manifests)} pack manifests '
+              f'in wheel {whl}. They declare far more than that, so this reader has stopped seeing '
+              f'them and the check below would pass over nothing.'
+          )
+          absent_assets = sorted(set(declared) - files)
+          assert not absent_assets, (
+              f'wheel {whl} carries pack manifests naming {len(absent_assets)} file(s) the wheel does '
+              f'not contain: {absent_assets[:5]}. Nothing raises on a user machine and the UI falls '
+              f'back, so this surfaces nowhere: the pack simply delivers less than it promised.'
+          )
+
           # captions.json names twelve photographs and the package walk was
           # dropping every one of them: .gitignore globs *.jpg for dev
           # screenshots, and hatchling reads that file but does not honour the
@@ -176,7 +246,8 @@ jobs:
 
           print(
               f'wheel OK: {whl} - {len(files)} files, index.html plus all {len(local)} assets it asks for, '
-              f'{len(revisions)} migrations, {len(locales)} locales, {len(pack_slugs)} packs'
+              f'{len(revisions)} migrations, {len(locales)} locales, {len(pack_slugs)} packs carrying all '
+              f'{len(declared)} files their manifests name'
           )
           PY
 
