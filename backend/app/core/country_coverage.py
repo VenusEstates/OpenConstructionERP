@@ -42,6 +42,42 @@ question. Unmeasured and fine are different words.
 An empty population is treated as ``UNRESOLVED`` rather than as "every country
 is missing", for the same reason. A probe that finds nothing at all has almost
 certainly broken, and a registry that genuinely emptied is worth the same alarm.
+
+Writing a probe
+---------------
+
+**A probe has to be able to answer without a database.** That is not a taste in
+dependencies, it is a constraint the repository enforces from somewhere you
+will not find by reading this file. ``.github/workflows/repo-hygiene.yml:550``,
+the step named "Check the instrument runs and no country has fallen to zero"
+(grep the step name, the line number will drift), runs
+``backend/scripts/country_coverage.py --strict --ignore-unprobed`` in a lane
+with no PostgreSQL service that sets no ``DATABASE_URL``. Read what that
+flag does and does not do: it suppresses exit 3, the code for a census with
+registries nobody probes, and it does **not** suppress exit 1, the code for a
+probe that could not resolve its registry. So an import-only probe does not
+merely lose a row on a developer's laptop. It takes a green lane red on the
+commit that adds it, for a reason that says nothing about the product.
+
+This is easy to walk into, and was walked into: ``demo.catalogue_projects``
+below was written import-only and would have done exactly this. Worse, the
+failure mode selects for the interesting registries - the ones worth probing
+are disproportionately the ones whose module reaches an ORM import and builds
+an engine before any literal in it is reachable.
+
+So a probe reads its registry through one of the two-path helpers, which import
+where an import is available and parse the file where it is not, and label the
+reading either way so a source read is never printed as though the live object
+had answered: :func:`_registry_literal` for a plain literal,
+:func:`_annotated_attributes` for class attributes, :func:`_isolated_namespace`
+for a registry that has to be executed to exist. Where a registry is assembled
+at runtime and no literal holds the answer, rebuild the assembly from the same
+files the product reads and pin the rebuild against the import with a test -
+:func:`_demo_catalogue_countries` is the worked example.
+
+Before shipping a probe, run that lane's argv with no database and read the
+printed output rather than the exit code. "instrument healthy: every probe
+resolved its registry" is the line that says you have not broken it.
 """
 
 from __future__ import annotations
@@ -1371,6 +1407,59 @@ def _markup_region(country: str) -> DimensionReport:
     )
 
 
+@_probe("estimate.markup_stack", covers=("app.modules.boq.markup_templates.DEFAULT_MARKUP_TEMPLATES",))
+def _markup_stack(country: str) -> DimensionReport:
+    """The markup stacks themselves are keyed by region, and a region is not a country.
+
+    The registry the discovery walk most convincingly mistakes for a country
+    table, and so the clearest case of the thing the reporter asks for: a probe
+    that records what a registry actually is, rather than one that answers a
+    question the registry has not got.
+
+    Its fourteen keys include ten two-letter uppercase tokens, which is what the
+    walk counts. Nine of them are real ISO codes; the tenth is ``UK``, which is
+    not a country code at all - ``GB`` is, and ``GB`` is not a key here. The
+    walk reports that split itself, ten codes against nine ISO hits, and it is
+    the whole finding in one line.
+
+    A probe that read these keys as countries would therefore report ``UK``
+    covered and ``GB`` missing, and would call Austria, Switzerland and the Gulf
+    states missing while every one of them is served - through ``DACH`` and
+    ``GULF``, which do not look like countries and so would not be counted.
+    Confidently wrong in both directions, and it is the natural probe to write.
+
+    The country question has an owner: ``estimate.markup_region``, reading
+    ``REGION_BY_COUNTRY``, where twenty countries map onto twelve of these
+    stacks. Covering a new country means a row there, not a key here. And a
+    country with no row still prices, because :func:`resolve_region_lines`
+    falls back to ``DEFAULT``, which is why that dimension's MISSING is a
+    statement about tailoring and not about a bill failing to seed.
+    """
+    from app.modules.boq.markup_templates import DEFAULT_MARKUP_TEMPLATES
+
+    source = "app.modules.boq.markup_templates.DEFAULT_MARKUP_TEMPLATES"
+    regions = tuple(sorted(DEFAULT_MARKUP_TEMPLATES))
+    if not regions:
+        return DimensionReport(
+            dimension="estimate.markup_stack",
+            verdict=UNRESOLVED,
+            detail="DEFAULT_MARKUP_TEMPLATES resolved but is empty",
+            source=source,
+            method="import",
+        )
+    return DimensionReport(
+        dimension="estimate.markup_stack",
+        verdict=NOT_KEYED,
+        detail=(
+            f"{len(regions)} stacks keyed by region, not by country ({', '.join(regions)}); "
+            "a country reaches one through REGION_BY_COUNTRY, so estimate.markup_region is the "
+            "dimension that answers for a country and this one cannot be asked"
+        ),
+        source=source,
+        method="import",
+    )
+
+
 # --------------------------------------------------------------------------- #
 # The demo dataset: four registries in one module, probed as four.
 #
@@ -1600,6 +1689,17 @@ def _demo_catalogue(country: str) -> DimensionReport:
     product offers a project in every one of them. That is the known-bad proxy
     the source-read policy above forbids; :func:`_demo_catalogue_countries`
     says what the second path does in its place.
+
+    **This row and the registry census disagree about this registry on purpose,
+    and neither of them is broken.** The census walks the tree with ``ast`` and
+    can only ever see what is written down, so it records ``DEMO_CATALOG`` as
+    five entries with the codes AE, DE, FR, GB and US. This probe reports
+    fifteen countries. The gap is the ten the pack templates add while the
+    module runs, which no walk over the source can see. Read the census figure
+    for this symbol as the size of the seed and not as the size of the
+    catalogue. The walk is left alone deliberately: teaching it to execute
+    modules to find out what they build would make a static census a runtime
+    one, and every other registry it counts is honestly counted today.
     """
     known, method = _demo_catalogue_countries()
     return _keyed(

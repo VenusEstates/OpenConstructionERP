@@ -1182,11 +1182,12 @@ def test_a_demo_registry_that_lost_its_shape_is_unresolved(monkeypatch):
     assert got.verdict == cc.UNRESOLVED, f"a wrongly-shaped registry was answered anyway: {got.detail}"
 
 
-def test_the_five_registries_are_no_longer_in_the_unprobed_census():
+def test_the_six_registries_are_no_longer_in_the_unprobed_census():
     """The census is what reports the gap, so it is where the fix has to show."""
     unprobed = {r.symbol for r in cc.registry_census().unprobed}
     closed = {
         "app.modules.boq.markup_templates.REGION_BY_COUNTRY",
+        "app.modules.boq.markup_templates.DEFAULT_MARKUP_TEMPLATES",
         "app.core.demo_projects._AUTHORITY_BY_COUNTRY",
         "app.core.demo_projects._COUNTRY_ISO2",
         "app.core.demo_projects._NOTICE_CLAUSE_BY_COUNTRY",
@@ -1194,6 +1195,38 @@ def test_the_five_registries_are_no_longer_in_the_unprobed_census():
     }
     assert not (closed & unprobed), f"still reported as nobody's registry: {sorted(closed & unprobed)}"
     assert closed <= cc.covered_symbols(), "a probe stopped naming the registry it reads"
+
+
+def test_the_markup_stacks_are_recorded_as_region_keyed_and_never_asked_about_a_country():
+    """The registry the walk most convincingly mistakes for a country table.
+
+    Its keys are region names, ten of which are two uppercase letters. The
+    wrong probe here is the natural one to write and it is confidently wrong in
+    both directions at once, so this pins the specific wrong answers rather
+    than only the right verdict: GB is a country that is served and is not a
+    key, UK is a key that is not a country, and AT, CH and SA are all served
+    through region names the walk cannot even see.
+    """
+    got = _one("GB", "estimate.markup_stack")
+    assert got.verdict == cc.NOT_KEYED, f"a region-keyed registry was asked a country question: {got.detail}"
+    assert got.verdict not in (cc.COVERED, cc.MISSING), "regions are being read as a country axis"
+    assert "REGION_BY_COUNTRY" in got.detail, "the verdict does not send the reader to the dimension that answers"
+
+    # The countries the wrong probe would misreport, each one served today.
+    for served in ("GB", "AT", "CH", "SA"):
+        assert _one(served, "estimate.markup_region").verdict == cc.COVERED, (
+            f"{served} is meant to reach a stack through REGION_BY_COUNTRY; this test's premise has moved"
+        )
+
+
+def test_the_markup_stack_probe_is_unresolved_when_its_registry_empties(monkeypatch):
+    """The red half: emptied is a broken registry, not a registry with no country axis."""
+    from app.modules.boq import markup_templates
+
+    monkeypatch.setattr(markup_templates, "DEFAULT_MARKUP_TEMPLATES", {})
+    got = _one("GB", "estimate.markup_stack")
+    assert got.verdict == cc.UNRESOLVED, f"an empty registry still reported {got.verdict}"
+    assert got.verdict != cc.NOT_KEYED, "an emptied registry is indistinguishable from a region-keyed one"
 
 
 def _seed_catalogue_rows() -> list[dict]:
