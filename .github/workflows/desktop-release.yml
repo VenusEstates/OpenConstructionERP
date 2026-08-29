@@ -823,11 +823,18 @@ jobs:
             openconstructionerp
             ```
 
-            Docker:
+            Docker. The published image carries the application but no database, and the app is PostgreSQL only, so the image needs the small compose stack around it. A bare `docker run` of it stops at the first check with "DATABASE_URL is not set". These lines fetch the stack, write the two secrets it will not start without, and bring it up:
 
             ```
-            docker run -d -p 8080:8080 -v oe_data:/data ghcr.io/datadrivenconstruction/openconstructionerp:latest
+            curl -fsSL https://raw.githubusercontent.com/datadrivenconstruction/OpenConstructionERP/main/docker-compose.quickstart.yml       -o docker-compose.yml
+            curl -fsSL https://raw.githubusercontent.com/datadrivenconstruction/OpenConstructionERP/main/docker-compose.quickstart.image.yml -o docker-compose.override.yml
+            echo "POSTGRES_PASSWORD=$(openssl rand -base64 24)" >  .env
+            echo "JWT_SECRET=$(openssl rand -hex 32)"           >> .env
+            docker compose pull app
+            docker compose up -d
             ```
+
+            The app then answers on http://localhost:8080. Windows has no `openssl` by default, so on PowerShell write the same two secrets with .NET instead, as the Quick Start in the README shows.
 
             ### Good to know
 
