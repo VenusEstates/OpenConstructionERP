@@ -35629,6 +35629,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "استانداردهای مکزیک، تحلیل قیمت واحد APU، IVA و CFDI",
     "onboarding.mod_sa_pack": "بسته منطقه‌ای، آفریقای جنوبی",
     "onboarding.mod_sa_pack_desc": "استانداردهای آفریقای جنوبی، SANS 1200، رتبه‌بندی CIDB، امتیازدهی PPPFA، ZAR و مالیات بر ارزش‌افزوده",
+    "onboarding.mod_payment_clock": "ساعت پرداخت",
+    "onboarding.mod_payment_clock_desc": "رژیم‌های قانونی پرداخت: سررسیدها، مهلت‌های اطلاع‌رسانی و پیامد از دست دادن یکی از آن‌ها",
     "onboarding.mod_china_pack": "بسته منطقه‌ای، چین",
     "onboarding.mod_china_pack_desc": "استانداردها، طبقه‌بندی‌ها، ارزها و فرمت‌ها برای چین",
     "assemblies.unit_hint": "واحدی که نرخ نهایی بر اساس آن قیمت‌گذاری می‌شود (مثلاً متر مربع دیوار). هر جزء همچنان می‌تواند واحد خودش را داشته باشد.",

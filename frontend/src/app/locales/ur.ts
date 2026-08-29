@@ -35629,6 +35629,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "میکسیکن معیارات، APU یونٹ-پرائس تجزیہ، IVA اور CFDI",
     "onboarding.mod_sa_pack": "علاقائی پیک، جنوبی افریقہ",
     "onboarding.mod_sa_pack_desc": "جنوبی افریقی معیارات، SANS 1200، CIDB گریڈنگ، PPPFA اسکورنگ، ZAR اور VAT",
+    "onboarding.mod_payment_clock": "ادائیگی کی گھڑی",
+    "onboarding.mod_payment_clock_desc": "قانونی ادائیگی کے نظام: واجب الادا تاریخیں، اطلاع کی آخری تاریخیں اور ایک کے چوکنے کا نتیجہ",
     "onboarding.mod_china_pack": "علاقائی پیک، چین",
     "onboarding.mod_china_pack_desc": "چین کے لیے معیارات، درجہ بندیاں، کرنسیاں، فارمیٹس",
     "assemblies.unit_hint": "وہ یونٹ جس کے مطابق مکمل ریٹ کی قیمت لگائی جاتی ہے (مثلاً دیوار کا m²)۔ ہر جزو پھر بھی اپنا یونٹ استعمال کر سکتا ہے۔",

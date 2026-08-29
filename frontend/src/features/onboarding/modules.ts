@@ -287,6 +287,11 @@ export const ALL_MODULES: ModuleDef[] = [
   // line here, so the picker offered twelve and China could not be chosen at
   // the one moment a new user is asked what they work on.
   { key: 'china_pack', labelKey: 'onboarding.mod_china_pack', descriptionKey: 'onboarding.mod_china_pack_desc', group: 'regional' },
+  // The fourteenth regional module, and the last one that had no line here.
+  // It does not carry the ``_pack`` suffix the other thirteen share, which is
+  // why a sweep for the country packs kept missing it, so the gate that now
+  // guards this list keys on the backend manifest's own ``category`` instead.
+  { key: 'payment_clock', labelKey: 'onboarding.mod_payment_clock', descriptionKey: 'onboarding.mod_payment_clock_desc', group: 'regional' },
 ];
 
 export const CORE_MODULE_KEYS = new Set(ALL_MODULES.filter((m) => m.core).map((m) => m.key));

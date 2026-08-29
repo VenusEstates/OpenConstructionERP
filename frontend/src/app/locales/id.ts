@@ -36357,6 +36357,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Standar Meksiko, analisis harga satuan APU, IVA, dan CFDI",
     "onboarding.mod_sa_pack": "Paket Regional, Afrika Selatan",
     "onboarding.mod_sa_pack_desc": "Standar Afrika Selatan, SANS 1200, peringkat CIDB, skor PPPFA, ZAR, dan PPN",
+    "onboarding.mod_payment_clock": "Jam Pembayaran",
+    "onboarding.mod_payment_clock_desc": "Rezim pembayaran menurut undang-undang: tanggal jatuh tempo, tenggat pemberitahuan, dan akibat jika terlewat",
     "onboarding.mod_china_pack": "Paket regional, Tiongkok",
     "onboarding.mod_china_pack_desc": "Standar, klasifikasi, mata uang, format untuk Tiongkok",
     "assemblies.unit_hint": "Unit tarif jadi dikenakan biaya per (misalnya m² dinding). Setiap komponen masih dapat menggunakan unitnya sendiri.",

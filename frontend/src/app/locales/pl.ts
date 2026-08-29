@@ -36536,6 +36536,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Meksykańskie normy, analiza cen jednostkowych APU, IVA i CFDI",
     "onboarding.mod_sa_pack": "Pakiet regionalny, RPA",
     "onboarding.mod_sa_pack_desc": "Południowoafrykańskie normy, SANS 1200, ocena CIDB, punktacja PPPFA, ZAR i VAT",
+    "onboarding.mod_payment_clock": "Zegar płatności",
+    "onboarding.mod_payment_clock_desc": "Ustawowe reżimy płatności: terminy zapłaty, terminy zawiadomień i skutek uchybienia terminowi",
     "onboarding.mod_china_pack": "Pakiet regionalny, Chiny",
     "onboarding.mod_china_pack_desc": "Standardy, klasyfikacje, waluty, formaty dla Chin",
     "assemblies.unit_hint": "Jednostka, dla której obliczana jest cena gotowej stawki (np. m² ściany). Każdy komponent może nadal używać własnej jednostki.",

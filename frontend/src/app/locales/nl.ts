@@ -36439,6 +36439,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Mexicaanse normen, APU-eenheidsprijsanalyse, IVA en CFDI",
     "onboarding.mod_sa_pack": "Regionaal Pakket, Zuid-Afrika",
     "onboarding.mod_sa_pack_desc": "Zuid-Afrikaanse normen, SANS 1200, CIDB-classificatie, PPPFA-scoring, ZAR en BTW",
+    "onboarding.mod_payment_clock": "Betalingsklok",
+    "onboarding.mod_payment_clock_desc": "Wettelijke betalingsregimes: vervaldata, kennisgevingstermijnen en het gevolg van een gemiste termijn",
     "onboarding.mod_china_pack": "Regionaal pakket, China",
     "onboarding.mod_china_pack_desc": "Normen, classificaties, valuta's, formaten voor China",
     "assemblies.unit_hint": "De eenheid waarvoor het voltooide tarief is geprijsd (bijv. m² muur). Elk onderdeel kan nog steeds zijn eigen eenheid gebruiken.",

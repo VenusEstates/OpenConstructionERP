@@ -36361,6 +36361,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "멕시코 표준, APU 단위 가격 분석, IVA 및 CFDI",
     "onboarding.mod_sa_pack": "지역 팩, 남아프리카",
     "onboarding.mod_sa_pack_desc": "남아프리카 표준, SANS 1200, CIDB 등급, PPPFA 점수, ZAR 및 VAT",
+    "onboarding.mod_payment_clock": "결제 시계",
+    "onboarding.mod_payment_clock_desc": "법정 지급 제도: 지급 기일, 통지 기한 및 기한을 놓쳤을 때의 결과",
     "onboarding.mod_china_pack": "지역 팩, 중국",
     "onboarding.mod_china_pack_desc": "중국용 표준, 분류, 통화, 포맷",
     "assemblies.unit_hint": "완성된 단가를 기준으로 하는 단위 (예: 벽의 m²). 각 구성 요소는 자체 단위를 사용할 수 있습니다.",

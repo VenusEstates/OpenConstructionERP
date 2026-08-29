@@ -35629,6 +35629,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Mga standard ng Mexico, APU unit-price analysis, IVA at CFDI",
     "onboarding.mod_sa_pack": "Panrehiyong Pakete, Timog Aprika",
     "onboarding.mod_sa_pack_desc": "Mga standard ng South Africa, SANS 1200, CIDB grading, PPPFA scoring, ZAR at VAT",
+    "onboarding.mod_payment_clock": "Orasan ng Bayad",
+    "onboarding.mod_payment_clock_desc": "Mga panuntunang legal sa pagbabayad: takdang petsa, deadline ng abiso at ang bunga ng pagpalampas",
     "onboarding.mod_china_pack": "Rehiyonal na Pakete, Tsina",
     "onboarding.mod_china_pack_desc": "Standard, classification, currency, format para sa Tsina",
     "assemblies.unit_hint": "Ang unit na pinagbabatayan ng presyo ng tapos nang rate (hal. m² ng dingding). Maaari pa ring gamitin ng bawat component ang sarili nitong unit.",

@@ -35655,6 +35655,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "תקנים מקסיקניים, ניתוח מחיר יחידה APU, IVA ו-CFDI",
     "onboarding.mod_sa_pack": "חבילה אזורית, דרום אפריקה",
     "onboarding.mod_sa_pack_desc": "תקנים דרום-אפריקאיים, SANS 1200, דירוג CIDB, ניקוד PPPFA, ZAR ומע\"מ",
+    "onboarding.mod_payment_clock": "שעון תשלום",
+    "onboarding.mod_payment_clock_desc": "משטרי תשלום סטטוטוריים: מועדי פירעון, מועדי הודעה והתוצאה של החמצת מועד",
     "onboarding.mod_china_pack": "חבילה אזורית, סין",
     "onboarding.mod_china_pack_desc": "תקנים, סיווגים, מטבעות, פורמטים עבור סין",
     "assemblies.unit_hint": "היחידה שלפיה מתומחר השער המוגמר (לדוגמה, מ\"ר קיר). כל רכיב יכול עדיין להשתמש ביחידה משלו.",

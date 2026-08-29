@@ -36388,6 +36388,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Meksikon standardit, APU-yksikköhinta-analyysi, IVA ja CFDI",
     "onboarding.mod_sa_pack": "Alueellinen paketti, Etelä-Afrikka",
     "onboarding.mod_sa_pack_desc": "Etelä-Afrikan standardit, SANS 1200, CIDB-luokitus, PPPFA-pisteet, ZAR ja ALV",
+    "onboarding.mod_payment_clock": "Maksukello",
+    "onboarding.mod_payment_clock_desc": "Lakisääteiset maksujärjestelyt: eräpäivät, ilmoitusten määräajat ja määräajan ylittämisen seuraus",
     "onboarding.mod_china_pack": "Aluepaketti, Kiina",
     "onboarding.mod_china_pack_desc": "Standardit, luokitukset, valuutat, muodot Kiina",
     "assemblies.unit_hint": "Valmiin yksikköhinnan yksikkö (esim. seinän m²). Jokainen komponentti voi silti käyttää omaa yksikköään.",

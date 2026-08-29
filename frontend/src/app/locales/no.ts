@@ -36384,6 +36384,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Meksikanske standarder, APU enhetspris-analyse, IVA og CFDI",
     "onboarding.mod_sa_pack": "Regionalpakke, Sør-Afrika",
     "onboarding.mod_sa_pack_desc": "Sørafrikanske standarder, SANS 1200, CIDB-gradering, PPPFA-scoring, ZAR og MVA",
+    "onboarding.mod_payment_clock": "Betalingsklokke",
+    "onboarding.mod_payment_clock_desc": "Lovbestemte betalingsordninger: forfallsdatoer, varslingsfrister og konsekvensen av en oversittet frist",
     "onboarding.mod_china_pack": "Regional pakke, Kina",
     "onboarding.mod_china_pack_desc": "Standarder, klassifikasjoner, valutaer, formater for Kina",
     "assemblies.unit_hint": "Enheten den ferdige satsen er priset per (f.eks. m² vegg). Hver komponent kan fortsatt bruke sin egen enhet.",

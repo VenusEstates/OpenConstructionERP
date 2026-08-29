@@ -36845,6 +36845,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Meksika standartlari, APU birlik narx tahlili, IVA va CFDI",
     "onboarding.mod_sa_pack": "Mintaqaviy paket, Janubiy Afrika",
     "onboarding.mod_sa_pack_desc": "Janubiy Afrika standartlari, SANS 1200, CIDB darajalash, PPPFA ballash, ZAR va QQS",
+    "onboarding.mod_payment_clock": "Toʻlov soati",
+    "onboarding.mod_payment_clock_desc": "Qonuniy toʻlov rejimlari: toʻlov muddatlari, xabarnoma muddatlari va muddatni oʻtkazib yuborish oqibati",
     "assemblies.unit_hint": "Tayyor stavka narxlanadigan birlik (masalan, devorning m²). Har bir komponent baribir oʻz birligidan foydalanishi mumkin.",
     "assemblies.not_found_hint": "Bu yigʻma band oʻchirilgan yoki unga kirish huquqingiz boʻlmasligi mumkin.",
     "assemblies.back_to_list": "Back to assemblies",

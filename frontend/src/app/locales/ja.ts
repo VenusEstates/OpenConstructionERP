@@ -36411,6 +36411,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "メキシコ規格、APU単価分析、IVA、およびCFDI",
     "onboarding.mod_sa_pack": "地域パック、南アフリカ",
     "onboarding.mod_sa_pack_desc": "南アフリカ規格、SANS 1200、CIDBグレーディング、PPPFAスコアリング、ZAR、およびVAT",
+    "onboarding.mod_payment_clock": "支払いクロック",
+    "onboarding.mod_payment_clock_desc": "法定の支払制度。支払期日、通知期限、期限を過ぎた場合の効果を扱います",
     "onboarding.mod_china_pack": "地域パック、中国",
     "onboarding.mod_china_pack_desc": "中国 向け規格、分類、通貨、フォーマット",
     "assemblies.unit_hint": "完成レートがいくらで計算されるかの単位（例：壁のm²）。各コンポーネントは独自の単位を使用できます。",

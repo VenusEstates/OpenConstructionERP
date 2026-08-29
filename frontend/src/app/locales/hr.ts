@@ -36489,6 +36489,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Meksički standardi, analiza jediničnih cijena APU, IVA i CFDI",
     "onboarding.mod_sa_pack": "Regionalni paket, Južna Afrika",
     "onboarding.mod_sa_pack_desc": "Južnoafrički standardi, SANS 1200, CIDB ocjena, PPPFA bodovanje, ZAR i PDV",
+    "onboarding.mod_payment_clock": "Sat plaćanja",
+    "onboarding.mod_payment_clock_desc": "Zakonski režimi plaćanja: datumi dospijeća, rokovi za obavijesti i posljedica propuštanja",
     "onboarding.mod_china_pack": "Regionalni paket, Kina",
     "onboarding.mod_china_pack_desc": "Standardi, klasifikacije, valute, formati za Kinu",
     "assemblies.unit_hint": "Jedinica za koju je konačna stopa izračunata (npr. m² zida). Svaka komponenta još uvijek može koristiti vlastitu jedinicu.",

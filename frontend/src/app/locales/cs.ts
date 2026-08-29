@@ -36535,6 +36535,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Mexické normy, analýza jednotkových cen APU, IVA a CFDI",
     "onboarding.mod_sa_pack": "Regionální balíček, Jihoafrická republika",
     "onboarding.mod_sa_pack_desc": "Jihoafrické normy, SANS 1200, hodnocení CIDB, bodování PPPFA, ZAR a DPH",
+    "onboarding.mod_payment_clock": "Hodiny plateb",
+    "onboarding.mod_payment_clock_desc": "Zákonné platební režimy: data splatnosti, lhůty pro oznámení a důsledky jejich zmeškání",
     "onboarding.mod_china_pack": "Regionální balíček, Čína",
     "onboarding.mod_china_pack_desc": "Standardy, klasifikace, měny, formáty pro Čínu",
     "assemblies.unit_hint": "Jednotka, podle které je konečná sazba účtována (např. m² zdi). Každá součástka může stále používat svou vlastní jednotku.",

@@ -36374,6 +36374,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Мексикийн стандарт, APU нэгж үнэ, IVA ба CFDI",
     "onboarding.mod_sa_pack": "Бүс нутгийн багц, Өмнөд Африк",
     "onboarding.mod_sa_pack_desc": "Өмнөд Африкийн стандарт, SANS 1200, CIDB зэрэглэл, PPPFA оноо, ZAR ба VAT",
+    "onboarding.mod_payment_clock": "Төлбөрийн цаг",
+    "onboarding.mod_payment_clock_desc": "Хуулиар тогтоосон төлбөрийн горим: төлөх хугацаа, мэдэгдлийн эцсийн хугацаа, хугацаа хэтэрсний үр дагавар",
     "onboarding.mod_china_pack": "Regional Pack, Хятад",
     "onboarding.mod_china_pack_desc": "Хятад-ийн стандарт, ангилал, валют, формат",
     "assemblies.unit_hint": "Дууссан хэмжээг нэгжийн үнээр тооцно (жишээ нь, хананы м²). Бүрэлдэхүүн хэсэг бүр өөрийн нэгжийг ашиглаж болно.",

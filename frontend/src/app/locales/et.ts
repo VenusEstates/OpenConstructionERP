@@ -36351,6 +36351,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Mehhiko standardid, APU ühikuhinna analüüs, IVA ja CFDI",
     "onboarding.mod_sa_pack": "Regionaalpakett, Lõuna-Aafrika",
     "onboarding.mod_sa_pack_desc": "Lõuna-Aafrika standardid, SANS 1200, CIDB gradeerimine, PPPFA skoorimine, ZAR ja käibemaks",
+    "onboarding.mod_payment_clock": "Maksekell",
+    "onboarding.mod_payment_clock_desc": "Seadusest tulenevad maksekorrad: maksetähtajad, teavitamistähtajad ja tähtaja ületamise tagajärg",
     "onboarding.mod_china_pack": "Regionaalne pakett, Hiina",
     "onboarding.mod_china_pack_desc": "Standardid, klassifikatsioonid, valuutad, vormingud Hiina jaoks",
     "assemblies.unit_hint": "Ühik, mille kohta valmis hind hinnastatakse (nt m² seina kohta). Iga komponent võib siiski kasutada oma ühikut.",

@@ -36409,6 +36409,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "มาตรฐานเม็กซิโก, การวิเคราะห์ราคาต่อหน่วย APU, IVA และ CFDI",
     "onboarding.mod_sa_pack": "ชุดภูมิภาค, แอฟริกาใต้",
     "onboarding.mod_sa_pack_desc": "มาตรฐานแอฟริกาใต้, SANS 1200, การจัดระดับ CIDB, การให้คะแนน PPPFA, ZAR และ VAT",
+    "onboarding.mod_payment_clock": "นาฬิกาการชำระเงิน",
+    "onboarding.mod_payment_clock_desc": "ระบอบการชำระเงินตามกฎหมาย: วันครบกำหนด กำหนดเวลาแจ้งเตือน และผลของการพลาดกำหนด",
     "onboarding.mod_china_pack": "แพ็กระดับภูมิภาค จีน",
     "onboarding.mod_china_pack_desc": "มาตรฐาน การจัดประเภท สกุลเงิน รูปแบบสำหรับ จีน",
     "assemblies.unit_hint": "หน่วยที่อัตราสำเร็จรูปคิดราคาต่อหน่วย (เช่น m² ของผนัง) ส่วนประกอบแต่ละส่วนยังคงสามารถใช้หน่วยของตนเองได้",

@@ -36422,6 +36422,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Meksika standartları, APU birim fiyat analizi, IVA ve CFDI",
     "onboarding.mod_sa_pack": "Bölgesel Paket, Güney Afrika",
     "onboarding.mod_sa_pack_desc": "Güney Afrika standartları, SANS 1200, CIDB derecelendirmesi, PPPFA puanlaması, ZAR ve KDV",
+    "onboarding.mod_payment_clock": "Ödeme Saati",
+    "onboarding.mod_payment_clock_desc": "Yasal ödeme rejimleri: vade tarihleri, bildirim süreleri ve bir süreyi kaçırmanın sonucu",
     "onboarding.mod_china_pack": "Bölgesel Paket, Çin",
     "onboarding.mod_china_pack_desc": "Çin için standartlar, sınıflandırmalar, para birimleri, formatlar",
     "assemblies.unit_hint": "Bitmiş oranın birim başına fiyatlandırıldığı birim (örn. duvar m²'si). Her bileşen kendi birimini kullanabilir.",

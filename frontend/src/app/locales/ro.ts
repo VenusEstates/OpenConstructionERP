@@ -36435,6 +36435,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Standarde mexicane, analiză preț unitar APU, IVA și CFDI",
     "onboarding.mod_sa_pack": "Pachet regional, Africa de Sud",
     "onboarding.mod_sa_pack_desc": "Standarde sud-africane, SANS 1200, gradare CIDB, punctaj PPPFA, ZAR și TVA",
+    "onboarding.mod_payment_clock": "Ceas de plăți",
+    "onboarding.mod_payment_clock_desc": "Regimuri legale de plată: scadențe, termene de notificare și consecința depășirii unui termen",
     "onboarding.mod_china_pack": "Pachet regional, China",
     "onboarding.mod_china_pack_desc": "Standarde, clasificări, monede, formate pentru China",
     "assemblies.unit_hint": "Unitatea pentru care este prețuit costul final (de ex. m² de perete). Fiecare componentă poate folosi în continuare propria unitate.",

@@ -12100,6 +12100,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Mexican standards, APU unit-price analysis, IVA and CFDI",
     "onboarding.mod_sa_pack": "Regional Pack, South Africa",
     "onboarding.mod_sa_pack_desc": "South African standards, SANS 1200, CIDB grading, PPPFA scoring, ZAR and VAT",
+    "onboarding.mod_payment_clock": "Payment Clock",
+    "onboarding.mod_payment_clock_desc": "Statutory payment regimes: due dates, notice deadlines and the consequence of missing one",
     "clash.title": "Clash Detection",
     "clash.subtitle": "Geometric interference & clearance coordination across federated BIM models, with a clash matrix and BCF export.",
     "clash.pick_project": "Select a project",

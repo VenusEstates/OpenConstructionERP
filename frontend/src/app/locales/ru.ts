@@ -36604,6 +36604,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Мексиканские стандарты, анализ удельной цены APU, IVA и CFDI",
     "onboarding.mod_sa_pack": "Региональный пакет, Южная Африка",
     "onboarding.mod_sa_pack_desc": "Южноафриканские стандарты, SANS 1200, классификация CIDB, оценка PPPFA, ZAR и НДС",
+    "onboarding.mod_payment_clock": "Часы платежей",
+    "onboarding.mod_payment_clock_desc": "Законные режимы платежей: сроки оплаты, сроки уведомлений и последствия пропуска срока",
     "onboarding.mod_china_pack": "Региональный пакет, Китай",
     "onboarding.mod_china_pack_desc": "Стандарты, классификаторы, валюты, форматы для Китая",
     "assemblies.unit_hint": "Единица измерения готовой расценки (например, м² стены). Каждый компонент может по-прежнему использовать свою единицу измерения.",

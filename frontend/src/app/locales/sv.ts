@@ -36434,6 +36434,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Mexikanska standarder, APU-enhetsprisanalys, IVA och CFDI",
     "onboarding.mod_sa_pack": "Regional Pack, Sydafrika",
     "onboarding.mod_sa_pack_desc": "Sydafrikanska standarder, SANS 1200, CIDB-klassificering, PPPFA-poängsättning, ZAR och moms",
+    "onboarding.mod_payment_clock": "Betalningsklocka",
+    "onboarding.mod_payment_clock_desc": "Lagstadgade betalningsordningar: förfallodagar, tidsfrister för underrättelser och följden av en missad frist",
     "onboarding.mod_china_pack": "Regionalt paket, Kina",
     "onboarding.mod_china_pack_desc": "Standarder, klassificeringar, valutor, format för Kina",
     "assemblies.unit_hint": "Enheten som det färdiga priset är prissatt per (t.ex. m² vägg). Varje komponent kan fortfarande använda sin egen enhet.",

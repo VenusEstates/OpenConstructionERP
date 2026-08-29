@@ -36593,6 +36593,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "المعايير المكسيكية، تحليل سعر الوحدة APU، ضريبة القيمة المضافة و CFDI",
     "onboarding.mod_sa_pack": "حزمة إقليمية، جنوب أفريقيا",
     "onboarding.mod_sa_pack_desc": "المعايير الجنوب أفريقية، SANS 1200، تصنيف CIDB، تسجيل PPPFA، ZAR و VAT",
+    "onboarding.mod_payment_clock": "ساعة الدفع",
+    "onboarding.mod_payment_clock_desc": "أنظمة الدفع القانونية: تواريخ الاستحقاق ومواعيد الإشعارات وعواقب تفويت أحدها",
     "onboarding.mod_china_pack": "حزمة إقليمية، الصين",
     "onboarding.mod_china_pack_desc": "المعايير، التصنيفات، العملات، الصيغ للصين",
     "assemblies.unit_hint": "الوحدة التي يتم تسعير المعدل النهائي بها (مثل م² من الجدار). لا يزال بإمكان كل مكون استخدام وحدته الخاصة.",

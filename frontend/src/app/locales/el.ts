@@ -35665,6 +35665,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Μεξικανικά πρότυπα, ανάλυση μοναδιαίων τιμών APU, IVA και CFDI",
     "onboarding.mod_sa_pack": "Περιφερειακό Πακέτο, Νότια Αφρική",
     "onboarding.mod_sa_pack_desc": "Νοτιοαφρικανικά πρότυπα, SANS 1200, βαθμολόγηση CIDB, βαθμολόγηση PPPFA, ZAR και ΦΠΑ",
+    "onboarding.mod_payment_clock": "Χρονόμετρο πληρωμής",
+    "onboarding.mod_payment_clock_desc": "Θεσμοθετημένα καθεστώτα πληρωμών: ημερομηνίες λήξης, προθεσμίες ειδοποιήσεων και η συνέπεια μιας παράλειψης",
     "onboarding.mod_china_pack": "Περιφερειακό Πακέτο, Κίνα",
     "onboarding.mod_china_pack_desc": "Πρότυπα, ταξινομήσεις, νομίσματα, μορφές για Κίνα",
     "assemblies.unit_hint": "Η μονάδα στην οποία τιμολογείται η τελική τιμή (π.χ. m² τοίχου). Κάθε στοιχείο μπορεί να έχει τη δική του μονάδα.",

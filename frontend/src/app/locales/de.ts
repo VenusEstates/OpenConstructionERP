@@ -37131,6 +37131,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Mexikanische Standards, APU-Einheitspreisanalyse, IVA und CFDI",
     "onboarding.mod_sa_pack": "Regionale Packung, Südafrika",
     "onboarding.mod_sa_pack_desc": "Südafrikanische Standards, SANS 1200, CIDB-Bewertung, PPPFA-Bewertung, ZAR und MwSt.",
+    "onboarding.mod_payment_clock": "Zahlungsuhr",
+    "onboarding.mod_payment_clock_desc": "Gesetzliche Zahlungsregime: Fälligkeitstermine, Anzeigefristen und die Folge einer Fristversäumnis",
     "onboarding.mod_china_pack": "Regionalpaket, China",
     "onboarding.mod_china_pack_desc": "Standards, Klassifikationen, Währungen, Formate für China",
     "assemblies.unit_hint": "Die Einheit, pro der der fertige Satz berechnet wird (z. B. m² Wand). Jede Komponente kann immer noch ihre eigene Einheit verwenden.",

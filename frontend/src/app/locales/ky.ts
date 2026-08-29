@@ -32706,6 +32706,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Мексикалык стандарттар, APU бирдик баа анализи, IVA жана CFDI",
     "onboarding.mod_sa_pack": "Аймактык топтом, Түштүк Африка",
     "onboarding.mod_sa_pack_desc": "Түштүк Африка стандарттары, SANS 1200, CIDB классификациясы, PPPFA баалоосу, ZAR жана VAT",
+    "onboarding.mod_payment_clock": "Төлөм саат",
+    "onboarding.mod_payment_clock_desc": "Мыйзам менен белгиленген төлөм режимдери: төлөм мөөнөттөрү, билдирүү мөөнөттөрү жана мөөнөттү өткөрүп жибергендин кесепети",
     "onboarding.mod_china_pack": "Аймактык топтом, Кытай",
     "onboarding.mod_china_pack_desc": "Кытай үчүн стандарттар, классификациялар, валюталар, форматтар",
     "assemblies.unit_hint": "Даяр болгон тарифтин бирдиги (мисалы, дубалдын м²). Ар бир компонент өзүнүн бирдигин колдоно алат.",

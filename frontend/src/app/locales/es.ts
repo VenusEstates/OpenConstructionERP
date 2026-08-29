@@ -36442,6 +36442,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Normas mexicanas, análisis de precios unitarios APU, IVA y CFDI",
     "onboarding.mod_sa_pack": "Paquete Regional, Sudáfrica",
     "onboarding.mod_sa_pack_desc": "Normas sudafricanas, SANS 1200, clasificación CIDB, puntuación PPPFA, ZAR e IVA",
+    "onboarding.mod_payment_clock": "Reloj de pagos",
+    "onboarding.mod_payment_clock_desc": "Regímenes legales de pago: fechas de vencimiento, plazos de notificación y la consecuencia de incumplir uno",
     "onboarding.mod_china_pack": "Pack regional, China",
     "onboarding.mod_china_pack_desc": "Estándares, clasificaciones, monedas, formatos para China",
     "assemblies.unit_hint": "La unidad por la que se calcula la tarifa final (p. ej., m² de muro). Cada componente puede usar su propia unidad.",

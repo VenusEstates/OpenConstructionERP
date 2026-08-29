@@ -36264,6 +36264,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Normas mexicanas, análise de preço unitário APU, IVA e CFDI",
     "onboarding.mod_sa_pack": "Pacote Regional, África do Sul",
     "onboarding.mod_sa_pack_desc": "Normas sul-africanas, SANS 1200, classificação CIDB, pontuação PPPFA, ZAR e IVA",
+    "onboarding.mod_payment_clock": "Relógio de pagamentos",
+    "onboarding.mod_payment_clock_desc": "Regimes legais de pagamento: datas de vencimento, prazos de notificação e a consequência de perder um",
     "onboarding.mod_china_pack": "Pacote regional, China",
     "onboarding.mod_china_pack_desc": "Padrões, classificações, moedas, formatos para a China",
     "assemblies.unit_hint": "A unidade pela qual a taxa final é calculada (por exemplo, m² de parede). Cada componente pode ainda usar a sua própria unidade.",

@@ -36921,6 +36921,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Мексиканські стандарти, аналіз одиничних розцінок APU, IVA та CFDI",
     "onboarding.mod_sa_pack": "Регіональний пакет, Південна Африка",
     "onboarding.mod_sa_pack_desc": "Південноафриканські стандарти, SANS 1200, класифікація CIDB, оцінювання PPPFA, ZAR і ПДВ",
+    "onboarding.mod_payment_clock": "Годинник платежів",
+    "onboarding.mod_payment_clock_desc": "Законодавчі режими платежів: строки оплати, строки повідомлень і наслідки пропуску строку",
     "onboarding.mod_china_pack": "Регіональний пакет, Китай",
     "onboarding.mod_china_pack_desc": "Стандарти, класифікації, валюти, формати для Китаю",
     "assemblies.unit_hint": "Одиниця, за якою оцінюється готова розцінка (напр., м² стіни). Кожен компонент усе одно може мати власну одиницю.",

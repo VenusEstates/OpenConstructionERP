@@ -35629,6 +35629,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "মেক্সিকান স্ট্যান্ডার্ড, APU ইউনিট-প্রাইস বিশ্লেষণ, IVA ও CFDI",
     "onboarding.mod_sa_pack": "আঞ্চলিক প্যাক, দক্ষিণ আফ্রিকা",
     "onboarding.mod_sa_pack_desc": "দক্ষিণ আফ্রিকান স্ট্যান্ডার্ড, SANS 1200, CIDB গ্রেডিং, PPPFA স্কোরিং, ZAR ও VAT",
+    "onboarding.mod_payment_clock": "পেমেন্ট ক্লক",
+    "onboarding.mod_payment_clock_desc": "সংবিধিবদ্ধ পেমেন্ট ব্যবস্থা: নির্ধারিত তারিখ, নোটিশের সময়সীমা এবং একটি বাদ পড়ার পরিণতি",
     "onboarding.mod_china_pack": "আঞ্চলিক প্যাক, চীন",
     "onboarding.mod_china_pack_desc": "চীন-এর জন্য স্ট্যান্ডার্ড, শ্রেণীবিভাগ, মুদ্রা, ফরম্যাট",
     "assemblies.unit_hint": "যে এককে চূড়ান্ত রেটের মূল্য নির্ধারণ হয় (যেমন দেয়ালের m²)। প্রতিটি কম্পোনেন্ট এখনো নিজস্ব একক ব্যবহার করতে পারে।",

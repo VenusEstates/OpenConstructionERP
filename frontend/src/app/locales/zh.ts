@@ -36361,6 +36361,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "墨西哥标准、APU单位价格分析、IVA和CFDI",
     "onboarding.mod_sa_pack": "区域包，南非",
     "onboarding.mod_sa_pack_desc": "南非标准、SANS 1200、CIDB评级、PPPFA评分、ZAR和VAT",
+    "onboarding.mod_payment_clock": "付款时钟",
+    "onboarding.mod_payment_clock_desc": "法定付款制度：到期日、通知期限，以及错过期限的后果",
     "onboarding.mod_china_pack": "区域包，中国",
     "onboarding.mod_china_pack_desc": "适用于 中国 的标准、分类、货币、格式",
     "assemblies.unit_hint": "完成费率的计价单位（例如，墙体平方米）。每个组件仍可使用自己的单位。",

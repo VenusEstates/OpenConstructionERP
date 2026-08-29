@@ -36417,6 +36417,8 @@ const resource = {
     "onboarding.mod_mexico_pack_desc": "Tiêu chuẩn Mexico, phân tích đơn giá APU, IVA và CFDI",
     "onboarding.mod_sa_pack": "Gói khu vực, Nam Phi",
     "onboarding.mod_sa_pack_desc": "Tiêu chuẩn Nam Phi, SANS 1200, phân loại CIDB, chấm điểm PPPFA, ZAR và VAT",
+    "onboarding.mod_payment_clock": "Đồng hồ thanh toán",
+    "onboarding.mod_payment_clock_desc": "Chế độ thanh toán theo luật định: ngày đến hạn, thời hạn thông báo và hậu quả khi bỏ lỡ",
     "onboarding.mod_china_pack": "Gói khu vực, Trung Quốc",
     "onboarding.mod_china_pack_desc": "Tiêu chuẩn, phân loại, tiền tệ, định dạng cho Trung Quốc",
     "assemblies.unit_hint": "Đơn vị tính mà đơn giá hoàn chỉnh được tính theo (ví dụ: m² tường). Mỗi thành phần vẫn có thể sử dụng đơn vị của riêng nó.",
