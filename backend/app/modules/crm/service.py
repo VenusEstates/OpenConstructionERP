@@ -191,6 +191,29 @@ _OPPORTUNITY_TRANSITIONS: dict[str, set[str]] = {
 }
 
 
+# Singular / plural English nouns for the kinds that can hold a lead against a
+# delete. The keys are the stable tokens the 409 body hands the client, which
+# localises from them; the nouns are only for the English fallback sentence.
+# Spelled out rather than derived, because appending an "s" turns both of these
+# kinds into misspellings.
+_LEAD_HOLDER_LABELS: dict[str, tuple[str, str]] = {
+    "opportunity": ("opportunity", "opportunities"),
+    "activity": ("logged activity", "logged activities"),
+}
+
+
+def _describe_lead_holders(holders: dict[str, int]) -> str:
+    """Render holder counts as an English list: ``"1 opportunity and 3 logged activities"``."""
+    parts = [
+        f"{count} {_LEAD_HOLDER_LABELS[kind][0 if count == 1 else 1]}"
+        for kind, count in holders.items()
+        if kind in _LEAD_HOLDER_LABELS
+    ]
+    if len(parts) <= 1:
+        return "".join(parts)
+    return f"{', '.join(parts[:-1])} and {parts[-1]}"
+
+
 def allowed_lead_transitions(current: str) -> set[str]:
     """Return the set of valid status transitions from ``current``."""
     return set(_LEAD_TRANSITIONS.get(current, set()))
@@ -698,7 +721,55 @@ class CrmService:
         return lead
 
     async def delete_lead(self, lead_id: uuid.UUID) -> None:
-        await self.get_lead(lead_id)
+        """Delete a lead that nothing is holding.
+
+        The affordance this guards is the duplicate and the typo: a row
+        somebody created by accident, which nobody has worked and nothing
+        refers to. Two things can be hanging off a lead, and a raw delete
+        destroys both in silence rather than failing:
+
+        * a CONVERTED lead carries ``converted_opportunity_id``. The
+          opportunity has no column pointing back, so nothing stops the
+          delete - it just erases where a live deal came from. This is the
+          same reasoning ``forget_lead`` already applies when it keeps the row
+          so downstream foreign keys stay valid;
+        * ``CrmActivity.lead_id`` is ``ON DELETE CASCADE``, so every logged
+          call, email and meeting on the lead goes with it.
+
+        Args:
+            lead_id: The lead to delete.
+
+        Raises:
+            HTTPException: 404 if the lead does not exist, 409 naming every
+                holder by kind and count if anything still refers to it.
+        """
+        lead = await self.get_lead(lead_id)
+
+        holders: dict[str, int] = {}
+        if lead.converted_opportunity_id is not None:
+            holders["opportunity"] = 1
+        activity_count = await self.activity_repo.count_for_lead(lead_id)
+        if activity_count:
+            holders["activity"] = int(activity_count)
+
+        if holders:
+            described = _describe_lead_holders(holders)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "lead_has_dependents",
+                    # No contact name in the message. This module redacts lead
+                    # PII on the way out on purpose, and an error string is
+                    # the one place it would leak into a log unredacted.
+                    "message": f"This lead is referenced by {described} and cannot be deleted.",
+                    "remediation": (
+                        "Disqualify the lead to take it out of the pipeline, or use the erasure request "
+                        "if the contact asked to be forgotten - both keep the trail intact."
+                    ),
+                    "holders": [{"kind": kind, "count": count} for kind, count in holders.items()],
+                },
+            )
+
         await self.lead_repo.delete(lead_id)
 
     async def forget_lead(self, lead_id: uuid.UUID, user_id: str | None = None) -> dict[str, Any]:

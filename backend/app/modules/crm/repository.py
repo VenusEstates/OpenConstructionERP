@@ -400,6 +400,17 @@ class ActivityRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all()), total
 
+    async def count_for_lead(self, lead_id: uuid.UUID) -> int:
+        """Number of activities logged against a lead.
+
+        ``CrmActivity.lead_id`` is ``ON DELETE CASCADE``, so deleting the lead
+        does not fail on these rows - it takes every logged call, email and
+        meeting with it, without a word. Counting them is what lets the delete
+        say so first.
+        """
+        stmt = select(func.count()).select_from(CrmActivity).where(CrmActivity.lead_id == lead_id)
+        return int((await self.session.execute(stmt)).scalar_one() or 0)
+
     async def create(self, activity: CrmActivity) -> CrmActivity:
         self.session.add(activity)
         await self.session.flush()
