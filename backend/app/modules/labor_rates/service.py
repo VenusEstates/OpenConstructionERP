@@ -213,15 +213,26 @@ class LaborRateService:
             currency=data.currency,
             description=data.description,
         )
-        for index, component in enumerate(data.components):
-            template.components.append(
-                OnCostComponent(
-                    label=component.label,
-                    kind=component.kind,
-                    value=component.value,
-                    sort_order=index,
-                )
+        # Assign the whole list (even when it is empty) rather than appending
+        # in a loop. An `.append()` call that never runs - a template created
+        # with no on-cost components, which is the common case - leaves the
+        # `components` collection untouched, so `flush()` (an INSERT, not a
+        # load) hands back a persistent row whose `selectin` relationship is
+        # still unloaded. `to_template_response()` below reads `.components`
+        # right after, and that first touch on a persistent instance is a
+        # lazy load - one an async session cannot run outside a greenlet, so
+        # it raises `MissingGreenlet` instead of an empty list. Assigning the
+        # list directly always initializes the collection in memory, so the
+        # later read never has anything to fetch.
+        template.components = [
+            OnCostComponent(
+                label=component.label,
+                kind=component.kind,
+                value=component.value,
+                sort_order=index,
             )
+            for index, component in enumerate(data.components)
+        ]
         self.session.add(template)
         await self.session.flush()
         return template
