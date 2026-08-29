@@ -29,6 +29,16 @@ import zipfile
 # path for the git scan and against the in-archive path for the wheel/dir scan,
 # so each pattern allows a leading directory prefix.
 DENY_PATTERNS = [
+    # The agent working notes and their siblings. .gitignore stops these
+    # being added; this list is the other half, and catches one that is
+    # already tracked, which .gitignore cannot do. Until 2026-08-29 neither
+    # half existed for them: the only guard was .git/info/exclude, which is
+    # per-clone and absent from a fresh clone, and this gate passed clean
+    # while blind to the whole class. .claude/ carries API tokens next to
+    # the notes, so the cost of the gap was not only a leaked document.
+    r"(^|/)\.claude/",
+    r"(^|/)CLAUDE-DASHBOARDS\.md$",
+    r"(^|/)marketing-site/CLAUDE\.md$",
     r"(^|/)R\d+_[A-Z0-9_]*REPORT\.md$",
     r"(^|/)ISSUE_\d+_HANDOVER\.md$",
     r"(^|/)_handover_dossiers/",

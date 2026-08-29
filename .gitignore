@@ -129,6 +129,19 @@ frontend/debug-bim/
 # MCP artifacts
 .mcp.json
 
+# The agent working notes. Local only, and the only thing that kept them out
+# of the repo until now was .git/info/exclude, which is per-clone and does not
+# survive a fresh clone. .claude/ also holds credentials (pypi-api-token.txt,
+# token.txt, _pat.txt) beside the notes, so a pathless add there costs more
+# than an embarrassing document. Nothing under .claude/ is tracked today, so
+# the blanket pattern changes nothing; if we ever want to ship part of it,
+# say .claude/skills/, this needs a negation rather than a wider net.
+# marketing-site/CLAUDE.md needs no line here: /marketing-site/ below
+# already ignores that whole tree. It is in the hygiene denylist instead,
+# which is the half that still applies if one is ever force-added.
+.claude/
+CLAUDE-DASHBOARDS.md
+
 # Internal-only files: planning, strategy, QA artifacts, audits and runbooks.
 # Kept local, never published. Enforced by scripts/check_repo_hygiene.py at
 # commit, CI and build time. If you keep one of these locally it stays
