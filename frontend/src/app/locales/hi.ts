@@ -18922,6 +18922,21 @@ const resource = {
     "global_search.no_results": "अभी कोई मिलान नहीं - कोई अलग शब्द आज़माएँ",
     "global_search.footer_hint": "वेक्टर एम्बेडिंग द्वारा संचालित सिमेंटिक खोज",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "मात्रा विवरण",
+    "global_search.collection.documents": "दस्तावेज़",
+    "global_search.collection.tasks": "कार्य",
+    "global_search.collection.risks": "जोखिम",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "आवश्यकताएँ",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "प्रस्तुतियाँ",
+    "global_search.collection.correspondence": "पत्राचार",
+    "global_search.collection.validation": "सत्यापन",
+    "global_search.collection.chat": "चैट",
+    "global_search.collection.change_orders": "परिवर्तन आदेश",
+    "global_search.collection.variations": "अतिरिक्त कार्य",
+    "global_search.collection.moc": "परिवर्तन प्रबंधन (MoC)",
+    "global_search.collection.costs": "लागत डेटाबेस",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

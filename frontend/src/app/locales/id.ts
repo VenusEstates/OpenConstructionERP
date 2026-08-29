@@ -18833,6 +18833,21 @@ const resource = {
     "global_search.no_results": "Belum ada kecocokan - coba ungkapan lain",
     "global_search.footer_hint": "Pencarian semantik didukung oleh penyematan vektor",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Daftar Kuantitas",
+    "global_search.collection.documents": "Dokumen",
+    "global_search.collection.tasks": "Tugas",
+    "global_search.collection.risks": "Risiko",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Persyaratan",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Submittal",
+    "global_search.collection.correspondence": "Korespondensi",
+    "global_search.collection.validation": "Validasi",
+    "global_search.collection.chat": "Obrolan",
+    "global_search.collection.change_orders": "Perubahan Pesanan",
+    "global_search.collection.variations": "Variasi",
+    "global_search.collection.moc": "Manajemen Perubahan (MoC)",
+    "global_search.collection.costs": "Basis Data Biaya",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

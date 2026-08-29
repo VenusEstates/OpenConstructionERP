@@ -18977,6 +18977,21 @@ const resource = {
     "global_search.no_results": "Пока нет совпадений - попробуйте другую формулировку",
     "global_search.footer_hint": "Семантический поиск на основе векторных эмбеддингов",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Ведомость объёмов работ",
+    "global_search.collection.documents": "Документы",
+    "global_search.collection.tasks": "Задачи",
+    "global_search.collection.risks": "Риски",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Требования",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Подачи документов",
+    "global_search.collection.correspondence": "Переписка",
+    "global_search.collection.validation": "Проверка",
+    "global_search.collection.chat": "Чат",
+    "global_search.collection.change_orders": "Изменения контракта",
+    "global_search.collection.variations": "Доп. соглашения",
+    "global_search.collection.moc": "Управление изменениями (MoC)",
+    "global_search.collection.costs": "База данных расценок",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

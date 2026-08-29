@@ -856,6 +856,7 @@ const resource = {
     "info.variations.body": "Manage contractual changes on a live project: variation notices, priced requests, agreed orders, time and materials tickets and extension-of-time claims. Approved orders carry their cost and schedule impact through to the contract final payment and roll up into Finance.",
     "global_search.placeholder": "Search anything, bid schedule positions, drawings, tasks, risks, BIM elements…",
     "info.ai-estimator.body": "Bring any source - a BIM or CAD model, a DWG or PDF takeoff, an Excel or GAEB import, photos, or just a written description. The agent detects the format, reads it into elements, groups quantities, and finds exact catalog rates with full resource breakdowns. Every rate comes from the cost database, never invented by the AI, and you confirm each stage before it moves on. The result is a validated estimate you write straight into a bid schedule.",
+    "global_search.collection.boq": "Bid Schedule",
     "aiest.subtitle": "A full AI-driven precise estimate from any source. The agent groups quantities and finds exact catalog rates - you confirm every step.",
     "aiest.status.run_cancelled": "Canceled",
     "aiest.intake.help": "Bring any source. The agent detects the format, reads it into elements, groups quantities and finds exact catalog rates. Rates always come from the cost database, never invented.",

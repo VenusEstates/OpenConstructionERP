@@ -18917,6 +18917,21 @@ const resource = {
     "global_search.no_results": "Inga träffar ännu - prova en annan formulering",
     "global_search.footer_hint": "Semantisk sökning driven av vektorembeddings",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Mängdförteckning",
+    "global_search.collection.documents": "Dokument",
+    "global_search.collection.tasks": "Uppgifter",
+    "global_search.collection.risks": "Risker",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Krav",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Inlämningar",
+    "global_search.collection.correspondence": "Korrespondens",
+    "global_search.collection.validation": "Validering",
+    "global_search.collection.chat": "Chatt",
+    "global_search.collection.change_orders": "Ändringsordrar",
+    "global_search.collection.variations": "Ändringsorder",
+    "global_search.collection.moc": "Ändringshantering (MoC)",
+    "global_search.collection.costs": "Kostnadsdatabas",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

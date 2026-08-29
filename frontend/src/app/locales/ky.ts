@@ -15603,6 +15603,21 @@ const resource = {
     "global_search.footer_hint": "Вектордук чөмдүрүүлөр менен иштеген семантикалык издөө",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
+    "global_search.collection.boq": "Смета ведомосу",
+    "global_search.collection.documents": "Документтер",
+    "global_search.collection.tasks": "Тапшырмалар",
+    "global_search.collection.risks": "Тобокелдиктер",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Талаптар",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Тапшырылуучу документтер",
+    "global_search.collection.correspondence": "Кат алышуу",
+    "global_search.collection.validation": "Текшерүү",
+    "global_search.collection.chat": "Чат",
+    "global_search.collection.change_orders": "Өзгөртүү буйруктары",
+    "global_search.collection.variations": "Өзгөртүүлөр",
+    "global_search.collection.moc": "Өзгөрүүлөрдү башкаруу",
+    "global_search.collection.costs": "Нарк базасы",
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info
     "info.ai-estimator.title": "AI Смета Тузуучу кантип иштейт",

@@ -19038,6 +19038,21 @@ const resource = {
     "global_search.no_results": "Все още няма съвпадения - опитайте друга формулировка",
     "global_search.footer_hint": "Семантично търсене, задвижвано от векторни вграждания",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Количествена сметка",
+    "global_search.collection.documents": "Документи",
+    "global_search.collection.tasks": "Задачи",
+    "global_search.collection.risks": "Рискове",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Изисквания",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Подавания",
+    "global_search.collection.correspondence": "Кореспонденция",
+    "global_search.collection.validation": "Валидиране",
+    "global_search.collection.chat": "Чат",
+    "global_search.collection.change_orders": "Промени по договора",
+    "global_search.collection.variations": "Анекси",
+    "global_search.collection.moc": "Управление на промените (MoC)",
+    "global_search.collection.costs": "Ценоразпис",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

@@ -19191,6 +19191,21 @@ const resource = {
     "global_search.no_results": "Noch keine Treffer - versuchen Sie eine andere Formulierung",
     "global_search.footer_hint": "Semantische Suche mit Vektor-Embeddings",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Leistungsverzeichnis",
+    "global_search.collection.documents": "Dokumente",
+    "global_search.collection.tasks": "Aufgaben",
+    "global_search.collection.risks": "Risiken",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Anforderungen",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Einreichungen",
+    "global_search.collection.correspondence": "Korrespondenz",
+    "global_search.collection.validation": "Validierung",
+    "global_search.collection.chat": "Chat",
+    "global_search.collection.change_orders": "Änderungsaufträge",
+    "global_search.collection.variations": "Nachträge",
+    "global_search.collection.moc": "Änderungsmanagement (MoC)",
+    "global_search.collection.costs": "Kostendatenbank",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

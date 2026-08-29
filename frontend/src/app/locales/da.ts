@@ -18941,6 +18941,21 @@ const resource = {
     "global_search.no_results": "Ingen match endnu - prøv en anden formulering",
     "global_search.footer_hint": "Semantisk søgning drevet af vektorembeddings",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Tilbudsliste",
+    "global_search.collection.documents": "Dokumenter",
+    "global_search.collection.tasks": "Opgaver",
+    "global_search.collection.risks": "Risici",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Krav",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Indsendelser",
+    "global_search.collection.correspondence": "Korrespondance",
+    "global_search.collection.validation": "Validering",
+    "global_search.collection.chat": "Chat",
+    "global_search.collection.change_orders": "Ændringsordrer",
+    "global_search.collection.variations": "Ekstraarbejder",
+    "global_search.collection.moc": "Ændringsstyring (MoC)",
+    "global_search.collection.costs": "Prisdatabase",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

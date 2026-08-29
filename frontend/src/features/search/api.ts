@@ -10,6 +10,8 @@
  * `backend/app/modules/search/router.py` for the contract.
  */
 
+import type { TFunction } from 'i18next';
+
 import { apiGet } from '@/shared/lib/api';
 
 /** One unified-search hit returned by the backend.  Mirrors the
@@ -225,32 +227,80 @@ export function hitToHref(hit: UnifiedSearchHit): string {
   }
 }
 
-/** Human-readable label for a collection key — used for facet pills. */
-export function collectionLabel(collection: string): string {
+/** The localised name of the kind of thing a collection holds.
+ *
+ *  This wording heads a group of results and stands in for the type of a
+ *  hit that has no title of its own, so it belongs to the locale files
+ *  rather than to this module. `t` is a required argument for that
+ *  reason - an optional one would let a call site quietly render English
+ *  to every reader, which is the defect this function used to be.
+ *
+ *  Acronyms are keyed like everything else here even though most
+ *  languages keep them as they are. A locale that leaves BOQ, BIM or RFI
+ *  alone has made that decision; a term never offered for translation
+ *  has not.
+ *
+ *  Args:
+ *    t: The i18next translator, from `useTranslation()`.
+ *    collection: Backend collection key, for example `oe_boq_positions`.
+ *
+ *  Returns:
+ *    The label in the reader's language.
+ */
+export function collectionLabel(t: TFunction, collection: string): string {
   switch (collection) {
     case 'oe_boq_positions':
-      return 'BOQ';
+      return t('global_search.collection.boq', { defaultValue: 'BOQ' });
     case 'oe_documents':
-      return 'Documents';
+      return t('global_search.collection.documents', {
+        defaultValue: 'Documents',
+      });
     case 'oe_tasks':
-      return 'Tasks';
+      return t('global_search.collection.tasks', { defaultValue: 'Tasks' });
     case 'oe_risks':
-      return 'Risks';
+      return t('global_search.collection.risks', { defaultValue: 'Risks' });
     case 'oe_bim_elements':
-      return 'BIM';
+      return t('global_search.collection.bim', { defaultValue: 'BIM' });
     case 'oe_requirements':
-      return 'Requirements';
+      return t('global_search.collection.requirements', {
+        defaultValue: 'Requirements',
+      });
     case 'oe_rfi_rfis':
-      return 'RFI';
+      return t('global_search.collection.rfi', { defaultValue: 'RFI' });
     case 'oe_submittals_submittals':
-      return 'Submittals';
+      return t('global_search.collection.submittals', {
+        defaultValue: 'Submittals',
+      });
     case 'oe_correspondence_correspondence':
-      return 'Correspondence';
+      return t('global_search.collection.correspondence', {
+        defaultValue: 'Correspondence',
+      });
     case 'oe_validation':
-      return 'Validation';
+      return t('global_search.collection.validation', {
+        defaultValue: 'Validation',
+      });
     case 'oe_chat':
-      return 'Chat';
+      return t('global_search.collection.chat', { defaultValue: 'Chat' });
+    case 'oe_change_orders':
+      return t('global_search.collection.change_orders', {
+        defaultValue: 'Change Orders',
+      });
+    case 'oe_variations':
+      return t('global_search.collection.variations', {
+        defaultValue: 'Variations',
+      });
+    case 'oe_moc':
+      return t('global_search.collection.moc', {
+        defaultValue: 'Management of Change',
+      });
+    case 'oe_cost_items':
+      return t('global_search.collection.costs', {
+        defaultValue: 'Cost Database',
+      });
     default:
+      // A collection this build has never heard of has no key to read, so
+      // the raw name without its `oe_` prefix is the only honest answer.
+      // Inventing a key here would only add one no locale can answer.
       return collection.replace(/^oe_/, '');
   }
 }
@@ -264,14 +314,27 @@ export function collectionLabel(collection: string): string {
  *  to the screen. Both read as a bare UUID, which names nothing to the person
  *  scanning the list.
  *
- *  The last-resort wording comes from the caller so this stays a pure
- *  function and the string stays in the locale file.
+ *  Both halves of the last-resort wording come from the caller - the
+ *  sentence through `unnamed` and the name of the kind through
+ *  `kindLabel` - so this stays a pure function and every string it can
+ *  produce for an unnamed hit stays in the locale files.
+ *
+ *  Args:
+ *    hit: The hit to name.
+ *    kindLabel: Resolves a collection key to its localised name; pass
+ *      `(c) => collectionLabel(t, c)`.
+ *    unnamed: Renders the fallback sentence from the kind and a short
+ *      reference.
+ *
+ *  Returns:
+ *    The title the backend sent, or the fallback wording.
  */
 export function hitLabel(
   hit: UnifiedSearchHit,
+  kindLabel: (collection: string) => string,
   unnamed: (kind: string, ref: string) => string,
 ): string {
   const title = (hit.title ?? '').trim();
   if (title && title !== hit.id) return title;
-  return unnamed(collectionLabel(hit.collection), String(hit.id).slice(0, 8));
+  return unnamed(kindLabel(hit.collection), String(hit.id).slice(0, 8));
 }

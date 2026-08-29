@@ -18865,6 +18865,21 @@ const resource = {
     "global_search.no_results": "Încă nicio potrivire - încearcă o altă formulare",
     "global_search.footer_hint": "Căutare semantică bazată pe vectori de încorporare",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Listă de cantități",
+    "global_search.collection.documents": "Documente",
+    "global_search.collection.tasks": "Sarcini",
+    "global_search.collection.risks": "Riscuri",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Cerințe",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Depuneri",
+    "global_search.collection.correspondence": "Corespondență",
+    "global_search.collection.validation": "Validare",
+    "global_search.collection.chat": "Chat",
+    "global_search.collection.change_orders": "Ordine de schimbare",
+    "global_search.collection.variations": "Modificări contract",
+    "global_search.collection.moc": "Gestionarea modificărilor (MoC)",
+    "global_search.collection.costs": "Bază de date costuri",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

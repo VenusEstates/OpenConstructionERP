@@ -18896,6 +18896,21 @@ const resource = {
     "global_search.no_results": "ยังไม่พบที่ตรงกัน - ลองใช้ถ้อยคำอื่น",
     "global_search.footer_hint": "การค้นหาเชิงความหมายขับเคลื่อนด้วยเวกเตอร์เอ็มเบดดิง",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "บัญชีปริมาณงาน",
+    "global_search.collection.documents": "เอกสาร",
+    "global_search.collection.tasks": "งาน",
+    "global_search.collection.risks": "ความเสี่ยง",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "ข้อกำหนด",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "เอกสารส่งมอบ",
+    "global_search.collection.correspondence": "การติดต่อ",
+    "global_search.collection.validation": "การตรวจสอบ",
+    "global_search.collection.chat": "แชท",
+    "global_search.collection.change_orders": "คำสั่งเปลี่ยนแปลง",
+    "global_search.collection.variations": "ใบสั่งเปลี่ยนแปลง",
+    "global_search.collection.moc": "การจัดการการเปลี่ยนแปลง (MoC)",
+    "global_search.collection.costs": "ฐานข้อมูลต้นทุน",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

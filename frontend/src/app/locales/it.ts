@@ -18760,6 +18760,21 @@ const resource = {
     "global_search.no_results": "Nessun risultato per ora - prova con una formulazione diversa",
     "global_search.footer_hint": "Ricerca semantica basata su embedding vettoriali",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Computo metrico estimativo",
+    "global_search.collection.documents": "Documenti",
+    "global_search.collection.tasks": "Attività",
+    "global_search.collection.risks": "Rischi",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Requisiti",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Sottomissioni",
+    "global_search.collection.correspondence": "Corrispondenza",
+    "global_search.collection.validation": "Validazione",
+    "global_search.collection.chat": "Chat",
+    "global_search.collection.change_orders": "Ordini di variazione",
+    "global_search.collection.variations": "Varianti",
+    "global_search.collection.moc": "Gestione delle modifiche (MoC)",
+    "global_search.collection.costs": "Database dei costi",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

@@ -18908,6 +18908,21 @@ const resource = {
     "global_search.no_results": "Одоохондоо таарц алга - өөр үг хэллэг туршиж үзнэ үү",
     "global_search.footer_hint": "Вектор шигтгээгээр ажилладаг утга санааны хайлт",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Ажил материалын жагсаалт",
+    "global_search.collection.documents": "Баримт бичиг",
+    "global_search.collection.tasks": "Даалгаврууд",
+    "global_search.collection.risks": "Эрсдэл",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Шаардлага",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Илгээмж",
+    "global_search.collection.correspondence": "Харилцаа холбоо",
+    "global_search.collection.validation": "Шалгалт",
+    "global_search.collection.chat": "Чат",
+    "global_search.collection.change_orders": "Өөрчлөлтийн захиалга",
+    "global_search.collection.variations": "Өөрчлөлтүүд",
+    "global_search.collection.moc": "Өөрчлөлтийн удирдлага (MoC)",
+    "global_search.collection.costs": "Үнийн мэдээлэл",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

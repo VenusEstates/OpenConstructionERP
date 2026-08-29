@@ -18898,6 +18898,21 @@ const resource = {
     "global_search.no_results": "아직 일치 항목 없음 - 다른 표현을 시도하세요",
     "global_search.footer_hint": "벡터 임베딩 기반 시맨틱 검색",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "내역서",
+    "global_search.collection.documents": "문서",
+    "global_search.collection.tasks": "작업",
+    "global_search.collection.risks": "리스크",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "요구사항",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "제출물",
+    "global_search.collection.correspondence": "서신",
+    "global_search.collection.validation": "검증",
+    "global_search.collection.chat": "채팅",
+    "global_search.collection.change_orders": "변경 지시서",
+    "global_search.collection.variations": "변경 지시",
+    "global_search.collection.moc": "변경 관리 (MoC)",
+    "global_search.collection.costs": "단가 데이터베이스",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

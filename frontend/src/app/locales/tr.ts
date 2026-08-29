@@ -18885,6 +18885,21 @@ const resource = {
     "global_search.no_results": "Henüz eşleşme yok - farklı bir ifade deneyin",
     "global_search.footer_hint": "Vektör gömmeleriyle güçlendirilen anlamsal arama",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Keşif Özeti",
+    "global_search.collection.documents": "Belgeler",
+    "global_search.collection.tasks": "Görevler",
+    "global_search.collection.risks": "Riskler",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Gereksinimler",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Sunumlar",
+    "global_search.collection.correspondence": "Yazışmalar",
+    "global_search.collection.validation": "Doğrulama",
+    "global_search.collection.chat": "Sohbet",
+    "global_search.collection.change_orders": "Değişiklik Emirleri",
+    "global_search.collection.variations": "İlave İşler",
+    "global_search.collection.moc": "Değişiklik yönetimi (MoC)",
+    "global_search.collection.costs": "Maliyet Veritabanı",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

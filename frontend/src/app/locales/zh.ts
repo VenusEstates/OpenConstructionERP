@@ -18898,6 +18898,21 @@ const resource = {
     "global_search.no_results": "暂无匹配 - 请换一种表述",
     "global_search.footer_hint": "由向量嵌入驱动的语义搜索",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "工程量清单",
+    "global_search.collection.documents": "文档",
+    "global_search.collection.tasks": "任务",
+    "global_search.collection.risks": "风险",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "需求",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "提交物",
+    "global_search.collection.correspondence": "往来函件",
+    "global_search.collection.validation": "验证",
+    "global_search.collection.chat": "聊天",
+    "global_search.collection.change_orders": "变更单",
+    "global_search.collection.variations": "变更增项",
+    "global_search.collection.moc": "变更管理 (MoC)",
+    "global_search.collection.costs": "造价数据库",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

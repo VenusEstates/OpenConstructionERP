@@ -18849,6 +18849,21 @@ const resource = {
     "global_search.no_results": "Ei vielä osumia - kokeile toista muotoilua",
     "global_search.footer_hint": "Semanttinen haku vektoriupotusten avulla",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Määräluettelo",
+    "global_search.collection.documents": "Asiakirjat",
+    "global_search.collection.tasks": "Tehtävät",
+    "global_search.collection.risks": "Riskit",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Vaatimukset",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Aineistotoimitukset",
+    "global_search.collection.correspondence": "Kirjeenvaihto",
+    "global_search.collection.validation": "Validointi",
+    "global_search.collection.chat": "Keskustelu",
+    "global_search.collection.change_orders": "Muutostilaukset",
+    "global_search.collection.variations": "Muutostyöt",
+    "global_search.collection.moc": "Muutosten hallinta (MoC)",
+    "global_search.collection.costs": "Kustannustietokanta",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

@@ -280,7 +280,7 @@ export default function GlobalSearchModal() {
                 <div key={collection}>
                   <div className="sticky top-0 z-10 flex items-center gap-2 px-2 py-1.5 bg-surface-primary/95 backdrop-blur-sm">
                     <span className="text-[11px] font-bold uppercase tracking-wide text-content-secondary">
-                      {collectionLabel(collection)}
+                      {collectionLabel(t, collection)}
                     </span>
                     <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-surface-secondary text-[10px] font-semibold text-content-secondary tabular-nums">
                       {hits.length}
@@ -298,12 +298,15 @@ export default function GlobalSearchModal() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-[13px] font-medium text-content-primary truncate">
-                                {hitLabel(hit, (kind, ref) =>
-                                  t('global_search.unnamed_hit', {
-                                    defaultValue: '{{kind}} {{ref}}',
-                                    kind,
-                                    ref,
-                                  }),
+                                {hitLabel(
+                                  hit,
+                                  (c) => collectionLabel(t, c),
+                                  (kind, ref) =>
+                                    t('global_search.unnamed_hit', {
+                                      defaultValue: '{{kind}} {{ref}}',
+                                      kind,
+                                      ref,
+                                    }),
                                 )}
                               </span>
                               <span className="text-[10px] text-content-tertiary tabular-nums shrink-0">

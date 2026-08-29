@@ -18643,6 +18643,21 @@ const resource = {
     "global_search.no_results": "Nog geen resultaten - probeer een andere formulering",
     "global_search.footer_hint": "Semantisch zoeken op basis van vectorembeddings",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Raming",
+    "global_search.collection.documents": "Documenten",
+    "global_search.collection.tasks": "Taken",
+    "global_search.collection.risks": "Risico's",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Vereisten",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Indieningen",
+    "global_search.collection.correspondence": "Correspondentie",
+    "global_search.collection.validation": "Validatie",
+    "global_search.collection.chat": "Chat",
+    "global_search.collection.change_orders": "Wijzigingsopdrachten",
+    "global_search.collection.variations": "Meerwerken",
+    "global_search.collection.moc": "Wijzigingsbeheer (MoC)",
+    "global_search.collection.costs": "Kostendatabase",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

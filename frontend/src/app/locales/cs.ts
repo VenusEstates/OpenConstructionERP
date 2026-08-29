@@ -18808,6 +18808,21 @@ const resource = {
     "global_search.no_results": "Zatím žádné shody - zkuste jinou formulaci",
     "global_search.footer_hint": "Sémantické vyhledávání poháněné vektorovými embeddingy",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Rozpočet",
+    "global_search.collection.documents": "Dokumenty",
+    "global_search.collection.tasks": "Úkoly",
+    "global_search.collection.risks": "Rizika",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Požadavky",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Podání",
+    "global_search.collection.correspondence": "Korespondence",
+    "global_search.collection.validation": "Validace",
+    "global_search.collection.chat": "Chat",
+    "global_search.collection.change_orders": "Změnové příkazy",
+    "global_search.collection.variations": "Změnové listy",
+    "global_search.collection.moc": "Řízení změn (MoC)",
+    "global_search.collection.costs": "Databáze cen",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

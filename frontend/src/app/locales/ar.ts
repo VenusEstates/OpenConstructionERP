@@ -19175,6 +19175,21 @@ const resource = {
     "global_search.no_results": "لا توجد نتائج بعد - جرّب صياغة مختلفة",
     "global_search.footer_hint": "بحث دلالي مدعوم بتضمينات المتجهات",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "جدول الكميات",
+    "global_search.collection.documents": "المستندات",
+    "global_search.collection.tasks": "المهام",
+    "global_search.collection.risks": "المخاطر",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "المتطلبات",
+    "global_search.collection.rfi": "طلبات المعلومات",
+    "global_search.collection.submittals": "التقديمات",
+    "global_search.collection.correspondence": "المراسلات",
+    "global_search.collection.validation": "التحقق",
+    "global_search.collection.chat": "الدردشة",
+    "global_search.collection.change_orders": "أوامر التغيير",
+    "global_search.collection.variations": "الأعمال الإضافية",
+    "global_search.collection.moc": "إدارة التغييرات (MoC)",
+    "global_search.collection.costs": "قاعدة بيانات التكاليف",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

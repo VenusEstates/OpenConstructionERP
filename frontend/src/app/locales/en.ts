@@ -16516,6 +16516,21 @@ const resource = {
     "global_search.footer_hint": "Semantic search powered by vector embeddings",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
+    "global_search.collection.boq": "BOQ",
+    "global_search.collection.documents": "Documents",
+    "global_search.collection.tasks": "Tasks",
+    "global_search.collection.risks": "Risks",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Requirements",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Submittals",
+    "global_search.collection.correspondence": "Correspondence",
+    "global_search.collection.validation": "Validation",
+    "global_search.collection.chat": "Chat",
+    "global_search.collection.change_orders": "Change Orders",
+    "global_search.collection.variations": "Variations",
+    "global_search.collection.moc": "Management of Change",
+    "global_search.collection.costs": "Cost Database",
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info
     "info.ai-estimator.title": "How the AI Estimate Builder works",

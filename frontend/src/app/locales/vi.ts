@@ -18834,6 +18834,21 @@ const resource = {
     "global_search.no_results": "Chưa có kết quả khớp - thử diễn đạt khác",
     "global_search.footer_hint": "Tìm kiếm ngữ nghĩa bằng vector embedding",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Bảng khối lượng",
+    "global_search.collection.documents": "Tài liệu",
+    "global_search.collection.tasks": "Công việc",
+    "global_search.collection.risks": "Rủi ro",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Yêu cầu",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Hồ sơ trình duyệt",
+    "global_search.collection.correspondence": "Thư từ",
+    "global_search.collection.validation": "Xác thực",
+    "global_search.collection.chat": "Trò chuyện",
+    "global_search.collection.change_orders": "Lệnh thay đổi",
+    "global_search.collection.variations": "Công việc phát sinh",
+    "global_search.collection.moc": "Quản lý thay đổi (MoC)",
+    "global_search.collection.costs": "Cơ sở dữ liệu chi phí",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

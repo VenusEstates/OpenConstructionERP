@@ -18780,6 +18780,21 @@ const resource = {
     "global_search.no_results": "Još nema podudaranja - pokušajte s drugom formulacijom",
     "global_search.footer_hint": "Semantičko pretraživanje pokretano vektorskim ugrađivanjima",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "Troškovnik",
+    "global_search.collection.documents": "Dokumenti",
+    "global_search.collection.tasks": "Zadaci",
+    "global_search.collection.risks": "Rizici",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "Zahtjevi",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "Predaje",
+    "global_search.collection.correspondence": "Dopisivanje",
+    "global_search.collection.validation": "Validacija",
+    "global_search.collection.chat": "Razgovor",
+    "global_search.collection.change_orders": "Izmjene narudžbi",
+    "global_search.collection.variations": "Izmjene ugovora",
+    "global_search.collection.moc": "Upravljanje izmjenama (MoC)",
+    "global_search.collection.costs": "Baza troškova",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

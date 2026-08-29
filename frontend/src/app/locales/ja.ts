@@ -18898,6 +18898,21 @@ const resource = {
     "global_search.no_results": "まだ一致なし - 別の言い回しを試してください",
     "global_search.footer_hint": "ベクトル埋め込みによるセマンティック検索",
     "global_search.unnamed_hit": "{{kind}} {{ref}}",
+    "global_search.collection.boq": "内訳書",
+    "global_search.collection.documents": "文書",
+    "global_search.collection.tasks": "タスク",
+    "global_search.collection.risks": "リスク",
+    "global_search.collection.bim": "BIM",
+    "global_search.collection.requirements": "要件",
+    "global_search.collection.rfi": "RFI",
+    "global_search.collection.submittals": "提出書類",
+    "global_search.collection.correspondence": "やり取り",
+    "global_search.collection.validation": "検証",
+    "global_search.collection.chat": "チャット",
+    "global_search.collection.change_orders": "変更指示書",
+    "global_search.collection.variations": "変更指示",
+    "global_search.collection.moc": "変更管理（MoC）",
+    "global_search.collection.costs": "単価データベース",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info
