@@ -727,6 +727,7 @@ class TolerianceProfileCreate(BaseModel):
 
 
 class TolerianceProfileUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
     description: str | None = Field(default=None, max_length=1000)
     price_tolerance_pct: Decimal | None = Field(default=None, ge=0, le=100)
     price_tolerance_abs: Decimal | None = Field(default=None, ge=0)

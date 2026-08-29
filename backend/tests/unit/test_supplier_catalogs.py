@@ -2600,6 +2600,97 @@ async def test_delete_tolerance_profile_refused_when_it_is_the_default(session):
 
 
 @pytest.mark.asyncio
+async def test_update_tolerance_profile_renames_it(session):
+    """A PATCH carrying ``name`` writes the row, not just a 200 with the old value.
+
+    Read the column back with a plain ``select`` instead of through the
+    service's returned instance or a second ``session.get()``: both of those
+    can hand back the same Python object the write already touched in
+    memory, which would pass even if the SET clause sent to PostgreSQL
+    never carried the new name.
+    """
+    from app.modules.supplier_catalogs.models import TolerianceProfile
+    from app.modules.supplier_catalogs.schemas import TolerianceProfileCreate, TolerianceProfileUpdate
+
+    svc = SupplierCatalogsService(session)
+    old_name = f"profile-{uuid.uuid4().hex[:6]}"
+    new_name = f"renamed-{uuid.uuid4().hex[:6]}"
+    profile = await svc.create_tolerance_profile(
+        TolerianceProfileCreate(name=old_name, price_tolerance_pct=Decimal("1")),
+    )
+
+    await svc.update_tolerance_profile(profile.id, TolerianceProfileUpdate(name=new_name))
+
+    stored_name = (
+        await session.execute(select(TolerianceProfile.name).where(TolerianceProfile.id == profile.id))
+    ).scalar_one()
+    assert stored_name == new_name
+
+
+@pytest.mark.asyncio
+async def test_update_tolerance_profile_refuses_a_rename_a_vendor_relies_on(session):
+    """The database enforces nothing here either, same as the delete guard.
+
+    Renaming a profile a vendor names by string would leave that vendor
+    pointing at a name that resolves to nothing, silently falling back to
+    different tolerances - the same money hazard ``delete_tolerance_profile``
+    already refuses.
+    """
+    from app.modules.supplier_catalogs.models import TolerianceProfile
+    from app.modules.supplier_catalogs.schemas import TolerianceProfileCreate, TolerianceProfileUpdate
+
+    svc = SupplierCatalogsService(session)
+    name = f"strict-{uuid.uuid4().hex[:6]}"
+    profile = await svc.create_tolerance_profile(
+        TolerianceProfileCreate(name=name, price_tolerance_pct=Decimal("0.5")),
+    )
+    await svc.create_vendor(
+        VendorCreate(
+            code=f"V-{uuid.uuid4().hex[:6]}",
+            name="Held vendor",
+            tolerance_profile_name=name,
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.update_tolerance_profile(profile.id, TolerianceProfileUpdate(name=f"renamed-{uuid.uuid4().hex[:6]}"))
+
+    detail = exc.value.detail
+    assert exc.value.status_code == 409
+    assert detail["code"] == "tolerance_profile_name_in_use"
+    assert "1 vendor" in detail["message"]
+    assert "is matched" in detail["message"]
+
+    stored_name = (
+        await session.execute(select(TolerianceProfile.name).where(TolerianceProfile.id == profile.id))
+    ).scalar_one()
+    assert stored_name == name
+
+
+@pytest.mark.asyncio
+async def test_update_tolerance_profile_allows_a_rename_nothing_relies_on(session):
+    """A rename that holds nothing goes through, description update included."""
+    from app.modules.supplier_catalogs.models import TolerianceProfile
+    from app.modules.supplier_catalogs.schemas import TolerianceProfileCreate, TolerianceProfileUpdate
+
+    svc = SupplierCatalogsService(session)
+    profile = await svc.create_tolerance_profile(
+        TolerianceProfileCreate(name=f"unused-{uuid.uuid4().hex[:6]}", price_tolerance_pct=Decimal("1")),
+    )
+    new_name = f"renamed-{uuid.uuid4().hex[:6]}"
+
+    updated = await svc.update_tolerance_profile(
+        profile.id,
+        TolerianceProfileUpdate(name=new_name, description="tightened for a new strategic supplier"),
+    )
+    assert updated.name == new_name
+
+    row = (await session.execute(select(TolerianceProfile).where(TolerianceProfile.id == profile.id))).scalar_one()
+    assert row.name == new_name
+    assert row.description == "tightened for a new strategic supplier"
+
+
+@pytest.mark.asyncio
 async def test_deleting_something_that_is_not_there_is_a_404(session):
     svc = SupplierCatalogsService(session)
     missing = uuid.uuid4()

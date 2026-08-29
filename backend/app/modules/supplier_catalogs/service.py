@@ -333,6 +333,17 @@ def _describe_holders(holders: dict[str, int]) -> str:
     return f"{', '.join(parts[:-1])} and {parts[-1]}"
 
 
+def _agreeing_verb(holders: dict[str, int], singular: str, plural: str) -> str:
+    """Pick the verb form that agrees with ``_describe_holders(holders)``.
+
+    The rendered phrase is one grammatical subject even when it names several
+    kinds ("2 purchase orders, 1 vendor invoice"), and a coordinated subject
+    takes the plural regardless of how each part is counted. Only a single
+    holder of a single kind is singular.
+    """
+    return singular if sum(holders.values()) == 1 else plural
+
+
 def _in_use_conflict(
     code: str,
     message: str,
@@ -625,7 +636,10 @@ class SupplierCatalogsService:
         if holders:
             raise _in_use_conflict(
                 "vendor_in_use",
-                (f"Vendor '{code}' cannot be deleted because {_describe_holders(holders)} still reference it."),
+                (
+                    f"Vendor '{code}' cannot be deleted because {_describe_holders(holders)} still "
+                    f"{_agreeing_verb(holders, 'references', 'reference')} it."
+                ),
                 (
                     "Suspend the vendor to stop it being ordered from while the open records are "
                     "settled, or blacklist it to close it permanently. Both keep the purchase "
@@ -762,7 +776,10 @@ class SupplierCatalogsService:
         if holders:
             raise _in_use_conflict(
                 "catalog_item_in_use",
-                (f"Catalog item '{sku}' cannot be deleted because {_describe_holders(holders)} still reference it."),
+                (
+                    f"Catalog item '{sku}' cannot be deleted because {_describe_holders(holders)} still "
+                    f"{_agreeing_verb(holders, 'references', 'reference')} it."
+                ),
                 (
                     "Clear those records first, or leave the item in place and switch it to inactive "
                     "so it is marked as no longer bought."
@@ -2051,7 +2068,10 @@ class SupplierCatalogsService:
         if holders:
             raise _in_use_conflict(
                 "warehouse_in_use",
-                (f"Warehouse '{code}' cannot be deleted because {_describe_holders(holders)} still reference it."),
+                (
+                    f"Warehouse '{code}' cannot be deleted because {_describe_holders(holders)} still "
+                    f"{_agreeing_verb(holders, 'references', 'reference')} it."
+                ),
                 (
                     "Issue or transfer the remaining stock out of this location first. A warehouse "
                     "that goods were received into keeps its receipt history."
@@ -2400,6 +2420,29 @@ class SupplierCatalogsService:
             ) from exc
         if "currency" in updates:
             updates["currency"] = normalised
+        # Vendor.tolerance_profile_name is a name, not a foreign key (see
+        # TolerianceProfileRepository.count_references), so a rename is the
+        # same hazard delete_tolerance_profile refuses: a vendor left naming
+        # the old name would resolve to nothing and silently fall back to a
+        # different set of tolerances, the way _resolve_tolerance falls
+        # through when a profile name does not match any row.
+        if "name" in updates and updates["name"] != existing.name:
+            holders = await self.tolerance_profiles.count_references(existing.name)
+            if holders:
+                raise _in_use_conflict(
+                    "tolerance_profile_name_in_use",
+                    (
+                        f"Tolerance profile '{existing.name}' cannot be renamed because "
+                        f"{_describe_holders(holders)} {_agreeing_verb(holders, 'is', 'are')} matched "
+                        "against it by this name."
+                    ),
+                    (
+                        "Move those vendors to another profile first, or leave this profile's name as "
+                        "is. Renaming it would leave them pointing at a name that no longer resolves, "
+                        "and their invoices would silently fall back to different tolerances."
+                    ),
+                    holders,
+                )
         if updates.get("is_default") is True:
             current = await self.tolerance_profiles.get_default()
             if current is not None and current.id != profile_id:
@@ -2449,8 +2492,8 @@ class SupplierCatalogsService:
             raise _in_use_conflict(
                 "tolerance_profile_in_use",
                 (
-                    f"Tolerance profile '{name}' cannot be deleted because "
-                    f"{_describe_holders(holders)} are matched against it."
+                    f"Tolerance profile '{name}' cannot be deleted because {_describe_holders(holders)} "
+                    f"{_agreeing_verb(holders, 'is', 'are')} matched against it."
                 ),
                 (
                     "Move those vendors to another profile first. Deleting this one would silently "
