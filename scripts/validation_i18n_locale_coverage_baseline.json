@@ -1,8 +1,41 @@
 {
-  "answered_locales": [
-    "de",
-    "en",
-    "es",
-    "ru"
-  ]
+  "catalogues": {
+    "backend/app/core/validation/messages": [
+      "de",
+      "en",
+      "es",
+      "ru"
+    ],
+    "backend/app/modules/bcf/messages": [
+      "de",
+      "en",
+      "ru"
+    ],
+    "backend/app/modules/compliance/messages": [
+      "de",
+      "en",
+      "ru"
+    ],
+    "backend/app/modules/compliance_ai/messages": [
+      "de",
+      "en",
+      "ru"
+    ],
+    "backend/app/modules/cost_match/messages": [
+      "de",
+      "en",
+      "ru"
+    ],
+    "backend/app/modules/dashboards/messages": [
+      "de",
+      "en",
+      "ru"
+    ],
+    "backend/app/modules/rebar_schedule/messages": [
+      "de",
+      "en",
+      "es",
+      "ru"
+    ]
+  }
 }
