@@ -1,6 +1,6 @@
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
-import { apiGet, apiPost, apiPatch, apiDelete } from '@/shared/lib/api';
+import { ApiError, apiGet, apiPost, apiPatch, apiDelete } from '@/shared/lib/api';
 import { toNum } from '@/shared/lib/money';
 
 /**
@@ -303,6 +303,40 @@ export interface CostItemPayload {
   classification?: Record<string, string>;
   components?: CostItemComponentInput[];
   tags?: string[];
+}
+
+// ── Delete refusal (the backend names what still holds a template) ──────────
+
+/** One holder of a template, as counted by the backend's 409 refusal body. */
+export interface InUseReference {
+  kind: string;
+  count: number;
+}
+
+/** The stable `detail.code` the backend sends when a template is still held. */
+export const TEMPLATE_IN_USE_CODE = 'labor_rate_template_in_use';
+
+/**
+ * Read the structured "template still in use" refusal out of a delete error.
+ *
+ * Deleting a template that a published cost item or a priced assembly still
+ * references is refused with 409 rather than cascaded, and the body carries a
+ * `detail` object with the stable {@link TEMPLATE_IN_USE_CODE} plus a
+ * `references` list of `{kind, count}`. Returning that list lets the caller
+ * name the holders in the user's language. Anything else - another status,
+ * another code, a shape that is not what we expect - yields `null`, so the
+ * caller falls back to the generic error message instead of inventing counts.
+ */
+export function readInUseRefusal(err: unknown): InUseReference[] | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const detail = (err.body as { detail?: unknown } | undefined)?.detail;
+  if (!detail || typeof detail !== 'object') return null;
+  const { code, references } = detail as { code?: unknown; references?: unknown };
+  if (code !== TEMPLATE_IN_USE_CODE || !Array.isArray(references)) return null;
+  return references.filter(
+    (r): r is InUseReference =>
+      !!r && typeof r === 'object' && typeof (r as { kind?: unknown }).kind === 'string',
+  );
 }
 
 /** Slim shape of the created cost item we read back for the success toast. */

@@ -11,7 +11,7 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -48,6 +48,56 @@ class LaborRateTemplateNotFoundError(LookupError):
     def __init__(self, template_id: uuid.UUID) -> None:
         self.template_id = template_id
         super().__init__(f"labor rate template not found: {template_id}")
+
+
+# Reference kinds a template can be held by, with the singular / plural English
+# nouns used to name the holder in the refusal message. The keys are the stable
+# tokens the API hands the client; the client localises from them.
+_REFERENCE_LABELS: dict[str, tuple[str, str]] = {
+    "cost_item": ("published cost item", "published cost items"),
+    "assembly": ("priced assembly", "priced assemblies"),
+}
+
+
+def describe_template_references(references: dict[str, int]) -> str:
+    """Render reference counts as English prose naming what holds a template.
+
+    Args:
+        references: Non-zero counts keyed by the tokens in
+            :data:`_REFERENCE_LABELS`.
+
+    Returns:
+        A phrase such as ``"3 published cost items and 1 priced assembly"``.
+    """
+    parts = [
+        f"{count} {_REFERENCE_LABELS[kind][0 if count == 1 else 1]}"
+        for kind, count in references.items()
+        if kind in _REFERENCE_LABELS
+    ]
+    if not parts:
+        return "other records"
+    if len(parts) == 1:
+        return parts[0]
+    return f"{', '.join(parts[:-1])} and {parts[-1]}"
+
+
+class LaborRateTemplateInUseError(RuntimeError):
+    """Raised when a template is deleted while other rows still reference it.
+
+    A template leaves this module in two persisted shapes: a published labour
+    cost item whose code encodes the template id, and a priced assembly that
+    records the template id in its metadata. Both outlive the request that
+    created them, so deleting the template would strand a pickable cost line
+    and a build-up on a row that no longer exists. Nothing is cascaded and
+    nothing is soft-deleted; the delete simply refuses and names the holders.
+    The router maps this to a 409 carrying ``references``.
+    """
+
+    def __init__(self, template_id: uuid.UUID, references: dict[str, int]) -> None:
+        self.template_id = template_id
+        self.references = dict(references)
+        held_by = describe_template_references(self.references)
+        super().__init__(f"labor rate template {template_id} is still referenced by {held_by}")
 
 
 def _crew_to_breakdown(build: rate_math.CrewBuildUp, currency: str) -> CrewBreakdown:
@@ -238,8 +288,74 @@ class LaborRateService:
         await self.session.flush()
         return template
 
+    async def count_template_references(self, template_id: uuid.UUID) -> dict[str, int]:
+        """Count the live rows outside this module that point at a template.
+
+        Two references are persisted and outlive the request that wrote them:
+
+        * ``cost_item`` - a labour cost item created by
+          :meth:`publish_template_as_cost_item`. Its code encodes the template
+          id, so the count is a prefix match on the indexed ``code`` column.
+        * ``assembly`` - a priced build-up created by the norm-expansion module,
+          which records ``labor_rate_template_id`` in the assembly metadata.
+
+        Only rows both modules still consider live are counted. Cost items are
+        soft-deleted (``is_active = False``), so counting inactive ones would
+        pin a template forever with no way for the user to release it.
+
+        Args:
+            template_id: The template to look for.
+
+        Returns:
+            Non-zero counts keyed by reference kind; empty when nothing points
+            at the template.
+        """
+        from app.modules.assemblies.models import Assembly
+        from app.modules.costs.models import CostItem
+
+        references: dict[str, int] = {}
+
+        published = await self.session.execute(
+            select(func.count())
+            .select_from(CostItem)
+            .where(
+                CostItem.code.startswith(_published_labor_code_prefix(template_id)),
+                CostItem.is_active.is_(True),
+            )
+        )
+        if count := int(published.scalar_one()):
+            references["cost_item"] = count
+
+        priced = await self.session.execute(
+            select(func.count())
+            .select_from(Assembly)
+            .where(
+                Assembly.metadata_["labor_rate_template_id"].as_string() == str(template_id),
+                Assembly.is_active.is_(True),
+            )
+        )
+        if count := int(priced.scalar_one()):
+            references["assembly"] = count
+
+        return references
+
     async def delete_template(self, template: LaborRateTemplate) -> None:
-        """Delete a template and its components (cascade)."""
+        """Delete a template and its components (cascade), unless it is in use.
+
+        The guard lives here rather than in the router so every caller is held
+        to it, not just the HTTP path.
+
+        Args:
+            template: The already-loaded template to delete.
+
+        Raises:
+            LaborRateTemplateInUseError: When a published cost item or a priced
+                assembly still references the template. Nothing is deleted and
+                nothing is cascaded or soft-deleted on refusal.
+        """
+        references = await self.count_template_references(template.id)
+        if references:
+            raise LaborRateTemplateInUseError(template.id, references)
         await self.session.delete(template)
         await self.session.flush()
 
@@ -446,6 +562,16 @@ def _template_all_in_rate(template: LaborRateTemplate) -> Decimal:
     )
 
 
+def _published_labor_code_prefix(template_id: uuid.UUID) -> str:
+    """Code prefix shared by every cost item published from one template.
+
+    The catalog part is what follows, so this prefix matches a template's
+    published items across all catalogs. :func:`_published_labor_code` builds on
+    it so the writer and the reference count can never drift apart.
+    """
+    return f"LABOR-RATE-{template_id.hex}-"
+
+
 def _published_labor_code(template_id: uuid.UUID, catalog_id: uuid.UUID | None) -> str:
     """Deterministic cost-item code encoding the template and target catalog.
 
@@ -454,7 +580,7 @@ def _published_labor_code(template_id: uuid.UUID, catalog_id: uuid.UUID | None) 
     region, catalog): re-publishing the same trio lands on the same row.
     """
     catalog_part = catalog_id.hex if catalog_id is not None else "GLOBAL"
-    return f"LABOR-RATE-{template_id.hex}-{catalog_part}"
+    return f"{_published_labor_code_prefix(template_id)}{catalog_part}"
 
 
 def _published_labor_description(template_name: str, region: str | None) -> str:

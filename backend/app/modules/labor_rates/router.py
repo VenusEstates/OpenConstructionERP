@@ -8,7 +8,7 @@ Endpoints:
     GET    /templates/                     - list the caller's templates
     GET    /templates/{template_id}        - get a template
     PATCH  /templates/{template_id}        - update a template
-    DELETE /templates/{template_id}        - delete a template
+    DELETE /templates/{template_id}        - delete a template (409 while referenced)
     POST   /templates/{template_id}/publish - publish the all-in rate as a labor cost item
     POST   /crews/                         - create or replace a crew's members
     GET    /crews/{crew_id}                - get a crew with its blended rate
@@ -32,7 +32,12 @@ from app.modules.labor_rates.schemas import (
     TemplateResponse,
     TemplateUpdate,
 )
-from app.modules.labor_rates.service import LaborRateService, LaborRateTemplateNotFoundError
+from app.modules.labor_rates.service import (
+    LaborRateService,
+    LaborRateTemplateInUseError,
+    LaborRateTemplateNotFoundError,
+    describe_template_references,
+)
 
 router = APIRouter(tags=["labor_rates"])
 
@@ -177,9 +182,31 @@ async def delete_template(
     payload: CurrentUserPayload,
     service: LaborRateService = Depends(_get_service),
 ) -> None:
-    """Delete a labor rate template and its components."""
+    """Delete a labor rate template and its components.
+
+    Refuses with 409 while a published cost item or a priced assembly still
+    references the template, naming the holders by count and kind. The refusal
+    body carries a machine-readable ``references`` list so the client can say
+    the same thing in the user's language. Nothing is cascaded and nothing is
+    soft-deleted: the caller clears the holders and retries.
+    """
     template = await _load_owned_template(service, template_id, user_id, payload)
-    await service.delete_template(template)
+    try:
+        await service.delete_template(template)
+    except LaborRateTemplateInUseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "labor_rate_template_in_use",
+                # Phrased so the sentence reads for one holder as well as many;
+                # "1 published cost item still use this template" does not.
+                "message": (
+                    f"This rate template is referenced by {describe_template_references(exc.references)} "
+                    "and cannot be deleted. Remove those records first, then delete the template."
+                ),
+                "references": [{"kind": kind, "count": count} for kind, count in exc.references.items()],
+            },
+        ) from exc
 
 
 @router.post(

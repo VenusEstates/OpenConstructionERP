@@ -3,11 +3,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Plus, Trash2, Save, Users, Calculator, ArrowDownToLine, Database } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Save,
+  Users,
+  Calculator,
+  ArrowDownToLine,
+  Database,
+  FilePlus,
+} from 'lucide-react';
 
-import { Button } from '@/shared/ui';
+import { Button, ConfirmDialog } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib/money';
 import { useToastStore } from '@/stores/useToastStore';
+import { useConfirm } from '@/shared/hooks/useConfirm';
 import { getErrorMessage } from '@/shared/lib/api';
 import {
   laborRatesApi,
@@ -17,10 +27,12 @@ import {
   type OnCostKind,
   type OnCostRowInput,
   type CrewRowInput,
+  readInUseRefusal,
   type LaborRateTemplate,
   type CostItemPayload,
+  type InUseReference,
 } from './api';
-import { fmtPercent } from '@/shared/lib/formatters';
+import { fmtList, fmtPercent } from '@/shared/lib/formatters';
 
 /** Debounce any value so the live compute does not fire on every keystroke. */
 function useDebounced<T>(value: T, delay: number): T {
@@ -57,6 +69,8 @@ export function LaborRatesPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
+  const confirmState = useConfirm();
+  const { confirm } = confirmState;
 
   const [baseWage, setBaseWage] = useState('30');
   const [currency, setCurrency] = useState('');
@@ -71,6 +85,9 @@ export function LaborRatesPage() {
   ]);
   const [crew, setCrew] = useState<CrewRowInput[]>(() => [newCrewMember()]);
   const [templateName, setTemplateName] = useState('');
+  // The saved template currently open for correction. Null means the editor is
+  // building a brand new rate, so saving creates rather than overwrites.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // ── Live build-up (authoritative, from the backend) ───────────────────────
   const request = useMemo(
@@ -93,6 +110,7 @@ export function LaborRatesPage() {
     queryFn: laborRatesApi.listTemplates,
   });
 
+  /** Open a saved template for correction: its values fill the editor. */
   const loadTemplate = (template: LaborRateTemplate) => {
     setBaseWage(template.base_wage ?? '0');
     setCurrency(template.currency ?? '');
@@ -100,7 +118,19 @@ export function LaborRatesPage() {
       (template.components ?? []).map((c) => newOnCost(c.label, c.kind, c.value)),
     );
     setTemplateName(template.name ?? '');
+    setEditingId(template.id);
   };
+
+  /** Leave the saved template alone and start a fresh build-up. */
+  const startNewTemplate = () => {
+    setEditingId(null);
+    setTemplateName('');
+  };
+
+  const editingTemplate = useMemo(
+    () => (templatesQuery.data ?? []).find((tpl) => tpl.id === editingId) ?? null,
+    [templatesQuery.data, editingId],
+  );
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -119,6 +149,9 @@ export function LaborRatesPage() {
           name: created?.name ?? templateName,
         }),
       });
+      // A "save as new" from an open template leaves the new row selected, so
+      // a follow-up correction edits the copy the user just made.
+      if (created?.id) setEditingId(created.id);
       queryClient.invalidateQueries({ queryKey: ['labor-rates', 'templates'] });
     },
     onError: (err: unknown) => {
@@ -129,6 +162,125 @@ export function LaborRatesPage() {
       });
     },
   });
+
+  // ── Correcting a saved template ───────────────────────────────────────────
+  // The name, the base wage, the currency and the whole on-cost list are sent
+  // back, so a rename and a wrong-figure correction are the same operation.
+  const updateMutation = useMutation({
+    mutationFn: (id: string) =>
+      laborRatesApi.updateTemplate(id, {
+        name: templateName.trim(),
+        base_wage: request.base_wage,
+        currency: request.currency,
+        components: request.components,
+      }),
+    onSuccess: (updated: LaborRateTemplate) => {
+      addToast({
+        type: 'success',
+        title: t('laborRates.updated_title', { defaultValue: 'Template updated' }),
+        message: t('laborRates.updated_msg', {
+          defaultValue: '"{{name}}" now carries your changes.',
+          name: updated?.name ?? templateName,
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey: ['labor-rates', 'templates'] });
+    },
+    onError: (err: unknown) => {
+      addToast({
+        type: 'error',
+        title: t('laborRates.update_failed', { defaultValue: 'Could not update template' }),
+        message: getErrorMessage(err),
+      });
+    },
+  });
+
+  // ── Deleting a saved template ─────────────────────────────────────────────
+  // The backend refuses with 409 while a published cost item or a priced
+  // assembly still references the template, and names the holders. That answer
+  // is worth reading, so it is turned into the sentence below instead of the
+  // generic conflict fallback an unhandled ApiError would show.
+
+  /** Name one holder in the user's language, e.g. "published cost items: 3". */
+  const holderLabel = (reference: InUseReference): string | null => {
+    const n = Number(reference.count) || 0;
+    if (reference.kind === 'cost_item') {
+      return t('laborRates.holder_cost_items', {
+        defaultValue: 'published cost items: {{n}}',
+        n,
+      });
+    }
+    if (reference.kind === 'assembly') {
+      return t('laborRates.holder_assemblies', {
+        defaultValue: 'priced assemblies: {{n}}',
+        n,
+      });
+    }
+    return null;
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => laborRatesApi.deleteTemplate(id),
+    onSuccess: (_result, id: string) => {
+      const name = (templatesQuery.data ?? []).find((tpl) => tpl.id === id)?.name ?? '';
+      addToast({
+        type: 'success',
+        title: t('laborRates.deleted_title', { defaultValue: 'Template deleted' }),
+        message: t('laborRates.deleted_msg', {
+          defaultValue: '"{{name}}" is no longer in the list.',
+          name,
+        }),
+      });
+      if (editingId === id) startNewTemplate();
+      queryClient.invalidateQueries({ queryKey: ['labor-rates', 'templates'] });
+    },
+    onError: (err: unknown) => {
+      const references = readInUseRefusal(err);
+      if (references) {
+        const holders = fmtList(
+          references
+            .map(holderLabel)
+            .filter((label): label is string => label !== null),
+        );
+        addToast({
+          type: 'error',
+          title: t('laborRates.delete_blocked_title', {
+            defaultValue: 'Template still in use',
+          }),
+          // With an unrecognised holder kind the list comes back empty, so the
+          // backend's own English sentence is shown rather than a blank clause.
+          message: holders
+            ? t('laborRates.delete_blocked_msg', {
+                defaultValue:
+                  'This template cannot be deleted while other records use it. Still using it: {{holders}}. Remove them first, then delete the template.',
+                holders,
+              })
+            : getErrorMessage(err),
+        });
+        return;
+      }
+      addToast({
+        type: 'error',
+        title: t('laborRates.delete_failed', { defaultValue: 'Could not delete template' }),
+        message: getErrorMessage(err),
+      });
+    },
+  });
+
+  /** Confirm what is about to go, then delete it. */
+  const onDeleteTemplate = async (template: LaborRateTemplate) => {
+    const ok = await confirm({
+      title: t('laborRates.delete_template_q', { defaultValue: 'Delete this rate template?' }),
+      message: t('laborRates.delete_template_msg', {
+        defaultValue:
+          'This permanently deletes "{{name}}", its {{onCosts}} on-costs and its saved all-in rate of {{rate}}. It cannot be undone.',
+        name: template.name,
+        onCosts: (template.components ?? []).length,
+        rate: formatCurrency(template.all_in_rate, template.currency),
+      }),
+      confirmLabel: t('laborRates.delete_confirm', { defaultValue: 'Delete template' }),
+    });
+    if (ok) deleteMutation.mutate(template.id);
+  };
 
   // ── On-cost row editing ───────────────────────────────────────────────────
   const updateOnCost = (key: string, patch: Partial<OnCostRowInput>) =>
@@ -327,8 +479,12 @@ export function LaborRatesPage() {
             <select
               className={inputClass}
               style={{ minWidth: '16rem' }}
-              value=""
+              value={editingId ?? ''}
               onChange={(e) => {
+                if (e.target.value === '') {
+                  startNewTemplate();
+                  return;
+                }
                 const found = (templatesQuery.data ?? []).find((tpl) => tpl.id === e.target.value);
                 if (found) loadTemplate(found);
               }}
@@ -345,10 +501,39 @@ export function LaborRatesPage() {
               ))}
             </select>
           </label>
+          {/* A saved template is not read-only: it can be corrected, renamed
+              through the name field below, or removed outright. */}
+          {editingTemplate && (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<FilePlus size={14} />}
+                onClick={startNewTemplate}
+              >
+                {t('laborRates.new_template', { defaultValue: 'New template' })}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                icon={<Trash2 size={14} />}
+                loading={deleteMutation.isPending}
+                disabled={deleteMutation.isPending}
+                onClick={() => onDeleteTemplate(editingTemplate)}
+              >
+                {t('laborRates.delete_template', { defaultValue: 'Delete template' })}
+              </Button>
+            </div>
+          )}
           <span className="text-xs text-gray-400 dark:text-gray-500">
-            {t('laborRates.template_hint', {
-              defaultValue: 'Loading a template fills the wage and on-costs below.',
-            })}
+            {editingTemplate
+              ? t('laborRates.editing_hint', {
+                  defaultValue: 'Editing "{{name}}". Save changes to write your corrections back.',
+                  name: editingTemplate.name,
+                })
+              : t('laborRates.template_hint', {
+                  defaultValue: 'Loading a template fills the wage and on-costs below.',
+                })}
           </span>
         </div>
       </div>
@@ -674,16 +859,43 @@ export function LaborRatesPage() {
                 })}
                 aria-label={t('laborRates.template_name', { defaultValue: 'Template name' })}
               />
-              <Button
-                variant="primary"
-                size="sm"
-                icon={<Save size={14} />}
-                loading={saveMutation.isPending}
-                disabled={templateName.trim() === ''}
-                onClick={() => saveMutation.mutate()}
-              >
-                {t('laborRates.save_template', { defaultValue: 'Save as template' })}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {editingId ? (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<Save size={14} />}
+                      loading={updateMutation.isPending}
+                      disabled={templateName.trim() === '' || updateMutation.isPending}
+                      onClick={() => updateMutation.mutate(editingId)}
+                    >
+                      {t('laborRates.save_changes', { defaultValue: 'Save changes' })}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<FilePlus size={14} />}
+                      loading={saveMutation.isPending}
+                      disabled={templateName.trim() === '' || saveMutation.isPending}
+                      onClick={() => saveMutation.mutate()}
+                    >
+                      {t('laborRates.save_as_new', { defaultValue: 'Save as new template' })}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<Save size={14} />}
+                    loading={saveMutation.isPending}
+                    disabled={templateName.trim() === ''}
+                    onClick={() => saveMutation.mutate()}
+                  >
+                    {t('laborRates.save_template', { defaultValue: 'Save as template' })}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Save as cost item: publish the computed rate(s) into the cost
@@ -733,6 +945,18 @@ export function LaborRatesPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={confirmState.cancelLabel}
+        variant={confirmState.variant}
+        loading={confirmState.loading}
+        onConfirm={confirmState.onConfirm}
+        onCancel={confirmState.onCancel}
+      />
     </div>
   );
 }
