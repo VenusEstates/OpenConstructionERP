@@ -22,6 +22,11 @@ VENDOR_CREATED = "supplier_catalogs.vendor.created"
 VENDOR_SUSPENDED = "supplier_catalogs.vendor.suspended"
 VENDOR_BLACKLISTED = "supplier_catalogs.vendor.blacklisted"
 VENDOR_RATED = "supplier_catalogs.vendor.rated"
+# Emitted only for a vendor nothing pointed at. A vendor with orders,
+# invoices, price lists or KYC documents against it cannot be deleted at all -
+# it is suspended or blacklisted instead - so this topic never carries the
+# disappearance of a supplier anyone traded with.
+VENDOR_DELETED = "supplier_catalogs.vendor.deleted"
 
 # Catalog SKU lifecycle (Wave M4 deep-pass) - Match Elements
 # subscribes to MATERIAL_ADDED to schedule a vector re-index of the
@@ -30,6 +35,10 @@ VENDOR_RATED = "supplier_catalogs.vendor.rated"
 MATERIAL_ADDED = "supplier_catalogs.material.added"
 MATERIAL_UPDATED = "supplier_catalogs.material.updated"
 MATERIAL_DEACTIVATED = "supplier_catalogs.material.deactivated"
+# An item that no requisition line, order line, vendor price or stock balance
+# referenced. Same reasoning as VENDOR_DELETED: anything with a history behind
+# it is refused rather than removed.
+MATERIAL_DELETED = "supplier_catalogs.material.deleted"
 
 PRICE_LIST_IMPORTED = "supplier_catalogs.price_list.imported"
 
@@ -59,6 +68,8 @@ STOCK_RESERVED = "supplier_catalogs.stock.reserved"
 STOCK_ISSUED = "supplier_catalogs.stock.issued"
 STOCK_LOW_THRESHOLD = "supplier_catalogs.stock.low_threshold"
 STOCK_ADJUSTED = "supplier_catalogs.stock.adjusted"
+# A location with no stock on hand and no goods receipt against it.
+WAREHOUSE_DELETED = "supplier_catalogs.warehouse.deleted"
 
 # Stock low / reorder alert - emitted whenever a balance dips below reorder_point
 STOCK_LOW = "supplier_catalogs.stock.low"

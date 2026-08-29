@@ -222,6 +222,24 @@ async def test_rate_vendor(session, captured_events):
         await svc.rate_vendor(vendor.id, 10)
 
 
+@pytest.mark.asyncio
+async def test_rate_vendor_carries_the_comment_on_the_event(session, captured_events):
+    """The form has always collected a note and the service always dropped it.
+
+    There is no column to store one on ``Vendor``, so the note rides the
+    published event instead. That is not storage, but it is somewhere rather
+    than nowhere, and it is where the reason on a suspend already goes.
+    """
+    svc = SupplierCatalogsService(session)
+    vendor = await _seed_vendor(svc, code=f"V-{uuid.uuid4().hex[:6]}")
+
+    await svc.rate_vendor(vendor.id, 5, user_id="buyer", comment="always on time")
+
+    rated = [data for name, data in captured_events if name == "supplier_catalogs.vendor.rated"]
+    assert rated, "no vendor.rated event was published"
+    assert rated[-1]["comment"] == "always on time"
+
+
 # ── Catalog & price list import ─────────────────────────────────────────────
 
 
@@ -1039,33 +1057,6 @@ async def test_stocktake_skips_zero_delta(session):
         ),
     )
     assert movements == []  # no delta → no movement
-
-
-# ── Budget check soft dependency ─────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_check_budget_when_finance_module_absent(session):
-    svc = SupplierCatalogsService(session)
-    vendor = await _seed_vendor(svc)
-    item = await _seed_item(svc, "SKU-B")
-    po = await svc.create_po(
-        POCreateExt(
-            vendor_id=vendor.id,
-            project_id=uuid.uuid4(),
-            lines=[
-                POLineCreate(
-                    catalog_item_id=item.id,
-                    description="x",
-                    ordered_qty=Decimal("1"),
-                    unit_price=Decimal("1"),
-                )
-            ],
-        )
-    )
-    result = await svc.check_budget(po)
-    # Either finance module is loaded (returns figures) OR absent (returns flag)
-    assert "available" in result
 
 
 # ── Service constructor sanity ───────────────────────────────────────────────
@@ -2184,3 +2175,447 @@ async def test_issuing_from_a_mixed_balance_records_no_unit_cost(session):
     # stock that genuinely cost nothing.
     assert movement.unit_cost is None
     assert movement.currency is None
+
+
+# ── Correcting and removing reference records ───────────────────────────────
+#
+# Until this batch a vendor, a catalog item and a warehouse could be created
+# and never touched again: no field on any of the three could be corrected and
+# nothing in the module could be deleted at all, so a mistyped code lived
+# forever and a record entered twice stayed twice.
+#
+# The delete side is not a row removal and these tests are mostly about why.
+# Every foreign key pointing at these three tables is permissive - CASCADE on
+# price lists, catalog entries, balances and movements, SET NULL on
+# requisition and order lines - so the database would let all four deletes
+# through and quietly take the referencing rows with them, or leave an order
+# line describing a purchase of nothing. The guard has to count the holders
+# itself, and the refusal has to say what is holding the record, because
+# "cannot delete" with no reason leaves a buyer with nowhere to go.
+
+
+async def _row_exists(session: AsyncSession, model, row_id: uuid.UUID) -> bool:
+    """True if the row is still in the database.
+
+    Selects the id column rather than the entity on purpose: a SELECT for an
+    entity can be answered out of the identity map, which still holds the
+    instance after a flushed delete, and the test would pass on an object
+    that is no longer in any table.
+    """
+    found = (await session.execute(select(model.id).where(model.id == row_id))).scalar_one_or_none()
+    return found is not None
+
+
+def test_a_refusal_names_its_holders_in_english():
+    """The counts have to read as a sentence; they are what the buyer sees."""
+    from app.modules.supplier_catalogs.service import _describe_holders
+
+    assert _describe_holders({"purchase_order": 1}) == "1 purchase order"
+    assert _describe_holders({"purchase_order": 2}) == "2 purchase orders"
+    assert _describe_holders({"price_list": 1, "kyc_document": 3}) == "1 price list and 3 KYC documents"
+    assert (
+        _describe_holders({"price_list": 1, "purchase_order": 2, "kyc_document": 3})
+        == "1 price list, 2 purchase orders and 3 KYC documents"
+    )
+
+
+# ── Vendor ──────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_patch_vendor_corrects_its_own_fields(session):
+    from app.modules.supplier_catalogs.schemas import VendorUpdate
+
+    svc = SupplierCatalogsService(session)
+    vendor = await _seed_vendor(svc, code=f"V-{uuid.uuid4().hex[:6]}")
+    updated = await svc.update_vendor(
+        vendor.id,
+        VendorUpdate(
+            name="Acme Building Supplies",
+            tax_id="DE123456789",
+            payment_terms_days=45,
+            country_code="DE",
+        ),
+    )
+    assert updated.name == "Acme Building Supplies"
+    assert updated.tax_id == "DE123456789"
+    assert updated.payment_terms_days == 45
+    assert updated.country_code == "DE"
+
+
+@pytest.mark.asyncio
+async def test_patch_vendor_cannot_change_status(session):
+    """Status has three routes of its own and this is not one of them.
+
+    ``VendorUpdate`` declares no ``status`` field, so a caller that sends one
+    is not rejected, it is ignored - Pydantic drops unknown keys by default.
+    That makes the assertion a statement about the stored row rather than
+    about a raise: a test written as ``pytest.raises`` here would fail while
+    describing the behaviour correctly, and switching the shipped schema to
+    ``extra="forbid"`` to make it raise would break every client that echoes
+    a whole vendor back.
+    """
+    from app.modules.supplier_catalogs.schemas import VendorUpdate
+
+    svc = SupplierCatalogsService(session)
+    vendor = await _seed_vendor(svc, code=f"V-{uuid.uuid4().hex[:6]}")
+    await svc.blacklist_vendor(vendor.id, reason="fraud")
+
+    payload = VendorUpdate.model_validate({"name": "Renamed", "status": "active", "rating": 5})
+    assert not hasattr(payload, "status")
+    updated = await svc.update_vendor(vendor.id, payload)
+
+    assert updated.name == "Renamed"
+    # The two fields with a lifecycle of their own are untouched.
+    assert updated.status == "blacklisted"
+    assert updated.rating is None
+
+
+@pytest.mark.asyncio
+async def test_delete_vendor_removes_an_unreferenced_record(session, captured_events):
+    svc = SupplierCatalogsService(session)
+    vendor = await _seed_vendor(svc, code=f"V-{uuid.uuid4().hex[:6]}")
+
+    await svc.delete_vendor(vendor.id, user_id="buyer")
+
+    assert await _row_exists(session, Vendor, vendor.id) is False
+    assert any(n == "supplier_catalogs.vendor.deleted" for n, _ in captured_events)
+
+
+@pytest.mark.asyncio
+async def test_delete_vendor_refused_by_a_purchase_order(session):
+    """A traded-with vendor is held, and the refusal points at the lifecycle."""
+    svc = SupplierCatalogsService(session)
+    vendor = await _seed_vendor(svc, code=f"V-{uuid.uuid4().hex[:6]}")
+    item = await _seed_item(svc, f"SKU-{uuid.uuid4().hex[:6]}")
+    await svc.create_po(
+        POCreateExt(
+            vendor_id=vendor.id,
+            project_id=uuid.uuid4(),
+            lines=[
+                POLineCreate(
+                    catalog_item_id=item.id,
+                    description="cement",
+                    ordered_qty=Decimal("10"),
+                    unit_price=Decimal("5"),
+                )
+            ],
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_vendor(vendor.id)
+
+    assert exc.value.status_code == 409
+    detail = exc.value.detail
+    assert detail["code"] == "vendor_in_use"
+    assert "1 purchase order" in detail["message"]
+    assert vendor.code in detail["message"]
+    assert "suspend" in detail["remediation"].lower()
+    assert "blacklist" in detail["remediation"].lower()
+    assert {"kind": "purchase_order", "count": 1} in detail["holders"]
+    # Refused means refused: the row is still there.
+    assert await _row_exists(session, Vendor, vendor.id) is True
+
+
+@pytest.mark.asyncio
+async def test_delete_vendor_names_every_kind_holding_it(session):
+    """Two different holders, both counted, both named, in one sentence."""
+    from datetime import date
+
+    from app.modules.supplier_catalogs.schemas import KYCDocumentCreate
+
+    svc = SupplierCatalogsService(session)
+    vendor = await _seed_vendor(svc, code=f"V-{uuid.uuid4().hex[:6]}")
+    await svc.create_price_list(vendor.id, PriceListCreate(name="Q1", currency="EUR"))
+    await svc.add_kyc_document(
+        vendor.id,
+        KYCDocumentCreate(
+            doc_type="vat_cert",
+            document_number="DE123",
+            issued_on=date(2025, 1, 1),
+            expires_on=date(2030, 1, 1),
+            issuing_country="DE",
+        ),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_vendor(vendor.id)
+
+    detail = exc.value.detail
+    assert "1 price list and 1 KYC document" in detail["message"]
+    assert {"kind": "price_list", "count": 1} in detail["holders"]
+    assert {"kind": "kyc_document", "count": 1} in detail["holders"]
+
+
+# ── Catalog item ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_patch_catalog_item_corrects_fields_but_never_the_sku(session):
+    from app.modules.supplier_catalogs.schemas import CatalogItemUpdate
+
+    svc = SupplierCatalogsService(session)
+    item = await _seed_item(svc, f"SKU-{uuid.uuid4().hex[:6]}")
+    original_sku = item.sku
+
+    payload = CatalogItemUpdate.model_validate(
+        {
+            "name": "Portland cement CEM I 42.5",
+            "unit_of_measure": "t",
+            "reorder_point": "25",
+            "sku": "SOMETHING-ELSE",
+        }
+    )
+    assert not hasattr(payload, "sku")
+    updated = await svc.update_catalog_item(item.id, payload)
+
+    assert updated.name == "Portland cement CEM I 42.5"
+    assert updated.unit_of_measure == "t"
+    assert updated.reorder_point == Decimal("25")
+    assert updated.sku == original_sku
+
+
+@pytest.mark.asyncio
+async def test_patch_catalog_item_announces_a_deactivation(session, captured_events):
+    """Switching a SKU off is its own fact downstream, not a field change."""
+    from app.modules.supplier_catalogs.schemas import CatalogItemUpdate
+
+    svc = SupplierCatalogsService(session)
+    item = await _seed_item(svc, f"SKU-{uuid.uuid4().hex[:6]}")
+
+    updated = await svc.update_catalog_item(item.id, CatalogItemUpdate(active=False))
+
+    assert updated.active is False
+    names = [n for n, _ in captured_events]
+    assert "supplier_catalogs.material.updated" in names
+    assert "supplier_catalogs.material.deactivated" in names
+
+
+@pytest.mark.asyncio
+async def test_patch_catalog_item_rejects_an_unknown_commodity_scheme(session):
+    from app.modules.supplier_catalogs.schemas import CatalogItemUpdate
+
+    svc = SupplierCatalogsService(session)
+    item = await _seed_item(svc, f"SKU-{uuid.uuid4().hex[:6]}")
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.update_catalog_item(item.id, CatalogItemUpdate(commodity_scheme="bogus"))
+
+    assert exc.value.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_delete_catalog_item_removes_an_unquoted_record(session, captured_events):
+    svc = SupplierCatalogsService(session)
+    item = await _seed_item(svc, f"SKU-{uuid.uuid4().hex[:6]}")
+
+    await svc.delete_catalog_item(item.id, user_id="buyer")
+
+    assert await _row_exists(session, CatalogItem, item.id) is False
+    assert any(n == "supplier_catalogs.material.deleted" for n, _ in captured_events)
+
+
+@pytest.mark.asyncio
+async def test_delete_catalog_item_refused_by_an_order_line(session):
+    svc = SupplierCatalogsService(session)
+    vendor = await _seed_vendor(svc, code=f"V-{uuid.uuid4().hex[:6]}")
+    item = await _seed_item(svc, f"SKU-{uuid.uuid4().hex[:6]}")
+    await svc.create_po(
+        POCreateExt(
+            vendor_id=vendor.id,
+            project_id=uuid.uuid4(),
+            lines=[
+                POLineCreate(
+                    catalog_item_id=item.id,
+                    description="cement",
+                    ordered_qty=Decimal("4"),
+                    unit_price=Decimal("9"),
+                )
+            ],
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_catalog_item(item.id)
+
+    detail = exc.value.detail
+    assert exc.value.status_code == 409
+    assert detail["code"] == "catalog_item_in_use"
+    assert "1 purchase order line" in detail["message"]
+    assert item.sku in detail["message"]
+    assert await _row_exists(session, CatalogItem, item.id) is True
+
+
+@pytest.mark.asyncio
+async def test_delete_catalog_item_refused_by_stock_on_hand(session):
+    """Inventory that exists cannot lose the item it is inventory of."""
+    svc = SupplierCatalogsService(session)
+    _wh, item = await _seed_stock(svc, on_hand=Decimal("12"))
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_catalog_item(item.id)
+
+    detail = exc.value.detail
+    assert detail["code"] == "catalog_item_in_use"
+    assert "1 stock balance with quantity on hand" in detail["message"]
+    assert {"kind": "stock_balance", "count": 1} in detail["holders"]
+
+
+# ── Warehouse ───────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_patch_warehouse_corrects_its_own_fields(session):
+    from app.modules.supplier_catalogs.schemas import WarehouseUpdate
+
+    svc = SupplierCatalogsService(session)
+    wh = await _seed_warehouse(svc)
+    original_code = wh.code
+
+    payload = WarehouseUpdate.model_validate(
+        {
+            "name": "North yard",
+            "address": "Hafenstrasse 4, Hamburg",
+            "code": "RENAMED",
+            "status": "closed",
+        }
+    )
+    assert not hasattr(payload, "code")
+    assert not hasattr(payload, "status")
+    updated = await svc.update_warehouse(wh.id, payload, user_id="storeman")
+
+    assert updated.name == "North yard"
+    assert updated.address == "Hafenstrasse 4, Hamburg"
+    assert updated.code == original_code
+    assert updated.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_delete_warehouse_removes_an_empty_location(session, captured_events):
+    svc = SupplierCatalogsService(session)
+    wh = await _seed_warehouse(svc)
+
+    await svc.delete_warehouse(wh.id, user_id="storeman")
+
+    assert await _row_exists(session, Warehouse, wh.id) is False
+    assert any(n == "supplier_catalogs.warehouse.deleted" for n, _ in captured_events)
+
+
+@pytest.mark.asyncio
+async def test_delete_warehouse_refused_by_stock_on_hand(session):
+    svc = SupplierCatalogsService(session)
+    wh, _item = await _seed_stock(svc, on_hand=Decimal("7"))
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_warehouse(wh.id)
+
+    detail = exc.value.detail
+    assert exc.value.status_code == 409
+    assert detail["code"] == "warehouse_in_use"
+    assert "1 stock balance with quantity on hand" in detail["message"]
+    assert wh.code in detail["message"]
+    assert await _row_exists(session, Warehouse, wh.id) is True
+
+
+@pytest.mark.asyncio
+async def test_delete_warehouse_allowed_once_the_stock_is_gone(session):
+    """An emptied balance is a record of stock that has left, not a holder.
+
+    Counting every balance row instead of the ones with quantity would make a
+    location that was used once and cleared out permanently undeletable, which
+    is the same dead end this batch exists to remove.
+    """
+    svc = SupplierCatalogsService(session)
+    wh, _item = await _seed_stock(svc, on_hand=Decimal("0"))
+
+    await svc.delete_warehouse(wh.id)
+
+    assert await _row_exists(session, Warehouse, wh.id) is False
+
+
+# ── Tolerance profile ───────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_delete_tolerance_profile_removes_an_unused_one(session):
+    from app.modules.supplier_catalogs.models import TolerianceProfile
+    from app.modules.supplier_catalogs.schemas import TolerianceProfileCreate
+
+    svc = SupplierCatalogsService(session)
+    profile = await svc.create_tolerance_profile(
+        TolerianceProfileCreate(name=f"unused-{uuid.uuid4().hex[:6]}", price_tolerance_pct=Decimal("1")),
+    )
+
+    await svc.delete_tolerance_profile(profile.id)
+
+    assert await _row_exists(session, TolerianceProfile, profile.id) is False
+
+
+@pytest.mark.asyncio
+async def test_delete_tolerance_profile_refused_when_a_vendor_names_it(session):
+    """The link is by name, so the database would not have stopped this.
+
+    A vendor left naming a profile that is gone falls back to a different set
+    of tolerances, and invoices that used to raise a price exception start
+    passing. That is money, so it is a refusal.
+    """
+    from app.modules.supplier_catalogs.schemas import TolerianceProfileCreate
+
+    svc = SupplierCatalogsService(session)
+    name = f"strict-{uuid.uuid4().hex[:6]}"
+    profile = await svc.create_tolerance_profile(
+        TolerianceProfileCreate(name=name, price_tolerance_pct=Decimal("0.5")),
+    )
+    await svc.create_vendor(
+        VendorCreate(
+            code=f"V-{uuid.uuid4().hex[:6]}",
+            name="Held vendor",
+            tolerance_profile_name=name,
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_tolerance_profile(profile.id)
+
+    detail = exc.value.detail
+    assert exc.value.status_code == 409
+    assert detail["code"] == "tolerance_profile_in_use"
+    assert "1 vendor" in detail["message"]
+    assert {"kind": "vendor", "count": 1} in detail["holders"]
+
+
+@pytest.mark.asyncio
+async def test_delete_tolerance_profile_refused_when_it_is_the_default(session):
+    svc = SupplierCatalogsService(session)
+    profile = await svc.ensure_default_tolerance_profile()
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_tolerance_profile(profile.id)
+
+    detail = exc.value.detail
+    assert exc.value.status_code == 409
+    assert detail["code"] == "tolerance_profile_is_default"
+    assert "default" in detail["remediation"].lower()
+
+
+@pytest.mark.asyncio
+async def test_deleting_something_that_is_not_there_is_a_404(session):
+    svc = SupplierCatalogsService(session)
+    missing = uuid.uuid4()
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_vendor(missing)
+    assert exc.value.status_code == 404
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_catalog_item(missing)
+    assert exc.value.status_code == 404
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_warehouse(missing)
+    assert exc.value.status_code == 404
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.delete_tolerance_profile(missing)
+    assert exc.value.status_code == 404
