@@ -829,6 +829,28 @@ jobs:
           tests/unit/test_backend_locale_catalogue.py
           tests/unit/test_cli_version_matches_the_running_code.py
           -q -p no:cacheprovider --timeout=300 --timeout-method=thread
+
+      # The validation message locale ratchet, which watches seven MessageBundle
+      # catalogues under backend/app and fails when one stops answering a locale
+      # it used to answer. It is not unwired today: ci.yml hands pytest the whole
+      # of tests/unit and this file drives the script as a subprocess, so it
+      # already runs there. What naming it here changes is which lane the result
+      # is read in. Naming the test rather than calling the script is deliberate:
+      # the file carries the red proofs and the assertion that the baseline is
+      # not stale, and a bare script call would be a weaker copy of a check that
+      # already exists.
+      #
+      # Read a green from this narrowly. The gate is a ratchet against a
+      # baseline that already records four locales of twenty eight for the core
+      # catalogue. It locks the floor, it does not raise it. Twenty four locales
+      # are still missing there and this step will never say so.
+      # Reads the catalogues and the baseline file. It spawns the script once
+      # per case, so it is 37 tests in about thirteen seconds. No database.
+      - name: Run validation message locale coverage guard
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: >-
+          pytest tests/unit/test_validation_message_locale_coverage.py
+          -q -p no:cacheprovider --timeout=300 --timeout-method=thread
       # Two properties of a generated document that only the rendered page can
       # witness, which is why they are named here rather than left in
       # tests/unit: that directory runs in no lane that blocks a merge.

@@ -94,12 +94,31 @@ REQUIRED_STATUS_CHECKS: frozenset[str] = frozenset()
 # is much closer to DECLARED_ON_DEMAND than the workflow file makes it look.
 #
 # tests/unit reads DECLARED_FULL because ci.yml runs the tree whole and declares
-# no continue-on-error. That is a statement about the file and nothing else. In
-# practice that job has been red for a long time for an unrelated reason and is
-# treated as advisory, which is why the steps in the PostgreSQL lane keep naming
-# unit files one at a time, and in any case no check is required on main at all.
-# Three separate reasons why a full declaration is not a break anybody acts on;
-# five tests in this tree were failing on main when this line was written.
+# no continue-on-error. That is a statement about the file and nothing else.
+#
+# What used to follow that sentence has been remeasured and was wrong. It said
+# the job had been red for a long time for an unrelated reason and was treated
+# as advisory, and it offered that as the reason the PostgreSQL lane names unit
+# files one at a time. Remeasured 2026-08-29: the unrelated reason was the Node
+# heap ceiling on the frontend type check and build, fixed on 2026-06-05 and
+# 2026-06-06 by d33d9bebf and 9b2007ba7. Both steps run at
+# --max-old-space-size=9216 today (ci.yml:480, :488) and both are green, so a
+# red Backend CI now is a real failure that has to be read rather than
+# discounted. Leaving the old sentence in place would have handed the next
+# reader a retired reason to go on ignoring the lane.
+#
+# A second cause of that silence was fixed on the day this was remeasured.
+# ci.yml cancelled in progress unconditionally, and this repository pushes
+# straight to main, so each push killed the run from the push before it: 28 of
+# the last 30 runs on main were cancelled. The block now excludes main. A
+# cancelled run reaches no conclusion, nothing goes red, and that silence had
+# been standing in for a green.
+#
+# One reason survives both measurements: no status check is required on main,
+# so a full declaration is still not a break anybody is forced to act on, and
+# that alone is why the PostgreSQL lane keeps naming unit files one at a time.
+# One reason where this comment claimed three, and the two it lost were both
+# instruments that had stopped reporting rather than facts about the tests.
 EXPECTED: dict[str, str] = {
     "tests/unit": DECLARED_FULL,
     "tests/pg": DECLARED_FULL,
