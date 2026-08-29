@@ -23,6 +23,7 @@ Coverage:
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 import pytest
 import pytest_asyncio
@@ -415,14 +416,19 @@ async def test_tax_quote_unsupported_jurisdiction_422(http_client, tenant_a):
 
 @pytest.mark.asyncio
 async def test_tax_quote_for_a_date_with_no_rate_in_force_422(http_client, tenant_a):
-    """A contract signed before the band is refused, not quoted at zero.
+    """A contract signed before the earliest band is refused, not quoted at zero.
 
     effective_on is not a request field: the service derives it from the
     contract's own signing_date, so what reaches the engine is a stored
-    contract rather than anything the caller typed. GB standard VAT begins
-    2011-01-04, and this contract is signed four days earlier, on a date when
-    the rate in force was 17.5 per cent. Before this was fixed the endpoint
-    answered 200 with vat "0.00" and no VAT line in the breakdown at all.
+    contract rather than anything the caller typed.
+
+    The date here used to be 2010-12-31, four days before the single band GB
+    standard VAT then carried. It is 1990 now because the table holds the
+    whole GB history since 1 April 1991 and can price 2010 perfectly well, at
+    the 17.5 per cent then in force. The refusal itself did not move: it is
+    the same event, at the point where the table genuinely stops. Before any
+    of this the endpoint answered 200 with vat "0.00" and no VAT line in the
+    breakdown at all.
     """
     ids = await _seed_spa(
         http_client,
@@ -430,7 +436,7 @@ async def test_tax_quote_for_a_date_with_no_rate_in_force_422(http_client, tenan
         governing_law="GB",
         total_value="500000.00",
         currency="GBP",
-        signing_date="2010-12-31",
+        signing_date="1990-06-01",
     )
     res = await http_client.post(
         f"/api/v1/property-dev/sales-contracts/{ids['spa_id']}/tax-quote",
@@ -446,9 +452,9 @@ async def test_tax_quote_for_a_date_with_no_rate_in_force_422(http_client, tenan
     assert detail["jurisdiction"] == "GB"
     assert detail["rate_class"] == "standard"
     # Both dates, because acting on this means either correcting the signing
-    # date or adding the historical band, and each needs a different one.
-    assert detail["effective_on"] == "2010-12-31"
-    assert detail["effective_from"] == "2011-01-04"
+    # date or extending the history, and each needs a different one.
+    assert detail["effective_on"] == "1990-06-01"
+    assert detail["effective_from"] == "1991-04-01"
 
 
 @pytest.mark.asyncio
@@ -475,3 +481,44 @@ async def test_tax_quote_inside_the_band_still_quotes(http_client, tenant_a):
     body = res.json()
     assert body["vat"] != "0", "a contract inside the band must be charged VAT"
     assert any("VAT" in line["line"] for line in body["breakdown"]), body["breakdown"]
+
+
+@pytest.mark.asyncio
+async def test_tax_quote_uses_the_rate_in_force_on_the_signing_date(http_client, tenant_a):
+    """The same plot at the same price, quoted two ways by two signing dates.
+
+    2009-06-01 falls inside the temporary reduction of the GB standard rate to
+    15 per cent; 2011-01-04 is the day it rose to 20. Before the table carried
+    a history the older contract could not be quoted at all and this endpoint
+    answered 422, so a client had no way to bill it.
+
+    Asserted as a ratio rather than as two literal amounts, because the net is
+    derived from an inclusive total_value and pinning the pennies would make
+    this a test of the rounding rule instead of a test of which rate was
+    chosen. Both directions are checked: one rate for every date would satisfy
+    a single assertion here.
+    """
+    quotes: dict[str, dict] = {}
+    for signed_on in ("2009-06-01", "2011-01-04"):
+        ids = await _seed_spa(
+            http_client,
+            tenant_a["headers"],
+            governing_law="GB",
+            total_value="500000.00",
+            currency="GBP",
+            signing_date=signed_on,
+        )
+        res = await http_client.post(
+            f"/api/v1/property-dev/sales-contracts/{ids['spa_id']}/tax-quote",
+            json={"jurisdiction": "GB"},
+            headers=tenant_a["headers"],
+        )
+        assert res.status_code == 200, res.text
+        quotes[signed_on] = res.json()
+
+    def _effective_rate(quote: dict) -> Decimal:
+        return (Decimal(quote["vat"]) / Decimal(quote["net"])).quantize(Decimal("0.0001"))
+
+    assert _effective_rate(quotes["2009-06-01"]) == Decimal("0.1500")
+    assert _effective_rate(quotes["2011-01-04"]) == Decimal("0.2000")
+    assert quotes["2009-06-01"]["vat"] != quotes["2011-01-04"]["vat"]

@@ -18,11 +18,16 @@ Design intent
 * **Decimal everywhere** - no float arithmetic. Money is rounded
   ``ROUND_HALF_UP`` to 2 dp on output; intermediate maths uses 6 dp
   of precision so successive percentage applications don't drift.
-* **Effective-date aware** - VAT bands carry ``effective_from``, and a
-  contract signed before it is refused rather than priced. The table holds
-  one band per rate class, not a history, so there is no earlier rate to
-  apply and the engine says so instead of inventing one. Adding the
-  historical band to the YAML is what makes such a date answerable.
+* **Effective-date aware** - a rate class holds either one band or a dated
+  history, and a quote takes the band in force on the contract's own date.
+  A contract signed before the earliest band the class holds is refused
+  rather than priced, because the alternative is inventing a rate. The
+  refusal is scoped to a rate class, not to a jurisdiction: GB and DE
+  standard VAT carry histories, while GB ``reduced`` and DE ``reduced`` are
+  single undated bands and answer for any date at all. Note the two axes
+  this module calls bands: a stamp-duty band is a slice of *price*
+  (:func:`_progressive_band_amount`), a rate band is a slice of *time*. The
+  helpers for the second say ``period`` so the two never read alike in code.
 * **No currency conversion** - the caller supplies the price in the
   contract's currency. Mixing currencies is a finance-module job, not
   a tax-engine job.
@@ -46,7 +51,7 @@ human-readable invoice row-by-row.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from datetime import date
+from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from threading import Lock
@@ -198,12 +203,20 @@ class RateNotInForceError(TaxEngineError):
     GB contract signed before 2011-01-04 was quoted zero VAT when the rate in
     force that day was 17.5 per cent.
 
-    Returning an older rate instead is not available: each rate class carries
-    a single band rather than a history, so there is nothing earlier to fall
-    back to and any number produced here would be invented rather than
-    approximate. The message names both dates so the caller can either ask
-    about a date inside the band or add the historical band to
-    ``data/tax_rates.yaml``.
+    Returning an older rate is available wherever the table holds one. A rate
+    class may carry a dated history, and a date inside it resolves to the band
+    that governed that day rather than raising, so a GB contract signed in 2009
+    is now quoted at the 15 per cent then in force. What still raises is a date
+    before the *earliest* band the class holds, which is the same absence as
+    before moved back to where the table genuinely stops: any number produced
+    there would be invented rather than approximate. The message names both
+    dates so the caller can either ask about a date the table can speak for or
+    extend the history in ``data/tax_rates.yaml``.
+
+    ``effective_from`` on this exception means the earliest date the class can
+    speak for, which is what the caller has to act on. It is deliberately not
+    "the start of the band we were looking at": there is no such band when
+    nothing is in force.
     """
 
     def __init__(
@@ -276,6 +289,69 @@ def _validate_vat_absence(raw: dict[str, Any]) -> None:
             )
 
 
+def _validate_rate_histories(raw: dict[str, Any]) -> None:
+    """Refuse a rate history that is not a dated list written oldest first.
+
+    Scoped to the classes under ``vat`` and ``gst``, and that scope is
+    load-bearing rather than tidy. The rest of this table is full of lists of
+    mappings on an entirely different axis - ``stamp_duty.bands``,
+    ``first_home_relief.bands``, ``bsd.bands``, ``itbi.bands`` - whose elements
+    carry a price ceiling and no date at all. A validator keyed on "a list of
+    mappings" would refuse the shipped table on its first load.
+
+    Three refusals:
+
+    * an empty history, which names a rate class and then says nothing about
+      it;
+    * a period with no readable ``effective_from``, which leaves "before the
+      earliest period" undefined and so leaves the refusal in
+      :func:`_period_in_force` with no date to name;
+    * a history that is not in strictly ascending date order.
+
+    The third is the one worth explaining, because :func:`_period_in_force`
+    selects by maximum date and so cannot be fooled by order. Nothing computes
+    a wrong number from a mis-ordered history; a person reads one. The
+    oldest-first rule is for the reader who scans a list for the current rate
+    and takes the last line, and without a check the convention would be a
+    comment that nobody enforces. Equal dates are refused too: two periods
+    starting the same day make "the rate in force" ambiguous, and the
+    tie-break would be silent.
+
+    Args:
+        raw: the parsed table, before it is cached.
+
+    Raises:
+        TaxEngineError: naming the jurisdiction, the block and the rate class.
+    """
+    for code, jur in (raw.get("jurisdictions") or {}).items():
+        if not isinstance(jur, dict):
+            continue
+        for block_key in ("vat", "gst"):
+            block = jur.get(block_key)
+            if not isinstance(block, Mapping):
+                continue
+            for rate_class, entry in block.items():
+                if not isinstance(entry, list):
+                    continue
+                where = f"{code}.{block_key}.{rate_class}"
+                if not entry:
+                    raise TaxEngineError(f"rate history '{where}' is empty; a class with no period cannot be quoted")
+                previous: date | None = None
+                for period in entry:
+                    effective = _period_date(period) if isinstance(period, Mapping) else None
+                    if effective is None:
+                        raise TaxEngineError(
+                            f"rate history '{where}' has a period with no readable effective_from; every period "
+                            f"in a history needs one, so that the earliest date the class can speak for is known"
+                        )
+                    if previous is not None and effective <= previous:
+                        raise TaxEngineError(
+                            f"rate history '{where}' is not in ascending date order: {effective.isoformat()} "
+                            f"follows {previous.isoformat()}. Write a history oldest first, one period per change"
+                        )
+                    previous = effective
+
+
 def _load_table(*, force_reload: bool = False) -> dict[str, Any]:
     """Return the parsed YAML table (cached after first call)."""
     global _TABLE_CACHE
@@ -290,9 +366,10 @@ def _load_table(*, force_reload: bool = False) -> dict[str, Any]:
             raw = yaml.safe_load(fh) or {}
         if not isinstance(raw, dict):
             raise TaxEngineError("tax_rates.yaml root must be a mapping")
-        # Before the cache, not after: a table that fails this must not be
-        # left behind for the next caller to read as if it had passed.
+        # Before the cache, not after: a table that fails either of these must
+        # not be left behind for the next caller to read as if it had passed.
         _validate_vat_absence(raw)
+        _validate_rate_histories(raw)
         _TABLE_CACHE = raw
         return raw
 
@@ -347,6 +424,31 @@ def _parse_iso(date_str: str | None) -> date | None:
         return None
 
 
+def _period_date(period: Mapping[str, Any]) -> date | None:
+    """The day a rate period takes effect, however YAML handed it over.
+
+    ``effective_from: "1991-04-01"`` arrives as a string and
+    ``effective_from: 1991-04-01`` arrives already parsed by PyYAML into a
+    :class:`~datetime.date`. Both are ordinary ways of writing the same day, so
+    both are read here rather than one of them being refused at load over its
+    punctuation. A timestamp is narrowed to its date so the comparisons in
+    :func:`_period_in_force` never mix the two types.
+
+    Args:
+        period: one rate period from the table.
+
+    Returns:
+        The effective date, or ``None`` when the period carries none or
+        carries something unreadable as one.
+    """
+    raw = period.get("effective_from")
+    if isinstance(raw, datetime):
+        return raw.date()
+    if isinstance(raw, date):
+        return raw
+    return _parse_iso(raw)
+
+
 # ── Public introspection ────────────────────────────────────────────────
 
 
@@ -367,7 +469,7 @@ def jurisdiction_metadata(jurisdiction: str) -> dict[str, Any]:
 def _has_vat_block(jur_table: dict[str, Any]) -> bool:
     """Whether the table models any VAT or GST at all for this jurisdiction.
 
-    The question :func:`_resolve_vat_block` cannot answer: it returns None both
+    The question :func:`_resolve_vat_entry` cannot answer: it returns None both
     for a jurisdiction with no block and for a class missing from one that has
     it, and those are different events with different right answers.
     """
@@ -446,31 +548,148 @@ def _provenance_for_absent_vat(jurisdiction: str) -> Provenance:
     raise TaxEngineError(f"no provenance rule for vat_absence {absence!r} on '{jurisdiction}'")
 
 
-def _vat_block_or_raise(jur_table: dict[str, Any], jurisdiction: str, rate_class: str) -> dict[str, Any]:
-    """The VAT block for ``rate_class``, or the error that says why there isn't one."""
-    block = _resolve_vat_block(jur_table, rate_class)
-    if block is not None:
-        return block
+def _vat_entry_or_raise(jur_table: dict[str, Any], jurisdiction: str, rate_class: str) -> Any:
+    """The rate-class entry for ``rate_class``, or the error that says why there isn't one."""
+    entry = _resolve_vat_entry(jur_table, rate_class)
+    if entry is not None:
+        return entry
     if not _has_vat_block(jur_table):
         raise NoVatBlockError(jurisdiction)
     raise UnknownRateClassError(f"Jurisdiction '{jurisdiction}' has no VAT/GST rate class '{rate_class}'")
 
 
-def _resolve_vat_block(jur_table: dict[str, Any], rate_class: str) -> dict[str, Any] | None:
-    """Return the VAT/GST sub-block for ``rate_class``.
+def _resolve_vat_entry(jur_table: dict[str, Any], rate_class: str) -> Any | None:
+    """Return the raw VAT/GST entry for ``rate_class``.
 
     Looks in ``vat.*`` first then ``gst.*`` so IN/SG/AU work the same
     way as DACH. Returns ``None`` if the class is not defined.
+
+    The entry comes back exactly as the table wrote it, un-normalised, because
+    :func:`_rate_periods` owns the shapes it may be written in. Normalising in
+    two places is how the two come to disagree about a third shape.
     """
     for key in ("vat", "gst"):
         block = jur_table.get(key) or {}
         if rate_class in block:
-            entry = block[rate_class]
-            if isinstance(entry, Mapping):
-                return dict(entry)
-            # Allow scalar shorthand (rare).
-            return {"rate": entry}
+            return block[rate_class]
     return None
+
+
+def _rate_periods(entry: Any) -> list[dict[str, Any]]:
+    """Return a rate class's periods, one mapping each, in the order written.
+
+    Three shapes reach here, and this is the only place that knows there are
+    three:
+
+    * a single mapping, ``{ rate: 0.05 }`` - one period, in force for every
+      date unless it carries ``effective_from``. Most of the table is this
+      shape and it keeps working untouched;
+    * a list of mappings written oldest first, each with its own ``rate`` and
+      ``effective_from`` - a history. GB and DE standard VAT carry one;
+    * a bare scalar, rare shorthand for ``{ rate: <scalar> }``.
+
+    A class with no ``rate`` key at all - ``AE.vat.exempt`` is one, carrying
+    only ``applies_to`` - comes back with none, so the zero the callers default
+    to is unchanged by any of this.
+
+    Args:
+        entry: whatever the table holds under the rate class.
+
+    Returns:
+        The periods, unsorted. Ordering is the table's business and is checked
+        at load by :func:`_validate_rate_histories`.
+    """
+    if isinstance(entry, list):
+        return [dict(period) if isinstance(period, Mapping) else {"rate": period} for period in entry]
+    if isinstance(entry, Mapping):
+        return [dict(entry)]
+    # Allow scalar shorthand (rare).
+    return [{"rate": entry}]
+
+
+def _period_in_force(
+    periods: list[dict[str, Any]],
+    jurisdiction: str,
+    rate_class: str,
+    effective_on: date | None,
+) -> dict[str, Any]:
+    """Pick the rate period that governs ``effective_on``.
+
+    The rule, and it is the whole of it: the period with the greatest
+    ``effective_from`` that is not after the date asked about. A period with no
+    ``effective_from`` is in force for every date, which is what keeps the
+    single-mapping shape answering exactly as it did before histories existed.
+
+    A date earlier than every dated period raises
+    :class:`RateNotInForceError` naming the earliest date the class can speak
+    for. "We do not have a rate that old" stays an honest refusal; stretching
+    the oldest period we do hold backwards over it would be an invention with
+    a plausible number attached.
+
+    ``effective_on=None`` means current rates and so takes the newest period.
+    Note what that implies for a rate change legislated in advance: a
+    future-dated period becomes the answer for every caller passing no date,
+    because this module never reads the wall clock and so cannot tell a
+    future period from a current one. Add one only once callers pass dates.
+
+    Selection is by maximum rather than by position, so a mis-ordered history
+    cannot produce a wrong number here. That is deliberate, and it is why the
+    oldest-first convention is enforced at load instead of relied on at
+    resolution.
+
+    Args:
+        periods: the class's periods, from :func:`_rate_periods`.
+        jurisdiction: ISO-3166 alpha-2 code, for the error message.
+        rate_class: the class asked about, for the error message.
+        effective_on: the date to resolve, or ``None`` for current rates.
+
+    Returns:
+        The governing period.
+
+    Raises:
+        RateNotInForceError: ``effective_on`` precedes every dated period.
+    """
+    dated = [(period, _period_date(period)) for period in periods]
+    if effective_on is None:
+        return max(dated, key=lambda pair: pair[1] or date.min)[0]
+    in_force = [(period, start) for period, start in dated if start is None or start <= effective_on]
+    if not in_force:
+        earliest = min(start for _, start in dated if start is not None)
+        raise RateNotInForceError(jurisdiction, rate_class, effective_on, earliest)
+    return max(in_force, key=lambda pair: pair[1] or date.min)[0]
+
+
+def _vat_rate_in_force(
+    jur_table: dict[str, Any],
+    jurisdiction: str,
+    rate_class: str,
+    effective_on: date | None,
+) -> Decimal:
+    """The VAT/GST rate to apply, having resolved both the class and the date.
+
+    One function for what used to be the same six lines in :func:`compute_vat`
+    and in :func:`net_from_gross`. Two copies of a date rule are two places to
+    extend it, and the history support this now carries would have had to land
+    in both of them to keep an inclusive price and an exclusive one agreeing
+    about the same contract.
+
+    Args:
+        jur_table: the jurisdiction's block.
+        jurisdiction: ISO-3166 alpha-2 code.
+        rate_class: ``standard`` | ``reduced`` | ``zero_rated`` etc.
+        effective_on: the contract's date, or ``None`` for current rates.
+
+    Returns:
+        The rate as a fraction; zero when the class defines no ``rate`` key.
+
+    Raises:
+        NoVatBlockError: the table holds no VAT or GST block here.
+        UnknownRateClassError: the block holds no such class.
+        RateNotInForceError: the date precedes every period of that class.
+    """
+    entry = _vat_entry_or_raise(jur_table, jurisdiction, rate_class)
+    period = _period_in_force(_rate_periods(entry), jurisdiction, rate_class, effective_on)
+    return _D(period.get("rate", 0))
 
 
 def compute_vat(
@@ -488,10 +707,11 @@ def compute_vat(
         rate_class: ``standard`` | ``reduced`` | ``zero`` | ``zero_rated``
             | ``exempt`` | ``first_home`` etc. Class must exist in the
             jurisdiction's VAT block.
-        effective_on: optional signing date. When the band carries
-            ``effective_from``, an earlier date has no rate at all and
-            raises; there is no second band to select, because each class
-            holds one. When None, current rates apply.
+        effective_on: optional signing date. The class's band in force that
+            day is used, which for a class carrying a history may be an older
+            rate than today's. A date before the earliest band that class
+            holds has no rate at all and raises. When None, current rates
+            apply.
 
     Returns:
         VAT amount rounded HALF_UP to 2 dp. Zero-rated / exempt
@@ -502,17 +722,11 @@ def compute_vat(
     Raises:
         UnsupportedJurisdictionError: jurisdiction not in table.
         UnknownRateClassError: ``rate_class`` not defined for this jurisdiction.
-        RateNotInForceError: ``effective_on`` precedes the only band the table
-            carries for this class, so no rate applies to that date.
+        RateNotInForceError: ``effective_on`` precedes the earliest band the
+            table carries for this class, so no rate applies to that date.
     """
     jur = _table_for(jurisdiction)
-    block = _vat_block_or_raise(jur, jurisdiction, rate_class)
-    # Honour effective_from if present.
-    if effective_on is not None and "effective_from" in block:
-        eff = _parse_iso(block["effective_from"])
-        if eff is not None and effective_on < eff:
-            raise RateNotInForceError(jurisdiction, rate_class, effective_on, eff)
-    rate = _D(block.get("rate", 0))
+    rate = _vat_rate_in_force(jur, jurisdiction, rate_class, effective_on)
     amount = _D(net) * rate
     return _money(amount)
 
@@ -544,19 +758,13 @@ def net_from_gross(
     pair on the ledger.
 
     Raises:
-        RateNotInForceError: ``effective_on`` precedes the only band the
-            table carries. Returning ``gross`` unchanged would assert that no
-            VAT was baked into the inclusive price, which is a claim about the
-            supply this function has no grounds to make.
+        RateNotInForceError: ``effective_on`` precedes the earliest band the
+            table carries for this class. Returning ``gross`` unchanged would
+            assert that no VAT was baked into the inclusive price, which is a
+            claim about the supply this function has no grounds to make.
     """
     jur = _table_for(jurisdiction)
-    block = _vat_block_or_raise(jur, jurisdiction, rate_class)
-    # Honour effective-from window.
-    if effective_on is not None and "effective_from" in block:
-        eff = _parse_iso(block["effective_from"])
-        if eff is not None and effective_on < eff:
-            raise RateNotInForceError(jurisdiction, rate_class, effective_on, eff)
-    rate = _D(block.get("rate", 0))
+    rate = _vat_rate_in_force(jur, jurisdiction, rate_class, effective_on)
     if rate == _ZERO:
         return _money(_D(gross))
     divisor = Decimal("1") + rate
@@ -931,8 +1139,8 @@ def compute_total_taxes_for_contract(
     Raises:
         UnsupportedJurisdictionError, MissingRegionSubcodeError,
         UnknownRateClassError.
-        RateNotInForceError: the contract's date precedes the only band the
-            table holds for its rate class. Nothing here catches it: the one
+        RateNotInForceError: the contract's date precedes the earliest band
+            the table holds for its rate class. Nothing here catches it: the one
             ``try`` below covers ``UnknownRateClassError`` alone, so this
             propagates from both the :func:`net_from_gross` and
             :func:`compute_vat` calls to whatever maps it for the caller.

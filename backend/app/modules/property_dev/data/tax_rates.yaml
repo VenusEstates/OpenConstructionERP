@@ -12,6 +12,15 @@
 #
 # Schema convention:
 #   * ``vat.<class>.rate``: tax rate as a Decimal-safe fraction (0.20 = 20 %).
+#   * ``vat.<class>``: either that single mapping, which is the shape most of
+#     this table uses and which applies to every date, or a LIST of dated
+#     periods written OLDEST FIRST, each carrying its own ``rate`` and
+#     ``effective_from``. A quote takes the period with the greatest
+#     ``effective_from`` that is not after the contract's date; a date before
+#     the earliest period is refused rather than priced at zero. The two
+#     shapes mix freely inside one jurisdiction - GB ``standard`` carries a
+#     history while GB ``reduced`` beside it is a single undated mapping.
+#     Out-of-order or undated periods are refused when the table loads.
 #   * ``stamp_duty.bands``: progressive bands, each ``up_to`` exclusive
 #     of next band; final band uses ``up_to: null`` for the open-ended
 #     "anything above". Rates are marginal — applied only to the
@@ -28,7 +37,18 @@ jurisdictions:
   GB:
     name: "United Kingdom"
     vat:
-      standard: { rate: 0.20, effective_from: "2011-01-04" }
+      # Standard-rate history, oldest first. Sources: Budget 1991 raised the
+      # rate to 17.5 % on 1 April 1991; the 2008 Pre-Budget Report cut it to
+      # 15 % for thirteen months from 1 December 2008; it returned to 17.5 %
+      # on 1 January 2010 and rose to 20 % on 4 January 2011 (Finance (No. 2)
+      # Act 2010). A contract signed before 1991-04-01 is refused, not priced.
+      standard:
+        - { rate: 0.175, effective_from: "1991-04-01" }
+        - { rate: 0.15, effective_from: "2008-12-01" }
+        - { rate: 0.175, effective_from: "2010-01-01" }
+        - { rate: 0.20, effective_from: "2011-01-04" }
+      # Undated on purpose: only the standard rate's history is modelled, so
+      # these two answer for any date, including one before 1991.
       reduced: { rate: 0.05 }
       zero: { rate: 0.00, applies_to: ["residential.new_build"] }
     stamp_duty:
@@ -56,7 +76,19 @@ jurisdictions:
   DE:
     name: "Germany"
     vat:
-      standard: { rate: 0.19, effective_from: "2007-01-01" }
+      # Umsatzsteuer Regelsteuersatz history, oldest first. Sources: UStG § 12
+      # Abs. 1, raised to 16 % on 1 April 1998 and to 19 % on 1 January 2007
+      # (Haushaltsbegleitgesetz 2006); the Zweites Corona-Steuerhilfegesetz cut
+      # it back to 16 % for the second half of 2020, from 1 July 2020, and the
+      # cut expired on 31 December 2020. That window is the one contract dates
+      # land in unexpectedly. A contract signed before 1998-04-01 is refused.
+      standard:
+        - { rate: 0.16, effective_from: "1998-04-01" }
+        - { rate: 0.19, effective_from: "2007-01-01" }
+        - { rate: 0.16, effective_from: "2020-07-01" }
+        - { rate: 0.19, effective_from: "2021-01-01" }
+      # Undated: the reduced rate's own history (7 %, and 5 % across the same
+      # 2020 window) is not modelled, so this answers for any date.
       reduced: { rate: 0.07 }
     grunderwerbsteuer:
       # State-specific Grunderwerbsteuer (real-estate transfer tax).

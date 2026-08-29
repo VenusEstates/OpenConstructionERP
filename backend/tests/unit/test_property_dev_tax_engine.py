@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -267,24 +267,29 @@ def test_late_interest_from_dates() -> None:
 # ── 8. Rate-effective-date behaviour ────────────────────────────────────
 
 
-def test_vat_effective_from_before_band_change_refuses_rather_than_returning_zero() -> None:
+def test_vat_before_the_earliest_band_refuses_rather_than_returning_zero() -> None:
     """A date the table cannot price is refused, not answered with zero.
 
-    This test previously asserted the opposite, with the comment "should
-    return 0 (no band yet in force)". The case it covers is right and is kept
-    verbatim; only the expectation is inverted. GB standard VAT carries
-    effective_from 2011-01-04, and on 2010-12-31 the rate actually in force
-    was 17.5 per cent, so zero was not a lenient answer, it was a wrong one
-    that a quote then presented as the whole bill.
+    This test once asserted the opposite, with the comment "should return 0
+    (no band yet in force)", and its date was 2010-12-31 because GB standard
+    VAT then held a single band starting 2011-01-04. Both of those have moved
+    on: zero was never a lenient answer but a wrong one, and 2010-12-31 is now
+    a date the table can price, at the 17.5 per cent actually in force that
+    day. What is left here is the case the table still cannot answer, a
+    contract predating the earliest band it holds, and the refusal has to
+    survive the arrival of the history rather than be dissolved by it.
     """
     with pytest.raises(RateNotInForceError) as exc:
-        compute_vat(Decimal("100000"), "GB", effective_on=date(2010, 12, 31))
-    # The caller has to be able to act on this: either ask about a date inside
-    # the band, or add the historical band to the YAML. Both need the dates.
+        compute_vat(Decimal("100000"), "GB", effective_on=date(1990, 1, 1))
+    # The caller has to be able to act on this: either ask about a date the
+    # table can speak for, or extend the history in the YAML. Both need dates.
     assert exc.value.jurisdiction == "GB"
     assert exc.value.rate_class == "standard"
-    assert exc.value.effective_on == date(2010, 12, 31)
-    assert exc.value.effective_from == date(2011, 1, 4)
+    assert exc.value.effective_on == date(1990, 1, 1)
+    # The earliest date the class can speak for, which is what makes the
+    # refusal actionable. Not the start of any band that was being considered:
+    # when nothing is in force there is no such band.
+    assert exc.value.effective_from == date(1991, 4, 1)
 
 
 def test_a_genuinely_zero_rated_supply_still_returns_zero_and_does_not_raise() -> None:
@@ -395,12 +400,12 @@ def _outcome(call: Callable[[], Decimal]) -> tuple[str, object]:
         (
             compute_vat,
             lambda f: f(Decimal("100000"), "AE", rate_class="zero_rated"),
-            lambda f: f(Decimal("100000"), "GB", effective_on=date(2010, 12, 31)),
+            lambda f: f(Decimal("100000"), "GB", effective_on=date(1990, 1, 1)),
         ),
         (
             net_from_gross,
             lambda f: f(Decimal("100000"), "AE", rate_class="zero_rated"),
-            lambda f: f(Decimal("100000"), "GB", effective_on=date(2010, 12, 31)),
+            lambda f: f(Decimal("100000"), "GB", effective_on=date(1990, 1, 1)),
         ),
     ],
     ids=["compute_vat", "net_from_gross"],
@@ -443,7 +448,164 @@ def test_vat_effective_from_on_or_after_uses_current_rate() -> None:
     ) == Decimal("20000.00")
 
 
-# ── 8c. Where a missing VAT block lives: in the law, or in this table ───
+# ── 8c. Rate histories - the band in force on the contract's date ───────
+
+# GB standard VAT, one row per era of the shipped history. Sources: 17.5 %
+# from 1 April 1991 (Budget 1991), 15 % from 1 December 2008 (the thirteen-
+# month Pre-Budget Report reduction), 17.5 % again from 1 January 2010, 20 %
+# from 4 January 2011. Each pair is a day inside an era and the day the next
+# era opens, so the table is read both away from the boundaries and on them.
+_GB_ERAS = [
+    (date(1991, 4, 1), "17500.00"),
+    (date(2008, 11, 30), "17500.00"),
+    (date(2008, 12, 1), "15000.00"),
+    (date(2009, 6, 1), "15000.00"),
+    (date(2009, 12, 31), "15000.00"),
+    (date(2010, 1, 1), "17500.00"),
+    (date(2011, 1, 3), "17500.00"),
+    (date(2011, 1, 4), "20000.00"),
+    (date(2026, 1, 1), "20000.00"),
+]
+
+# DE Regelsteuersatz: 16 % from 1 April 1998, 19 % from 1 January 2007, the
+# Corona reduction back to 16 % for the second half of 2020, and 19 % again
+# when it expired on 31 December 2020.
+_DE_ERAS = [
+    (date(1998, 4, 1), "16000.00"),
+    (date(2006, 12, 31), "16000.00"),
+    (date(2007, 1, 1), "19000.00"),
+    (date(2020, 6, 30), "19000.00"),
+    (date(2020, 7, 1), "16000.00"),
+    (date(2020, 9, 1), "16000.00"),
+    (date(2020, 12, 31), "16000.00"),
+    (date(2021, 1, 1), "19000.00"),
+]
+
+
+@pytest.mark.parametrize(("signed_on", "expected"), _GB_ERAS, ids=[str(day) for day, _ in _GB_ERAS])
+def test_a_gb_contract_is_quoted_at_the_rate_in_force_when_it_was_signed(signed_on: date, expected: str) -> None:
+    """Every era of the GB standard rate, on a 100k net contract.
+
+    The row that matters most is 2009-06-01. A contract signed that day sits
+    inside the temporary 15 per cent reduction, so quoting it at 17.5 per cent
+    would be wrong by two and a half points while looking entirely plausible,
+    and quoting it at today's 20 per cent would be wrong by five. Before the
+    history existed the same contract could not be quoted at all.
+    """
+    assert compute_vat(Decimal("100000"), "GB", effective_on=signed_on) == Decimal(expected)
+
+
+@pytest.mark.parametrize(("signed_on", "expected"), _DE_ERAS, ids=[str(day) for day, _ in _DE_ERAS])
+def test_a_de_contract_is_quoted_at_the_rate_in_force_when_it_was_signed(signed_on: date, expected: str) -> None:
+    """Every era of the DE Regelsteuersatz, on a 100k net contract.
+
+    The 2020 half-year at 16 per cent is the window people forget, and it is
+    the only one here bounded on both sides by the same rate, so a resolver
+    that took the newest band regardless, or the oldest band before the date
+    and stopped, would still pass the rows either side of it.
+    """
+    assert compute_vat(Decimal("100000"), "DE", effective_on=signed_on) == Decimal(expected)
+
+
+@pytest.mark.parametrize(
+    ("jurisdiction", "opens_on", "on_the_day", "the_day_before"),
+    [
+        ("GB", date(2011, 1, 4), "20000.00", "17500.00"),
+        ("GB", date(2008, 12, 1), "15000.00", "17500.00"),
+        ("DE", date(2021, 1, 1), "19000.00", "16000.00"),
+        ("DE", date(2020, 7, 1), "16000.00", "19000.00"),
+    ],
+    ids=["gb-2011-rise", "gb-2008-cut", "de-2021-restore", "de-2020-cut"],
+)
+def test_a_date_on_a_bands_first_day_takes_that_band_and_not_the_one_before(
+    jurisdiction: str, opens_on: date, on_the_day: str, the_day_before: str
+) -> None:
+    """``effective_from`` is inclusive, and the off-by-one is asserted in both directions.
+
+    Asserting only the new rate on the day would pass for a resolver that took
+    the newest band for every date; asserting only the previous day would pass
+    for one that never advanced. The pair is what pins the boundary, and each
+    row here is a real day on which a real contract changed price.
+    """
+    assert compute_vat(Decimal("100000"), jurisdiction, effective_on=opens_on) == Decimal(on_the_day)
+    assert compute_vat(Decimal("100000"), jurisdiction, effective_on=opens_on - timedelta(days=1)) == Decimal(
+        the_day_before
+    )
+
+
+def test_a_date_before_the_earliest_band_is_still_refused_for_both_histories() -> None:
+    """Adding a history moves the refusal back; it does not remove it.
+
+    Both jurisdictions, because the whole point of the error is that it names
+    the earliest date the table can speak for, and a single-jurisdiction test
+    would pass for an implementation that hard-coded one.
+    """
+    for jurisdiction, earliest in (("GB", date(1991, 4, 1)), ("DE", date(1998, 4, 1))):
+        with pytest.raises(RateNotInForceError) as exc:
+            compute_vat(Decimal("100000"), jurisdiction, effective_on=earliest - timedelta(days=1))
+        assert exc.value.effective_from == earliest, f"{jurisdiction} names the wrong earliest date"
+        assert earliest.isoformat() in str(exc.value), "the message has to carry the date the caller must act on"
+
+
+def test_no_date_at_all_still_means_the_current_rate() -> None:
+    """The default, which a history must not quietly change.
+
+    ``effective_on=None`` is most callers, and a resolver that reached for the
+    first band written rather than the newest would answer 17.5 per cent for
+    every GB quote in the app while every dated test above stayed green.
+    """
+    assert compute_vat(Decimal("100000"), "GB") == Decimal("20000.00")
+    assert compute_vat(Decimal("100000"), "DE") == Decimal("19000.00")
+
+
+def test_net_from_gross_reads_the_same_history_as_compute_vat() -> None:
+    """One contract, two price fields, one rate.
+
+    The date rule used to be written out twice, once per function, which is
+    two places for a history to land in and one of them to be forgotten. A
+    2009 GB contract quoted inclusive of 15 per cent VAT splits back to its
+    net; if this function still read only the newest band it would divide by
+    1.20 and return 95833.33.
+    """
+    assert net_from_gross(Decimal("115000"), "GB", effective_on=date(2009, 6, 1)) == Decimal("100000.00")
+    assert gross_from_net(Decimal("100000"), "GB", effective_on=date(2009, 6, 1)) == Decimal("115000.00")
+
+
+@pytest.mark.parametrize(
+    ("jurisdiction", "rate_class", "expected"),
+    [
+        ("GB", "reduced", "5000.00"),
+        ("GB", "zero", "0.00"),
+        ("DE", "reduced", "7000.00"),
+        ("RU", "standard", "20000.00"),
+        ("SG", "standard", "9000.00"),
+        ("AE", "exempt", "0.00"),
+    ],
+    ids=["gb-reduced", "gb-zero", "de-reduced", "ru-standard", "sg-gst", "ae-exempt-no-rate-key"],
+)
+def test_a_single_mapping_rate_class_answers_exactly_as_it_did_before(
+    jurisdiction: str, rate_class: str, expected: str
+) -> None:
+    """Most of the table is one undated mapping and none of it was migrated.
+
+    Two properties at once, on a date far outside any history. The rate is
+    unchanged, and the class still answers rather than refusing: an undated
+    mapping is in force for every date, so GB ``reduced`` prices a 1900
+    contract at 5 per cent. That is not an oversight to fix here. Only the
+    standard rate of each of the two jurisdictions carries a history, so the
+    refusal is scoped to a rate class and never to a jurisdiction, and this
+    test is where that scope is written down.
+
+    ``AE.exempt`` is in the list because it carries ``applies_to`` and no
+    ``rate`` key at all, so it measures the "no rate means zero" default that
+    the normaliser must not turn into a missing-key error.
+    """
+    assert compute_vat(Decimal("100000"), jurisdiction, rate_class=rate_class, effective_on=date(1900, 1, 1)) == (
+        Decimal(expected)
+    )
+
+
+# ── 8d. Where a missing VAT block lives: in the law, or in this table ───
 
 
 def _blockless_codes() -> list[str]:
@@ -588,7 +750,132 @@ def test_a_refused_table_does_not_replace_the_good_one_already_cached(tmp_path: 
         assert vat_absence("BR") == VAT_ABSENT_NOT_MODELLED
 
 
-# ── 8d. The quote says how its VAT figure was arrived at ───────────────
+# ── 8e. A history the loader will not accept as one ─────────────────────
+
+# A history that is valid, to be broken one way at a time below. Oldest first,
+# two periods, both dated - the shape the shipped GB and DE rows use.
+_HISTORY = [
+    {"rate": 0.175, "effective_from": "1991-04-01"},
+    {"rate": 0.20, "effective_from": "2011-01-04"},
+]
+
+
+def _table_with_history(history: object) -> dict[str, Any]:
+    """The well-formed synthetic table, with GB standard replaced by ``history``."""
+    table = _well_formed()
+    table["jurisdictions"]["GB"]["vat"]["standard"] = history
+    return table
+
+
+def test_a_synthetic_history_loads_and_resolves(tmp_path: Path) -> None:
+    """The control for the refusals below.
+
+    Without it, a loader that rejected every list would pass all of them and
+    the suite would report a working guard while no history could load at all.
+    The assertion goes through ``compute_vat`` rather than stopping at the
+    load, so the synthetic table is measured the way the shipped one is.
+    """
+    with _table_on_disk(tmp_path, _table_with_history(_HISTORY)):
+        tax_engine.reload_tax_table()
+        assert compute_vat(Decimal("100000"), "GB", effective_on=date(1995, 1, 1)) == Decimal("17500.00")
+        assert compute_vat(Decimal("100000"), "GB", effective_on=date(2015, 1, 1)) == Decimal("20000.00")
+
+
+def test_a_history_written_newest_first_is_refused_at_load(tmp_path: Path) -> None:
+    """The convention is enforced rather than merely documented.
+
+    Nothing computes a wrong number from a reversed history - the resolver
+    picks by greatest date, not by position - which is exactly why this needs
+    a test of its own. What a reversed list breaks is the person who scans it
+    for the current rate and reads the last line, and only the loader is in a
+    position to catch that.
+    """
+    with _table_on_disk(tmp_path, _table_with_history(list(reversed(_HISTORY)))):
+        with pytest.raises(TaxEngineError, match="ascending date order"):
+            tax_engine.reload_tax_table()
+
+
+def test_two_periods_starting_the_same_day_are_refused_at_load(tmp_path: Path) -> None:
+    """Ascending is strict, because a tie has no answer and would be resolved silently."""
+    twice = [dict(_HISTORY[0]), {"rate": 0.20, "effective_from": _HISTORY[0]["effective_from"]}]
+    with _table_on_disk(tmp_path, _table_with_history(twice)):
+        with pytest.raises(TaxEngineError, match="ascending date order"):
+            tax_engine.reload_tax_table()
+
+
+def test_a_period_with_no_date_is_refused_at_load(tmp_path: Path) -> None:
+    """A history whose earliest date is unknown cannot refuse anything honestly.
+
+    An undated single mapping is in force for every date, which is fine and is
+    what most of the table relies on. Inside a list it is different: it would
+    make one period answer for all dates and leave the error with no earliest
+    date to name.
+    """
+    undated = [{"rate": 0.175}, _HISTORY[1]]
+    with _table_on_disk(tmp_path, _table_with_history(undated)):
+        with pytest.raises(TaxEngineError, match="no readable effective_from"):
+            tax_engine.reload_tax_table()
+
+
+def test_an_empty_history_is_refused_at_load(tmp_path: Path) -> None:
+    """A rate class that names itself and then says nothing."""
+    with _table_on_disk(tmp_path, _table_with_history([])):
+        with pytest.raises(TaxEngineError, match="is empty"):
+            tax_engine.reload_tax_table()
+
+
+def test_price_bands_are_not_mistaken_for_a_rate_history(tmp_path: Path) -> None:
+    """The scope of the validator, measured rather than asserted in a comment.
+
+    This table is full of lists of mappings on a completely different axis:
+    ``stamp_duty.bands`` and its relatives carry a price ceiling and no date
+    at all. A validator keyed on "a list of mappings" would refuse the shipped
+    table on its first load and take the whole module down, so the check is
+    scoped to the classes under ``vat`` and ``gst``. Stamp duty is computed
+    here as well, because a refusal at load is not the only way to break it.
+    """
+    table = _well_formed()
+    table["jurisdictions"]["GB"]["stamp_duty"] = {
+        "bands": [
+            {"up_to": 250000, "rate": 0.0},
+            {"up_to": None, "rate": 0.05},
+        ]
+    }
+    with _table_on_disk(tmp_path, table):
+        tax_engine.reload_tax_table()
+        assert compute_stamp_duty(Decimal("400000"), "GB") == Decimal("7500.00")
+
+
+def test_a_single_undated_mapping_never_refuses_a_date(tmp_path: Path) -> None:
+    """The shape most of the shipped table uses, asserted where it is unambiguous.
+
+    Every class in the shipped table is now either a history or an undated
+    mapping, so this property has no dated single-mapping row left to be
+    confused with. A synthetic table is the honest place to pin it.
+    """
+    with _table_on_disk(tmp_path, _well_formed()):
+        tax_engine.reload_tax_table()
+        assert compute_vat(Decimal("100000"), "GB", effective_on=date(1066, 10, 14)) == Decimal("20000.00")
+
+
+def test_a_single_mapping_that_does_carry_a_date_still_refuses_an_earlier_one(tmp_path: Path) -> None:
+    """The path the shipped table no longer exercises, kept under test anyway.
+
+    GB and DE standard were the only two dated single mappings and both are
+    now histories, so this branch of the resolver has no coverage left from
+    the shipped data at all. It is still live code and a jurisdiction added
+    tomorrow may well use it: one band, dated, nothing before it.
+    """
+    dated = {"rate": 0.2, "effective_from": "2011-01-04"}
+    with _table_on_disk(tmp_path, _table_with_history(dated)):
+        tax_engine.reload_tax_table()
+        assert compute_vat(Decimal("100000"), "GB", effective_on=date(2011, 1, 4)) == Decimal("20000.00")
+        with pytest.raises(RateNotInForceError) as exc:
+            compute_vat(Decimal("100000"), "GB", effective_on=date(2011, 1, 3))
+        assert exc.value.effective_from == date(2011, 1, 4)
+
+
+# ── 8f. The quote says how its VAT figure was arrived at ───────────────
 
 
 def _quote(jurisdiction: str, rate_class: str = "standard") -> dict[str, Any]:
