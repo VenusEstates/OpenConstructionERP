@@ -117,13 +117,14 @@ def test_installable_catalogues_never_keep_the_legacy_github_path():
     giving it an HF path. ``install_v3_catalogue`` picks its base URL by
     looking for ``___DDC_CWICR`` in the path, so such a row would send Qdrant
     to a GitHub URL that no longer exists and the install would fail at
-    download with nothing in the registry looking wrong. The two rows that
-    still carry a legacy path (ZH_CHINA, TR_NATIONAL) are unpublished, and the
-    endpoint refuses them with 409 before it ever builds a URL.
+    download with nothing in the registry looking wrong.
 
-    Reading it from the tuple rather than naming those two regions on purpose:
-    the invariant is about installability, not about which regions happen to be
-    waiting today.
+    No row carries a legacy path today. ZH_CHINA and TR_NATIONAL used to, and
+    the 409 for an unpublished region was the only thing keeping them off a
+    dead URL, until both turned out to have been published all along under
+    their pre-rename ids. So this finds nothing at the moment and regains its
+    force the first time a genuinely pending region is added, which is why it
+    reads the tuple rather than naming regions.
     """
     stranded = [cat.region for cat in CWICR_V3_CATALOGUES if cat.available and "___DDC_CWICR" in cat.ddc_path]
     assert not stranded, (

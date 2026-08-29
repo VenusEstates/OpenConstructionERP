@@ -1,6 +1,6 @@
 # DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 # Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
-"""Registry of DDC v3 BGE-M3 catalogues - the 30-region master list.
+"""Registry of DDC v3 BGE-M3 catalogues - the 48-region master list.
 
 This is the single source of truth that the ``GET /catalogues-v3/``
 endpoint serves to the frontend. Each entry describes one CWICR region
@@ -655,6 +655,12 @@ _HF_PUBLISHED: dict[str, tuple[str, str]] = {
     "GB_LONDON": ("UK", "UK_GBP"),
     "USA_USD": ("US", "USA_USD"),
     "ZA_JOHANNESBURG": ("ZA", "ZA_JOHANNESBURG"),
+    # Published 2026-05-11 with the batch above, under the ids these two
+    # regions were renamed away from - the same shape as CA_TORONTO reusing
+    # ENG_TORONTO. Both were left out when the mapping was first written, so
+    # the cards read "coming soon" for months while the files were live.
+    "ZH_CHINA": ("ZH", "ZH_SHANGHAI"),
+    "TR_NATIONAL": ("TR", "TR_ISTANBUL"),
     # Newly published 2026-05-14 - folder/stem match the HF tree directly.
     "MN_ULAANBAATAR": ("MN", "MN_ULAANBAATAR"),
     "BG_SOFIA": ("BG", "BG_SOFIA"),

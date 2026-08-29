@@ -2409,7 +2409,7 @@ def _demo_mode_enabled() -> bool:
 
 @router.get("/catalogues-v3/")
 async def list_v3_catalogues() -> dict:
-    """List the 30 CWICR v3 catalogues with install status.
+    """List the 48 CWICR v3 catalogues with install status.
 
     Frontend powers the `/setup/databases` "Quick install from DDC" grid
     from this endpoint. Each row gets a flag, name, currency, size,
@@ -2434,7 +2434,7 @@ async def list_v3_catalogues() -> dict:
     qdrant_url = _v3_qdrant_url()
 
     # Probe Qdrant once for the whole list. A single REST call is much
-    # cheaper than per-region collection lookups, especially for the 30
+    # cheaper than per-region collection lookups, especially for the 48
     # cards where most regions share a language collection anyway.
     server_collections: set[str] = set()
     server_reachable = False
