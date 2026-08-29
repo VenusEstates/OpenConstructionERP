@@ -126,8 +126,8 @@ const BASELINE: Record<(typeof NAMING_KEYS)[number], Record<string, string>> = {
 function read(code: string): Map<string, string> {
   const values = new Map<string, string>();
   for (const line of readFileSync(resolve(LOCALES_DIR as string, `${code}.ts`), 'utf8').split(/\r?\n/)) {
-    const pair = PAIR.exec(line);
-    if (pair) values.set(pair[1], pair[2]);
+    const [, key, value] = PAIR.exec(line) ?? [];
+    if (key !== undefined && value !== undefined) values.set(key, value);
   }
   return values;
 }
