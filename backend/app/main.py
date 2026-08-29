@@ -784,6 +784,16 @@ async def _seed_demo_account() -> None:
     from app.modules.users.service import hash_password
 
     # Email → env-var-name mapping. Order matters for stable banner output.
+    #
+    # Two login pages mirror this list by hand and show it on their demo
+    # sign-in tiles: the ``demoAccounts`` arrays in
+    # ``frontend/src/features/auth/LoginPage.tsx`` and ``LoginPageNext.tsx``.
+    # Renaming an account or changing an email here means editing both of
+    # them - nothing gates that, and the manager tile on LoginPageNext once
+    # carried a name that existed in no seeder at all. The emails alone are
+    # also mirrored in ``app.modules.users.service`` and
+    # ``app.modules.users.router`` (whitelists, kept in sync by
+    # ``backend/tests/integration/test_demo_login_endpoint.py``).
     demo_account_specs: list[dict[str, str]] = [
         {
             "email": "demo@openconstructionerp.com",

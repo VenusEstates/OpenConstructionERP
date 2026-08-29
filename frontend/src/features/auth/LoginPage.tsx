@@ -262,6 +262,13 @@ export function LoginPage() {
     }
   };
 
+  // Mirrors the seeded demo accounts in backend/app/main.py::_seed_demo_account:
+  // every email here has to be one that seeder creates, and each name has to
+  // match that account's full_name. The admin tile shows the role word instead
+  // of the seeded person on purpose - that is what a first-time visitor scans
+  // for. No password is listed on purpose either: the seeder generates a fresh
+  // random one per install, so any literal printed here would be wrong on every
+  // install. The tiles sign in through /auth/demo-login/ instead.
   const demoAccounts = [
     { email: 'demo@openconstructionerp.com', name: 'Admin', role: t('auth.demo_role_admin', 'Administrator'), color: 'bg-blue-500', letter: 'A' },
     { email: 'manager@openconstructionerp.com', name: 'Michael Carter', role: t('auth.demo_role_manager', 'Manager'), color: 'bg-[#7cd0ff]', letter: 'M' },
