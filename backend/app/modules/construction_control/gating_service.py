@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import event_bus
 from app.core.json_merge import merge_metadata
+from app.modules.construction_control.deletion import refuse_if_locked
 from app.modules.construction_control.models import AcceptanceCriterion, HoldGate, Inspection
 from app.modules.construction_control.repository import HoldGateRepository
 from app.modules.construction_control.schemas import (
@@ -40,6 +41,9 @@ logger = logging.getLogger(__name__)
 _BLOCKING_BY_DEFAULT = {"hold"}
 # Only these point types may be waived; a hold can only be released, never waived.
 _WAIVABLE_POINT_TYPES = {"witness", "surveillance", "review"}
+
+# Only a pending gate may be deleted; every other state carries a signature.
+_GATE_DELETE_LOCKED_STATUSES = frozenset({"released", "waived", "void"})
 # The party-role hierarchy used to decide whether a caller satisfies a required role.
 # A higher-authority party may stand in for a lower one (an authority having
 # jurisdiction or a third-party inspector may release a qc/qa gate), never the reverse.
@@ -177,7 +181,23 @@ class GatingService:
         return gate
 
     async def delete_gate(self, gate_id: uuid.UUID) -> None:
-        await self.get_gate(gate_id)
+        """Delete a gate that is still pending.
+
+        A released or waived gate is the authority under which work was allowed
+        to carry on, captured with the releasing party's e-signature. Deleting
+        it would leave the work it unblocked with no record of who let it
+        through, so only a gate nobody has decided on can go.
+        """
+        gate = await self.get_gate(gate_id)
+        refuse_if_locked(
+            f"gate {gate.gate_number}",
+            gate.status,
+            _GATE_DELETE_LOCKED_STATUSES,
+            reason=(
+                "It carries the signed decision that let the work past this point, "
+                "which is the record of who authorised it."
+            ),
+        )
         await self.gates.delete(gate_id)
 
     # ── Release / waive / void (the FSM) ──────────────────────────────────────

@@ -34,6 +34,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.json_merge import merge_metadata
+from app.modules.construction_control.deletion import HolderCount, refuse_if_held, refuse_if_locked
 from app.modules.construction_control.gating_service import GatingService
 from app.modules.construction_control.models import (
     AsBuiltRecord,
@@ -44,7 +45,11 @@ from app.modules.construction_control.models import (
     TestResult,
 )
 from app.modules.construction_control.ncr_bridge import raise_ncr
-from app.modules.construction_control.repository import ElementRefRepository, HandoverPackageRepository
+from app.modules.construction_control.repository import (
+    ElementRefRepository,
+    HandoverPackageRepository,
+    ReferenceCountRepository,
+)
 from app.modules.construction_control.schemas import (
     HandoverIssueIn,
     HandoverOverrideIn,
@@ -89,6 +94,7 @@ class HandoverService:
         self.packages = HandoverPackageRepository(session)
         self.element_refs = ElementRefRepository(session)
         self.gating = GatingService(session)
+        self.holders = ReferenceCountRepository(session)
 
     # ── CRUD ─────────────────────────────────────────────────────────────────
 
@@ -160,7 +166,30 @@ class HandoverService:
         return package
 
     async def delete_package(self, package_id: uuid.UUID) -> None:
+        """Delete a handover package no certificate was issued from.
+
+        Issuing writes a signed completion certificate, and revoking records
+        that a signed certificate was withdrawn. Either way the package is the
+        document behind a contractual date, so it stays. A package that gates
+        are attached to also stays: those gates would otherwise point at a
+        completion that no longer exists.
+        """
         package = await self.get_package(package_id)
+        subject = f"handover package {package.package_number}"
+        refuse_if_locked(
+            subject,
+            package.status,
+            _HANDOVER_LOCKED_STATUSES,
+            reason=(
+                "A completion certificate was signed against it, and that certificate is the "
+                "evidence behind a contractual completion date."
+            ),
+        )
+        refuse_if_held(
+            subject,
+            [HolderCount("hold gate", "hold gates", await self.holders.count_gates_on_handover(package_id))],
+            advice="Detach those gates from the package first.",
+        )
         await self.element_refs.delete_for_owner(_OWNER_TYPE, str(package.id))
         await self.packages.delete(package_id)
 

@@ -17,6 +17,11 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.json_merge import merge_metadata
+from app.modules.construction_control.deletion import (
+    HolderCount,
+    refuse_if_held,
+    refuse_if_locked,
+)
 from app.modules.construction_control.models import (
     AcceptanceCriterion,
     ElementRef,
@@ -29,6 +34,7 @@ from app.modules.construction_control.repository import (
     ElementRefRepository,
     InspectionRepository,
     MaterialRecordRepository,
+    ReferenceCountRepository,
     TestResultRepository,
 )
 from app.modules.construction_control.schemas import (
@@ -80,6 +86,13 @@ _TEST_RESULT_RULES: dict[str, tuple[str, str, bool]] = {
 _MATERIAL_REVIEWABLE_STATUSES = {"draft", "submitted", "under_review"}
 _MATERIAL_LOCKED_STATUSES = {"accepted", "rejected", "superseded"}
 
+# Statuses that make a record evidence and so refuse a delete. An inspection is
+# deletable while nobody has concluded anything on it; once a result is recorded
+# the row is the account of what was checked, and "in_progress" still counts as
+# open because no verdict exists yet.
+_INSPECTION_DELETE_LOCKED_STATUSES = frozenset({"passed", "failed", "closed", "void"})
+_TEST_DELETE_LOCKED_STATUSES = frozenset({"recorded", "void"})
+
 
 def _is_date_past(value: str | None) -> bool:
     """True when ``value`` (an ISO date string) is strictly before today in UTC.
@@ -117,6 +130,7 @@ class ConstructionControlService:
         self.element_refs = ElementRefRepository(session)
         self.materials = MaterialRecordRepository(session)
         self.tests = TestResultRepository(session)
+        self.holders = ReferenceCountRepository(session)
 
     # ── Acceptance criteria ──────────────────────────────────────────────────
 
@@ -173,7 +187,41 @@ class ConstructionControlService:
         return criterion
 
     async def delete_criterion(self, criterion_id: uuid.UUID) -> None:
-        await self.get_criterion(criterion_id)
+        """Delete an acceptance criterion that nothing is judged against.
+
+        A criterion is a specification rather than evidence, so it carries no
+        workflow state and stays plainly editable and deletable. What it cannot
+        do is vanish out from under the records that were judged against it: the
+        links are soft ids, so the rows would keep a criterion id that resolves
+        to nothing and the tolerance verdicts on them would become unreadable.
+        """
+        criterion = await self.get_criterion(criterion_id)
+        refuse_if_held(
+            f"acceptance criterion {criterion.code}",
+            [
+                HolderCount(
+                    "inspection", "inspections", await self.holders.count_inspections_using_criterion(criterion_id)
+                ),
+                HolderCount(
+                    "material record",
+                    "material records",
+                    await self.holders.count_materials_using_criterion(criterion_id),
+                ),
+                HolderCount(
+                    "test result", "test results", await self.holders.count_tests_using_criterion(criterion_id)
+                ),
+                HolderCount(
+                    "as-built record",
+                    "as-built records",
+                    await self.holders.count_asbuilt_using_criterion(criterion_id),
+                ),
+                HolderCount("hold gate", "hold gates", await self.holders.count_gates_using_criterion(criterion_id)),
+            ],
+            advice=(
+                "Point those records at another criterion first, or clear the is_active flag "
+                "so this one stops being offered on new records while the old ones stay readable."
+            ),
+        )
         await self.criteria.delete(criterion_id)
 
     # ── Inspections ──────────────────────────────────────────────────────────
@@ -264,7 +312,37 @@ class ConstructionControlService:
         return inspection
 
     async def delete_inspection(self, inspection_id: uuid.UUID) -> None:
+        """Delete an inspection nobody has concluded or built on.
+
+        Refuses once a result has been recorded, and refuses while anything
+        still points at the inspection. The non-conformance report raised by a
+        failed inspection is counted among the holders: it is the one holder
+        that lives in another module, and an NCR whose ``linked_inspection_id``
+        resolves to nothing is a defect report with no account of what failed.
+        """
         inspection = await self.get_inspection(inspection_id)
+        refuse_if_locked(
+            f"inspection {inspection.inspection_number}",
+            inspection.status,
+            _INSPECTION_DELETE_LOCKED_STATUSES,
+            reason=(
+                "An inspection that carries a result is the record of what was checked and by whom, "
+                "so it stays on the register."
+            ),
+        )
+        refuse_if_held(
+            f"inspection {inspection.inspection_number}",
+            [
+                HolderCount("test result", "test results", await self.holders.count_tests_on_inspection(inspection_id)),
+                HolderCount("hold gate", "hold gates", await self.holders.count_gates_on_inspection(inspection_id)),
+                HolderCount(
+                    "non-conformance report",
+                    "non-conformance reports",
+                    await self.holders.count_ncrs_on_inspection(inspection_id),
+                ),
+            ],
+            advice="Detach or remove those records first.",
+        )
         await self.element_refs.delete_for_owner("inspection", str(inspection.id))
         await self.inspections.delete(inspection_id)
 
@@ -509,7 +587,38 @@ class ConstructionControlService:
         return material
 
     async def delete_material(self, material_id: uuid.UUID) -> None:
+        """Delete a material record nobody has decided on or tested.
+
+        The status lock is the same set the edit guard uses, widened by the
+        review timestamp: a record can lapse to ``expired`` after it was
+        accepted, and that later status must not hand back a delete the
+        acceptance had already taken away.
+        """
         material = await self.get_material(material_id)
+        subject = f"material record {material.record_number}"
+        refuse_if_locked(
+            subject,
+            material.status,
+            _MATERIAL_LOCKED_STATUSES,
+            reason=(
+                "A conformity decision was recorded against it, and that decision is part of "
+                "the evidence that the material was accepted onto the works."
+            ),
+        )
+        if material.reviewed_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"This {subject} was reviewed on {material.reviewed_at} and cannot be deleted. "
+                    "A conformity decision is part of the evidence that the material was accepted "
+                    "onto the works."
+                ),
+            )
+        refuse_if_held(
+            subject,
+            [HolderCount("test result", "test results", await self.holders.count_tests_on_material(material_id))],
+            advice="Remove those test results first, or point them at the material record that replaces this one.",
+        )
         await self.element_refs.delete_for_owner("material_record", str(material.id))
         await self.materials.delete(material_id)
 
@@ -642,7 +751,22 @@ class ConstructionControlService:
         return test
 
     async def delete_test_result(self, result_id: uuid.UUID) -> None:
+        """Delete a test result that is still a draft.
+
+        A recorded result is the laboratory's statement about a sample. It can
+        be superseded by a re-test, which is what the create verb is for, but it
+        is never removed: the register would then show a material that was never
+        questioned.
+        """
         test = await self.get_test_result(result_id)
+        refuse_if_locked(
+            f"test result {test.result_number}",
+            test.status,
+            _TEST_DELETE_LOCKED_STATUSES,
+            reason=(
+                "A recorded result is laboratory evidence about a sample. Record a re-test as a new result instead."
+            ),
+        )
         await self.element_refs.delete_for_owner("test_result", str(test.id))
         await self.tests.delete(result_id)
 

@@ -23,6 +23,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.json_merge import merge_metadata
+from app.modules.construction_control.deletion import refuse_if_locked
 from app.modules.construction_control.models import AcceptanceCriterion, AsBuiltRecord, ElementRef
 from app.modules.construction_control.ncr_bridge import raise_ncr
 from app.modules.construction_control.repository import (
@@ -47,6 +48,9 @@ logger = logging.getLogger(__name__)
 _SURVEYABLE_STATUSES = {"draft", "surveyed"}
 # A recorded or void record is immutable; an edit is rejected.
 _ASBUILT_LOCKED_STATUSES = {"recorded", "void"}
+# Deleting is refused one step earlier than editing: verification is the
+# conformity judgement and may already have raised a workmanship NCR.
+_ASBUILT_DELETE_LOCKED_STATUSES = frozenset({"verified", "recorded", "superseded", "void"})
 
 
 def _to_decimal(value: str | None) -> Decimal | None:
@@ -200,7 +204,25 @@ class AsBuiltService:
         return record
 
     async def delete_asbuilt(self, record_id: uuid.UUID) -> None:
+        """Delete an as-built record that has not been judged or attested.
+
+        The delete lock is wider than the edit lock on purpose. Editing is
+        refused from ``recorded`` because that is when the legal-record
+        attestation is signed, but deleting is refused one step earlier, from
+        ``verify``: verification is the conformity judgement, it can raise a
+        workmanship NCR, and a record whose verdict has been acted on cannot be
+        made to have never existed.
+        """
         record = await self.get_asbuilt(record_id)
+        refuse_if_locked(
+            f"as-built record {record.record_number}",
+            record.status,
+            _ASBUILT_DELETE_LOCKED_STATUSES,
+            reason=(
+                "It has been judged against its acceptance criterion, and a verified as-built is "
+                "part of the legal record of what was built. Create a new as-built for any change."
+            ),
+        )
         await self.element_refs.delete_for_owner("asbuilt", str(record.id))
         await self.records.delete(record_id)
 
