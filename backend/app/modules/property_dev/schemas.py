@@ -1144,12 +1144,25 @@ class SalesKanbanBuyerCard(BaseModel):
 
 
 class SalesKanbanColumn(BaseModel):
-    """One column on the kanban (one status)."""
+    """One column on the kanban (one status).
+
+    ``total_value`` is money in the base currency named by
+    ``SalesKanbanResponse.currency``, not a raw sum of the cards: buyer
+    values in another currency are FX-converted first, and a currency
+    with no rate is left OUT of ``total_value`` and reported under
+    ``unconverted_by_currency``. ``total_by_currency`` carries every
+    amount in the units it was agreed in, so nothing is lost.
+    """
 
     status: str
     buyers: list[SalesKanbanBuyerCard] = Field(default_factory=list)
     count: int = 0
     total_value: Decimal = Decimal("0")
+    # True when this column blends more than one distinct currency; the
+    # UI should read the breakdown rather than showing one headline.
+    mixed_currency: bool = False
+    total_by_currency: dict[str, str] = Field(default_factory=dict)
+    unconverted_by_currency: dict[str, str] = Field(default_factory=dict)
 
     # R8: money fields as plain-decimal strings.
     @field_serializer("total_value", when_used="json")
@@ -1162,6 +1175,12 @@ class SalesKanbanResponse(BaseModel):
     """Kanban response - one column per buyer-status."""
 
     development_id: UUID
+    # The currency every column's ``total_value`` is expressed in. Empty
+    # when neither the development nor its project names one and the
+    # buyers disagree - in that case no column total can be labelled and
+    # every amount arrives through the per-currency maps instead.
+    currency: str = ""
+    mixed_currency: bool = False
     columns: list[SalesKanbanColumn] = Field(default_factory=list)
 
 
@@ -1197,10 +1216,20 @@ class DevelopmentPnLResponse(BaseModel):
 
     Reads from CRM/finance via the cross-module events; service-layer
     aggregates contract revenue + actual costs + deposit retention.
+
+    Every money scalar is expressed in ``currency`` - the development's
+    base currency, falling back to the parent project's and then to the
+    single currency the buyers agree on. Buyers in another currency are
+    FX-converted through the project's rate table; a currency with no
+    rate is EXCLUDED from the scalar and named in the matching
+    ``*_unconverted_by_currency`` map. The ``*_by_currency`` maps carry
+    every amount in the units it was agreed in.
     """
 
     development_id: UUID
     currency: str = ""
+    # True when the buyers hold more than one distinct currency, whether
+    # or not the amounts could be converted.
     mixed_currency: bool = False
     revenue_contracted: Decimal = Decimal("0")
     revenue_completed: Decimal = Decimal("0")
@@ -1211,6 +1240,19 @@ class DevelopmentPnLResponse(BaseModel):
     avg_sale_price: Decimal = Decimal("0")
     open_warranty_count: int = 0
     open_snag_count: int = 0
+
+    # Per-currency truth behind the scalars above (plain-decimal strings,
+    # each quantised to its own currency's minor units). The
+    # ``*_unconverted_*`` maps hold exactly what the paired scalar had to
+    # leave out for want of an FX rate.
+    revenue_contracted_by_currency: dict[str, str] = Field(default_factory=dict)
+    revenue_contracted_unconverted_by_currency: dict[str, str] = Field(default_factory=dict)
+    revenue_completed_by_currency: dict[str, str] = Field(default_factory=dict)
+    revenue_completed_unconverted_by_currency: dict[str, str] = Field(default_factory=dict)
+    deposits_held_by_currency: dict[str, str] = Field(default_factory=dict)
+    deposits_held_unconverted_by_currency: dict[str, str] = Field(default_factory=dict)
+    deposits_forfeited_by_currency: dict[str, str] = Field(default_factory=dict)
+    deposits_forfeited_unconverted_by_currency: dict[str, str] = Field(default_factory=dict)
 
     # R8: money fields as plain-decimal strings.
     @field_serializer(

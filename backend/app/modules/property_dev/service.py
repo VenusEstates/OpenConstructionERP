@@ -14,7 +14,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any, Iterable
 
 from fastapi import HTTPException, status
@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.events import event_bus, publish_after_commit
 from app.core.i18n import get_locale
 from app.core.json_merge import merge_metadata
+from app.core.money import money_quantum
 from app.core.pdf_fonts import (
     BODY_FONT,
     BOLD_FONT,
@@ -154,6 +155,346 @@ from app.modules.property_dev.schemas import (
 logger = logging.getLogger(__name__)
 
 _MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
+
+
+# ── Currency folding for the money roll-ups ─────────────────────────────
+#
+# A development sells to buyers who may each sign in their own currency.
+# Adding those contract values together produces a number that is not
+# money in any currency, so every roll-up below buckets amounts per ISO
+# code first, converts each bucket to the development BASE currency, and
+# leaves a bucket it cannot convert OUT of the headline figure instead of
+# folding it in silently. Mirrors ``variations/service.py``.
+
+
+def _money_decimal(value: Any) -> Decimal:
+    """Coerce a money-ish value to an exact Decimal without ever raising.
+
+    Args:
+        value: A ``Decimal``, int, float, numeric string or ``None``.
+
+    Returns:
+        The value as a ``Decimal``, or ``Decimal("0")`` when unreadable.
+    """
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal("0")
+
+
+def _currency_code(raw: Any) -> str:
+    """Normalise a stored currency stamp to a comparable ISO-4217 code.
+
+    Args:
+        raw: The stored value - typically ``str`` or ``None``.
+
+    Returns:
+        The upper-case code, or ``""`` when the row carries no stamp.
+    """
+    return str(raw or "").strip().upper()
+
+
+def _add_bucket(buckets: dict[str, Decimal], code: str, amount: Decimal) -> None:
+    """Add ``amount`` to ``buckets[code]``, ignoring a zero contribution.
+
+    A zero never moves a total, and creating a bucket for it would put an
+    empty currency on the wire that the development does not trade in.
+
+    Args:
+        buckets: ``{ISO code: amount}`` accumulator, mutated in place.
+        code: Normalised currency code (``""`` for an unstamped row).
+        amount: The contribution.
+    """
+    if amount:
+        buckets[code] = buckets.get(code, Decimal("0")) + amount
+
+
+def _is_mixed_currency(codes: Iterable[str]) -> bool:
+    """True when more than one distinct *known* (non-blank) currency appears.
+
+    Args:
+        codes: Currency stamps of the rows being folded, in any case.
+
+    Returns:
+        Whether the rows blend currencies.
+    """
+    return len({code for code in (_currency_code(c) for c in codes) if code}) > 1
+
+
+def _project_fx_map(project: Any) -> dict[str, Decimal]:
+    """Project ``Project.fx_rates`` into ``{CODE: rate}`` as exact Decimals.
+
+    Mirrors ``variations/service.py::_project_fx_map`` (shape
+    ``[{"code": "USD", "rate": "1.08", "label": "US Dollar"}]`` where
+    ``rate`` is BASE units per 1 unit of the foreign currency). Defensive
+    against a missing attribute or a malformed entry - a bad row is
+    skipped rather than failing the read.
+
+    Args:
+        project: The owning ``Project`` row, or ``None``.
+
+    Returns:
+        ``{ISO code: rate}`` holding only entries with a positive rate.
+    """
+    if project is None:
+        return {}
+    raw = getattr(project, "fx_rates", None)
+    if not isinstance(raw, list):
+        return {}
+    out: dict[str, Decimal] = {}
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        code = _currency_code(entry.get("code"))
+        rate = _money_decimal(entry.get("rate"))
+        if code and rate > 0:
+            out[code] = rate
+    return out
+
+
+def _convert_money_buckets(
+    by_currency: dict[str, Decimal],
+    base_code: str,
+    fx_map: dict[str, Decimal],
+) -> tuple[Decimal, dict[str, Decimal]]:
+    """Fold per-currency money buckets into a single base-currency total.
+
+    A bucket already in the base currency (or carrying a blank currency,
+    which means "unstamped", treated as already base) passes through
+    unchanged. A FOREIGN bucket with NO FX rate is never folded into the
+    base total; it comes back under ``unconverted`` so the headline stays
+    honest rather than silently wrong.
+
+    A blank ``base_code`` means no base could be established, so nothing
+    foreign can be converted - every non-blank bucket is unconverted.
+
+    Args:
+        by_currency: ``{ISO code: amount}``.
+        base_code: The base currency code, or ``""`` when there is none.
+        fx_map: ``{ISO code: base units per 1 foreign unit}``.
+
+    Returns:
+        ``(base_total, unconverted_by_currency)``.
+    """
+    base = _currency_code(base_code)
+    total = Decimal("0")
+    unconverted: dict[str, Decimal] = {}
+    for raw_code, amount in by_currency.items():
+        code = _currency_code(raw_code)
+        if not code or (base and code == base):
+            # Already in the base currency (or no currency stamp at all).
+            total += amount
+            continue
+        fx = fx_map.get(code) if base else None
+        if fx is not None:
+            total += amount * fx
+        else:
+            # Foreign currency with no usable rate - keep it visible per
+            # currency instead of mis-stamping it as base currency.
+            unconverted[code] = unconverted.get(code, Decimal("0")) + amount
+    return total, unconverted
+
+
+def _money_str_map(by_currency: dict[str, Decimal]) -> dict[str, str]:
+    """Render a ``{code: Decimal}`` money map as ``{code: decimal-string}``.
+
+    Each amount is written in the units its own key names, which is the
+    whole reason the map is keyed by currency. :func:`money_quantum`
+    answers how fine that is, so a forint total comes back whole and a
+    Kuwaiti dinar keeps its fils. The plain-decimal string wire format is
+    the one the scalar money fields already use, so the breakdown stays
+    exact and JS-safe.
+
+    Args:
+        by_currency: ``{ISO code: amount}``.
+
+    Returns:
+        ``{ISO code: plain-decimal string}``, keys normalised.
+    """
+    out: dict[str, str] = {}
+    for raw_code, amount in sorted(by_currency.items()):
+        code = _currency_code(raw_code)
+        out[code] = format(_money_decimal(amount).quantize(money_quantum(code), rounding=ROUND_HALF_UP), "f")
+    return out
+
+
+def _resolve_base_currency(
+    development_currency: Any,
+    project_currency: Any,
+    codes_seen: Iterable[str],
+) -> str:
+    """Pick the currency the headline money figures are expressed in.
+
+    ``Development.currency`` defaults to an empty string on purpose - it
+    means "read the parent project's currency at read time" - so a blank
+    development currency falls through to the project. When neither
+    carries one, a development whose rows all agree on a single currency
+    adopts that currency; a development whose rows disagree gets no base
+    at all, because there is then no honest single number to label and
+    every bucket must be reported unconverted.
+
+    Args:
+        development_currency: ``Development.currency`` as stored.
+        project_currency: ``Project.currency`` as stored, or ``""``.
+        codes_seen: Every currency code appearing on the rows being folded.
+
+    Returns:
+        The upper-case base currency code, or ``""`` when none applies.
+    """
+    base = _currency_code(development_currency) or _currency_code(project_currency)
+    if base:
+        return base
+    distinct = {code for code in (_currency_code(c) for c in codes_seen) if code}
+    return distinct.pop() if len(distinct) == 1 else ""
+
+
+def compute_kanban_column_money(
+    values_by_currency: dict[str, Decimal],
+    *,
+    base_code: str,
+    fx_map: dict[str, Decimal],
+) -> dict[str, Any]:
+    """Fold one kanban column's contract values into a base-currency total.
+
+    Args:
+        values_by_currency: ``{ISO code: amount}`` for the column. A blank
+            key holds the buyers that carry no currency stamp.
+        base_code: Currency the returned ``total_value`` is expressed in.
+        fx_map: ``{ISO code: base units per 1 foreign unit}``.
+
+    Returns:
+        ``{"total_value": Decimal, "mixed_currency": bool,
+        "total_by_currency": {code: str},
+        "unconverted_by_currency": {code: str}}`` - where
+        ``total_value`` excludes every amount listed in
+        ``unconverted_by_currency``.
+    """
+    total, unconverted = _convert_money_buckets(values_by_currency, base_code, fx_map)
+    return {
+        "total_value": total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+        "mixed_currency": _is_mixed_currency(values_by_currency),
+        "total_by_currency": _money_str_map(values_by_currency),
+        "unconverted_by_currency": _money_str_map(unconverted),
+    }
+
+
+def compute_development_pnl_money(
+    buyers: Iterable[Any],
+    *,
+    base_code: str,
+    fx_map: dict[str, Decimal],
+) -> dict[str, Any]:
+    """Fold buyer money into the P&L headline figures plus per-currency truth.
+
+    Every money stream on the P&L (contracted revenue, completed revenue,
+    deposits held, deposits forfeited) is bucketed per ISO currency and
+    converted to ``base_code``. A currency with no FX rate is excluded
+    from the headline scalar and reported under the matching
+    ``*_unconverted_by_currency`` map.
+
+    ``avg_sale_price`` divides converted contract revenue by the number of
+    buyers whose money actually reached that numerator: a buyer in an
+    unconvertible currency is excluded from both, so the mean never mixes
+    populations.
+
+    Args:
+        buyers: ``Buyer`` rows (anything exposing ``currency``, ``status``,
+            ``contract_value``, ``deposit_amount``, ``deposit_forfeited``).
+        base_code: The development base currency, ``""`` when there is none.
+        fx_map: ``{ISO code: base units per 1 foreign unit}``.
+
+    Returns:
+        The money half of the P&L envelope - the five scalars, the four
+        ``*_by_currency`` / ``*_unconverted_by_currency`` pairs, and
+        ``mixed_currency``.
+    """
+    contracted: dict[str, Decimal] = {}
+    completed: dict[str, Decimal] = {}
+    held: dict[str, Decimal] = {}
+    forfeited: dict[str, Decimal] = {}
+    contract_value: dict[str, Decimal] = {}
+    contract_count: dict[str, int] = {}
+    codes_seen: list[str] = []
+
+    for buyer in buyers:
+        code = _currency_code(getattr(buyer, "currency", ""))
+        codes_seen.append(code)
+        buyer_status = str(getattr(buyer, "status", "") or "")
+        value = _money_decimal(getattr(buyer, "contract_value", None))
+        if buyer_status == "contracted":
+            _add_bucket(contracted, code, value)
+        if buyer_status == "completed":
+            _add_bucket(completed, code, value)
+        if buyer_status in {"contracted", "completed"} and value > 0:
+            _add_bucket(contract_value, code, value)
+            contract_count[code] = contract_count.get(code, 0) + 1
+        if buyer_status in {"reserved", "contracted"}:
+            _add_bucket(held, code, _money_decimal(getattr(buyer, "deposit_amount", None)))
+        _add_bucket(forfeited, code, _money_decimal(getattr(buyer, "deposit_forfeited", None)))
+
+    revenue_contracted, contracted_unconv = _convert_money_buckets(contracted, base_code, fx_map)
+    revenue_completed, completed_unconv = _convert_money_buckets(completed, base_code, fx_map)
+    deposits_held, held_unconv = _convert_money_buckets(held, base_code, fx_map)
+    deposits_forfeited, forfeited_unconv = _convert_money_buckets(forfeited, base_code, fx_map)
+    contract_total, contract_unconv = _convert_money_buckets(contract_value, base_code, fx_map)
+
+    # Average sale price = mean contract value across the buyers that
+    # actually hold a contract AND whose currency reached the numerator -
+    # NOT contracted revenue divided by the count of *sold plots*
+    # (mismatched populations: a contracted buyer's plot is usually still
+    # under construction, not "sold").
+    counted = sum(n for code, n in contract_count.items() if code not in contract_unconv)
+    avg_sale = (
+        (contract_total / Decimal(counted)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if counted
+        else Decimal("0")
+    )
+
+    return {
+        "mixed_currency": _is_mixed_currency(codes_seen),
+        "revenue_contracted": revenue_contracted.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+        "revenue_completed": revenue_completed.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+        "deposits_held": deposits_held.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+        "deposits_forfeited": deposits_forfeited.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+        "avg_sale_price": avg_sale,
+        "revenue_contracted_by_currency": _money_str_map(contracted),
+        "revenue_contracted_unconverted_by_currency": _money_str_map(contracted_unconv),
+        "revenue_completed_by_currency": _money_str_map(completed),
+        "revenue_completed_unconverted_by_currency": _money_str_map(completed_unconv),
+        "deposits_held_by_currency": _money_str_map(held),
+        "deposits_held_unconverted_by_currency": _money_str_map(held_unconv),
+        "deposits_forfeited_by_currency": _money_str_map(forfeited),
+        "deposits_forfeited_unconverted_by_currency": _money_str_map(forfeited_unconv),
+    }
+
+
+async def _load_project_currency_meta(session: AsyncSession, project_id: uuid.UUID) -> Any:
+    """Load the owning ``Project`` (currency + fx_rates) for FX conversion.
+
+    Imported lazily so property_dev stays decoupled from projects at
+    import time, exactly as ``variations/service.py`` does it. Returns
+    ``None`` defensively - a read must never 500 over FX metadata.
+
+    Args:
+        session: The active async session.
+        project_id: ``Development.project_id``.
+
+    Returns:
+        The ``Project`` row, or ``None`` when it cannot be loaded.
+    """
+    try:
+        from sqlalchemy import select as _fx_select
+
+        from app.modules.projects.models import Project
+
+        result = await session.execute(_fx_select(Project).where(Project.id == project_id))
+        return result.scalar_one_or_none()
+    except Exception:  # noqa: BLE001 -- a roll-up must never 500 on FX metadata
+        return None
 
 
 # ── State machines ──────────────────────────────────────────────────────
@@ -2615,18 +2956,43 @@ class PropertyDevService:
     # ── Sales pipeline kanban + reservation calendar ────────────────────
 
     async def sales_kanban(self, dev_id: uuid.UUID) -> dict[str, Any]:
-        """Group buyers into kanban columns by status."""
-        await self.get_development(dev_id)
+        """Group buyers into kanban columns by status.
+
+        A column's ``total_value`` is money in the development BASE
+        currency, not a raw sum: buyers signed in another currency are
+        converted through the project's FX table first, and a currency
+        with no rate is left out of the total and reported under the
+        column's ``unconverted_by_currency`` rather than being added as
+        if it were base currency. ``total_by_currency`` always carries
+        the unfolded truth.
+
+        Args:
+            dev_id: Development to build the board for.
+
+        Returns:
+            ``development_id``, the base ``currency`` the column totals
+            are expressed in, development-wide ``mixed_currency`` and one
+            entry per status column.
+        """
+        dev = await self.get_development(dev_id)
         rows = await self.pipeline.kanban_for_development(dev_id)
+        project = await _load_project_currency_meta(self.session, dev.project_id)
+        fx_map = _project_fx_map(project)
+        codes_seen = [_currency_code(buyer.currency) for buyer, _plot in rows]
+        base_code = _resolve_base_currency(
+            getattr(dev, "currency", ""),
+            getattr(project, "currency", "") if project is not None else "",
+            codes_seen,
+        )
         # Stable column order for the UI.
         column_order = ("lead", "reserved", "contracted", "completed", "cancelled")
         columns: dict[str, dict[str, Any]] = {
-            s: {"status": s, "buyers": [], "count": 0, "total_value": Decimal("0")} for s in column_order
+            s: {"status": s, "buyers": [], "count": 0, "by_currency": {}} for s in column_order
         }
         for buyer, plot in rows:
             col = columns.setdefault(
                 buyer.status,
-                {"status": buyer.status, "buyers": [], "count": 0, "total_value": Decimal("0")},
+                {"status": buyer.status, "buyers": [], "count": 0, "by_currency": {}},
             )
             col["buyers"].append(
                 {
@@ -2643,10 +3009,21 @@ class PropertyDevService:
                 }
             )
             col["count"] += 1
-            col["total_value"] += Decimal(str(buyer.contract_value or 0))
+            _add_bucket(
+                col["by_currency"],
+                _currency_code(buyer.currency),
+                _money_decimal(buyer.contract_value),
+            )
+        out_columns: list[dict[str, Any]] = []
+        for col in columns.values():
+            by_currency: dict[str, Decimal] = col.pop("by_currency")
+            col.update(compute_kanban_column_money(by_currency, base_code=base_code, fx_map=fx_map))
+            out_columns.append(col)
         return {
             "development_id": dev_id,
-            "columns": list(columns.values()),
+            "currency": base_code,
+            "mixed_currency": _is_mixed_currency(codes_seen),
+            "columns": out_columns,
         }
 
     async def reservation_calendar(
@@ -2689,77 +3066,57 @@ class PropertyDevService:
         report the developer-visible revenue + deposit + after-care
         metrics.
 
-        Currency: a development is single-currency by convention. We pick
-        the currency of the first buyer that has one and only aggregate
-        buyers in that currency - silently summing mixed-currency contract
-        values into one number is meaningless. ``mixed_currency`` flags
-        when at least one buyer used a different currency so the UI can
-        warn instead of showing a wrong total.
+        Currency: the scalars are money in the development BASE currency
+        (``Development.currency``, falling back to the parent project's,
+        then to the single currency the rows agree on). Buyers signed in
+        another currency are FX-converted through the project's rate
+        table; a currency with no rate is EXCLUDED from the scalar and
+        named in the matching ``*_unconverted_by_currency`` map, so a
+        figure is never a blend of currencies wearing one label. The
+        previous behaviour picked the first buyer's currency and dropped
+        every buyer that disagreed with it, which reported a zero where
+        contracted revenue really existed. ``mixed_currency`` now means
+        "more than one distinct currency is present", not "some buyer
+        differs from the first one".
+
+        Args:
+            dev_id: Development to roll up.
+
+        Returns:
+            The P&L envelope - counts, the base ``currency``, the money
+            scalars and their per-currency breakdowns.
         """
         dev = await self.get_development(dev_id)
         rows = await self.pipeline.kanban_for_development(dev_id)
-        currency = ""
-        for buyer, _plot in rows:
-            if buyer.currency:
-                currency = buyer.currency
-                break
-        mixed_currency = False
-        revenue_contracted = Decimal("0")
-        revenue_completed = Decimal("0")
-        deposits_held = Decimal("0")
-        deposits_forfeited = Decimal("0")
+        project = await _load_project_currency_meta(self.session, dev.project_id)
+        fx_map = _project_fx_map(project)
+        base_code = _resolve_base_currency(
+            getattr(dev, "currency", ""),
+            getattr(project, "currency", "") if project is not None else "",
+            [_currency_code(buyer.currency) for buyer, _plot in rows],
+        )
+        money = compute_development_pnl_money(
+            (buyer for buyer, _plot in rows),
+            base_code=base_code,
+            fx_map=fx_map,
+        )
         plot_count_sold = 0
         plot_count_handed_over = 0
-        contract_revenue_total = Decimal("0")
-        contract_buyer_count = 0
-        for buyer, plot in rows:
-            b_ccy = buyer.currency or ""
-            # Only aggregate money for buyers in the development currency.
-            # A buyer with no currency set carries no monetary signal so
-            # it is treated as in-currency (its value is 0 anyway).
-            in_currency = (not b_ccy) or (not currency) or (b_ccy == currency)
-            if b_ccy and currency and b_ccy != currency:
-                mixed_currency = True
-            value = Decimal(str(buyer.contract_value or 0))
-            if in_currency:
-                if buyer.status == "contracted":
-                    revenue_contracted += value
-                if buyer.status == "completed":
-                    revenue_completed += value
-                if buyer.status in {"contracted", "completed"} and value > 0:
-                    contract_revenue_total += value
-                    contract_buyer_count += 1
-                if buyer.status in {"reserved", "contracted"}:
-                    deposits_held += Decimal(str(buyer.deposit_amount or 0))
-                deposits_forfeited += Decimal(str(buyer.deposit_forfeited or 0))
+        for _buyer, plot in rows:
             if plot is not None and plot.status == "sold":
                 plot_count_sold += 1
             if plot is not None and plot.status == "handed_over":
                 plot_count_handed_over += 1
-        # Average sale price = mean contract value across buyers that
-        # actually hold a contract - NOT contracted revenue divided by
-        # the count of *sold plots* (mismatched populations: a contracted
-        # buyer's plot is usually still under construction, not "sold").
-        avg_sale = (
-            (contract_revenue_total / Decimal(contract_buyer_count)).quantize(Decimal("0.01"))
-            if contract_buyer_count
-            else Decimal("0")
-        )
         open_warranty = await self.warranty.count_open_for_development(dev_id)
         open_snags = await self.snags.count_open_for_development(dev_id)
         return {
             "development_id": dev.id,
-            "currency": currency,
-            "mixed_currency": mixed_currency,
-            "revenue_contracted": revenue_contracted.quantize(Decimal("0.01")),
-            "revenue_completed": revenue_completed.quantize(Decimal("0.01")),
-            "deposits_held": deposits_held.quantize(Decimal("0.01")),
-            "deposits_forfeited": deposits_forfeited.quantize(Decimal("0.01")),
+            "currency": base_code,
             "plot_count_sold": plot_count_sold,
             "plot_count_handed_over": plot_count_handed_over,
-            "avg_sale_price": avg_sale,
             "open_warranty_count": open_warranty,
             "open_snag_count": open_snags,
+            **money,
         }
 
     # ════════════════════════════════════════════════════════════════════
