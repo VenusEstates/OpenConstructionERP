@@ -113,7 +113,7 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(
                 ["variation_request_id"],
                 [f"{_REQUEST_TABLE}.id"],
-                name="fk_oe_variations_boq_trace_variation_request_id_oe_variations_request",
+                name="fk_oe_variations_boq_trace_variation_request",
                 ondelete="CASCADE",
             ),
             # One trace row per line: the line is the thing whose provenance
