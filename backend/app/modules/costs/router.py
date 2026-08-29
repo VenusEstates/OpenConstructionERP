@@ -2178,8 +2178,11 @@ async def restore_qdrant_snapshot(
     import asyncio
     import time
 
-    from app.core.vector import _get_qdrant
-    from app.modules.costs.qdrant_adapter import describe_server_write_mismatch
+    from app.modules.costs.qdrant_adapter import (
+        _get_client,
+        describe_server_write_mismatch,
+        resolve_cwicr_target,
+    )
 
     start = time.monotonic()
 
@@ -2192,12 +2195,44 @@ async def restore_qdrant_snapshot(
     if mismatch:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, mismatch)
 
-    client = _get_qdrant()
-    if client is None:
+    # Resolved once and held, so that a reader counting the places this
+    # handler decides where the CWICR store lives finds exactly one.
+    target = resolve_cwicr_target()
+
+    # Every client operation in this handler talks to the CWICR store, which
+    # is the one the ranker reads. It used to acquire the GENERAL vector
+    # client here, which resolves on a different setting, so the collection
+    # was created and later counted on one server while the snapshot was
+    # uploaded to another whenever the two differed - an empty collection
+    # left behind on the wrong host and a vectors_count read from a
+    # collection that never received the data.
+    #
+    # The availability probe is kept, and moved onto that same store. The
+    # old one connected to the general server and called get_collections()
+    # on it, which is a real reachability check aimed at the wrong host: it
+    # passed while the CWICR target was down and refused while it was fine.
+    # It has to stay in some form, because it is what stands between an
+    # unreachable server and a 1.1 GB download that can only fail after it
+    # finishes. Probing the store the upload actually targets is the whole
+    # of the fix; deleting the probe as "redundant" would restore the wait.
+    #
+    # One property is deliberately not carried over. The old probe built a
+    # throwaway client with timeout=2s; this one uses the shared CWICR
+    # client and so inherits the qdrant-client default instead. Passing 2s
+    # into _get_client would reach the ranker too, where a two-second
+    # ceiling on a real search over a large collection is a bug rather than
+    # a safeguard. A few extra seconds on a failure path that precedes a
+    # 1.1 GB download is not worth a second connection path to maintain.
+    try:
+        client = _get_client()
+        await asyncio.to_thread(client.get_collections)
+    except RuntimeError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    except Exception as exc:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Qdrant not available. Start Qdrant: docker run -p 6333:6333 qdrant/qdrant",
-        )
+            f"CWICR Qdrant at {target.location} is not reachable: {exc}",
+        ) from exc
 
     snapshot_path = _GITHUB_SNAPSHOT_FILES.get(db_id)
     if not snapshot_path:

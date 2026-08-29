@@ -21,6 +21,16 @@ loads ``backend/.env``, and on a developer machine that file sets
 ``CWICR_QDRANT_URL`` - which silently supplies the missing value to every
 case and makes the whole file pass by describing the machine rather than
 the product.
+
+Two assertions here were never proved red, and the next reader should not
+assume otherwise just because the rest of the file was. Both are in the
+``is_server`` branch of the cross-module invariant below: ``mismatch is
+None`` and ``write_target == read_target.location``. Both injections
+restored the old lenient resolution, which is a failure of the embedded
+branch, so the configured-server cases stayed green throughout. They pin the
+positive path - that a correctly configured server is NOT refused - and a
+regression that breaks them would be a refusal storm rather than a silent
+divergence, which is loud enough to find without a red run behind it.
 """
 
 from __future__ import annotations
