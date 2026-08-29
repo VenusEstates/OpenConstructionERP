@@ -14,12 +14,16 @@ Covered:
     * ``ReportingService.render_po_retainage_reconciliation`` period scoping,
       held-amount roll-up, and per-currency (never-blended) summary.
 
-FK note: the procurement service touches only the ``oe_procurement_po`` table
-and its own release log. The reconciliation report's Project/Contact lookups
-are best-effort (wrapped in try/except in the service), so these tests insert
-PO rows directly without provisioning a full project/user graph. FK triggers
-are disabled on the connection to allow the PO rows (whose ``project_id`` /
-``created_by`` are not backed by real parent rows here) to persist.
+FK note: ``oe_procurement_po`` declares no outgoing foreign keys, so its
+``project_id`` / ``created_by`` columns are plain identifier columns and the
+rows below persist without a full project/user graph behind them. The
+reconciliation report's Project/Contact lookups are best-effort (wrapped in
+try/except in the service) and tolerate the missing parents. Nothing here
+needs FK enforcement relaxed, and it must not be: the release log is removed
+by the database's own ``ON DELETE CASCADE``, which PostgreSQL implements as
+an internal referential-integrity trigger. Turning triggers off (
+``session_replication_role = replica``) would silently switch that cascade
+off along with them.
 """
 
 from __future__ import annotations
@@ -42,14 +46,15 @@ from tests._pg import transactional_session
 
 @pytest_asyncio.fixture
 async def session() -> AsyncSession:
-    """Isolated PostgreSQL session with FK triggers disabled.
+    """Isolated PostgreSQL session with foreign keys enforced for real.
 
-    FKs are disabled so we can insert PO rows referencing synthetic
-    ``project_id`` / ``created_by`` values without standing up the full
-    user/project graph; the retainage logic under test does not depend on
-    those parents existing.
+    ``oe_procurement_po`` has no outgoing foreign keys, so the synthetic
+    ``project_id`` / ``created_by`` values used below need no parent rows and
+    no relaxation. Enforcement stays on because the cascade test depends on
+    it: an ``ON DELETE CASCADE`` runs as an internal trigger, so a session
+    with triggers disabled would never delete the release log.
     """
-    async with transactional_session(disable_fks=True) as sess:
+    async with transactional_session(disable_fks=False) as sess:
         yield sess
 
 
