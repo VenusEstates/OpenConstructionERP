@@ -831,12 +831,16 @@ async def handle_get_schedule(session: AsyncSession, args: dict[str, Any], user_
                 {
                     "id": str(act.id),
                     "name": act.name,
-                    "wbs_code": getattr(act, "wbs_code", ""),
+                    "wbs_code": act.wbs_code,
                     "start_date": str(act.start_date) if act.start_date else "",
                     "end_date": str(act.end_date) if act.end_date else "",
                     "duration_days": act.duration_days,
-                    "progress": act.progress,
-                    "status": getattr(act, "status", ""),
+                    "progress": act.progress_pct,
+                    "status": act.status,
+                    # Always False: GanttActivity carries no critical-path flag,
+                    # because get_gantt_data never projects Activity.is_critical
+                    # into the schema. The card cannot mark a critical activity
+                    # until the schema carries the flag.
                     "is_critical": getattr(act, "is_critical", False),
                 }
             )

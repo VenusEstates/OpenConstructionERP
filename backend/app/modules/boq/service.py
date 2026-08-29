@@ -9121,7 +9121,10 @@ class BOQService:
         if not boq:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="BOQ not found")
 
-        positions = await self.position_repo.list_by_boq(boq_id)
+        # Unbounded read: the analysis reports total_positions and summarises the
+        # whole BOQ, so the paginated list_for_boq (1000-row cap, returns a tuple)
+        # would both under-state a large tender and hand back the wrong shape.
+        positions = await self.position_repo.list_all_for_boq(boq_id)
         if not positions:
             return {
                 "completeness_score": 0.0,

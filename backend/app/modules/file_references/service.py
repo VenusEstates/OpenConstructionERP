@@ -95,6 +95,18 @@ def _strip_ext(filename: str) -> str:
     return Path(filename).stem
 
 
+def _url_basename(file_url: str) -> str:
+    """Return the name a URL or storage path ends in.
+
+    Some kinds record a file by location rather than by name. The naming
+    rules apply to the last path segment: a full URL's separators and query
+    string would otherwise be split into ISO 19650 fields, and the URL
+    columns are far longer than the ``filename`` a violation row stores.
+    """
+    trimmed = file_url.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+    return trimmed.replace("\\", "/").rsplit("/", 1)[-1]
+
+
 def validate_iso19650_name(filename: str) -> Iso19650Result:
     """Validate a filename against the ISO 19650 format.
 
@@ -244,14 +256,18 @@ async def _iter_project_files(session: AsyncSession, project_id: uuid.UUID) -> l
     try:
         from app.modules.daily_diary.models import DiaryPhoto  # type: ignore
 
-        if hasattr(DiaryPhoto, "project_id") and hasattr(DiaryPhoto, "filename"):
+        # A photo is stored by location: the model has no ``filename`` column,
+        # only ``file_url``. Guarding on the name this scan wants rather than
+        # the name the model has left the condition permanently False, so
+        # photos were absent from every scan without anything raising.
+        if hasattr(DiaryPhoto, "project_id") and hasattr(DiaryPhoto, "file_url"):
             rows = (
                 await session.execute(
-                    select(DiaryPhoto.id, DiaryPhoto.filename).where(DiaryPhoto.project_id == project_id)
+                    select(DiaryPhoto.id, DiaryPhoto.file_url).where(DiaryPhoto.project_id == project_id)
                 )
             ).all()
-            for pid, name in rows:
-                out.append(("photo", str(pid), name or ""))
+            for pid, file_url in rows:
+                out.append(("photo", str(pid), _url_basename(file_url or "")))
     except Exception:
         logger.debug("Naming scan: photo kind unavailable")
 

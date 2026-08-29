@@ -136,7 +136,7 @@ async def import_schedule(
     Re-uploading bytes already imported into this project returns the existing
     import untouched, with ``duplicate`` set.
     """
-    await verify_project_access(project_id, session, user_id)
+    await verify_project_access(project_id, user_id, session)
     content = await upload.read()
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(
@@ -174,7 +174,7 @@ async def list_imports(
     validation_status: str | None = Query(default=None, max_length=16),
 ) -> RebarImportListResponse:
     """List a project's imported bending schedules, newest first."""
-    await verify_project_access(project_id, session, user_id)
+    await verify_project_access(project_id, user_id, session)
     rows, total = await _service(session).list_imports(
         project_id,
         offset=offset,
@@ -197,7 +197,7 @@ async def get_import(import_id: uuid.UUID, session: SessionDep, user_id: Current
         record = await service.get_import(import_id)
     except RebarScheduleError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    await verify_project_access(record.project_id, session, user_id)
+    await verify_project_access(record.project_id, user_id, session)
     return RebarImportResponse.model_validate(record)
 
 
@@ -209,7 +209,7 @@ async def delete_import(import_id: uuid.UUID, session: SessionDep, user_id: Curr
         record = await service.get_import(import_id)
     except RebarScheduleError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    await verify_project_access(record.project_id, session, user_id)
+    await verify_project_access(record.project_id, user_id, session)
     await service.delete_import(import_id)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -233,7 +233,7 @@ async def list_shapes(
         record = await service.get_import(import_id)
     except RebarScheduleError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    await verify_project_access(record.project_id, session, user_id)
+    await verify_project_access(record.project_id, user_id, session)
     rows, total = await service.list_shapes(import_id, offset=offset, limit=limit, super_group=super_group)
     return RebarShapeListResponse(
         items=[RebarShapeResponse.model_validate(row) for row in rows],
@@ -255,7 +255,7 @@ async def cutting_summary(
         record = await service.get_import(import_id)
     except RebarScheduleError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    await verify_project_access(record.project_id, session, user_id)
+    await verify_project_access(record.project_id, user_id, session)
     return await service.cutting_summary(import_id)
 
 
@@ -278,7 +278,7 @@ async def export_schedule(
         record = await service.get_import(import_id)
     except RebarScheduleError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    await verify_project_access(record.project_id, session, user_id)
+    await verify_project_access(record.project_id, user_id, session)
     payload = await service.export(import_id, super_group=super_group)
     name = record.filename if record.filename.lower().endswith(".abs") else f"{record.filename}.abs"
     return Response(
