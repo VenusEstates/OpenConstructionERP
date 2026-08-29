@@ -292,6 +292,11 @@ def report_pdf() -> bytes:
         generated_at="2026-08-23T09:15:00+00:00",
         template_data={},
         data_snapshot={"summary": [{"trade": "Concrete", "amount": "1000.00"}]},
+        # Pinned rather than parametrised: the contrast of a fill against the
+        # text drawn on it is a property of the palette, and the palette does
+        # not vary by language. A second locale here would render the same
+        # colours and assert the same thing twice.
+        locale="en",
     )
 
 
