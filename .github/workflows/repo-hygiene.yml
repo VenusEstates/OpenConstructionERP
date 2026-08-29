@@ -966,9 +966,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_commit_trailers.py
 
-      # Not a duplicate of the step above. These two scripts are the pair the
-      # local .git/hooks/commit-msg shim runs, and until this step existed only
-      # one of them had a second home: check_commit_trailers.py ran here,
+      # Not a duplicate of the trailers step above. These two scripts are
+      # the pair the local .git/hooks/commit-msg shim runs, and until this
+      # step existed only one of them had a second home:
+      # check_commit_trailers.py ran here,
       # check_commit_subject.py ran in none of the twenty workflows. Measured
       # 2026-08-30, it was the only one of the twenty-five scripts named in
       # .pre-commit-config.yaml with no executor anywhere.
@@ -989,6 +990,42 @@ jobs:
       # rule is deliberately confined to a message being written, because 2094
       # existing messages use one and scanning history for them would report a
       # decision nobody has taken.
+      # Prove the guard below can fail. It scans 5027 commits that are all
+      # clean, so it goes green today whether it works or not, and a step that
+      # has never once failed is not evidence about anything. Same script as the
+      # scan it vouches for, which is the only reason it is evidence about it.
+      # Modelled on the planted-credential self-test in secret-scan.yml.
+      #
+      # The planted subject is the exact artefact that put twelve commits into
+      # published history: a PowerShell here-string opener consumed by
+      # 'git commit -m'. It is written under RUNNER_TEMP, outside the tree, so
+      # no other guard in this workflow sees it. Naming the reason as well as
+      # reading the exit code matters: a guard that failed for some unrelated
+      # reason would otherwise look like a guard that caught the plant.
+      - name: Prove the commit subject guard can fail
+        if: ${{ !cancelled() }}
+        run: |
+          # `set +e` is not redundant. GitHub runs a `run:` block under `bash -e`
+          # and the command below deliberately exits 1, which is the outcome
+          # being measured, so without this the step dies on the very line whose
+          # failure is the point. Same reasoning as secret-scan.yml.
+          set +e
+          set -uo pipefail
+          probe="${RUNNER_TEMP}/planted_subject.txt"
+          printf "@' \nthe real subject lands underneath\n" > "$probe"
+          python scripts/check_commit_subject.py "$probe" > probe.log 2>&1
+          rc=$?
+          cat probe.log
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::the subject guard accepted a planted here-string opener, so the scan below proves nothing"
+            exit 1
+          fi
+          if ! grep -q 'here-string opener' probe.log; then
+            echo "::error::the guard failed but did not name the planted artefact"
+            exit 1
+          fi
+          echo "self-test ok: planted subject rejected, exit ${rc}"
+
       - name: Scan commit subjects for shell quoting artefacts
         if: ${{ !cancelled() }}
         run: python scripts/check_commit_subject.py
