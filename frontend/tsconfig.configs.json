@@ -1,0 +1,55 @@
+// Type checking for the configuration files at the frontend root.
+//
+// The fourth and last project over this package. tsconfig.json covers src,
+// tsconfig.e2e.json covers tests/e2e, tsconfig.e2e-root.json covers e2e, and
+// until this file existed the 17 files that AIM all of that compiled nowhere:
+// 16 playwright*.config.ts and vite.config.ts. A spec tree under a gate and the
+// configuration that points at it left ungated is half a gate.
+//
+// Nothing read them at all, which is stronger than "no type checking" and was
+// measured rather than assumed: eslint.config.js ignores '*.config.ts' by name,
+// alongside 'e2e/**', so neither of this package's two readers looked at these
+// files. That is how a dead /// <reference types="vitest" /> could sit on line 1
+// of vite.config.ts with the whole test configuration unchecked behind it.
+//
+// What this catches and what it does not, stated because the difference is easy
+// to lose. It catches a misspelled option, an option that no longer exists, and
+// a value of the wrong type - vite.config.ts turned out to hold two of those on
+// the day this landed. It does NOT catch a wrong VALUE: a testDir that sweeps a
+// whole directory instead of one spec, or a testIgnore whose glob is correct
+// against the repository and wrong against the machine it runs on, are both
+// well-typed strings and no compiler will ever object to them. Catching those
+// needs a gate that resolves each config against the filesystem and asserts a
+// non-zero collection. This is the shape of these files, not their meaning.
+//
+// A separate project chained onto typecheck:e2e with && rather than another
+// entry in an existing include, for the reason recorded in tsconfig.e2e.json:
+// the whole-program check over src already OOM'd at a 6 GB heap, runs at 9 GB
+// now, and macOS skips it because 9 GB exceeds that runner's RAM. Merging
+// programs costs memory, not time; these 17 files cost seconds. Nothing here
+// imports from src (measured, not assumed), so the program stays at 17.
+//
+// It extends the base config and overrides no compiler option, on purpose.
+// Exempting configuration from strictness would leave the same hole under a
+// nicer name, and it would do it in the files that are written rarely and read
+// even more rarely, which is where a silent hole survives longest.
+//
+// The exclude mirrors .gitignore line 69. playwright.video.config.ts is ignored
+// but is a root-level *.ts, so a checkout that has one would pull it into this
+// program off the disk - tsc reads the disk, not the index - and the same
+// command would answer differently here and in CI. There was no such file when
+// this was written, and no other ignored root-level .ts either; that was
+// measured on 2026-08-30 rather than assumed, and it is written down so the
+// next reader can tell "checked, none" from "never checked".
+//
+// The boundary. Before this, 25 tracked .ts/.tsx files in this package were
+// outside every project. After it, 8: e2e-match/match-iter.spec.ts,
+// e2e-match/match.spec.ts, playwright/property-dev-buyer-edit.spec.ts,
+// playwright/property-dev-drawer-a11y.spec.ts, scripts/pwa-install.spec.ts,
+// tests/pwa/manifest.test.ts, tests/pwa/service-worker.test.ts and
+// tests/splash/splashI18n.test.ts.
+{
+  "extends": "./tsconfig.json",
+  "include": ["*.ts"],
+  "exclude": ["playwright.video.config.ts"]
+}

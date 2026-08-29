@@ -1,5 +1,11 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite';
+// defineConfig comes from vitest/config, not vite, because the `test` block
+// near the bottom of this file is part of the config object and vite's own
+// UserConfig has no such property. Line 1 used to be
+// /// <reference types="vitest" />, which is how vitest 0.x augmented vite's
+// type; it stopped doing that in 1.0 and we are on 4.1.9, so the reference had
+// been a declaration with no reader for a long time and the `test` block was
+// unchecked. Runtime was never affected - vitest reads this file either way.
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -28,7 +34,7 @@ function cesiumAssets(): Plugin {
           next();
           return;
         }
-        const rel = decodeURIComponent(url.slice('/cesium/'.length).split('?')[0]);
+        const rel = decodeURIComponent(url.slice('/cesium/'.length).split('?')[0] ?? '');
         const file = path.join(cesiumSource, rel);
         if (!file.startsWith(cesiumSource) || !existsSync(file) || statSync(file).isDirectory()) {
           next();
