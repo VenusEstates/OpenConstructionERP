@@ -63,11 +63,19 @@ def _get_service(session: SessionDep) -> ProcurementService:
 
 
 def _contact_display_name(c: Contact) -> str:
-    """Return the human-readable contact label (company > "first last" > email)."""
-    if c.company_name:
-        return c.company_name
-    full = f"{c.first_name or ''} {c.last_name or ''}".strip()
-    return full or c.email or ""
+    """Return the human-readable contact label (company > "first last" > email).
+
+    Delegates so that the name shown beside a purchase order and the name
+    written into an invoice raised against it are the same string. The copy
+    that stood here read ``c.email``, which is not a column on ``Contact`` -
+    the column is ``primary_email`` - so listing purchase orders raised
+    AttributeError on any vendor with neither a company nor a person name.
+    The identical defect was found and fixed in the invoice register's copy of
+    this function; this one was missed because the two were never one.
+    """
+    from app.modules.finance.einvoice_parties import contact_display_name
+
+    return contact_display_name(c)
 
 
 async def _fetch_vendor_names(session: AsyncSession, vendor_ids: Iterable[str | None]) -> dict[str, str]:

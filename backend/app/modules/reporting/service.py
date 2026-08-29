@@ -1571,10 +1571,11 @@ class ReportingService:
         if vendor_ids:
             try:
                 from app.modules.contacts.models import Contact
+                from app.modules.finance.einvoice_parties import contact_display_name
 
                 rows = (await self.session.execute(select(Contact).where(Contact.id.in_(vendor_ids)))).scalars().all()
                 for c in rows:
-                    label = c.company_name or f"{c.first_name or ''} {c.last_name or ''}".strip() or c.email or ""
+                    label = contact_display_name(c)
                     vendor_names[str(c.id)] = label
             except Exception:
                 logger.debug("Vendor-name lookup skipped for retainage report", exc_info=True)

@@ -326,19 +326,25 @@ class ConnectorService:
         return payload
 
     async def _counterparty_names(self, invoices: list) -> dict[str, str]:
-        """Best-effort Contact.id -> display name. Never raises."""
+        """Best-effort Contact.id -> display name. Never raises.
+
+        It keeps that promise and lies with the result. The catch below is
+        outside the loop, so one unnameable contact does not cost one name, it
+        returns ``{}`` and every counterparty in the run exports blank. The
+        label was built here by hand and read ``c.email``, a column that does
+        not exist on ``Contact``, so a vendor with neither a company nor a
+        person name emptied the whole map and the export went out looking
+        merely sparse rather than broken.
+        """
         ids = {str(inv.contact_id) for inv in invoices if inv.contact_id}
         if not ids:
             return {}
         try:
             from app.modules.contacts.models import Contact
+            from app.modules.finance.einvoice_parties import contact_display_name
 
             rows = (await self.session.execute(select(Contact).where(Contact.id.in_(ids)))).scalars().all()
-            out: dict[str, str] = {}
-            for c in rows:
-                label = c.company_name or f"{c.first_name or ''} {c.last_name or ''}".strip() or c.email or ""
-                out[str(c.id)] = label
-            return out
+            return {str(c.id): contact_display_name(c) for c in rows}
         except Exception:
             logger.debug("connector: counterparty resolution failed", exc_info=True)
             return {}
