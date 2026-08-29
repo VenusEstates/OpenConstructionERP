@@ -42,6 +42,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import ValidationError
+from starlette.requests import ClientDisconnect
 
 from app.core.rate_limiter import RateLimiter, client_identifier
 from app.modules.client_errors.schemas import ClientErrorReport
@@ -84,7 +85,18 @@ async def submit_client_error(
         )
 
     # ── 2. Read + cap body, then validate ─────────────────────────────────
-    raw = await request.body()
+    try:
+        raw = await request.body()
+    except ClientDisconnect:
+        # The reporter is fire-and-forget (``void fetch(...)`` in
+        # errorLogger.ts) and commonly fires right as the page navigates
+        # away, which aborts the in-flight request client-side before the
+        # full body reaches us. Starlette surfaces that as an unhandled
+        # ``ClientDisconnect`` from ``request.body()`` rather than an empty
+        # read, and nothing downstream is listening for a response either
+        # way, so there is nothing to log and no error to report - treat it
+        # exactly like a malformed body.
+        return {"status": "accepted"}
     if len(raw) > _MAX_BODY_BYTES:
         # Silently truncate oversized payloads rather than surfacing a 413 —
         # a legitimate reporter will never be this large; an attacker gets
