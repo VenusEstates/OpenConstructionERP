@@ -1355,9 +1355,11 @@ def create_app() -> FastAPI:
     # installs are written instead, and this is the verdict of running them.
     #
     # ``None`` is again "never ran", which covers a non-PostgreSQL deployment
-    # and the window before startup writes a verdict. ``True`` means at least
-    # one repair raised, so rows that should have been rewritten were not - the
-    # ids are in ``data_repairs_failed_ids`` and the causes are in the log.
+    # and the window before startup writes a verdict. ``True`` means rows that
+    # should have been rewritten were not, either because a repair raised or
+    # because the module holding it never imported and so registered nothing to
+    # run. The ids are in ``data_repairs_failed_ids``, where an unimported
+    # module is marked apart from a repair id, and the causes are in the log.
     app.state.data_repairs_failed = None
     app.state.data_repairs_failed_ids = ()
 
@@ -1833,11 +1835,12 @@ def create_app() -> FastAPI:
         ``/api/system/upgrade/status``, and not here.
 
         The same rule governs the two signals added since: which data repairs
-        failed is on ``app.state.data_repairs_failed_ids``, and which columns
-        the schema has diverged on is on
-        ``app.state.schema_divergent_columns``. Both are lists of internal
-        names, both would map the deployment for an anonymous caller, and both
-        stay in the log for the same reason the failing statement does.
+        failed, and which repair modules could not be imported at all, is on
+        ``app.state.data_repairs_failed_ids``, and which columns the schema has
+        diverged on is on ``app.state.schema_divergent_columns``. Both are
+        lists of internal names - a module path maps the deployment quite as
+        well as a repair id does - and both stay in the log for the same reason
+        the failing statement does.
         """
         import os as _os
         from pathlib import Path as _Path
