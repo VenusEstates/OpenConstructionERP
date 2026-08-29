@@ -151,14 +151,20 @@ describe('resolveModuleDisplayName against the shipped locale files', () => {
     expect(resolveModuleDisplayName(mod, real(de.translation), 'de')).not.toBe(mod.display_name);
   });
 
-  it('leaves a module no language attests showing its English name', () => {
-    // The 62 with no attested carrier are deliberately untranslated. This
-    // pins that as an expected state rather than an accident, so filling them
-    // later is a visible change and not a silent one.
+  it('answers the module that used to stand for the untranslated cohort', () => {
+    // This pinned the opposite until the cohort it named stopped existing.
+    // client_errors was one of the 62 modules with no attested carrier, left
+    // untranslated on purpose so that filling them later would be a visible
+    // change rather than a silent one. They were filled: every locale now
+    // answers all 190 modules.catalog keys en.ts carries, none missing in any
+    // of them, so there is no longer a module for this case to point at. The
+    // resolver's English-fallback branch is not what changed and is still
+    // covered by the fake-dictionary case above, which is where it belongs,
+    // because it is a property of the resolver and not of the shipped data.
     const key = 'modules.catalog.client_errors';
     const mod: TranslatableModule = { name: 'oe_client_errors', display_name: en.translation[key]! };
     expect(en.translation[key]).toBeDefined();
-    expect(de.translation[key]).toBeUndefined();
-    expect(resolveModuleDisplayName(mod, real(de.translation), 'de')).toBe(mod.display_name);
+    expect(de.translation[key]).toBeDefined();
+    expect(resolveModuleDisplayName(mod, real(de.translation), 'de')).not.toBe(mod.display_name);
   });
 });

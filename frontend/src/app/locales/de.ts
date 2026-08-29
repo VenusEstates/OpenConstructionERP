@@ -36,7 +36,7 @@ const resource = {
     "modules.catalog.clash": "Kollisionsprüfung",
     "modules.catalog.clash_ai_triage": "KI-Triage von Kollisionen",
     "modules.catalog.clash_cost_impact": "Kosten-Auswirkung von Kollisionen",
-    "modules.catalog.client_errors": "Client-Fehlersenke",
+    "modules.catalog.client_errors": "Client-Fehlersammler",
     "modules.catalog.closeout": "Übergabe & Abschluss",
     "modules.catalog.collaboration": "Kommentare & Ansichtspunkte",
     "modules.catalog.collaboration_locks": "Echtzeit-Kollaborationssperren",
