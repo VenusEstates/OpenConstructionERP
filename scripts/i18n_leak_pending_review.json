@@ -1494,7 +1494,7 @@
     "reason": "Added alongside the costExplorer cluster fix (fix(i18n): contain the costExplorer leak cluster found below threshold). This entry's n sits at 15-16, below the 24/28 threshold - the same below-threshold band the commit's own title names for the costExplorer cluster - so it was not caught by the general threshold scan; filed without individual triage. Backfilled 2026-08-25 when reason/added_by became mandatory fields on this list; this is commit-level and group-level context recovered from git history and this file's own n/differs_in fields, not a fresh per-key content review."
   },
   "global_search.collection.rfi": {
-    "added_by": "search collection labels (2026-08-29)",
+    "added_by": "1208ceda9 (2026-08-29)",
     "differs_in": [
       "ar",
       "he"
