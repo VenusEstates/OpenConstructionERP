@@ -31,6 +31,7 @@ import {
   Badge,
   EmptyState,
   Breadcrumb,
+  ConfirmDialog,
   SkeletonTable,
   SideDrawer,
   WideModal,
@@ -47,6 +48,7 @@ import {
   listKpis,
   getKpiHistory,
   computeKpi,
+  deleteKpi,
   drillDownKpi,
   listDashboards,
   renderDashboard,
@@ -82,6 +84,7 @@ import {
   type WidgetRenderResult,
   type WidgetType,
 } from './api';
+import { CustomKpiModal } from './CustomKpiModal';
 import { biDashboardsGuide } from './biDashboardsGuide';
 import { useDashboardFilters } from '@/stores/useDashboardFilters';
 import { fmtPercent, fmtFixed } from '@/shared/lib/formatters';
@@ -221,6 +224,10 @@ export function BIDashboardsPage() {
   const addToast = useToastStore((s) => s.addToast);
   const [tab, setTab] = useState<Tab>('dashboards');
   const [createOpen, setCreateOpen] = useState(false);
+  // The KPI dialog is its own state rather than another `kind` of the
+  // create modal: what it builds is a spec over a server-served
+  // vocabulary, not three text fields.
+  const [kpiCreateOpen, setKpiCreateOpen] = useState(false);
   const [activeDashboardId, setActiveDashboardId] = useState<string | null>(null);
 
   // The project named in the address bar on
@@ -377,6 +384,16 @@ export function BIDashboardsPage() {
               content={biDashboardsGuide}
               onCta={() => installStarterM.mutate()}
             />
+            {tab === 'kpis' && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => setKpiCreateOpen(true)}
+              >
+                {t('bi.new_kpi', { defaultValue: 'New KPI' })}
+              </Button>
+            )}
             {(tab === 'dashboards' || tab === 'reports' || tab === 'alerts') && (
               <Button
                 variant="primary"
@@ -480,7 +497,7 @@ export function BIDashboardsPage() {
           installingStarter={installStarterM.isPending}
         />
       ) : tab === 'kpis' ? (
-        <KpiLibrary rows={kpisQ.data ?? []} />
+        <KpiLibrary rows={kpisQ.data ?? []} onCreate={() => setKpiCreateOpen(true)} />
       ) : tab === 'reports' ? (
         <ReportList rows={reportsQ.data ?? []} onCreate={() => setCreateOpen(true)} />
       ) : tab === 'schedules' ? (
@@ -497,6 +514,15 @@ export function BIDashboardsPage() {
         <DashboardRenderPanel
           dashboardId={activeDashboardId}
           onClose={() => setActiveDashboardId(null)}
+        />
+      )}
+
+      {/* Custom KPI dialog - issue #441 */}
+      {kpiCreateOpen && (
+        <CustomKpiModal
+          projectId={projectId}
+          projectName={projectName}
+          onClose={() => setKpiCreateOpen(false)}
         />
       )}
 
@@ -627,7 +653,7 @@ function DashboardsGrid({
 
 /* ─── KPI library with sparklines ─── */
 
-function KpiLibrary({ rows }: { rows: KpiDefinition[] }) {
+function KpiLibrary({ rows, onCreate }: { rows: KpiDefinition[]; onCreate: () => void }) {
   const { t } = useTranslation();
   if (rows.length === 0) {
     return (
@@ -639,6 +665,10 @@ function KpiLibrary({ rows }: { rows: KpiDefinition[] }) {
             defaultValue:
               'KPIs (CPI, SPI, cost variance, schedule health…) are provisioned per role. None are available for your account yet - an administrator can enable the relevant KPI pack.',
           })}
+          action={{
+            label: t('bi.new_kpi', { defaultValue: 'New KPI' }),
+            onClick: onCreate,
+          }}
         />
       </Card>
     );
@@ -663,6 +693,11 @@ function KpiLibraryCard({ kpi }: { kpi: KpiDefinition }) {
   const qc = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const [drillOpen, setDrillOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Custom definitions carry a spec instead of a Python formula, and they
+  // are the only ones this page may remove - the built-ins have no row of
+  // their own to delete.
+  const isCustom = kpi.formula_ref === 'spec' && !kpi.is_system;
   const historyQ = useQuery({
     queryKey: ['bi', 'kpi-history', kpi.code],
     queryFn: () => getKpiHistory(kpi.code, { limit: 12 }),
@@ -696,6 +731,29 @@ function KpiLibraryCard({ kpi }: { kpi: KpiDefinition }) {
     onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
   });
 
+  // Deleting is refused with a 409 while any widget, alert or report still
+  // reads the code, and the refusal names how many of each. That sentence
+  // is the whole answer, so it is toasted as it comes.
+  const deleteMut = useMutation({
+    mutationFn: () => deleteKpi(kpi.code),
+    onSuccess: () => {
+      setConfirmDelete(false);
+      qc.invalidateQueries({ queryKey: ['bi', 'kpis'] });
+      addToast({
+        type: 'success',
+        title: t('bi.kpi_deleted', { defaultValue: 'KPI deleted' }),
+      });
+    },
+    onError: (err) => {
+      setConfirmDelete(false);
+      addToast({
+        type: 'error',
+        title: t('bi.kpi_delete_failed', { defaultValue: 'The KPI was not deleted' }),
+        message: getErrorMessage(err),
+      });
+    },
+  });
+
   const historyLatest = values.length > 0 ? values[values.length - 1] : null;
   const latest = historyLatest != null ? historyLatest : liveValue?.value ?? null;
   const previous = values.length > 1 ? values[values.length - 2] : null;
@@ -714,7 +772,12 @@ function KpiLibraryCard({ kpi }: { kpi: KpiDefinition }) {
           </h3>
           <p className="mt-0.5 text-xs font-mono text-content-tertiary">{kpi.code}</p>
         </div>
-        <Badge variant="neutral">{kpi.category}</Badge>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {isCustom && (
+            <Badge variant="blue">{t('bi.kpi_custom', { defaultValue: 'Custom' })}</Badge>
+          )}
+          <Badge variant="neutral">{kpi.category}</Badge>
+        </div>
       </div>
       <div className="mt-3 flex items-end justify-between gap-2">
         <div>
@@ -790,8 +853,33 @@ function KpiLibraryCard({ kpi }: { kpi: KpiDefinition }) {
           >
             {t('bi.compute_now', { defaultValue: 'Compute' })}
           </Button>
+          {isCustom && (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Trash2 size={12} />}
+              onClick={() => setConfirmDelete(true)}
+              title={t('bi.kpi_delete_hint', {
+                defaultValue:
+                  'Delete this custom KPI. Refused while a widget, alert or report still reads it.',
+              })}
+              aria-label={t('bi.kpi_delete', { defaultValue: 'Delete KPI' })}
+            />
+          )}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        onConfirm={() => deleteMut.mutate()}
+        onCancel={() => setConfirmDelete(false)}
+        loading={deleteMut.isPending}
+        title={t('bi.kpi_delete_title', { defaultValue: 'Delete this KPI?' })}
+        message={t('bi.kpi_delete_message', {
+          defaultValue:
+            '{{name}} and its saved readings are removed for good. Anything still reading it has to be repointed first, and the deletion is refused until it is.',
+          name: kpi.name,
+        })}
+      />
       {drillOpen && (
         <KpiSourceRecordsDrawer
           kpi={kpi}
@@ -818,6 +906,27 @@ function KpiLibraryCard({ kpi }: { kpi: KpiDefinition }) {
 // result is likely truncated, so the drawer surfaces that explicitly instead of
 // implying the user is seeing every source row.
 const DRILL_DOWN_LIMIT = 100;
+
+/**
+ * Render one drill-down field.
+ *
+ * A breakdown group can be a `{label, value}` record rather than a bare
+ * number - the `top_by` aggregation has always returned them, and a
+ * breakdown that names its groups now does too - and `String()` on one
+ * prints "[object Object]" at the reader. The report writer already spells
+ * this shape "label: value"; this is the same sentence on screen.
+ */
+function drillFieldText(v: unknown): string {
+  if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+    const rec = v as Record<string, unknown>;
+    const keys = Object.keys(rec);
+    if (keys.length === 2 && keys.includes('label') && keys.includes('value')) {
+      return `${String(rec['label'])}: ${String(rec['value'])}`;
+    }
+    return JSON.stringify(v);
+  }
+  return String(v);
+}
 
 function KpiSourceRecordsDrawer({
   kpi,
@@ -894,12 +1003,12 @@ function KpiSourceRecordsDrawer({
                     ([k, v]) =>
                       k !== 'project_id' &&
                       v != null &&
-                      String(v).trim() !== '',
+                      drillFieldText(v).trim() !== '',
                   )
                   .map(([k, v]) => (
                     <div key={k} className="contents">
                       <dt className="font-medium">{humanizeToken(k)}</dt>
-                      <dd className="truncate tabular-nums">{String(v)}</dd>
+                      <dd className="truncate tabular-nums">{drillFieldText(v)}</dd>
                     </div>
                   ))}
               </dl>

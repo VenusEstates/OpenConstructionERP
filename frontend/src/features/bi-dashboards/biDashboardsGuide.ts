@@ -48,7 +48,7 @@ export const biDashboardsGuide: ModuleGuideContent = {
       titleDefault: 'The KPI library',
       bodyKey: 'guide.bi_dashboards.kpis.body',
       bodyDefault:
-        'Each KPI card shows its latest value, a sparkline of recent periods, the period-over-period change and the source modules that feed it. Click Compute to calculate it now from live data and save a snapshot, or Source records to drill into the underlying rows behind the number.',
+        'Each KPI card shows its latest value, a sparkline of recent periods, the period-over-period change and the source modules that feed it. Click Compute to calculate it now from live data and save a snapshot, or Source records to drill into the underlying rows behind the number. New KPI defines one of your own: pick the records, the aggregation, the field and any filters, and the platform computes it. There is no formula code to write, and a definition that is accepted is one that will produce a number, because it is checked against what the data actually holds before it is saved.',
     },
     {
       icon: 'FileSearch',

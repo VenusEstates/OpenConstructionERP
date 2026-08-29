@@ -328,6 +328,96 @@ export function computeKpi(
   );
 }
 
+/* ── Custom KPI (issue #441) ──────────────────────────────────────────── */
+
+/** A field kind decides which aggregations and filter operators it accepts. */
+export type KpiSpecFieldKind = 'numeric' | 'text' | 'uuid' | 'bool';
+
+export interface KpiSpecField {
+  name: string;
+  kind: KpiSpecFieldKind;
+}
+
+/** One entity a custom KPI may aggregate over, as the catalog describes it. */
+export interface KpiSpecEntity {
+  name: string;
+  source_module: string;
+  description: string;
+  fields: KpiSpecField[];
+  /** Fields that can be measured. */
+  numeric_fields: string[];
+  /** Fields a breakdown can be keyed by, or a group labelled with. */
+  groupable_fields: string[];
+}
+
+/**
+ * The whole vocabulary a spec may be written in, served by the backend.
+ *
+ * The form is built from this rather than from a copy kept here: the
+ * whitelist is the server's to define, and a picker offering a field the
+ * server has since dropped would only be refused on submit.
+ */
+export interface KpiSpecCatalog {
+  entities: KpiSpecEntity[];
+  aggregations: string[];
+  filter_operators: string[];
+  max_breakdown_groups: number;
+}
+
+export interface KpiSpecFilter {
+  field: string;
+  op: string;
+  /** `is_null` / `not_null` carry none; `in` carries a list. */
+  value?: unknown;
+}
+
+export interface KpiSpec {
+  entity: string;
+  aggregation: string;
+  /** Every aggregation but `count` needs a numeric field. */
+  field?: string;
+  /** `weighted_avg` only. */
+  weight_field?: string;
+  /** Keys the breakdown. */
+  group_by?: string;
+  /** Names each group of the breakdown, so ids read as words. */
+  label_field?: string;
+  filters?: KpiSpecFilter[];
+}
+
+export interface CreateKpiPayload {
+  code: string;
+  name: string;
+  description?: string;
+  unit?: string;
+  target_default?: number | string | null;
+  /** How stored values roll up over time - not what the KPI measures. */
+  aggregation?: string;
+  category?: KpiCategory;
+  project_id?: string | null;
+  spec: KpiSpec;
+}
+
+export function getKpiSpecCatalog(): Promise<KpiSpecCatalog> {
+  return apiGet<KpiSpecCatalog>(`${BASE}/kpis/spec-catalog`);
+}
+
+/**
+ * Register a custom KPI.
+ *
+ * A 422 carries `{path, value, allowed, message}` naming the part of the
+ * spec that was refused; `getErrorMessage` surfaces the message, which
+ * already starts with that path.
+ */
+export function createKpi(payload: CreateKpiPayload): Promise<KpiDefinition> {
+  return apiPost<KpiDefinition>(`${BASE}/kpis`, payload);
+}
+
+/** Delete a custom KPI. Refused with 409 while anything still reads it. */
+export function deleteKpi(code: string): Promise<void> {
+  return apiDelete<void>(`${BASE}/kpis/${encodeURIComponent(code)}`);
+}
+
 /* ── Dashboards ───────────────────────────────────────────────────────── */
 
 export interface StarterPackResult {
