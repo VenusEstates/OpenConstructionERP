@@ -81,22 +81,48 @@ export async function expectAppShell(page: Page): Promise<void> {
   await expect(shell).toBeVisible({ timeout: 15_000 });
 }
 
-/** Switch UI language via the language switcher dropdown. */
+/**
+ * Display name each dropdown entry renders (Header.tsx:1102-1116,
+ * `SUPPORTED_LANGUAGES` in app/i18n.ts) — this is the entry's accessible
+ * name, since the entry has no `data-testid` and is not `role="option"`.
+ */
+const LANGUAGE_NAMES: Record<
+  'en' | 'de' | 'ru' | 'ar' | 'es' | 'fr' | 'pt' | 'it' | 'pl' | 'ja' | 'ko' | 'zh',
+  string
+> = {
+  en: 'English',
+  de: 'Deutsch',
+  ru: 'Русский',
+  ar: 'العربية',
+  es: 'Español',
+  fr: 'Français',
+  pt: 'Português',
+  it: 'Italiano',
+  pl: 'Polski',
+  ja: '日本語',
+  ko: '한국어',
+  zh: '简体中文',
+};
+
+/**
+ * Switch UI language via the language switcher dropdown.
+ *
+ * The trigger button carries `aria-label="Language: <name>"`
+ * (Header.tsx:1086), and each entry in the opened menu is a
+ * `role="menuitem"` button whose accessible name is the language's own
+ * display name (Header.tsx:1099-1116) — neither element carries a
+ * `data-testid`, and the entries are NOT `role="option"`.
+ *
+ * NB: the old locator looked for `[data-testid="lang-${lang}"]` /
+ * `[role="option"][data-value="${lang}"]`, which the app renders neither
+ * of, so it always fell through to a "last resort" that navigated to
+ * `?locale=${lang}`. The app only ever reads `?lang=`
+ * (`resolveInitialLanguage`, app/i18n.ts:300) — never `?locale=` — so that
+ * fallback silently did nothing and every caller of this helper was
+ * testing English regardless of the language it asked for.
+ */
 export async function switchLanguage(page: Page, lang: 'en' | 'de' | 'ru' | 'ar' | 'es' | 'fr' | 'pt' | 'it' | 'pl' | 'ja' | 'ko' | 'zh'): Promise<void> {
-  // Preferred: data-testid; fallback: aria-label.
-  const trigger = page.locator(
-    '[data-testid="language-switcher"], button[aria-label*="language" i]',
-  ).first();
-  if (await trigger.isVisible({ timeout: 1_000 }).catch(() => false)) {
-    await trigger.click();
-    const opt = page.locator(`[data-testid="lang-${lang}"], [role="option"][data-value="${lang}"]`).first();
-    if (await opt.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      await opt.click();
-      return;
-    }
-  }
-  // Last-resort: poke i18next via the global query param the app respects.
-  const url = new URL(page.url());
-  url.searchParams.set('locale', lang);
-  await page.goto(url.toString());
+  const trigger = page.locator('button[aria-label*="language" i]').first();
+  await trigger.click();
+  await page.getByRole('menuitem', { name: LANGUAGE_NAMES[lang], exact: true }).click();
 }
