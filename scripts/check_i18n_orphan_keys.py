@@ -42,10 +42,25 @@ Four things worth knowing about how it counts:
     as holes made one 1499-key overlay print 25280 errors. A variant is only
     missing a key when its base is missing it too.
 
-  * Scope. Keys called WITHOUT a defaultValue are out of scope. A missing
-    one of those renders the raw key on screen, which is loud, self-reporting
-    and gets fixed the day someone opens the page. The defaultValue form is
-    the silent one, and silence is what needs a machine watching it.
+  * Scope. Keys called WITHOUT a default are out of scope. A missing one of
+    those renders the raw key on screen, which is loud, self-reporting and
+    gets fixed the day someone opens the page. A default is the silent one,
+    and silence is what needs a machine watching it.
+
+    i18next takes a default in two shapes and both are silent: the options
+    object this guard was written around, and a bare string as the second
+    argument, `t(key, 'Some English')`. For a long time only the first was
+    read, so the second was out of scope by accident rather than by the
+    reasoning above - the same defect the guard exists to catch, in the shape
+    it happened not to match. Measured when that was fixed: 1120 keys were
+    called only in the positional shape, and 20 of them had a real gap. Eight
+    were answered by no locale at all and had been English in every language
+    since they were written - `people.no_login` and its neighbours in the
+    project people picker, and three subtotal lines in the assembly library.
+    `positionalDefaultIsADefaultValue.test.ts` asserts the runtime behaviour
+    this scope now rests on, so an i18next that stopped honouring the
+    positional form would fail there rather than turn this guard back into a
+    formality.
 
   * Baseline, not allowlist. Known debt lives in i18n_orphan_baseline.json
     as an explicit map of key to the SET of locales that cannot answer it,
@@ -113,7 +128,9 @@ _KEY_LINE = re.compile(r'^\s*"([A-Za-z0-9_.\-]+)"\s*:', re.MULTILINE)
 # identical-fraction heuristic below, so a value this misses (wrapped across
 # lines, which the generator does not produce) only narrows that sample and
 # never affects which keys count as missing.
-_KEY_VALUE_LINE = re.compile(r'^\s*"([A-Za-z0-9_.\-]+)"\s*:\s*"((?:[^"\\]|\\.)*)"', re.MULTILINE)
+_KEY_VALUE_LINE = re.compile(
+    r'^\s*"([A-Za-z0-9_.\-]+)"\s*:\s*"((?:[^"\\]|\\.)*)"', re.MULTILINE
+)
 
 # `{ code: 'xx', ... }` entries inside SUPPORTED_LANGUAGES.
 _SUPPORTED_CODE = re.compile(r"code:\s*'([A-Za-z0-9\-]+)'")
@@ -124,6 +141,20 @@ _SUPPORTED_CODE = re.compile(r"code:\s*'([A-Za-z0-9\-]+)'")
 # and `[^}]*` stops at the first `}` of an interpolation, which would drop
 # real call sites and make this guard quietly narrower than it claims.
 _CALL_HEAD = re.compile(r"""\bt\(\s*(['"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\1\s*,\s*\{""")
+
+# The other defaultValue shape: `t(key, 'English')`. i18next reads a bare
+# string second argument as the default, so these fail exactly as silently as
+# the object form and belong in the same scope. Nothing is brace-matched here
+# because there is no options object to match; the key is what this guard
+# needs and the default itself is never read.
+#
+# The opening quote of the default is enough to tell this shape from the
+# others. A second argument that is a variable, a call or an object is not a
+# default this guard can name, and `t(key)` alone is the loud case the scope
+# paragraph excludes on purpose.
+_CALL_HEAD_STRING_DEFAULT = re.compile(
+    r"""\bt\(\s*(['"])([A-Za-z0-9_][A-Za-z0-9_.\-]*)\1\s*,\s*['"`]"""
+)
 
 _CLDR_SUFFIXES = ("_zero", "_one", "_two", "_few", "_many", "_other")
 
@@ -259,7 +290,14 @@ def _read_locales() -> dict[str, set[str]]:
 
 
 def _read_call_sites() -> dict[str, str]:
-    """Map each key called with a defaultValue to the first file calling it."""
+    """Map each key called with a default to the first file calling it.
+
+    Both default shapes count. The file-level skip is on ``t(`` rather than on
+    ``defaultValue``, because a file whose every default is positional never
+    contains that word and used to be skipped whole - which is how the
+    positional shape stayed out of scope twice over, once in the regex and
+    once before the regex ever ran.
+    """
     sites: dict[str, str] = {}
     for path in sorted(glob.glob(SOURCE_GLOB, recursive=True)):
         posix = path.replace(os.sep, "/")
@@ -267,12 +305,14 @@ def _read_call_sites() -> dict[str, str]:
             continue
         with open(path, encoding="utf-8") as fh:
             text = fh.read()
-        if "defaultValue" not in text:
+        if "t(" not in text:
             continue
         for match in _CALL_HEAD.finditer(text):
             body = _options_body(text, match.end() - 1)
             if body is None or "defaultValue" not in body:
                 continue
+            sites.setdefault(match.group(2), posix)
+        for match in _CALL_HEAD_STRING_DEFAULT.finditer(text):
             sites.setdefault(match.group(2), posix)
     return sites
 
@@ -304,7 +344,9 @@ def missing_locales(
     """
     reach = _reach(key, by_locale)
     return sorted(
-        stem for stem in by_locale if stem not in reach and bases[stem] not in reach and stem not in in_progress
+        stem
+        for stem in by_locale
+        if stem not in reach and bases[stem] not in reach and stem not in in_progress
     )
 
 
@@ -321,7 +363,9 @@ def downgraded_locales(
     reported with a number instead of disappearing from the guard's output.
     """
     reach = _reach(key, by_locale)
-    return sorted(stem for stem in in_progress if stem not in reach and bases[stem] not in reach)
+    return sorted(
+        stem for stem in in_progress if stem not in reach and bases[stem] not in reach
+    )
 
 
 def main() -> int:
@@ -380,7 +424,9 @@ def main() -> int:
         )
         return 1
     en_values = read_en_values()
-    in_progress, fractions, abandoned = classify_locales(by_locale, supported, en_values)
+    in_progress, fractions, abandoned = classify_locales(
+        by_locale, supported, en_values
+    )
 
     new_gaps: list[tuple[str, str, list[str]]] = []
     widened: list[tuple[str, list[str]]] = []
@@ -426,7 +472,9 @@ def main() -> int:
             f"{', '.join(sorted(abandoned))}"
         )
     else:
-        print("0 locale(s) outside SUPPORTED_LANGUAGES read as an abandoned, unoffered file.")
+        print(
+            "0 locale(s) outside SUPPORTED_LANGUAGES read as an abandoned, unoffered file."
+        )
 
     if new_gaps or widened:
         for key, first_file, missing in new_gaps:
@@ -465,12 +513,17 @@ def main() -> int:
     # and the message it prints would still read like an ordinary gap.
     print(
         "  regional variants resolving through a base language: "
-        + (", ".join(f"{stem} via {base}" for stem, base in sorted(variants.items())) or "none")
+        + (
+            ", ".join(f"{stem} via {base}" for stem, base in sorted(variants.items()))
+            or "none"
+        )
     )
     if healed:
         shown = ", ".join(healed[:12])
         more = f", and {len(healed) - 12} more" if len(healed) > 12 else ""
-        print(f"  {len(healed)} baseline key(s) now fully answered, drop them: {shown}{more}")
+        print(
+            f"  {len(healed)} baseline key(s) now fully answered, drop them: {shown}{more}"
+        )
     return 0
 
 
