@@ -223,6 +223,17 @@ def _describe_holders(holders: dict[str, int]) -> str:
     return ", ".join(parts)
 
 
+def _agreeing_verb(holders: dict[str, int], singular: str, plural: str) -> str:
+    """Pick the verb form that agrees with ``_describe_holders(holders)``.
+
+    The rendered phrase is one grammatical subject even when it names several
+    kinds ("2 goods receipts, 1 payable invoice"), and a coordinated subject
+    takes the plural regardless of how each part is counted. Only a single
+    holder of a single kind is singular.
+    """
+    return singular if sum(holders.values()) == 1 else plural
+
+
 def _holders_conflict(code: str, message: str, remediation: str, holders: dict[str, int]) -> HTTPException:
     """Build the 409 a removal refusal returns.
 
@@ -1152,7 +1163,7 @@ class ProcurementService:
             code="purchase_order_has_dependents",
             message=(
                 f"Purchase order {po.po_number} cannot be {'cancelled' if action == 'cancel' else 'deleted'}: "
-                f"{described} still refer to it."
+                f"{described} still {_agreeing_verb(holders, 'refers', 'refer')} to it."
             ),
             remediation=(
                 "Reverse or detach those records first, or close the purchase order short "
