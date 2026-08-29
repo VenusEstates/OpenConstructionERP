@@ -2,14 +2,14 @@
 # Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 """The vendor label on a purchase order, for a contact with only an email.
 
-``Contact`` has no ``email`` column - the column is ``primary_email`` - and
-three copies of the same display-name rule around this codebase ended their
-fallback chain on ``c.email``. Two of them are reached only when a contact has
-neither a company name nor a person name, which is exactly the shape a vendor
-imported from a supplier list or created from an inbound invoice arrives in.
-The purchase order list endpoint therefore raised AttributeError, as a 500 over
-the whole page rather than one unnamed row, for any project with such a vendor
-on any of its orders.
+``Contact`` has no ``email`` column - the column is ``primary_email`` - and the
+same display-name rule was written out by hand in several places, two of which
+ended their fallback chain on ``c.email``. That branch is reached only when a
+contact has neither a company name nor a person name, which is exactly the
+shape a vendor imported from a supplier list or created from an inbound invoice
+arrives in. The purchase order list endpoint therefore raised AttributeError,
+as a 500 over the whole page rather than one unnamed row, for any project with
+such a vendor on any of its orders.
 
 The test drives the endpoint rather than the helper underneath it, because the
 helper was never the thing that was wrong: the rule it applied was written out
@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from decimal import Decimal
 
 import pytest
 import pytest_asyncio
@@ -30,6 +31,7 @@ from app.modules.contacts.models import Contact
 from app.modules.procurement import router as procurement_router
 from app.modules.procurement.models import PurchaseOrder
 from app.modules.procurement.service import ProcurementService
+from app.modules.reporting.service import ReportingService
 from tests._pg import transactional_session
 
 
@@ -156,3 +158,44 @@ async def test_po_list_falls_back_to_the_person_when_there_is_no_company(session
     resp = await _list_pos(session, project_id)
 
     assert resp.items[0].vendor_name == "Anna Schmidt"
+
+
+@pytest.mark.asyncio
+async def test_retainage_report_names_a_vendor_that_has_only_an_email(session: AsyncSession) -> None:
+    """The retainage report resolves the same vendor through the same helper.
+
+    This path already delegated correctly, so this test guards rather than
+    fixes. It earns its place because the lookup sits inside a broad handler
+    that logs at debug and moves on: if the rule there is ever rewritten by
+    hand and breaks, the report does not fail, it silently drops every vendor
+    name and reads as a page of blank counterparties. A swallow with no test
+    over it is exactly how the other two copies rotted unnoticed.
+    """
+    vendor = Contact(
+        contact_type="vendor",
+        company_name=None,
+        first_name=None,
+        last_name=None,
+        primary_email="rechnung@example.de",
+    )
+    session.add(vendor)
+    await session.flush()
+
+    project_id = uuid.uuid4()
+    session.add(
+        PurchaseOrder(
+            project_id=project_id,
+            po_number="PO-0004",
+            vendor_contact_id=str(vendor.id),
+            amount_total="1000.00",
+            currency_code="EUR",
+            retention_percent=Decimal("5.00"),
+            issue_date="2026-03-15",
+        )
+    )
+    await session.flush()
+
+    report = await ReportingService(session).render_po_retainage_reconciliation(project_id, "2026-01-01", "2026-12-31")
+
+    assert len(report["po_rows"]) == 1
+    assert report["po_rows"][0]["vendor_name"] == "rechnung@example.de"
