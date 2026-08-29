@@ -1004,6 +1004,24 @@ jobs:
           tests/unit/teams/test_teams_access_control.py
           tests/modules/requirements/test_matrix_and_traceability.py
           -q -p no:cacheprovider
+      # Named one file at a time because nothing else runs them. Measured
+      # 2026-08-29: tests/modules/property_dev holds 254 tests, the marker and
+      # the -k chain in ci.yml between them select 59, and 195 are run by no
+      # lane at all. What does get selected is selected by spelling rather than
+      # by subject. test_admin_tenant_boundary.py is covered 8 of 8 because its
+      # filename contains "tenant", while test_currency_mixing.py beside it is
+      # covered 0 of 16. The three files below carry the guards for the
+      # property_dev.owner_scoped_delete split and none of them wins that
+      # lottery, so without this step the newest ownership guards in the module
+      # are green only on the machine that wrote them. This does not close the
+      # remaining 192; it stops these three from being decorative.
+      - name: Run property_dev delete-permission guards
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: >-
+          pytest tests/modules/property_dev/test_delete_permission_deadlock.py
+          tests/modules/property_dev/test_owner_scoped_delete_invariant.py
+          tests/modules/property_dev/test_service_surface_resolves.py
+          -q -p no:cacheprovider --timeout=300 --timeout-method=thread
       # Two steps rather than one because two halves is how the integration set
       # was actually measured, and a single process holding all eighteen files
       # has never been run anywhere. The extra cluster boot is seconds; a first
