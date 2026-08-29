@@ -222,6 +222,36 @@ repos:
         pass_filenames: false
         files: ^frontend/src/app/locales/.*\.ts$
 
+      # The other direction of the same defect: an escape stripped to bare
+      # letters, `u2013` where the value should carry one backslash and render
+      # as a dash. The guard above looks for a doubled backslash and cannot see
+      # this, and its own docstring opens by naming itself the second half of
+      # that pair. Same files, and provably so: all three locale scripts carry
+      # the identical `LOCALE_GLOB = "frontend/src/app/locales/*.ts"`, which is
+      # why the pattern below is copied rather than written afresh. Undeclared
+      # here until now for no reason anyone recorded. CI already runs it on
+      # every push, so this changes the accounting and not the coverage.
+      - id: locale-lost-escape-check
+        name: Block Unicode escapes stripped to bare letters in locale files
+        entry: python scripts/check_locale_lost_escapes.py
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/app/locales/.*\.ts$
+
+      # Block one word built from both Cyrillic and Latin letters. Two scripts
+      # in one value are fine, "Excel файл" is correct; two inside one word
+      # come only from a homoglyph or a half-finished edit, and the bg value
+      # reading "Заменен" with a Latin a where Bulgarian needs U+0430 is the
+      # same glyph on screen, so no amount of reading the page finds it. 75
+      # words across 14 locales when it was written. Same glob as the two
+      # above, same reason. CI already runs it on every push.
+      - id: locale-mixed-script-check
+        name: Block Cyrillic and Latin letters inside one locale word
+        entry: python scripts/check_locale_mixed_script.py
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/app/locales/.*\.ts$
+
       # Scan the whole of en.ts for values byte-identical to their source in
       # 24+ of 28 non-en locales, and require every hit to land in exactly
       # one of two never-merged lists: i18n_leak_allowlist.json (identical on

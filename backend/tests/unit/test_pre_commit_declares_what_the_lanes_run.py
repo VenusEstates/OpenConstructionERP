@@ -2,12 +2,21 @@
 # Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 """The hook config and the lanes may diverge, but only on purpose.
 
-``.pre-commit-config.yaml`` declares 38 hooks. Thirty-four of them sit at the
-default pre-commit stage and none of those run in this checkout, because there
-is no ``.git/hooks/pre-commit``: the only installed hook is a hand-written
-``commit-msg`` shim that calls ``check_commit_subject.py`` and
-``check_commit_trailers.py`` directly. The shim says so itself, and it exists
-because twelve commits once shipped with a shell fragment as their subject.
+``.pre-commit-config.yaml`` declares 39 hooks and exactly two of them run when
+you commit here. Thirty-five sit at the default pre-commit stage and none of
+those run at all, because there is no ``.git/hooks/pre-commit``. One more,
+``conventional-pre-commit``, is staged for commit-msg and does not run either.
+One is manual by declaration. The two that run are ``check_commit_subject.py``
+and ``check_commit_trailers.py``, and they run because a hand-written
+``commit-msg`` shim calls the scripts directly rather than through pre-commit.
+The shim says so itself, and it exists because twelve commits once shipped with
+a shell fragment as their subject.
+
+An earlier version of this docstring said 38 and thirty-four. Both were wrong,
+and nothing had changed in the config: the count was simply taken badly. The
+numbers above come from ``yaml.safe_load`` over the file and from reading
+``.git/hooks/`` for what is installed, which is the only pair of sources that
+can answer this, since a declaration and an executable are two artefacts.
 
 That is survivable, and measurably so. Every script named by a local hook is
 also invoked by at least one workflow, 26 of 26, so nothing is guarded by the
@@ -90,8 +99,6 @@ CI_ONLY_UNEXPLAINED = frozenset(
         "check_case_routes.py",
         "check_demo_firm_names.py",
         "check_i18n_computed_keys.py",
-        "check_locale_lost_escapes.py",
-        "check_locale_mixed_script.py",
         "check_migration_heads.py",
         "check_module_display_names.py",
         "check_module_manifests.py",
@@ -101,7 +108,7 @@ CI_ONLY_UNEXPLAINED = frozenset(
         "check_zero_width.py",
     }
 )
-UNEXPLAINED_CEILING = 13
+UNEXPLAINED_CEILING = 11
 
 # No caller in any channel: no hook, no lane, no test, no Makefile, no sibling
 # script. Recorded rather than deleted, because removing code is a decision for
