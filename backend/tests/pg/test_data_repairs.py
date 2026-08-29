@@ -49,6 +49,7 @@ from sqlalchemy import select, text
 from app.core.data_repairs import DataRepair, DataRepairLedger, run_data_repairs
 from app.modules.formwork.debrand import LEGACY_BRANDED_SYSTEMS
 from app.modules.formwork.models import FormworkSystem
+from tests._repair_registry_source import repairs_missing_from
 
 pytestmark = pytest.mark.asyncio
 
@@ -474,13 +475,21 @@ async def test_the_whole_registry_runs_clean_against_a_current_schema(repair_fac
     to one repair so that adding another does not fail them, and this is the
     one that has to notice a new entry. A repair that raises here raises on
     every customer's boot.
-    """
-    from app.core.data_repairs import DATA_REPAIRS
 
+    The coverage check reads the registrations out of ``app/**/repairs.py`` as
+    source. It used to be ``report.attempted == len(DATA_REPAIRS)``, which is
+    the registry compared against itself: the report is what running the
+    registry produced and the length is the registry's own. A repair that fell
+    out of it - a module that stopped importing, a registration deleted - fell
+    out of both sides at once and the assertion went on passing, so it could
+    never fail for the thing it was written to catch. See
+    ``tests/_repair_registry_source.py``.
+    """
     report = await run_data_repairs(repair_factory, app_version="test")
 
-    assert report.attempted == len(DATA_REPAIRS)
+    assert repairs_missing_from(report) == set()
     assert report.failed == ()
+    assert report.discovery_failures == ()
     assert report.ledger_written is True
 
 
@@ -492,15 +501,17 @@ async def test_every_registered_repair_is_idempotent(repair_factory) -> None:
     fails this doubles or re-writes something on every restart, which is worse
     than one that never runs - and only a test that reads the registry rather
     than a fixed list will notice when a new entry breaks it.
-    """
-    from app.core.data_repairs import DATA_REPAIRS
 
+    Coverage is read from source for the reason given on the test above: a
+    count taken from the registry the pass just ran cannot notice a repair
+    going missing from it.
+    """
     await _seed_branded(repair_factory)
 
     await run_data_repairs(repair_factory, app_version="test")
     second = await run_data_repairs(repair_factory, app_version="test")
 
-    assert second.attempted == len(DATA_REPAIRS)
+    assert repairs_missing_from(second) == set()
     not_idempotent = [(o.repair_id, o.rows_changed) for o in second.outcomes if o.rows_changed]
     assert not not_idempotent, f"second pass changed rows: {not_idempotent}"
 

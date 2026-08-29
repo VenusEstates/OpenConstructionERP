@@ -541,7 +541,15 @@ class DataRepairReport:
 
     @property
     def attempted(self) -> int:
-        """How many repairs were actually run."""
+        """How many repairs were actually run.
+
+        Never compare this against the length of the registry it was built
+        from: a repair that drops out of the registry drops out of both sides
+        at once and the comparison holds, so it cannot fail for the thing it
+        would be written to catch. ``tests/pg/test_data_repairs.py`` checks it
+        against the ``register_data_repair()`` calls read out of the source
+        instead.
+        """
         return len(self.outcomes)
 
     @property
