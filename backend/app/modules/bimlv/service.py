@@ -32,6 +32,7 @@ from app.modules.bimlv.container import (
     write_container,
 )
 from app.modules.boq.models import BOQ, Position
+from app.modules.boq.service import SECTION_UNITS
 from app.modules.projects.models import Project
 
 logger = logging.getLogger(__name__)
@@ -40,9 +41,11 @@ logger = logging.getLogger(__name__)
 # distinguishable from manual / rule_based links in the existing table.
 LINK_TYPE = "bimlv"
 
-# GAEB section header rows carry this synthetic unit and never represent a
-# measurable LV position, so they are excluded from the exported LV.
-_SECTION_UNIT = "section"
+# Section header rows never represent a measurable LV position, so they are
+# excluded from the exported LV. Their unit is the sentinel the BOQ module owns
+# and spells two ways, so the vocabulary comes from there: this filter used to
+# name only "section", the spelling the file importers write, and so exported a
+# seeded bill's headers as positions measured in pieces.
 
 
 @dataclass(slots=True)
@@ -227,7 +230,7 @@ async def export_container(boq_id: uuid.UUID, db: AsyncSession) -> ContainerExpo
         (
             await db.execute(
                 select(Position)
-                .where(Position.boq_id == boq_id, Position.unit != _SECTION_UNIT)
+                .where(Position.boq_id == boq_id, Position.unit.notin_(SECTION_UNITS))
                 .order_by(Position.sort_order),
             )
         )
