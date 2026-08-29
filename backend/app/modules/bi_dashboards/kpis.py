@@ -2312,9 +2312,19 @@ async def incident_count_kpi(
 ) -> KPIComputation:
     """Raw incident count, optionally windowed by ``incident_date``.
 
-    Uses the real ``SafetyIncident`` model (the ``safety_trir`` formula
-    imports a non-existent ``Incident`` alias and so silently counts zero;
-    this KPI is the working count surface).
+    Uses the real ``SafetyIncident`` model. This KPI exists as a separate
+    count surface because ``safety_trir`` once imported a non-existent
+    ``Incident`` and so silently read zero. ``d1e556037`` (v8.8.3) fixed
+    that by importing ``SafetyIncident as Incident``, in
+    ``safety_trir_kpi`` and in the ``safety_trir`` record provider alike,
+    and both have read real rows ever since.
+
+    The past tense above is deliberate. The sentence this replaces said in
+    the present that ``safety_trir`` counts zero, was left untouched by the
+    fix, and was later read as a measurement rather than as history, which
+    is how two phantom always-zero KPIs reached a defect register. A note
+    about a bug needs a date and a past tense, or it outlives its subject
+    and gets re-filed as a live one.
     """
     count = 0
     try:
