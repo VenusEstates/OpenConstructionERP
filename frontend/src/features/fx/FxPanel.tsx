@@ -46,8 +46,9 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { TruncationNotice } from '@/shared/ui/TruncationNotice';
-import { getErrorMessage } from '@/shared/lib/api';
+import { ApiError, getErrorMessage } from '@/shared/lib/api';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';
 import { useToastStore } from '@/stores/useToastStore';
 
@@ -636,6 +637,24 @@ function PolicyTab({ projectId }: { projectId: string }) {
       <p className="text-sm text-content-tertiary">
         {t('common.loading', { defaultValue: 'Loading...' })}
       </p>
+    );
+  }
+
+  // A 404 means the project has no policy, which is the ordinary state and is
+  // rendered as an invitation below. Any other failure - a 500, a dropped
+  // connection - must not borrow that wording: telling somebody "nothing is
+  // broken" while the server is down is how a missing policy gets set twice.
+  const policyLoadFailed =
+    policyQuery.isError && !(policyQuery.error instanceof ApiError && policyQuery.error.status === 404);
+
+  if (policyLoadFailed && !editing) {
+    return (
+      <ErrorState
+        title={getErrorMessage(policyQuery.error)}
+        onRetry={() => {
+          void policyQuery.refetch();
+        }}
+      />
     );
   }
 

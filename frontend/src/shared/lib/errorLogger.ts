@@ -121,6 +121,18 @@ export const RECORDING_WHITELIST: readonly RecordingFilter[] = [
     path: /\/v1\/users\/?\?[^#]*\blimit=(?:1[1-9]\d|[2-9]\d{2,}|\d{4,})\b/i,
     status: 422,
   },
+  // 5) /v1/fx/policies/{uuid}/ 404 — a project with no currency policy is the
+  // ordinary state of every project until somebody sets one, including the
+  // demo project a fresh install ships with. The FX panel renders that 404 as
+  // an invitation to set one, and the DELETE returns the same 404 for removing
+  // a policy that is already absent, which is equally benign. Anchored on the
+  // project id so the /validation/ subpath underneath it is not swallowed: that
+  // endpoint answers "nothing examined" with a 200, and a real 404 there would
+  // be a routing fault worth capturing.
+  {
+    path: /\/v1\/fx\/policies\/[0-9a-f-]+\/?(?:$|\?)/i,
+    status: 404,
+  },
 ];
 
 /**

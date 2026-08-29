@@ -122,6 +122,31 @@ describe('errorLogger recording whitelist', () => {
     expect(getErrorLog()).toHaveLength(0);
   });
 
+  it('drops /v1/fx/policies/{uuid}/ 404 (project has no currency policy yet)', () => {
+    logApiError(
+      '/v1/fx/policies/f1a95000-0001-4a00-8b00-000000000001/',
+      404,
+      'No FX policy is configured for project f1a95000-0001-4a00-8b00-000000000001',
+    );
+    expect(getErrorLog()).toHaveLength(0);
+  });
+
+  it('does NOT suppress a 404 on the FX policy validation subpath', () => {
+    // /validation/ answers with a 200 and an empty report when there is no
+    // policy, so a 404 there is a routing fault and must be recorded.
+    logApiError(
+      '/v1/fx/policies/f1a95000-0001-4a00-8b00-000000000001/validation/',
+      404,
+      'Not Found',
+    );
+    expect(getErrorLog().length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does NOT suppress a 500 on /v1/fx/policies/{uuid}/ (real failure)', () => {
+    logApiError('/v1/fx/policies/f1a95000-0001-4a00-8b00-000000000001/', 500, 'oops');
+    expect(getErrorLog().length).toBeGreaterThanOrEqual(1);
+  });
+
   it('does NOT suppress unrelated 404s on the same modules', () => {
     // A genuine 404 on /v1/projects/{id}/boqs/ is unrelated to the
     // profile-retrofit issue — must still be recorded.
