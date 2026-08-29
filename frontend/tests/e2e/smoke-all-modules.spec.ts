@@ -167,7 +167,8 @@ test.beforeAll(async () => {
   });
   const pd = await pr.json();
   const items: Array<{ id: string; name: string }> = Array.isArray(pd) ? pd : pd.items ?? [];
-  if (items.length) PROJECT = { id: items[0].id, name: items[0].name };
+  const [first] = items;
+  if (first) PROJECT = { id: first.id, name: first.name };
 });
 
 function ensureDir(p: string) {

@@ -87,7 +87,8 @@ async function openSession(): Promise<Session> {
     const pr = await fetch(`${API}/api/v1/projects/`, { headers: { Authorization: `Bearer ${token}` } });
     const pd = await pr.json();
     const items: Array<{ id: string; name: string }> = Array.isArray(pd) ? pd : (pd.items ?? []);
-    if (items.length) project = { id: items[0].id, name: items[0].name };
+    const [first] = items;
+    if (first) project = { id: first.id, name: first.name };
   } catch {
     /* a missing project list is non-fatal; modules still render their chrome */
   }

@@ -84,10 +84,17 @@ export function expectNoConsoleErrors(errors: string[], allow: RegExp[] = []): v
  * mismatch on a freshly-cloned dev box). Only "down" or missing status
  * fails the assertion.
  */
-export function expectHealthShape(body: unknown): asserts body is { status: string; version: string } {
+export function expectHealthShape(
+  body: unknown,
+): asserts body is { status: string; version: string; modules_loaded: number } {
   expect(typeof body).toBe('object');
   const b = body as Record<string, unknown>;
   expect(b.status, `unexpected health status "${b.status}"`).toMatch(/^(healthy|degraded)$/);
   expect(typeof b.version).toBe('string');
   expect((b.version as string).length).toBeGreaterThan(0);
+  // The payload has always carried this count - backend/app/main.py builds it
+  // into the response unconditionally - and health.spec asserts on it. The
+  // guard has to vouch for it, rather than narrow the body to a shape its own
+  // caller then has to reach outside of.
+  expect(typeof b.modules_loaded, 'health payload must report modules_loaded').toBe('number');
 }

@@ -20,10 +20,9 @@ const SHOTS = 'C:/Users/Artem Boiko/Desktop/CodeProjects/ERP_26030500/backend/_e
 const HOST = new URL(BASE).host;
 
 const PROJ = {
-  downtownMedical: 'e6a93f4c-ff4b-4d2a-92fc-ab6477e8afbb', // has geo tileset d346a4b2
+  downtownMedical: 'e6a93f4c-ff4b-4d2a-92fc-ab6477e8afbb', // geo tileset d346a4b2-2cdf-43a8-b492-e257b7e5f384
   berlinMitte: 'f4c80264-cf27-40e4-ac4d-68ddf6877996', // clean spine, DIN276 BOQ
 };
-const GEO_TILESET_ID = 'd346a4b2-2cdf-43a8-b492-e257b7e5f384';
 // Downtown Medical tileset.source_id — used as ?model= so the viewer flies
 // the camera onto the building's bounding sphere.
 const GEO_BIM_SOURCE = 'e7b92f12-f716-4ed5-8cd4-a50d9c2dfee1';

@@ -1,0 +1,22 @@
+// Type checking for frontend/tests/e2e.
+//
+// tsconfig.json carries `include: ["src"]`, so the whole e2e directory - the
+// specs, the fixtures, the helpers and the reporters - was invisible to the
+// only gate the frontend answers to. The harness that polices our e2e code was
+// itself unpoliced. Measured on 2026-08-29 the hole held 15 type errors.
+//
+// A separate project rather than adding "tests/e2e" to the base include, for a
+// reason recorded in ci.yml: the whole-program check already OOM'd at a 6 GB
+// heap and now runs at 9 GB, and macOS skips it because 9 GB exceeds that
+// runner's RAM. Folding 38 more files plus @playwright/test's types into that
+// same program raises peak heap on the one step with that history. A second,
+// sequential pass costs about 20 seconds and no extra memory. It also keeps
+// Playwright's types out of the app's program, which src never imports.
+//
+// It extends the base config and overrides no compiler option on purpose.
+// Exempting this directory from strictness would leave the same hole under a
+// nicer name.
+{
+  "extends": "./tsconfig.json",
+  "include": ["tests/e2e"]
+}

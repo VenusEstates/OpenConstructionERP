@@ -62,10 +62,11 @@ async function navigateToFirstProject(page: Page): Promise<void> {
   const items: { id: string }[] = Array.isArray(body)
     ? body
     : body.items ?? [];
-  if (items.length === 0) {
+  const [first] = items;
+  if (!first) {
     throw new Error('No projects in the seed DB.');
   }
-  const id = items[0].id;
+  const id = first.id;
   await page.goto(`/projects/${id}`);
   await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}/, {
     timeout: 15_000,

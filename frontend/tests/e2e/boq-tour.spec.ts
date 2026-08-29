@@ -73,7 +73,7 @@ async function openAnyBOQ(page: Page): Promise<void> {
       sessionStorage.getItem('oe_access_token') ??
       localStorage.getItem('oe_access_token'),
   );
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
   const projRes = await page.request.get('/api/v1/projects/?limit=20', {
     headers,
@@ -99,8 +99,9 @@ async function openAnyBOQ(page: Page): Promise<void> {
     const items: { id: string }[] = Array.isArray(body)
       ? body
       : body.items ?? [];
-    if (items.length > 0) {
-      boqId = items[0].id;
+    const [first] = items;
+    if (first) {
+      boqId = first.id;
       break;
     }
   }
