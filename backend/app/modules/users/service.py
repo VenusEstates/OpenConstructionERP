@@ -198,10 +198,18 @@ def generate_api_key() -> tuple[str, str, str]:
 
 # Whitelist of seeded demo accounts. Must mirror the same set in
 # ``backend/app/modules/users/router.py:_DEMO_EMAIL_WHITELIST`` and
-# ``backend/app/main.py:_seed_demo_account``. The integration test
-# ``test_demo_login_endpoint.py`` asserts router and seeder stay in sync;
-# this duplicate exists so ``login()`` can route demo logins without
-# importing from router (which would create a circular import).
+# ``backend/app/main.py:_seed_demo_account``. This duplicate exists so
+# ``login()`` can route demo logins without importing from router (which
+# would create a circular import).
+#
+# All three copies are covered:
+# ``test_demo_login_endpoint.py::test_whitelist_matches_seeder_spec`` parses
+# the seeder's literals out of its source and asserts the router set AND this
+# set both equal them. This comment used to say the test checked "router and
+# seeder", which undersold it by exactly one copy - and a reader acting on
+# that went looking for an uncovered mirror that does not exist. A comment
+# that understates its own guard invents work the same way one that overstates
+# it hides a gap.
 _DEMO_EMAIL_WHITELIST: frozenset[str] = frozenset(
     {
         "demo@openconstructionerp.com",

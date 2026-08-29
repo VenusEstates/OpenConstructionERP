@@ -3095,6 +3095,21 @@ def create_app() -> FastAPI:
         # three of the strings config.py rejects, and its length test counted
         # UTF-8 bytes where config.py counted characters, so the two disagreed
         # on any non-ASCII secret.
+        #
+        # Read the next branch knowing this: for APP_ENV != "development" it
+        # CANNOT BE REACHED. app.config validates the secret in a pydantic
+        # ``@model_validator(mode="after")``, which runs while ``Settings`` is
+        # being constructed, so a weak secret has already raised long before
+        # this function is called. The raise below is kept because it costs
+        # nothing and states the rule at the place an operator looks for it,
+        # but it is documentation, not the enforcement.
+        #
+        # Spelling that out is the point. Dead code describing a protection
+        # that lives elsewhere reads exactly like the protection itself, and a
+        # reader who believes this block is what stops a weak secret in
+        # production will draw the wrong conclusion about what happens if they
+        # change it. The live branch here is the development one below, which
+        # rotates and persists a real secret.
         _jwt_too_short = jwt_secret_is_too_short(settings.jwt_secret)
         _jwt_is_default = jwt_secret_is_known_weak(settings.jwt_secret)
         # Any non-development environment must have a real secret. We treat
