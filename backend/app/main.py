@@ -934,6 +934,31 @@ async def _seed_demo_account() -> None:
             # separate session below.
             await session.commit()
 
+        # ── 2b. Starter labor rate library ────────────────────────────
+        # Rate templates are owner-scoped, so unlike the platform-wide library
+        # seeds (waste factors, production norms, assemblies) there is no
+        # ownerless row that fills the page for everyone: a NULL owner is
+        # readable by an admin alone. The library is seeded against the
+        # estimator account, the persona that builds rates, and the admin
+        # accounts see it regardless because their collection view is
+        # unscoped. Where no estimator account exists it lands on the demo
+        # admin instead, so the picker is never empty.
+        #
+        # Its own session, like every other seeder here, and fail-soft: an
+        # empty rate library is a screen worth filling, never a reason to
+        # abort the demo seed. Idempotent per owner, so a restart cannot
+        # double the library and a rate the user has corrected is left alone.
+        rate_owner_id = estimator_user_id or demo_user_id
+        if rate_owner_id:
+            try:
+                from app.modules.labor_rates.seed import seed_labor_rates
+
+                async with async_session_factory() as rate_session:
+                    await seed_labor_rates(rate_session, uuid.UUID(rate_owner_id))
+                    await rate_session.commit()
+            except Exception:
+                logger.warning("Labor rate starter library seed skipped (non-fatal)", exc_info=True)
+
         # ── 3. Project seed (outside the user session) ────────────────
         # Two distinct seeding paths run on PostgreSQL, picked by whether a
         # partner pack is active:
