@@ -32,9 +32,12 @@ from fastapi import APIRouter, WebSocket
 
 from app.config import get_settings
 from app.core.demo_read_only import (
+    _AUTHENTICATION_ENDPOINTS,
+    _READ_ONLY_ENDPOINTS,
     _READ_ONLY_SOCKET_ENDPOINTS,
     ALLOWED_ENDPOINTS,
     DEMO_READ_ONLY_ERROR,
+    WriteScope,
     endpoint_key,
 )
 from app.main import create_app
@@ -186,14 +189,28 @@ def _closed_with(frames: list[dict[str, Any]]) -> tuple[int | None, str | None]:
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_the_allowlist_names_endpoints_that_exist(app_and_token):
-    """An allowlist entry that matches nothing would refuse the real socket.
+    """An allowlist entry that matches nothing refuses the route it was written to keep open.
 
-    The entries are strings, so a rename in either router leaves them pointing
-    at nothing and the socket they were meant to keep open starts being refused
-    on the demo only - silently, because a refused handshake has no error to
-    show. Resolve each one against the live route table instead.
+    The entries are strings, so a rename in any router leaves one pointing at
+    nothing. The allowlist is default-deny, so an entry that resolves to
+    nothing is not an entry that does nothing: the route it named goes back to
+    being refused on the demo, and only on the demo.
+
+    This is the one test in this file that is not about sockets, and that is
+    deliberate. ``ALLOWED_ENDPOINTS`` is built from three lists, this check
+    used to read one of them, and a check whose population is a third of the
+    thing it is named after is the defect it exists to prevent. The population
+    here is the merged dict, so a fourth list added later is covered the day it
+    is merged rather than the day somebody remembers this file.
+
+    The HTTP entries fail differently from the socket ones and both directions
+    are bad. A stale socket entry is silent - a refused handshake reaches the
+    browser as a close code our own clients do not render. A stale HTTP entry
+    does produce a 403 with a body, but nothing in CI ever asks for those paths
+    with the flag on, so it is just as unobserved and it lands on the demo,
+    which is the one deployment strangers judge the product by.
     """
-    from fastapi.routing import APIWebSocketRoute
+    from fastapi.routing import APIRoute, APIWebSocketRoute
 
     app, _token = app_and_token
 
@@ -208,14 +225,67 @@ async def test_the_allowlist_names_endpoints_that_exist(app_and_token):
             if isinstance(path, str):
                 yield prefix + path, entry
 
-    mounted = {endpoint_key(r.endpoint): p for p, r in walk(app.routes) if isinstance(r, APIWebSocketRoute)}
-    assert mounted, "no socket routes found, so this test would prove nothing"
+    mounted: dict[str, str] = {}
+    sockets: set[str] = set()
+    for path, route in walk(app.routes):
+        if not isinstance(route, (APIRoute, APIWebSocketRoute)):
+            continue
+        key = endpoint_key(route.endpoint)
+        if key is None:
+            continue
+        mounted.setdefault(key, path)
+        if isinstance(route, APIWebSocketRoute):
+            sockets.add(key)
+
+    # Two vacuity guards rather than one, because the two halves are found by
+    # different branches of the same walk and either can collapse alone.
+    assert sockets, "no socket routes found, so the socket half of this test would prove nothing"
+    assert len(mounted) - len(sockets) > 100, (
+        f"the walk found {len(mounted) - len(sockets)} HTTP endpoints, which is far below what this "
+        "product mounts. The traversal is broken, not the allowlist, and every assertion below it "
+        "would pass by finding nothing."
+    )
+
+    unresolved = sorted(entry for entry in ALLOWED_ENDPOINTS if entry not in mounted)
+    assert not unresolved, (
+        f"{len(unresolved)} of {len(ALLOWED_ENDPOINTS)} allowlist entries name nothing that is "
+        f"mounted: {unresolved}. Each one was written to keep a route usable on the read-only "
+        "demo and now keeps nothing, so that route is refused there and answers normally "
+        "everywhere else, which is why no other test sees it."
+    )
+
+    # The merge in demo_read_only.py is three dict.fromkeys calls into one
+    # dict, so a key named in two lists takes the scope of the last list
+    # silently. Login in both would come out as NONE and stop working on the
+    # demo, which is the one route whose failure locks a visitor out entirely.
+    named_twice = sorted(
+        {e for e in _AUTHENTICATION_ENDPOINTS if e in set(_READ_ONLY_ENDPOINTS) | set(_READ_ONLY_SOCKET_ENDPOINTS)}
+        | (set(_READ_ONLY_ENDPOINTS) & set(_READ_ONLY_SOCKET_ENDPOINTS))
+    )
+    assert not named_twice, (
+        f"{named_twice} appear in more than one allowlist source, and the merge keeps only the "
+        "scope of the last one. An authentication endpoint demoted to NONE this way is refused "
+        "on the demo with no sign anywhere that a scope was overwritten."
+    )
+    for entry in _AUTHENTICATION_ENDPOINTS:
+        assert ALLOWED_ENDPOINTS[entry] is WriteScope.AUTHENTICATION, (
+            f"{entry} is listed as an authentication endpoint and merged as "
+            f"{ALLOWED_ENDPOINTS[entry]}, so it cannot write the rows a sign-in needs."
+        )
 
     for entry in _READ_ONLY_SOCKET_ENDPOINTS:
-        assert entry in mounted, f"allowlisted socket {entry} is not mounted; mounted keys are {sorted(mounted)}"
-        assert ALLOWED_ENDPOINTS[entry].value == "none"
+        assert entry in sockets, (
+            f"allowlisted socket {entry} resolves to an HTTP route rather than a socket; "
+            f"mounted sockets are {sorted(sockets)}"
+        )
+        assert ALLOWED_ENDPOINTS[entry] is WriteScope.NONE
 
-    print(f"\n[allowlist] {len(_READ_ONLY_SOCKET_ENDPOINTS)} socket entries all resolve; mounted: {mounted}")
+    print(
+        f"\n[allowlist] {len(ALLOWED_ENDPOINTS)} entries all resolve "
+        f"({len(_AUTHENTICATION_ENDPOINTS)} authentication, {len(_READ_ONLY_ENDPOINTS)} read-only HTTP, "
+        f"{len(_READ_ONLY_SOCKET_ENDPOINTS)} socket) against {len(mounted)} mounted endpoints, "
+        f"{len(sockets)} of them sockets"
+    )
 
 
 @pytest.mark.asyncio
