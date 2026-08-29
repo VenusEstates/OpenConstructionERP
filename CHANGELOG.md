@@ -4918,7 +4918,7 @@ Source: https://github.com/datadrivenconstruction/OpenConstructionERP
 
 ### Removed
 
-- LanceDB legacy code paths (Phase 5): `app/modules/costs/vector_adapter.py`, `app/core/match_service/ranker.py`, `app/core/match_service/boosts/lex.py`, `app/core/match_service/boosts/rare_token.py`, `app/modules/match_elements/matchers/lexical.py`. Sparse Qdrant + BGE-M3 supersedes them.
+- LanceDB legacy code paths (Phase 5): `app/core/match_service/ranker.py`, `app/core/match_service/boosts/lex.py`, `app/core/match_service/boosts/rare_token.py`, `app/modules/match_elements/matchers/lexical.py`. Sparse Qdrant + BGE-M3 supersedes them.
 
 ### Fixed
 
