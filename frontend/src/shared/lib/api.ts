@@ -129,6 +129,33 @@ export function getAuthToken(): string | null {
   return getToken();
 }
 
+/**
+ * The active i18next language reduced to its primary subtag, or null when
+ * it cannot be read.
+ *
+ * Exported because not every request goes through `apiGet` / `apiPost`: a
+ * few endpoints stream a binary or an HTML document and are fetched with a
+ * raw `fetch`, which means they never got the `Accept-Language` header
+ * `buildHeaders` attaches. Those are exactly the endpoints that render a
+ * document in the reader's language (see
+ * backend/app/modules/reporting/report_translations), so they have to ask
+ * for one explicitly rather than silently taking the server default.
+ */
+export function activeLanguageTag(): string | null {
+  try {
+    const lang = i18next.language || 'en';
+    // Strip any region suffix (i18next stores codes like 'pt-BR'; the
+    // backend maps via prefix anyway, but this keeps the header tidy
+    // and matches the locale codes shipped in the translations module).
+    const base = String(lang).split('-')[0];
+    return base || null;
+  } catch {
+    // Reading i18next mid-init can throw; locale-aware payloads
+    // gracefully fall back to English on the server.
+    return null;
+  }
+}
+
 /** Build common headers for every request. */
 function buildHeaders(extra?: HeadersInit): Headers {
   const headers = new Headers(extra);
@@ -151,17 +178,8 @@ function buildHeaders(extra?: HeadersInit): Headers {
   // without requiring an explicit ?locale= query param on every call.
   // Caller-provided Accept-Language always wins.
   if (!headers.has('Accept-Language')) {
-    try {
-      const lang = i18next.language || 'en';
-      // Strip any region suffix (i18next stores codes like 'pt-BR'; the
-      // backend maps via prefix anyway, but this keeps the header tidy
-      // and matches the locale codes shipped in the translations module).
-      const base = String(lang).split('-')[0];
-      if (base) headers.set('Accept-Language', base);
-    } catch {
-      // Reading i18next mid-init can throw; locale-aware payloads
-      // gracefully fall back to English on the server.
-    }
+    const base = activeLanguageTag();
+    if (base) headers.set('Accept-Language', base);
   }
 
   return headers;

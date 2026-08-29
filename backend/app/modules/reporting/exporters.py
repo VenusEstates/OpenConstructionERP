@@ -53,6 +53,16 @@ Public API
 
 The function is sync and pure - no DB, no network, no clock. The service
 layer assembles the snapshot and resolves the currency before calling it.
+
+Language
+========
+Pass ``locale=`` to write the file in one of
+:data:`~app.modules.reporting.report_translations.SUPPORTED_REPORT_LOCALES`.
+Section headings, field labels, column headers, ``Yes`` / ``No`` and the
+metadata preamble all come from that catalogue, and the route serving the
+file declares what was produced in ``Content-Language``. COBie is excluded
+on purpose: its sheet and column names are fixed by the handover standard,
+so translating them would produce a file no COBie consumer can read.
 """
 
 from __future__ import annotations
@@ -65,6 +75,13 @@ from typing import Any
 
 from app.core.csv_safety import neutralise_formula
 from app.core.evidence import evidence_header
+from app.modules.reporting.report_translations import (
+    DEFAULT_REPORT_LOCALE,
+    field_label,
+    normalize_report_locale,
+    section_title,
+    tr,
+)
 
 __all__ = [
     "COBIE_ADDITIONAL_SHEETS",
@@ -84,6 +101,7 @@ def _evidence_rows(
     currency: str,
     generated_at: str,
     data_snapshot: dict[str, Any] | None,
+    locale: str,
 ) -> list[tuple[str, str]]:
     """Tamper-evident header rows: generation time + content digest.
 
@@ -91,6 +109,10 @@ def _evidence_rows(
     currency, section snapshot) but not the timestamp, so re-exporting the
     same data reproduces the same digest for verification. Rendered by each
     format's own header block. See :mod:`app.core.evidence`.
+
+    ``evidence_header`` has always taken a ``locale``; reporting never passed
+    one, so these two labels stayed English in a document whose every other
+    label is now written in the reader's language.
     """
     payload = {
         "report_type": report_type,
@@ -99,7 +121,7 @@ def _evidence_rows(
         "currency": currency,
         "data": data_snapshot or {},
     }
-    return evidence_header(generated_at=generated_at, payload=payload)
+    return evidence_header(generated_at=generated_at, payload=payload, locale=locale)
 
 
 # Formats this module can produce. ``html`` is included so the download
@@ -160,13 +182,17 @@ def _resolve_sections(
     return _DEFAULT_SECTIONS.get(report_type, [{"id": "summary", "title": "Summary"}])
 
 
-def _section_title(section: dict[str, Any]) -> str:
-    """Human-readable section title, falling back to a Title-Cased id."""
+def _section_title(section: dict[str, Any], locale: str) -> str:
+    """Human-readable section title, falling back to a Title-Cased id.
+
+    Localized through the same table the HTML renderer uses, so a downloaded
+    file and the on-screen view name a section identically.
+    """
     sid = str(section.get("id", "")).strip()
-    return str(section.get("title", sid.replace("_", " ").title()))
+    return section_title(str(section.get("title", sid.replace("_", " ").title())), locale)
 
 
-def _stringify(value: Any) -> str:
+def _stringify(value: Any, locale: str) -> str:
     """Stringify a scalar snapshot value for a flat text cell.
 
     Booleans become Yes/No (matching the renderer); ``None`` becomes an
@@ -176,19 +202,14 @@ def _stringify(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, bool):
-        return "Yes" if value else "No"
+        return tr(locale, "yes" if value else "no")
     if isinstance(value, dict):
         # Compact "k: v" join so a nested object still conveys its content
         # in a single cell rather than printing a Python repr.
-        return "; ".join(f"{_humanize_key(k)}: {_stringify(v)}" for k, v in value.items())
+        return "; ".join(f"{field_label(k, locale)}: {_stringify(v, locale)}" for k, v in value.items())
     if isinstance(value, list):
-        return "; ".join(_stringify(v) for v in value)
+        return "; ".join(_stringify(v, locale) for v in value)
     return str(value)
-
-
-def _humanize_key(key: Any) -> str:
-    """Title-case a snake_case snapshot key for a label cell."""
-    return str(key).replace("_", " ").title()
 
 
 def _looks_numeric(text: str) -> bool:
@@ -244,7 +265,7 @@ def _record_columns(records: list[dict[str, Any]]) -> list[str]:
     return columns
 
 
-def _flatten_keyvalue(payload: Any) -> list[tuple[str, str]]:
+def _flatten_keyvalue(payload: Any, locale: str) -> list[tuple[str, str]]:
     """Flatten a dict / scalar / scalar-list into ``(label, value)`` rows.
 
     Money / Decimal values pass through ``_stringify`` unchanged so no float
@@ -254,12 +275,12 @@ def _flatten_keyvalue(payload: Any) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = []
     if isinstance(payload, dict):
         for key, value in payload.items():
-            rows.append((_humanize_key(key), _stringify(value)))
+            rows.append((field_label(key, locale), _stringify(value, locale)))
     elif isinstance(payload, list):
         for item in payload:
-            rows.append(("", _stringify(item)))
+            rows.append(("", _stringify(item, locale)))
     else:
-        rows.append(("", _stringify(payload)))
+        rows.append(("", _stringify(payload, locale)))
     return rows
 
 
@@ -315,6 +336,7 @@ def _export_csv(
     generated_at: str,
     template_data: dict[str, Any] | None,
     data_snapshot: dict[str, Any] | None,
+    locale: str,
 ) -> bytes:
     """Render the report snapshot as a CSV file.
 
@@ -328,11 +350,11 @@ def _export_csv(
     writer = csv.writer(buffer)
 
     # Metadata preamble - first-party labels, dynamic values neutralised.
-    writer.writerow(["Report", neutralise_formula(title)])
-    writer.writerow(["Project", neutralise_formula(project_name)])
-    writer.writerow(["Type", neutralise_formula(report_type)])
+    writer.writerow([tr(locale, "meta_report"), neutralise_formula(title)])
+    writer.writerow([tr(locale, "meta_project"), neutralise_formula(project_name)])
+    writer.writerow([tr(locale, "meta_type"), neutralise_formula(report_type)])
     if currency:
-        writer.writerow(["Currency", neutralise_formula(currency)])
+        writer.writerow([tr(locale, "meta_currency"), neutralise_formula(currency)])
     for label, value in _evidence_rows(
         report_type=report_type,
         title=title,
@@ -340,6 +362,7 @@ def _export_csv(
         currency=currency,
         generated_at=generated_at,
         data_snapshot=data_snapshot,
+        locale=locale,
     ):
         writer.writerow([neutralise_formula(label), neutralise_formula(value)])
 
@@ -351,22 +374,22 @@ def _export_csv(
             continue
         rendered_any = True
         writer.writerow([])
-        writer.writerow([neutralise_formula(_section_title(section))])
+        writer.writerow([neutralise_formula(_section_title(section, locale))])
         if _is_record_list(payload):
             # Columnar table (e.g. cost breakdown): one header row of the
             # union of keys, then a row per record. Every cell neutralised.
             columns = _record_columns(payload)
-            writer.writerow([neutralise_formula(_humanize_key(c)) for c in columns])
+            writer.writerow([neutralise_formula(field_label(c, locale)) for c in columns])
             for item in payload:
-                writer.writerow([neutralise_formula(_stringify(item.get(c))) for c in columns])
+                writer.writerow([neutralise_formula(_stringify(item.get(c), locale)) for c in columns])
         else:
-            writer.writerow(["Field", "Value"])
-            for label, value in _flatten_keyvalue(payload):
+            writer.writerow([tr(locale, "field_column"), tr(locale, "value_column")])
+            for label, value in _flatten_keyvalue(payload, locale):
                 writer.writerow([neutralise_formula(label), neutralise_formula(value)])
 
     if not rendered_any:
         writer.writerow([])
-        writer.writerow(["No data available"])
+        writer.writerow([tr(locale, "no_data_heading")])
 
     return buffer.getvalue().encode("utf-8-sig")
 
@@ -383,6 +406,7 @@ def _export_xlsx(
     generated_at: str,
     template_data: dict[str, Any] | None,
     data_snapshot: dict[str, Any] | None,
+    locale: str,
 ) -> bytes:
     """Render the report snapshot as a formatted .xlsx workbook.
 
@@ -399,7 +423,7 @@ def _export_xlsx(
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Report"
+    ws.title = tr(locale, "worksheet_name")
 
     bold = Font(bold=True)
     title_font = Font(bold=True, size=14)
@@ -416,11 +440,11 @@ def _export_xlsx(
     row += 1
 
     meta_rows = [
-        ("Project", project_name),
-        ("Type", report_type),
+        (tr(locale, "meta_project"), project_name),
+        (tr(locale, "meta_type"), report_type),
     ]
     if currency:
-        meta_rows.append(("Currency", currency))
+        meta_rows.append((tr(locale, "meta_currency"), currency))
     meta_rows.extend(
         _evidence_rows(
             report_type=report_type,
@@ -429,6 +453,7 @@ def _export_xlsx(
             currency=currency,
             generated_at=generated_at,
             data_snapshot=data_snapshot,
+            locale=locale,
         )
     )
     for label, value in meta_rows:
@@ -451,7 +476,7 @@ def _export_xlsx(
             n_cols = max(len(columns), 1)
 
             # Section heading shaded across the table width.
-            sec_cell = ws.cell(row=row, column=1, value=neutralise_formula(_section_title(section)))
+            sec_cell = ws.cell(row=row, column=1, value=neutralise_formula(_section_title(section, locale)))
             sec_cell.font = section_font
             sec_cell.fill = section_fill
             for c in range(2, n_cols + 1):
@@ -460,14 +485,14 @@ def _export_xlsx(
 
             # Header row (one cell per column).
             for c_idx, col in enumerate(columns, start=1):
-                hc = ws.cell(row=row, column=c_idx, value=neutralise_formula(_humanize_key(col)))
+                hc = ws.cell(row=row, column=c_idx, value=neutralise_formula(field_label(col, locale)))
                 hc.font = header_font
                 hc.fill = header_fill
             row += 1
 
             for item in payload:
                 for c_idx, col in enumerate(columns, start=1):
-                    cell_val = _stringify(item.get(col))
+                    cell_val = _stringify(item.get(col), locale)
                     if _looks_numeric(cell_val):
                         ws.cell(row=row, column=c_idx, value=Decimal(cell_val))
                     else:
@@ -478,21 +503,21 @@ def _export_xlsx(
             continue
 
         # Key/value table shape.
-        sec_cell = ws.cell(row=row, column=1, value=neutralise_formula(_section_title(section)))
+        sec_cell = ws.cell(row=row, column=1, value=neutralise_formula(_section_title(section, locale)))
         sec_cell.font = section_font
         sec_cell.fill = section_fill
         ws.cell(row=row, column=2).fill = section_fill
         row += 1
 
-        h1 = ws.cell(row=row, column=1, value="Field")
+        h1 = ws.cell(row=row, column=1, value=tr(locale, "field_column"))
         h1.font = header_font
         h1.fill = header_fill
-        h2 = ws.cell(row=row, column=2, value="Value")
+        h2 = ws.cell(row=row, column=2, value=tr(locale, "value_column"))
         h2.font = header_font
         h2.fill = header_fill
         row += 1
 
-        for label, value in _flatten_keyvalue(payload):
+        for label, value in _flatten_keyvalue(payload, locale):
             ws.cell(row=row, column=1, value=neutralise_formula(label))
             # Store clean numbers as Decimal so Excel treats them as numeric
             # (sortable, summable) without the lossy float roundtrip; money
@@ -506,7 +531,7 @@ def _export_xlsx(
         row += 1  # blank spacer between sections
 
     if not rendered_any:
-        ws.cell(row=row, column=1, value="No data available").font = bold
+        ws.cell(row=row, column=1, value=tr(locale, "no_data_heading")).font = bold
 
     # Reasonable column widths so the file opens readable.
     ws.column_dimensions[get_column_letter(1)].width = 32
@@ -530,6 +555,7 @@ def _export_pdf(
     generated_at: str,
     template_data: dict[str, Any] | None,
     data_snapshot: dict[str, Any] | None,
+    locale: str,
 ) -> bytes:
     """Render an executive-summary PDF using the platform reportlab stack.
 
@@ -633,10 +659,10 @@ def _export_pdf(
 
     flowables: list[Any] = []
     flowables.append(_p(title, "title"))
-    flowables.append(_p(f"Project: {project_name}", "meta"))
-    meta_line = f"Type: {report_type}"
+    flowables.append(_p(f"{tr(locale, 'meta_project')}: {project_name}", "meta"))
+    meta_line = f"{tr(locale, 'meta_type')}: {report_type}"
     if currency:
-        meta_line += f"  -  Currency: {currency}"
+        meta_line += f"  -  {tr(locale, 'meta_currency')}: {currency}"
     flowables.append(_p(meta_line, "meta"))
     for label, value in _evidence_rows(
         report_type=report_type,
@@ -645,6 +671,7 @@ def _export_pdf(
         currency=currency,
         generated_at=generated_at,
         data_snapshot=data_snapshot,
+        locale=locale,
     ):
         flowables.append(_p(f"{label}: {value}", "meta"))
     flowables.append(Spacer(1, 4 * mm))
@@ -659,14 +686,14 @@ def _export_pdf(
         if _section_is_empty(payload):
             continue
         rendered_any = True
-        flowables.append(_p(_section_title(section), "section"))
+        flowables.append(_p(_section_title(section, locale), "section"))
 
         if _is_record_list(payload):
             columns = _record_columns(payload)
-            header_cells = [_p(_humanize_key(c), "column_header") for c in columns]
+            header_cells = [_p(field_label(c, locale), "column_header") for c in columns]
             table_rows = [header_cells]
             for item in payload:
-                table_rows.append([_p(_stringify(item.get(c)), "value") for c in columns])
+                table_rows.append([_p(_stringify(item.get(c), locale), "value") for c in columns])
             n_cols = max(len(columns), 1)
             rec_col_widths = [usable_width / n_cols] * n_cols
             table = Table(table_rows, colWidths=rec_col_widths, repeatRows=1)
@@ -691,7 +718,7 @@ def _export_pdf(
             continue
 
         table_rows = []
-        for label, value in _flatten_keyvalue(payload):
+        for label, value in _flatten_keyvalue(payload, locale):
             table_rows.append([_p(label, "label"), _p(value, "value")])
 
         if not table_rows:
@@ -713,14 +740,8 @@ def _export_pdf(
         flowables.append(table)
 
     if not rendered_any:
-        flowables.append(_p("No data available", "section"))
-        flowables.append(
-            _p(
-                "This report was generated with an empty data snapshot. Verify that "
-                "the source modules returned data for the selected project.",
-                "value",
-            )
-        )
+        flowables.append(_p(tr(locale, "no_data_heading"), "section"))
+        flowables.append(_p(tr(locale, "no_data_body_short"), "value"))
 
     buffer = io.BytesIO()
     # Metadata + the brand header/footer follow the workspace white-label
@@ -736,7 +757,7 @@ def _export_pdf(
         bottomMargin=18 * mm,
         title=title,
         author=meta["author"],
-        subject="Project Report",
+        subject=tr(locale, "pdf_subject"),
         creator=meta["creator"],
     )
     doc.build(flowables, onFirstPage=branded_header_footer, onLaterPages=branded_header_footer)
@@ -757,6 +778,7 @@ def export_report(
     template_data: dict[str, Any] | None,
     data_snapshot: dict[str, Any] | None,
     html_body: str | None = None,
+    locale: str = DEFAULT_REPORT_LOCALE,
 ) -> tuple[str, str, bytes]:
     """Render a generated report into a downloadable file.
 
@@ -773,6 +795,13 @@ def export_report(
         html_body: Pre-rendered HTML body, only used for ``fmt="html"`` so
             the existing HTML output is served unchanged. When ``None`` and
             ``fmt="html"`` the HTML is rendered fresh from the snapshot.
+            The caller owns the language of a body it passes in: this
+            function cannot re-language an already-rendered document, so a
+            caller asking for a locale the stored body is not written in
+            must pass ``None`` and let the renderer run again.
+        locale: Language to write the file in; a member of
+            ``report_translations.SUPPORTED_REPORT_LOCALES``. Defaults to
+            English, which reproduces the pre-catalogue output exactly.
 
     Returns:
         ``(suggested_filename, media_type, file_bytes)``.
@@ -781,6 +810,7 @@ def export_report(
         ExportFormatError: when *fmt* is not supported.
     """
     fmt = (fmt or "").strip().lower()
+    locale = normalize_report_locale(locale)
     if fmt not in SUPPORTED_FORMATS:
         raise ExportFormatError(f"Unsupported export format '{fmt}'. Expected one of: {', '.join(SUPPORTED_FORMATS)}.")
 
@@ -806,6 +836,7 @@ def export_report(
             generated_at=generated_at,
             template_data=template_data,
             data_snapshot=data_snapshot,
+            locale=locale,
         )
     elif fmt == "xlsx":
         blob = _export_xlsx(
@@ -816,6 +847,7 @@ def export_report(
             generated_at=generated_at,
             template_data=template_data,
             data_snapshot=data_snapshot,
+            locale=locale,
         )
     elif fmt == "pdf":
         blob = _export_pdf(
@@ -826,6 +858,7 @@ def export_report(
             generated_at=generated_at,
             template_data=template_data,
             data_snapshot=data_snapshot,
+            locale=locale,
         )
     else:  # html
         if html_body is not None:
@@ -842,6 +875,7 @@ def export_report(
                     template_data=template_data,
                     data_snapshot=data_snapshot,
                     generated_at=generated_at,
+                    locale=locale,
                 )
                 .encode("utf-8")
             )

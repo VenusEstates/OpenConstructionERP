@@ -22,11 +22,12 @@ Endpoints:
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import HTMLResponse, Response
 
 from app.core.content_disposition import attachment_disposition
 from app.dependencies import CurrentUserId, RequirePermission, SessionDep, verify_project_access
+from app.modules.reporting.report_translations import resolve_report_locale
 from app.modules.reporting.schemas import (
     GeneratedReportResponse,
     GenerateReportRequest,
@@ -361,6 +362,11 @@ async def get_report_content(
     report_id: uuid.UUID,
     session: SessionDep,
     user_id: CurrentUserId,
+    locale: str | None = Query(
+        default=None,
+        description="Language to render the report in; falls back to Accept-Language, then English",
+    ),
+    accept_language: str | None = Header(default=None, alias="Accept-Language"),
     service: ReportingService = Depends(_get_service),
 ) -> HTMLResponse:
     """Return the rendered HTML body of a generated report.
@@ -373,6 +379,12 @@ async def get_report_content(
     Before this endpoint landed (W23 P0 audit, task #252) the frontend
     history panels listed report rows but had no way to open them
     because no endpoint exposed the rendered body.
+
+    The language comes from ``?locale=`` first and ``Accept-Language``
+    second, and the response declares what was actually rendered rather
+    than what was asked for: the report catalogue holds fewer languages
+    than the interface offers, so a request the catalogue cannot satisfy
+    gets an English body that says so in ``Content-Language``.
     """
     # Resolve the metadata row first (raises 404 if unknown) so we know
     # which project to gate on, then verify access *before* fetching the
@@ -382,8 +394,9 @@ async def get_report_content(
     # the caller's access is confirmed.
     report = await service.get_report(report_id)
     await verify_project_access(report.project_id, user_id, session)
-    _, body_html = await service.get_report_content(report_id)
-    return HTMLResponse(content=body_html, status_code=200)
+    resolved = resolve_report_locale(locale, accept_language)
+    _, body_html = await service.get_report_content(report_id, locale=resolved)
+    return HTMLResponse(content=body_html, status_code=200, headers={"Content-Language": resolved})
 
 
 @router.get(
@@ -415,6 +428,11 @@ async def download_report(
         pattern=r"^(pdf|xlsx|csv|html)$",
         description="Export format: pdf, xlsx, csv, or html",
     ),
+    locale: str | None = Query(
+        default=None,
+        description="Language to write the file in; falls back to Accept-Language, then English",
+    ),
+    accept_language: str | None = Header(default=None, alias="Accept-Language"),
     service: ReportingService = Depends(_get_service),
 ) -> Response:
     """Download a generated report as a real PDF / Excel / CSV / HTML file.
@@ -434,23 +452,28 @@ async def download_report(
     The response carries a ``Content-Disposition: attachment`` header so the
     browser downloads a file rather than rendering it inline, matching the
     BOQ export endpoints' convention.
+
+    The language comes from ``?locale=`` first and ``Accept-Language``
+    second, and applies to every format the endpoint serves.
     """
     report = await service.get_report(report_id)
     await verify_project_access(report.project_id, user_id, session)
-    filename, media_type, blob = await service.export_report_file(report_id, format)
+    resolved = resolve_report_locale(locale, accept_language)
+    filename, media_type, blob = await service.export_report_file(report_id, format, locale=resolved)
     return Response(
         content=blob,
         media_type=media_type,
         headers={
             "Content-Disposition": attachment_disposition(filename),
             "Content-Length": str(len(blob)),
-            # Every format this endpoint serves is built from the same English
-            # literals in reporting/exporters.py, and no locale reaches any of
-            # them, so the declaration holds whichever format was asked for
-            # rather than only for the PDF. Without it the Accept-Language
-            # middleware names the reader's language on a document written in
-            # ours.
-            "Content-Language": "en",
+            # What was written, not what was asked for. The report catalogue
+            # holds fewer languages than the interface offers, so a request
+            # it cannot satisfy falls back to English and this header is how
+            # the client finds out. It used to be pinned to "en" because no
+            # locale reached the exporters at all; one does now, and pinning
+            # it would put the reader's language on a document written in
+            # ours - the mislabelling the header exists to prevent.
+            "Content-Language": resolved,
         },
     )
 

@@ -24,6 +24,7 @@ from app.modules.reporting.cron import CronParseError, next_occurrence
 from app.modules.reporting.currency_resolver import resolve_template_currency
 from app.modules.reporting.models import GeneratedReport, KPISnapshot, ReportTemplate
 from app.modules.reporting.renderer import ReportRenderer
+from app.modules.reporting.report_translations import DEFAULT_REPORT_LOCALE
 from app.modules.reporting.repository import (
     GeneratedReportRepository,
     KPISnapshotRepository,
@@ -627,13 +628,30 @@ class ReportingService:
         )
         return report
 
-    async def get_report_content(self, report_id: uuid.UUID) -> tuple[GeneratedReport, str]:
-        """Fetch a rendered report's HTML body.
+    async def get_report_content(
+        self,
+        report_id: uuid.UUID,
+        locale: str = DEFAULT_REPORT_LOCALE,
+    ) -> tuple[GeneratedReport, str]:
+        """Fetch a rendered report's HTML body in the requested language.
 
         Returns ``(report, html_string)``. Raises 404 if the report is
         unknown or 410 (Gone) if the metadata row exists but the rendered
         body is no longer reachable from the storage backend - a clearer
         signal than blank 200 OK.
+
+        The stored body is written once, at generation time, in
+        :data:`DEFAULT_REPORT_LOCALE`. It has to be: ``generate_report``
+        runs for a cron schedule as often as for a person, and a body frozen
+        in whichever language happened to trigger it is worse than one that
+        is predictably English. So a reader asking for another language gets
+        a fresh render of the same persisted ``data_snapshot`` instead of
+        the stored blob - the numbers are identical, only the words differ.
+
+        ``storage_key`` still gates the 410 for every language, because it
+        is the record that this report was rendered at all, and a report
+        that was never rendered must not start existing just because it was
+        asked for in German.
         """
         report = await self.get_report(report_id)
         if not report.storage_key:
@@ -641,6 +659,9 @@ class ReportingService:
                 status_code=status.HTTP_410_GONE,
                 detail="Report body has not been rendered yet",
             )
+
+        if locale != DEFAULT_REPORT_LOCALE:
+            return report, await self._render_body(report, locale)
 
         try:
             from app.core.storage import get_storage_backend
@@ -654,10 +675,43 @@ class ReportingService:
             ) from exc
         return report, blob.decode("utf-8")
 
+    async def _render_body(self, report: GeneratedReport, locale: str) -> str:
+        """Re-render a stored report's HTML body in *locale*.
+
+        Reads the same three inputs ``generate_report`` used - the bound
+        template's sections, the project's display name and the persisted
+        snapshot - so the re-render differs from the stored body in nothing
+        but its language.
+        """
+        template_data: dict | None = None
+        if report.template_id is not None:
+            try:
+                template = await self.template_repo.get_by_id(report.template_id)
+                if template is not None:
+                    template_data = template.template_data
+            except Exception:
+                logger.debug(
+                    "_render_body: template lookup failed for report %s",
+                    report.id,
+                    exc_info=True,
+                )
+
+        project_name = await self._lookup_project_name(report.project_id)
+        return ReportRenderer().render_html(
+            report_type=report.report_type,
+            title=report.title,
+            project_name=project_name,
+            template_data=template_data,
+            data_snapshot=report.data_snapshot,
+            generated_at=report.generated_at,
+            locale=locale,
+        )
+
     async def export_report_file(
         self,
         report_id: uuid.UUID,
         fmt: str,
+        locale: str = DEFAULT_REPORT_LOCALE,
     ) -> tuple[str, str, bytes]:
         """Render a generated report into a downloadable file (pdf/xlsx/csv/html).
 
@@ -678,6 +732,12 @@ class ReportingService:
         ``verify_project_access`` on ``report.project_id`` before invoking
         this, exactly like ``get_report_content`` / ``get_report``. Raises
         404 when the report id is unknown.
+
+        *locale* names the language the file is written in and must be one
+        the exporters can render (see
+        :data:`app.modules.reporting.report_translations.SUPPORTED_REPORT_LOCALES`);
+        the route resolves it and declares the result in
+        ``Content-Language``.
         """
         from app.modules.reporting.exporters import ExportFormatError, export_report
 
@@ -704,8 +764,15 @@ class ReportingService:
         # For HTML we prefer the already-rendered-and-stored body so the
         # download byte-for-byte matches the on-screen view; if it was never
         # stored the exporter re-renders from the snapshot.
+        #
+        # That preference only holds while the reader wants the language the
+        # body was stored in. Handing back the stored English body for a
+        # ``?locale=de`` download would put a German Content-Language header
+        # on an English document, which is the exact mislabelling
+        # app.core.document_locale exists to prevent. Passing no body makes
+        # the exporter render the snapshot again, in the language asked for.
         html_body: str | None = None
-        if fmt.strip().lower() == "html" and report.storage_key:
+        if fmt.strip().lower() == "html" and report.storage_key and locale == DEFAULT_REPORT_LOCALE:
             try:
                 _, html_body = await self.get_report_content(report_id)
             except HTTPException:
@@ -722,6 +789,7 @@ class ReportingService:
                 template_data=template_data,
                 data_snapshot=report.data_snapshot,
                 html_body=html_body,
+                locale=locale,
             )
         except ExportFormatError as exc:
             raise HTTPException(

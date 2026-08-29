@@ -41,7 +41,14 @@ import { reportingGuide } from './reportingGuide';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
-import { apiGet, apiPost, API_BASE, getAuthToken, ApiError } from '@/shared/lib/api';
+import {
+  apiGet,
+  apiPost,
+  API_BASE,
+  activeLanguageTag,
+  getAuthToken,
+  ApiError,
+} from '@/shared/lib/api';
 import { projectsApi, type Project } from '@/features/projects/api';
 import { fmtPercent, getIntlLocale, fmtFixed } from '@/shared/lib/formatters';
 
@@ -1805,14 +1812,22 @@ type DownloadFormat = 'pdf' | 'xlsx' | 'csv';
  * Authorization header, so we fetch, read the blob, and click a temporary
  * object-URL anchor. The filename comes from the server's
  * Content-Disposition when present, else a sensible client-side fallback.
+ *
+ * Language: a raw fetch skips buildHeaders, so it has to name the reader's
+ * language itself. Without it the server has nothing to go on and writes
+ * the file in English however the interface is set. It answers in the
+ * nearest language its report catalogue holds and says which one in
+ * Content-Language.
  */
 async function downloadReport(report: GeneratedReport, format: DownloadFormat): Promise<void> {
   const token = getAuthToken();
+  const lang = activeLanguageTag();
   const url = `${API_BASE}/v1/reporting/reports/${report.id}/download/?format=${format}`;
   const res = await fetch(url, {
     method: 'GET',
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(lang ? { 'Accept-Language': lang } : {}),
       'X-DDC-Client': 'OE/1.0',
     },
   });
@@ -2184,7 +2199,9 @@ function ReportViewerModal({
   >(null);
 
   // Fetch the rendered HTML body. We bypass apiGet because it always parses
-  // JSON — this endpoint returns text/html.
+  // JSON — this endpoint returns text/html. Bypassing it also means naming
+  // the reader's language ourselves, or the body comes back in English
+  // whatever the interface is set to.
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
@@ -2193,12 +2210,14 @@ function ReportViewerModal({
       setErrorKind(null);
       try {
         const token = getAuthToken();
+        const lang = activeLanguageTag();
         const res = await fetch(
           `${API_BASE}/v1/reporting/reports/${report.id}/content`,
           {
             method: 'GET',
             headers: {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              ...(lang ? { 'Accept-Language': lang } : {}),
               Accept: 'text/html',
               'X-DDC-Client': 'OE/1.0',
             },
@@ -2303,7 +2322,16 @@ function ReportViewerModal({
                 // but the auth cookie (when present) covers the case.
                 // For Bearer-only auth we copy the URL to clipboard as
                 // a graceful fallback.
-                const url = `${API_BASE}/v1/reporting/reports/${report.id}/content`;
+                //
+                // The language rides in the query string rather than in a
+                // header because one of the two paths below is a bare
+                // navigation, and a window.open() carries no header we
+                // control — it would print in whatever the browser asks
+                // for rather than in the language on screen.
+                const lang = activeLanguageTag();
+                const url =
+                  `${API_BASE}/v1/reporting/reports/${report.id}/content` +
+                  (lang ? `?locale=${encodeURIComponent(lang)}` : '');
                 if (token) {
                   // Trigger a fetch + blob URL so we can carry the Authorization.
                   fetch(url, {

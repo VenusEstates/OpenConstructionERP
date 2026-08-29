@@ -60,12 +60,29 @@ Public API
 The function is sync and pure - no DB, no network, no clock. The service
 layer is responsible for assembling ``data_snapshot`` from the live module
 state before invoking the renderer.
+
+Language
+========
+Pass ``locale=`` to render in one of
+:data:`~app.modules.reporting.report_translations.SUPPORTED_REPORT_LOCALES`;
+every heading, label and notice below comes from that catalogue and the
+document declares the language in its ``lang`` attribute. The default is
+English and reproduces the output byte for byte, so a caller that does not
+care about language does not have to change.
 """
 
 from __future__ import annotations
 
 import html
 from typing import Any
+
+from app.modules.reporting.report_translations import (
+    DEFAULT_REPORT_LOCALE,
+    field_label,
+    normalize_report_locale,
+    section_title,
+    tr,
+)
 
 # ── Public renderer entry point ─────────────────────────────────────────
 
@@ -86,6 +103,7 @@ class ReportRenderer:
         template_data: dict[str, Any] | None,
         data_snapshot: dict[str, Any] | None,
         generated_at: str,
+        locale: str = DEFAULT_REPORT_LOCALE,
     ) -> str:
         """Render a complete HTML document for a generated report.
 
@@ -106,16 +124,25 @@ class ReportRenderer:
                 values are arbitrary JSON-able dicts. Missing keys cause
                 the matching section to be skipped.
             generated_at: ISO 8601 timestamp shown in the report footer.
+            locale: Language to render in; a member of
+                ``report_translations.SUPPORTED_REPORT_LOCALES``. Anything
+                else reads the English table, which is what the document's
+                ``lang`` attribute must then declare.
 
         Returns:
             A complete HTML document as a ``str``.
         """
+        # Every string below falls back to the English table when the
+        # catalogue has no entry for *locale*, so the ``lang`` attribute has
+        # to be reduced to the language actually written or the document
+        # claims a language it is not in.
+        locale = normalize_report_locale(locale)
         sections = self._resolve_sections(report_type, template_data)
         snapshot = data_snapshot or {}
 
         parts: list[str] = [
             "<!DOCTYPE html>",
-            '<html lang="en"><head>',
+            f'<html lang="{html.escape(locale, quote=True)}"><head>',
             '<meta charset="UTF-8">',
             f"<title>{html.escape(title)}</title>",
             self._stylesheet(),
@@ -123,9 +150,9 @@ class ReportRenderer:
             '<header class="report-header">',
             f"<h1>{html.escape(title)}</h1>",
             f'<p class="meta">'
-            f"Project: <strong>{html.escape(project_name)}</strong> "
-            f"&middot; Type: {html.escape(report_type)} "
-            f"&middot; Generated: {html.escape(generated_at)}"
+            f"{html.escape(tr(locale, 'meta_project'))}: <strong>{html.escape(project_name)}</strong> "
+            f"&middot; {html.escape(tr(locale, 'meta_type'))}: {html.escape(report_type)} "
+            f"&middot; {html.escape(tr(locale, 'meta_generated'))}: {html.escape(generated_at)}"
             "</p>",
             "</header>",
             '<main class="report-body">',
@@ -138,15 +165,15 @@ class ReportRenderer:
         # "AI-augmented, human-confirmed"). It never counts toward
         # ``rendered_any`` so an otherwise empty report still shows the
         # "no data" notice.
-        narrative_block = self._render_ai_narrative(snapshot.get("ai_narrative"))
+        narrative_block = self._render_ai_narrative(snapshot.get("ai_narrative"), locale)
         if narrative_block is not None:
             parts.append(narrative_block)
 
         rendered_any = False
         for section in sections:
             sid = str(section.get("id", "")).strip()
-            stitle = str(section.get("title", sid.replace("_", " ").title()))
-            block = self._render_section(sid, stitle, snapshot.get(sid))
+            stitle = section_title(str(section.get("title", sid.replace("_", " ").title())), locale)
+            block = self._render_section(sid, stitle, snapshot.get(sid), locale)
             if block is not None:
                 parts.append(block)
                 rendered_any = True
@@ -158,19 +185,18 @@ class ReportRenderer:
             # sections we want the recipient to see why, not a blank PDF.
             parts.append(
                 '<section class="report-section">'
-                "<h2>No data available</h2>"
+                f"<h2>{html.escape(tr(locale, 'no_data_heading'))}</h2>"
                 '<p class="report-empty">'
-                "This report was generated with an empty data snapshot. "
-                "Verify that the source modules (finance, schedule, "
-                "safety, etc.) returned data for the selected project."
+                f"{html.escape(tr(locale, 'no_data_body'))}"
                 "</p></section>"
             )
 
+        footer = tr(locale, "footer_generated_by", timestamp=html.escape(generated_at))
         parts.extend(
             [
                 "</main>",
                 '<footer class="report-footer">',
-                f"<p>Generated by OpenConstructionERP at {html.escape(generated_at)}.</p>",
+                f"<p>{footer}</p>",
                 "</footer>",
                 "</body></html>",
             ]
@@ -182,8 +208,9 @@ class ReportRenderer:
     def _render_section(
         self,
         section_id: str,
-        section_title: str,
+        heading: str,
         payload: Any,
+        locale: str,
     ) -> str | None:
         """Render one section block, or return ``None`` to skip it.
 
@@ -203,28 +230,28 @@ class ReportRenderer:
         # gallery (image thumbnails, not a table of URLs). Handle them
         # explicitly before falling through to the generic renderers.
         if section_id == "progress" and isinstance(payload, dict):
-            body = self._render_progress_block(payload)
-            return f'<section class="report-section"><h2>{html.escape(section_title)}</h2>{body}</section>'
+            body = self._render_progress_block(payload, locale)
+            return f'<section class="report-section"><h2>{html.escape(heading)}</h2>{body}</section>'
 
         if section_id == "photos":
-            body = self._render_photo_gallery(payload)
+            body = self._render_photo_gallery(payload, locale)
             if not body:
                 return None
-            return f'<section class="report-section"><h2>{html.escape(section_title)}</h2>{body}</section>'
+            return f'<section class="report-section"><h2>{html.escape(heading)}</h2>{body}</section>'
 
         body: str
         if isinstance(payload, dict):
-            body = self._render_keyvalue(payload)
+            body = self._render_keyvalue(payload, locale)
         elif isinstance(payload, list):
-            body = self._render_list(payload)
+            body = self._render_list(payload, locale)
         else:
             body = f"<p>{html.escape(str(payload))}</p>"
 
-        return f'<section class="report-section"><h2>{html.escape(section_title)}</h2>{body}</section>'
+        return f'<section class="report-section"><h2>{html.escape(heading)}</h2>{body}</section>'
 
     # ── AI narrative block (item 15) ─────────────────────────────────────
 
-    def _render_ai_narrative(self, payload: Any) -> str | None:
+    def _render_ai_narrative(self, payload: Any, locale: str) -> str | None:
         """Render the optional AI-written narrative, or ``None`` to skip.
 
         Expects ``{"text": str, "confidence": float, ...}`` produced by the
@@ -251,14 +278,17 @@ class ReportRenderer:
         paragraphs = [p.strip() for p in text.replace("\r\n", "\n").split("\n\n") if p.strip()]
         body = "".join(f"<p>{html.escape(p)}</p>" for p in paragraphs) or f"<p>{html.escape(text.strip())}</p>"
 
-        note = "Generated by AI from the project data below"
-        if conf_pct is not None:
-            note += f" (confidence {conf_pct})"
-        note += ". Review before sharing with the client."
+        if conf_pct is None:
+            note = tr(locale, "ai_note")
+        else:
+            note = tr(locale, "ai_note_confidence", confidence=conf_pct)
+        note += " " + tr(locale, "ai_note_review")
 
+        heading = html.escape(tr(locale, "ai_summary_heading"))
+        badge = html.escape(tr(locale, "ai_badge"))
         return (
             '<section class="report-section report-ai-narrative">'
-            '<h2>Summary <span class="report-ai-badge">AI-generated</span></h2>'
+            f'<h2>{heading} <span class="report-ai-badge">{badge}</span></h2>'
             f"{body}"
             f'<p class="report-ai-note">{html.escape(note)}</p>'
             "</section>"
@@ -266,7 +296,7 @@ class ReportRenderer:
 
     # ── Progress-report blocks (item 15) ─────────────────────────────────
 
-    def _render_progress_block(self, payload: dict[str, Any]) -> str:
+    def _render_progress_block(self, payload: dict[str, Any], locale: str) -> str:
         """Render the field-progress completion block.
 
         Presents the headline overall percent-complete plus the "as of"
@@ -282,34 +312,39 @@ class ReportRenderer:
                 pct_label = f"{float(overall):.1f}%"
             except (TypeError, ValueError):
                 pct_label = html.escape(str(overall))
-            rows.append(f"<tr><th>Overall Progress</th><td><strong>{pct_label}</strong></td></tr>")
+            label = html.escape(tr(locale, "overall_progress"))
+            rows.append(f"<tr><th>{label}</th><td><strong>{pct_label}</strong></td></tr>")
 
         if payload.get("as_of_date"):
-            rows.append(f"<tr><th>As Of</th><td>{html.escape(str(payload['as_of_date']))}</td></tr>")
+            label = html.escape(tr(locale, "as_of"))
+            rows.append(f"<tr><th>{label}</th><td>{html.escape(str(payload['as_of_date']))}</td></tr>")
         if payload.get("recorded_by"):
-            rows.append(f"<tr><th>Recorded By</th><td>{html.escape(str(payload['recorded_by']))}</td></tr>")
+            label = html.escape(tr(locale, "recorded_by"))
+            rows.append(f"<tr><th>{label}</th><td>{html.escape(str(payload['recorded_by']))}</td></tr>")
 
         milestones = payload.get("milestone_status")
         if isinstance(milestones, list):
             for ms in milestones:
                 if not isinstance(ms, dict):
                     continue
-                period = html.escape(str(ms.get("period", "Period")))
+                period = html.escape(str(ms.get("period", tr(locale, "period"))))
                 try:
                     ms_pct = f"{float(ms.get('percent', 0)):.1f}%"
                 except (TypeError, ValueError):
                     ms_pct = html.escape(str(ms.get("percent", "")))
                 count = ms.get("entry_count")
-                count_suffix = f" ({html.escape(str(count))} entries)" if count is not None else ""
+                count_suffix = ""
+                if count is not None:
+                    count_suffix = " " + html.escape(tr(locale, "entries_suffix", count=count))
                 rows.append(f"<tr><th>{period}</th><td>{ms_pct}{count_suffix}</td></tr>")
 
         if not rows:
             # Defensive: a progress block with no recognised keys still
             # renders something rather than an empty table.
-            return self._render_keyvalue(payload)
+            return self._render_keyvalue(payload, locale)
         return f'<table class="report-table">{"".join(rows)}</table>'
 
-    def _render_photo_gallery(self, payload: Any) -> str:
+    def _render_photo_gallery(self, payload: Any, locale: str) -> str:
         """Render up to six site photos as inline thumbnails.
 
         Accepts either ``{"photo_gallery": [url, ...]}`` or a bare list of
@@ -325,6 +360,7 @@ class ReportRenderer:
         elif isinstance(payload, list):
             photos = payload
 
+        alt = html.escape(tr(locale, "site_photo_alt"), quote=True)
         img_tags: list[str] = []
         for photo_url in photos[:6]:
             if not photo_url or not isinstance(photo_url, str):
@@ -333,14 +369,14 @@ class ReportRenderer:
             img_tags.append(
                 '<div style="display:inline-block;width:30%;margin:5px;vertical-align:top;">'
                 f'<img src="{safe_url}" style="max-width:100%;max-height:150px;'
-                'border:1px solid #e5e7eb;border-radius:4px;" alt="Site photo" />'
+                f'border:1px solid #e5e7eb;border-radius:4px;" alt="{alt}" />'
                 "</div>"
             )
         if not img_tags:
             return ""
         return f'<div style="display:flex;flex-wrap:wrap;">{"".join(img_tags)}</div>'
 
-    def _render_keyvalue(self, payload: dict[str, Any]) -> str:
+    def _render_keyvalue(self, payload: dict[str, Any], locale: str) -> str:
         """Render a dict as a definition-style table.
 
         Nested dicts collapse into sub-tables, nested lists collapse via
@@ -353,12 +389,12 @@ class ReportRenderer:
         """
         rows: list[str] = []
         for key, value in payload.items():
-            label = html.escape(str(key).replace("_", " ").title())
-            cell = self._cell(value)
+            label = html.escape(field_label(key, locale))
+            cell = self._cell(value, locale)
             rows.append(f"<tr><th>{label}</th><td>{cell}</td></tr>")
         return f'<table class="report-table">{"".join(rows)}</table>'
 
-    def _render_list(self, payload: list[Any]) -> str:
+    def _render_list(self, payload: list[Any], locale: str) -> str:
         """Render a list as either a row-table (list-of-dicts) or a UL."""
         if not payload:
             return ""
@@ -374,10 +410,10 @@ class ReportRenderer:
                     if k not in seen:
                         seen.add(k)
                         columns.append(k)
-            header = "".join(f"<th>{html.escape(col.replace('_', ' ').title())}</th>" for col in columns)
+            header = "".join(f"<th>{html.escape(field_label(col, locale))}</th>" for col in columns)
             body_rows: list[str] = []
             for item in payload:
-                cells = "".join(f"<td>{self._cell(item.get(col))}</td>" for col in columns)
+                cells = "".join(f"<td>{self._cell(item.get(col), locale)}</td>" for col in columns)
                 body_rows.append(f"<tr>{cells}</tr>")
             return (
                 '<table class="report-table">'
@@ -386,19 +422,19 @@ class ReportRenderer:
                 "</table>"
             )
 
-        items = "".join(f"<li>{self._cell(it)}</li>" for it in payload)
+        items = "".join(f"<li>{self._cell(it, locale)}</li>" for it in payload)
         return f"<ul>{items}</ul>"
 
-    def _cell(self, value: Any) -> str:
+    def _cell(self, value: Any, locale: str) -> str:
         """HTML-escape and stringify a single cell value."""
         if value is None:
             return '<span class="report-null">&mdash;</span>'
         if isinstance(value, dict):
-            return self._render_keyvalue(value)
+            return self._render_keyvalue(value, locale)
         if isinstance(value, list):
-            return self._render_list(value)
+            return self._render_list(value, locale)
         if isinstance(value, bool):
-            return "Yes" if value else "No"
+            return html.escape(tr(locale, "yes" if value else "no"))
         return html.escape(str(value))
 
     # ── Section discovery ────────────────────────────────────────────────

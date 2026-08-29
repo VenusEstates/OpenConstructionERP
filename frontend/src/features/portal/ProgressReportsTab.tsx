@@ -9,7 +9,7 @@ import { openInNewTab } from '@/shared/lib/desktop';
 import { DateDisplay } from '@/shared/ui/DateDisplay';
 import { useActiveProjectId } from '@/shared/hooks/useActiveProjectId';
 import { projectsApi } from '@/features/projects/api';
-import { API_BASE, getAuthToken } from '@/shared/lib/api';
+import { activeLanguageTag, API_BASE, getAuthToken } from '@/shared/lib/api';
 import { useToastStore } from '@/stores/useToastStore';
 import { getErrorMessage } from '@/shared/lib/api';
 import { listProgressReports, type ProgressReport } from './api';
@@ -164,15 +164,19 @@ function ReportRow({ report }: { report: ProgressReport }) {
 
   // Fetch the rendered HTML with the bearer token (the endpoint returns
   // text/html, not JSON, so we bypass apiGet) and either open it in a new
-  // tab or download it as a file.
+  // tab or download it as a file. Bypassing apiGet also skips the
+  // Accept-Language header it attaches, so we name the language here or the
+  // report comes back in English however the portal is set.
   const fetchHtml = async (): Promise<string | null> => {
     const token = getAuthToken();
+    const lang = activeLanguageTag();
     const res = await fetch(
       `${API_BASE}/v1/reporting/reports/${report.id}/content`,
       {
         method: 'GET',
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(lang ? { 'Accept-Language': lang } : {}),
           Accept: 'text/html',
           'X-DDC-Client': 'OE/1.0',
         },
