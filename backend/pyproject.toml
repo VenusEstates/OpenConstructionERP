@@ -698,7 +698,23 @@ asyncio_default_test_loop_scope = "session"
 # workers end up hammering the same database: concurrent create_all DDL races
 # and the bootstrap-admin ordering is no longer deterministic. Parallel
 # execution needs a per-worker database first; until then serial is correct.
-addopts = []
+# --strict-markers makes an unregistered marker a collection error instead
+# of a warning. Without it a typo in a decorator still exits 0, and the test
+# simply leaves whatever lane selects on that marker while the lane stays
+# green. Measured on a two-test fixture holding one correct and one
+# misspelled marker: `-m` reports "1 passed, 1 deselected" and exits 0.
+# Nothing in that output says a test went missing, and tenant_isolation has
+# 511 application sites to lose one in.
+# It catches every form that goes through pytest.mark attribute access, so
+# the decorator, a module level pytestmark, and marks= inside parametrize,
+# all three verified as exit 2. It does not catch item.add_marker with a
+# string, one site in tests/pg/conftest.py, and it does not catch a typo in
+# an -m expression, which deselects everything and exits 5 instead.
+# Switching it on breaks nothing today. The tree applies 12 distinct marker
+# names: 5 pytest builtins, asyncio and anyio from auto-loaded plugins that
+# register through addinivalue_line, and the 5 declared below. Counted over
+# every tracked .py plus the untracked ones, 2026-08-30.
+addopts = ["--strict-markers"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
