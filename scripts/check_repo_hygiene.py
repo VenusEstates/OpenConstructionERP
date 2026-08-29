@@ -36,6 +36,22 @@ DENY_PATTERNS = [
     # per-clone and absent from a fresh clone, and this gate passed clean
     # while blind to the whole class. .claude/ carries API tokens next to
     # the notes, so the cost of the gap was not only a leaked document.
+    # Runtime user data. .gitignore already stops these being added; this is
+    # the half that catches one already tracked. Not hypothetical: 18 files
+    # under backend/uploads/ shipped in the two v5.6.0 release commits
+    # (bcc4180e8, e50d2eb33) and were removed in c3efd76fd. Those 18 turned
+    # out to be 13-209 byte test fixtures containing 'real pdf', not personal
+    # data, but the directory reached public history once and .gitignore was
+    # written afterwards.
+    #
+    # Anchored to the real paths on purpose. A bare (^|/)uploads?/ matched 6
+    # tracked files under backend/app/modules/uploads/, which is a shipped
+    # module: a pattern that fires on real code is worse than the gap it
+    # closes, because the gate that cries wolf is the gate someone deletes.
+    r"(^|/)backend/uploads/",
+    r"(^|/)data/uploads/",
+    r"(^|/)dwg_uploads/",
+    r"(^|/)data/exports/",
     r"(^|/)\.claude/",
     r"(^|/)CLAUDE-DASHBOARDS\.md$",
     r"(^|/)marketing-site/CLAUDE\.md$",
