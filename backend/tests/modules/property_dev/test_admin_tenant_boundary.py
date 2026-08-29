@@ -92,9 +92,10 @@ _ALLOWED_ROUTE_HANDLERS: dict[str, str] = {
 # ROUTE, never to a helper name, which keeps the spelling of an internal
 # function out of the decision entirely.
 
-# Mutating routes that legitimately resolve no ownership chain, with why.
-# Each was read before being listed. A route added here without a reason
-# that survives reading the handler is a bypass with paperwork.
+# Routes, read and write alike, that legitimately resolve no ownership
+# chain, with why. Each was read before being listed. A route added here
+# without a reason that survives reading the handler is a bypass with
+# paperwork.
 _NO_OWNER_CHAIN_EXPECTED: dict[str, str] = {
     # The portal authenticates by signed token, not by user payload. The
     # token is the credential and it names exactly one buyer, so there is
@@ -113,6 +114,17 @@ _NO_OWNER_CHAIN_EXPECTED: dict[str, str] = {
     # rather than settled here.
     "put_document_template_locale": "translation asset: no owner column exists",
     "delete_document_template_locale_override": "translation asset: no owner column exists",
+    "get_document_template_locale": "translation asset: no owner column exists",
+    # Static reference data. Neither reads a tenant row, so there is no
+    # owner to resolve and nothing to cross.
+    "list_jurisdictions": "reference data: ISO codes, identical for every caller",
+    "list_payment_schedule_templates": "reference data: static catalogue, identical for every caller",
+    # Buyer portal reads, authenticated by the same signed token as the
+    # portal writes above rather than by a user payload.
+    "buyer_overview": "portal: the signed token is the credential",
+    "download_buyer_document": "portal: the signed token is the credential",
+    "portal_list_my_snags": "portal session: scoped to the buyer the session names",
+    "portal_list_my_warranty_claims": "portal session: scoped to the buyer the session names",
 }
 
 
@@ -318,22 +330,34 @@ def test_no_route_reaches_a_gate_that_admits_a_cross_tenant_admin() -> None:
     )
 
 
-def test_every_mutating_route_reaches_some_ownership_resolution() -> None:
-    """A mutating route that resolves no owner at all is a finding, not a pass."""
+def test_every_route_reaches_some_ownership_resolution() -> None:
+    """A route that resolves no owner at all is a finding, not a pass.
+
+    This is the assertion that catches a route reaching NO gate whatsoever.
+    The admin-role test above cannot: a route with no gate reaches no admin
+    branch either, so it sails through on an absence rather than on a check.
+
+    It covers reads as well as writes. It did not always. While this suite
+    still enumerated mutating routes only, seven read routes reached no
+    ownership resolution and NOTHING asserted anything about them. They all
+    turned out to be reference data or portal-token reads, so the answer was
+    the same either way, but an unexamined route is not an exempted one and
+    the two should never have looked alike from outside.
+    """
     functions = _module_functions()
     ungated: list[str] = []
 
     for method, path, handler in _all_routes():
-        if method not in MUTATING or handler in _NO_OWNER_CHAIN_EXPECTED:
+        if handler in _NO_OWNER_CHAIN_EXPECTED:
             continue
         reached = _reachable(handler, functions)
         if not any(_resolves_ownership(d) for name in reached for d in functions[name]):
             ungated.append(f"{method} {path} (handler {handler})")
 
     assert not ungated, (
-        "These mutating routes reach no function that compares a stored owner or "
-        "tenant against the caller, so nothing stands between the request and "
-        "another tenant's data. Add the ownership gate, or record the route in "
+        "These routes reach no function that compares a stored owner or tenant "
+        "against the caller, so nothing stands between the request and another "
+        "tenant's data. Add the ownership gate, or record the route in "
         "_NO_OWNER_CHAIN_EXPECTED with the reason it needs none.\n" + "\n".join(f"  {r}" for r in sorted(ungated))
     )
 
