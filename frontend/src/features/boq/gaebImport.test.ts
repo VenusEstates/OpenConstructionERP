@@ -16,7 +16,6 @@ import {
   importGAEBToBOQ,
   decodeXmlBuffer,
   detectGAEBPhase,
-  type GAEBPosition,
 } from './gaebImport';
 
 // ---------------------------------------------------------------------------

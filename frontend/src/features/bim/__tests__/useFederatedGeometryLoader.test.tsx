@@ -14,7 +14,6 @@ import {
   describe,
   expect,
   it,
-  vi,
   beforeAll,
   beforeEach,
   afterEach,

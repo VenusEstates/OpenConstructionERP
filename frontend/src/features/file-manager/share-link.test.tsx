@@ -20,8 +20,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import React from 'react';
-
 // The global test setup mocks `useParams` to always return `{}`, which would
 // strand SharePage on the "no token" path before any fetch fires. Restore the
 // real react-router-dom surface inside this test file so the MemoryRouter +

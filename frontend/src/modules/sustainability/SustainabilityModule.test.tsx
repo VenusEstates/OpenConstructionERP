@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import SustainabilityModule from './SustainabilityModule';
-import { EPD_MATERIALS, EU_CPR_BENCHMARKS } from './data/epd-materials';
+import { EPD_MATERIALS } from './data/epd-materials';
 
 describe('SustainabilityModule', () => {
   it('should render the page header', () => {

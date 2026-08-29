@@ -22,8 +22,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
-
 /* ── Recycle-bin layer mock — what the dispatcher actually calls ───── */
 
 vi.mock('@/features/file-trash/api', () => {

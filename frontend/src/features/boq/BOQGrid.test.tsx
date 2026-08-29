@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { evaluateFormula } from './grid/cellEditors';
 import { getColumnDefs } from './grid/columnDefs';
 import { parseClipboardNumber } from './BOQGrid';

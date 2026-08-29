@@ -15,7 +15,7 @@
  * Override per-test with `test.use({ screenshotModule: 'custom' })` or by
  * placing tests in the right folder.
  */
-import { test as base, type Page, type TestInfo } from '@playwright/test';
+import { type Page, type TestInfo } from '@playwright/test';
 import { test as tenantTest } from './tenant.fixture';
 import fs from 'node:fs';
 import path from 'node:path';

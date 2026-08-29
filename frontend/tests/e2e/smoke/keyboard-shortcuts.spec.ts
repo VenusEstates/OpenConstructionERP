@@ -4,7 +4,7 @@
  *   Cmd/Ctrl+K → command palette opens
  *   ?          → keyboard shortcuts help opens
  */
-import { test, expect } from '../fixtures';
+import { test } from '../fixtures';
 import { gotoModule, openCommandPalette, openShortcutsHelp, captureScreen } from '../helpers';
 
 test.describe('@smoke keyboard-shortcuts', () => {

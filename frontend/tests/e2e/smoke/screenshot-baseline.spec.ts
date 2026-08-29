@@ -4,7 +4,7 @@
  * are the seed of a future visual baseline (the QA agent compares
  * across runs via /qa-screenshots/).
  */
-import { test, expect } from '../fixtures';
+import { test } from '../fixtures';
 import { MODULE_ROUTES, captureScreen, expectAppShell } from '../helpers';
 
 const ROUTES_TO_BASELINE: Array<{ key: keyof typeof MODULE_ROUTES; label: string }> = [

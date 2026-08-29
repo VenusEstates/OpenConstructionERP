@@ -13,7 +13,7 @@
  *     expect(project.id).toBeTruthy();
  *   });
  */
-import { test as base, type APIRequestContext, type APIResponse } from '@playwright/test';
+import { type APIRequestContext, type APIResponse } from '@playwright/test';
 import { test as authTest } from './auth.fixture';
 
 const API_URL = process.env.OE_TEST_API_URL ?? 'http://localhost:8000';

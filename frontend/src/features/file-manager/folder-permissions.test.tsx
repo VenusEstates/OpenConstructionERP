@@ -18,8 +18,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
-
 import { FolderPermissionsModal } from './components/FolderPermissionsModal';
 import type { FolderPermissionRow } from './types';
 import * as api from './api';

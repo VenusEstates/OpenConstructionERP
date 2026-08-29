@@ -10,7 +10,7 @@
 
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MeasurementLedger } from '../components/MeasurementLedger';
 import type { Measurement } from '../lib/takeoff-types';
 import { usePreferencesStore } from '@/stores/usePreferencesStore';

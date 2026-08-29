@@ -19,8 +19,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
-
 // Mock apiGet BEFORE importing the component under test so the module
 // graph picks up the mock instead of the real implementation.
 vi.mock('@/shared/lib/api', async (importOriginal) => {
