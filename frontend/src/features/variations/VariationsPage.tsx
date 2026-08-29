@@ -22,6 +22,8 @@ import {
   Network,
   Pencil,
   Trash2,
+  Calculator,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   Button,
@@ -97,6 +99,10 @@ import {
   submitEoT,
   grantEoT,
   rejectEoT,
+  getVariationRequestBOQ,
+  createVariationRequestBOQ,
+  adoptVariationRequestBOQ,
+  type VariationBOQ,
   type Notice,
   type NoticeStatus,
   type VariationRequest,
@@ -1656,6 +1662,195 @@ export function changeOrderDeepLink(changeOrderId: string): string {
   return `/changeorders?highlight=${encodeURIComponent(changeOrderId)}`;
 }
 
+/** Where a variation request's own bill of quantities is edited.
+ *
+ * A variation bill is an ordinary bill, so it is edited in the ordinary BOQ
+ * editor at `/boq/:boqId` - positions, assemblies, markups, revisions and
+ * every export work on it unchanged. That is the whole argument for making it
+ * a real bill instead of a second, thinner pricing screen inside this module.
+ */
+export function variationBoqDeepLink(boqId: string): string {
+  return `/boq/${encodeURIComponent(boqId)}`;
+}
+
+/** The priced scope of one variation request, inside the request drawer.
+ *
+ * Placement is deliberate. This is per-request state, not a register, so it
+ * belongs beside the request it describes rather than behind a sixth tab that
+ * would ask the user to leave the record to see its own price.
+ *
+ * A request that has no bill is the normal case and says so plainly, with the
+ * one button that changes it. Nothing here writes to the headline estimate on
+ * its own: the bill and the estimate are shown side by side, and it takes a
+ * click to make the priced figure the one the request carries.
+ */
+function PricedScope({
+  request,
+  currency,
+}: {
+  request: VariationRequest;
+  currency: string;
+}) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const addToast = useToastStore((s) => s.addToast);
+
+  const boqQ = useQuery<VariationBOQ>({
+    queryKey: ['variations', 'request-boq', request.id],
+    queryFn: () => getVariationRequestBOQ(request.id),
+  });
+
+  const openMut = useMutation({
+    mutationFn: () => createVariationRequestBOQ(request.id),
+    onSuccess: (boq) => {
+      qc.invalidateQueries({ queryKey: ['variations'] });
+      addToast({
+        type: 'success',
+        title: t('variations.boq_opened', { defaultValue: 'Bill opened' }),
+      });
+      navigate(variationBoqDeepLink(boq.id));
+    },
+    onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  const adoptMut = useMutation({
+    mutationFn: () => adoptVariationRequestBOQ(request.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['variations'] });
+      addToast({
+        type: 'success',
+        title: t('variations.boq_adopted', {
+          defaultValue: 'Estimate taken from the bill',
+        }),
+      });
+    },
+    onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  const boq = boqQ.data;
+  const decided =
+    request.status === 'approved' ||
+    request.status === 'rejected' ||
+    request.status === 'converted_to_vo';
+
+  return (
+    <Card padding="sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-content-secondary mb-2">
+        {t('variations.priced_scope', { defaultValue: 'Priced scope' })}
+      </p>
+
+      {boqQ.isLoading && (
+        <p className="text-sm text-content-tertiary">
+          {t('common.loading', { defaultValue: 'Loading…' })}
+        </p>
+      )}
+
+      {boqQ.isError && (
+        <p className="text-sm text-content-tertiary">{getErrorMessage(boqQ.error)}</p>
+      )}
+
+      {boq && !boq.has_boq && (
+        <div className="space-y-2">
+          <p className="text-sm text-content-secondary">
+            {t('variations.priced_scope_hint', {
+              defaultValue:
+                'Price this variation on a bill of its own, holding only the scope it changes and separate from the project estimate.',
+            })}
+          </p>
+          <Button
+            variant="secondary"
+            icon={<Calculator size={14} />}
+            onClick={() => openMut.mutate()}
+            loading={openMut.isPending}
+          >
+            {t('variations.open_variation_boq', { defaultValue: 'Open a bill' })}
+          </Button>
+        </div>
+      )}
+
+      {boq && boq.has_boq && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <Field
+              label={t('variations.priced_total', { defaultValue: 'Priced total' })}
+              value={
+                <MoneyDisplay
+                  amount={Number(boq.grand_total ?? 0)}
+                  currency={boq.base_currency || request.currency || currency}
+                />
+              }
+            />
+            <Field
+              label={t('variations.priced_lines', { defaultValue: 'Priced lines' })}
+              value={String(boq.position_count)}
+            />
+            <Field
+              label={t('variations.traced_lines', { defaultValue: 'Traced lines' })}
+              value={String(boq.traces.length)}
+            />
+            <Field
+              label={t('variations.boq_name', { defaultValue: 'Bill' })}
+              value={boq.name || '—'}
+            />
+          </div>
+
+          {boq.is_mixed_currency && (
+            <p className="flex items-start gap-1.5 text-xs text-content-secondary">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {t('variations.boq_mixed_currency', {
+                defaultValue:
+                  'This bill blends currencies, so its total is not a figure to settle on yet.',
+              })}
+            </p>
+          )}
+
+          {!boq.estimate_matches_boq && !boq.is_mixed_currency && (
+            <p className="text-xs text-content-secondary">
+              {t('variations.boq_differs_from_estimate', {
+                defaultValue:
+                  'The estimate on this request has not been taken from the bill yet, so the two figures above are saying different things.',
+              })}
+            </p>
+          )}
+
+          {boq.checks.map((check) => (
+            <p
+              key={check.rule_id}
+              className="flex items-start gap-1.5 text-xs text-content-secondary"
+            >
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {check.message}
+            </p>
+          ))}
+
+          <div className="flex flex-wrap gap-2">
+            {boq.boq_id && (
+              <Button
+                variant="secondary"
+                icon={<Calculator size={14} />}
+                onClick={() => navigate(variationBoqDeepLink(boq.boq_id as string))}
+              >
+                {t('variations.open_boq_editor', { defaultValue: 'Open bill' })}
+              </Button>
+            )}
+            {!decided && !boq.estimate_matches_boq && !boq.is_mixed_currency && (
+              <Button
+                variant="primary"
+                icon={<CheckCircle2 size={14} />}
+                onClick={() => adoptMut.mutate()}
+                loading={adoptMut.isPending}
+              >
+                {t('variations.adopt_boq_total', { defaultValue: 'Use as estimate' })}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export function DetailDrawer({
   selected,
   projectId,
@@ -2057,6 +2252,7 @@ export function DetailDrawer({
                   <p className="text-sm whitespace-pre-wrap">{request.decision_notes}</p>
                 </Card>
               )}
+              <PricedScope request={request} currency={currency} />
               <div className="flex flex-wrap gap-2 pt-2 border-t border-border-light">
                 {request.status === 'draft' && (
                   <Button
