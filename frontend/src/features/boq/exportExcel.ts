@@ -11,6 +11,7 @@
  */
 
 import {
+  exportablePositions,
   groupPositionsIntoSections,
   isSection,
   type Position,
@@ -215,7 +216,11 @@ export function buildBOQSheetData(options: ExportOptions): {
    *  receive currency / quantity number formatting. */
   numberFormatStartRow: number;
 } {
-  const { positions, boqTitle, markupTotals, netTotal, vatRate, vatAmount, grossTotal } = options;
+  const { boqTitle, markupTotals, netTotal, vatRate, vatAmount, grossTotal } = options;
+  // A row the estimator has not typed into yet is not a line of the bill:
+  // drop it before it can reach a delivered file or the position tally in the
+  // header, matching what the server-side exports emit.
+  const positions = exportablePositions(options.positions);
   const grouped = groupPositionsIntoSections(positions, {
     baseCurrency: options.baseCurrency,
     fxRates: options.fxRates,
@@ -430,7 +435,8 @@ export function buildSummarySheetData(options: ExportOptions): {
   rows: Row[];
   numberFormatStartRow: number;
 } {
-  const { positions, markupTotals, netTotal, vatRate, vatAmount, grossTotal } = options;
+  const { markupTotals, netTotal, vatRate, vatAmount, grossTotal } = options;
+  const positions = exportablePositions(options.positions);
   const grouped = groupPositionsIntoSections(positions, {
     baseCurrency: options.baseCurrency,
     fxRates: options.fxRates,

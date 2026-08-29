@@ -3,6 +3,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
+  exportablePositions,
   groupPositionsIntoSections,
   isSection,
   type Position,
@@ -609,7 +610,14 @@ function renderSummary(
  *  - Cost summary: Direct Cost, Markups (itemised), Net Total, VAT, Gross Total
  *  - Page footers with "Page X of Y"
  */
-export function generateBOQPdf(options: PdfReportOptions): void {
+export function generateBOQPdf(rawOptions: PdfReportOptions): void {
+  // Placeholder rows the estimator has not typed into are not lines of the
+  // bill. Narrow once here so every renderer below — cover statistics, tables,
+  // summary — works from the same set the server-side PDF export renders.
+  const options: PdfReportOptions = {
+    ...rawOptions,
+    positions: exportablePositions(rawOptions.positions),
+  };
   const locale = options.locale ?? 'en-US';
 
   const doc = new jsPDF({

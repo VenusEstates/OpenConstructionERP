@@ -482,6 +482,38 @@ export function isSection(pos: Pick<Position, 'unit'>): boolean {
   return !pos.unit || pos.unit.trim() === '' || pos.unit.trim().toLowerCase() === 'section';
 }
 
+/** A position nobody has typed into yet: no description and no quantity.
+ *
+ * "Add Position" creates the row on the server straight away and opens its
+ * description cell, so a bill legitimately holds rows carrying nothing yet.
+ * They are not lines of the bill: the server leaves them out of its position
+ * counts and out of every export it renders, and the client-side Excel / PDF
+ * exports apply this same rule so a file downloaded from the browser matches
+ * one downloaded from the API.
+ *
+ * A section header carries no quantity by definition, so it is never empty in
+ * this sense — without that guard every header would be dropped and the
+ * exports would lose their structure.
+ */
+export function isEmptyPosition(
+  pos: Pick<Position, 'unit' | 'description' | 'quantity'>,
+): boolean {
+  if (isSection(pos)) return false;
+  const described = (pos.description ?? '').trim() !== '';
+  // A quantity that will not parse counts as no quantity, matching what the
+  // server's `_str_to_float` does with the same value — the two exports must
+  // not disagree about which rows a bill has.
+  const qty = Number(pos.quantity ?? 0);
+  return !described && (!Number.isFinite(qty) || qty === 0);
+}
+
+/** Narrow a position list to the rows an export may emit. Keeps section headers. */
+export function exportablePositions<T extends Pick<Position, 'unit' | 'description' | 'quantity'>>(
+  positions: T[],
+): T[] {
+  return positions.filter((p) => !isEmptyPosition(p));
+}
+
 /**
  * Organizes a flat positions list into sections with children.
  * A section is any position where `unit` is empty.

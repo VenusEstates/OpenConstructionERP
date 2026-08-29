@@ -198,7 +198,13 @@ from app.modules.boq.schemas import (
     SustainabilityResponse,
     TemplateInfo,
 )
-from app.modules.boq.service import MAX_NESTING_DEPTH, SECTION_UNITS, BOQService, resource_fx_factor
+from app.modules.boq.service import (
+    MAX_NESTING_DEPTH,
+    SECTION_UNITS,
+    BOQService,
+    exportable_positions,
+    resource_fx_factor,
+)
 from app.modules.boq.units import to_gaeb_unit_code
 from app.modules.costs.repository import CostItemRepository
 
@@ -3738,7 +3744,7 @@ async def export_boq_csv(
     # exports must do the same before fetching any priced data.
     await _verify_boq_owner(session, boq_id, _user_id, payload)
     # Use structured data to include markups in the grand total
-    structured = await service.get_boq_structured(boq_id)
+    structured = await service.get_boq_structured_for_export(boq_id)
     # Issue #111 - freeze the project FX table into the exported artifact so
     # the base-currency totals are auditable and a later rate edit cannot
     # retroactively rewrite a delivered BOQ.
@@ -3983,7 +3989,7 @@ async def export_boq_excel(
     await _verify_boq_owner(session, boq_id, _user_id, payload)
     boq_data = await service.get_boq_with_positions(boq_id)
     boq_obj = await service.get_boq(boq_id)
-    structured_data = await service.get_boq_structured(boq_id)
+    structured_data = await service.get_boq_structured_for_export(boq_id)
     # Issue #111 - structured_data totals are FX-converted into the project
     # base currency; boq_data.grand_total is a raw position sum (wrong for
     # mixed-currency BOQs). Source the aggregate cells from structured_data
@@ -4090,7 +4096,10 @@ async def export_boq_excel(
         total_cell.fill = light_gray_fill
         return row + 1
 
-    for pos in boq_data.positions:
+    # The flat list drives the sheet's rows, so it needs the same narrowing
+    # ``get_boq_structured_for_export`` applies to the section tree above: a
+    # placeholder nobody has typed into is not a line of the delivered bill.
+    for pos in exportable_positions(boq_data.positions):
         pos_parent = str(pos.parent_id) if pos.parent_id else None
 
         # If we switched sections, write subtotal for previous section
@@ -4416,7 +4425,7 @@ async def export_boq_pdf(
     # IDOR guard: scope the export to the project owner/member, matching
     # every other BOQ read endpoint.
     await _verify_boq_owner(session, boq_id, _user_id, payload)
-    boq_data = await service.get_boq_structured(boq_id)
+    boq_data = await service.get_boq_structured_for_export(boq_id)
 
     # Load project for cover page info
     project_repo = ProjectRepository(session)
@@ -4573,7 +4582,7 @@ async def export_boq_gaeb(
     # IDOR guard: scope the export to the project owner/member, matching
     # every other BOQ read endpoint.
     await _verify_boq_owner(session, boq_id, _user_id, payload)
-    boq_data = await service.get_boq_structured(boq_id)
+    boq_data = await service.get_boq_structured_for_export(boq_id)
 
     # Load project for label text + currency.
     project_repo = ProjectRepository(session)
@@ -4641,7 +4650,7 @@ async def export_boq_bc3(
     # IDOR guard: scope the export to the project owner/member, matching every
     # other BOQ read endpoint.
     await _verify_boq_owner(session, boq_id, _user_id, payload)
-    boq_data = await service.get_boq_structured(boq_id)
+    boq_data = await service.get_boq_structured_for_export(boq_id)
 
     # Load project for label text + currency.
     project_repo = ProjectRepository(session)

@@ -21,7 +21,7 @@ import logging
 import math
 import re
 import uuid
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -504,6 +504,49 @@ def _is_section(position: Position) -> bool:
     qty = _str_to_float(position.quantity)
     rate = _str_to_float(position.unit_rate)
     return unit in SECTION_UNITS and qty == 0.0 and rate == 0.0
+
+
+def is_empty_position(position: Any) -> bool:
+    """Determine whether a position is a placeholder nobody has filled in yet.
+
+    "Add Position" in the editor creates the row on the server straight away
+    and opens its description cell for typing, so a bill legitimately holds
+    rows that carry nothing yet. Such a row is not a priced line: it must not
+    be counted as one and it must not reach an export. It becomes a real line
+    the moment it carries a description or a quantity, which is the first
+    thing the estimator types into it.
+
+    Section headers are a separate concept and are never empty in this sense -
+    they carry no quantity by definition - so they are excluded here and stay
+    subject to :func:`_is_section` alone. Without that guard every seeded
+    header (unit ``""``, and often no description) would read as empty and
+    vanish from the exports that render it.
+
+    ``total`` is always ``quantity x unit_rate`` (:func:`_compute_total`), so a
+    row this returns ``True`` for provably carries no money: dropping it from
+    an export can never change what that export sums to.
+
+    Args:
+        position: An ORM ``Position`` or any response object exposing
+            ``description``, ``quantity``, ``unit`` and ``unit_rate``.
+
+    Returns:
+        True when the row carries neither a description nor a quantity.
+    """
+    if _is_section(position):
+        return False
+    description = (getattr(position, "description", "") or "").strip()
+    return not description and _str_to_float(getattr(position, "quantity", 0)) == 0.0
+
+
+def exportable_positions(positions: Iterable[Any]) -> list[Any]:
+    """Narrow a position list to the rows an export is allowed to emit.
+
+    Drops the placeholder rows :func:`is_empty_position` identifies and keeps
+    everything else, section headers included - a header is structure an
+    export needs, an untouched blank line is not.
+    """
+    return [p for p in positions if not is_empty_position(p)]
 
 
 def _stamp_resource_breakdown(metadata: dict[str, Any]) -> None:
@@ -2433,7 +2476,37 @@ class BOQService:
                 .group_by(Position.boq_id)
             )
         ).all()
-        return {boq_id: count for boq_id, count in rows}
+        counts: dict[uuid.UUID, int] = {boq_id: count for boq_id, count in rows}
+
+        # Subtract the placeholder rows "Add Position" leaves behind, so a
+        # blank line the estimator has not typed into yet does not inflate the
+        # figure the listing shows.
+        #
+        # The emptiness test stays in Python (``is_empty_position``) because
+        # ``quantity`` is a String column: "0", "0.00" and "" are three
+        # spellings of one zero and no portable comparison catches all of
+        # them. Restating the predicate in SQL is the mistake ``SECTION_UNITS``
+        # exists to prevent, so the query only narrows to the rows that could
+        # possibly be empty - a row carrying a description never is - and
+        # Python decides each candidate. That candidate set is precisely the
+        # blank rows we are trying to stop counting, so it stays small even on
+        # a bill with thousands of priced lines.
+        blank = (
+            await self.session.execute(
+                select(Position.boq_id, Position.quantity)
+                .where(Position.boq_id.in_(boq_ids))
+                .where(Position.unit.notin_(SECTION_UNITS))
+                .where(func.trim(func.coalesce(Position.description, "")) == "")
+            )
+        ).all()
+        for boq_id, quantity in blank:
+            if _str_to_float(quantity) == 0.0:
+                counts[boq_id] = counts.get(boq_id, 0) - 1
+
+        # A BOQ whose every line item turned out to be a placeholder drops out
+        # of the mapping rather than reporting a zero, matching the contract
+        # above for a BOQ with no line items at all.
+        return {boq_id: count for boq_id, count in counts.items() if count > 0}
 
     async def compute_boq_totals(
         self,
@@ -6461,13 +6534,16 @@ class BOQService:
         boq = await self.get_boq(boq_id)
         positions = await self.position_repo.list_all_for_boq(boq_id)
 
-        # Build position responses + count (section headers carry no unit and
-        # are excluded from money / counts).
+        # Build position responses + count. Section headers carry no unit and
+        # are excluded from money / counts, and so are the placeholder rows
+        # "Add Position" creates before the estimator has typed into them.
+        # ``positions`` itself keeps both: the editor renders from this list
+        # and has to show the row it just asked the server to create.
         position_responses = []
         position_count = 0
         for pos in positions:
             position_responses.append(_build_position_response(pos))
-            if not _is_section(pos):
+            if not _is_section(pos) and not is_empty_position(pos):
                 position_count += 1
 
         # Money via the shared currency-aware path so detail matches the list
@@ -6682,6 +6758,25 @@ class BOQService:
             net_total=_round_currency(net_total),
             grand_total=_round_currency(net_total),
         )
+
+    async def get_boq_structured_for_export(self, boq_id: uuid.UUID) -> BOQWithSections:
+        """:meth:`get_boq_structured` with the unfilled placeholder rows removed.
+
+        Every export format reads the structured payload, and none of them may
+        emit a blank line: a delivered bill that carries one is a defect the
+        recipient sees. The editor endpoint deliberately keeps calling
+        :meth:`get_boq_structured` instead, because a row the user just created
+        has to appear on screen for them to type into.
+
+        Money is untouched. An emptied row has a zero quantity and therefore a
+        zero total, so the subtotals and grand total computed over the full set
+        stay correct for the narrowed one.
+        """
+        structured = await self.get_boq_structured(boq_id)
+        structured.positions = exportable_positions(structured.positions)
+        for section in structured.sections:
+            section.positions = exportable_positions(section.positions)
+        return structured
 
     async def get_export_fx(
         self,

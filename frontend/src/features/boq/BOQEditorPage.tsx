@@ -26,7 +26,9 @@ import { usePreferencesStore, useNumberLocale } from '@/stores/usePreferencesSto
 import { useDisplayQuantity } from '@/shared/hooks/useDisplayQuantity';
 import {
   boqApi,
+  exportablePositions,
   groupPositionsIntoSections,
+  isEmptyPosition,
   isSection,
   getPositionDepth,
   normalizePositions,
@@ -2453,7 +2455,11 @@ export function BOQEditorPage() {
   const miniSummaryStats = useMemo(() => {
     const allPositions = boq?.positions ?? [];
     const sectionCount = grouped.sections.length;
-    const positionCount = allPositions.filter((p) => !isSection(p)).length;
+    // Counts the bill, not the grid: a row nobody has typed into yet is not a
+    // position, and this figure has to agree with the one on the bill's card
+    // in the listing. The "X of Y" count above deliberately does not use this
+    // rule - it describes the rows the grid is rendering, blank ones included.
+    const positionCount = allPositions.filter((p) => !isSection(p) && !isEmptyPosition(p)).length;
     const errorCount = allPositions.filter(
       (p) => !isSection(p) && p.validation_status === 'errors',
     ).length;
@@ -5351,7 +5357,9 @@ export function BOQEditorPage() {
                   {t('boq.gaeb_positions', { defaultValue: 'Positions' })}
                 </span>
                 <span className="font-medium text-content-primary">
-                  {positions.filter((p) => !isSection(p)).length}
+                  {/* Counts what the GAEB file will actually contain, so this
+                      preview cannot promise a position the export then drops. */}
+                  {exportablePositions(positions).filter((p) => !isSection(p)).length}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
