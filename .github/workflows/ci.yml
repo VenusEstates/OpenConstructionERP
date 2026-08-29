@@ -490,7 +490,20 @@ jobs:
         run: npm run build
 
       - name: Run tests
+        # Two steps rather than one because of the Build step above. The
+        # tests under frontend/tests/pwa read the build output, and they now
+        # FAIL on a missing artifact instead of skipping themselves, so they
+        # can only run on a runner that built. macOS deliberately does not,
+        # so it names the exclusion here. Written as an exclusion in the
+        # workflow rather than as a skip inside the test on purpose: a skip
+        # reports green having read nothing, and a green that means "I did
+        # not look" is the failure this pair of steps exists to remove.
+        if: matrix.os != 'macos-latest'
         run: npm run test
+
+      - name: Run tests (no build output on this runner)
+        if: matrix.os == 'macos-latest'
+        run: npm run test -- --exclude "tests/pwa/**"
 
   backend-cross-os:
     name: Backend CI (${{ matrix.os }}, embedded PG, shard ${{ matrix.shard }}/3)
