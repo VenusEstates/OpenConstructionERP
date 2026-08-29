@@ -19,6 +19,7 @@ with it. What follows asserts the label a buyer actually sees.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import AsyncIterator
 from decimal import Decimal
@@ -199,3 +200,55 @@ async def test_retainage_report_names_a_vendor_that_has_only_an_email(session: A
 
     assert len(report["po_rows"]) == 1
     assert report["po_rows"][0]["vendor_name"] == "rechnung@example.de"
+
+
+@pytest.mark.asyncio
+async def test_a_failed_vendor_lookup_is_logged_where_somebody_sees_it(
+    session: AsyncSession, monkeypatch, caplog
+) -> None:
+    """Losing every vendor name on a report must not be a debug-level event.
+
+    The handler wraps the whole lookup, so a throw does not cost one name, it
+    costs all of them and the report renders with a blank counterparty on every
+    row. At debug that can happen on every run forever and nothing anywhere
+    says so: the report looks sparse rather than broken, which is the failure
+    nobody reports because it does not look like one.
+    """
+    from app.modules.finance import einvoice_parties
+
+    def _boom(_contact):
+        raise RuntimeError("display helper exploded")
+
+    monkeypatch.setattr(einvoice_parties, "contact_display_name", _boom)
+
+    vendor = Contact(contact_type="vendor", company_name="Stadtwerke Kiel")
+    session.add(vendor)
+    await session.flush()
+
+    project_id = uuid.uuid4()
+    session.add(
+        PurchaseOrder(
+            project_id=project_id,
+            po_number="PO-0005",
+            vendor_contact_id=str(vendor.id),
+            amount_total="1000.00",
+            currency_code="EUR",
+            retention_percent=Decimal("5.00"),
+            issue_date="2026-03-15",
+        )
+    )
+    await session.flush()
+
+    with caplog.at_level(logging.DEBUG, logger="app.modules.reporting.service"):
+        report = await ReportingService(session).render_po_retainage_reconciliation(
+            project_id, "2026-01-01", "2026-12-31"
+        )
+
+    # The report still renders: the guard is right that this must not 500.
+    assert report["po_rows"][0]["vendor_name"] == ""
+
+    complaints = [r for r in caplog.records if "Vendor-name lookup" in r.message]
+    assert complaints, "the failure was not logged at all"
+    assert complaints[0].levelno >= logging.WARNING, (
+        f"logged at {complaints[0].levelname}; losing every vendor name is not a debug-level event"
+    )

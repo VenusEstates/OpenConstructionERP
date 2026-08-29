@@ -1578,7 +1578,14 @@ class ReportingService:
                     label = contact_display_name(c)
                     vendor_names[str(c.id)] = label
             except Exception:
-                logger.debug("Vendor-name lookup skipped for retainage report", exc_info=True)
+                # Warning, not debug. This handler wraps the whole lookup, so a
+                # throw here does not cost one name, it costs every name on the
+                # report and each row renders with a blank counterparty. That
+                # reads as a sparse report rather than a broken one, which is
+                # the kind of failure nobody thinks to report, so it can repeat
+                # on every run indefinitely. The report must still render, which
+                # is why this is caught at all, but it may not do so quietly.
+                logger.warning("Vendor-name lookup failed for retainage report", exc_info=True)
 
         po_rows: list[dict] = []
         # Per-currency accumulators so we never blend currencies.
