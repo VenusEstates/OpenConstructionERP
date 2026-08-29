@@ -12,15 +12,19 @@
 #
 # Schema convention:
 #   * ``vat.<class>.rate``: tax rate as a Decimal-safe fraction (0.20 = 20 %).
-#   * ``vat.<class>``: either that single mapping, which is the shape most of
-#     this table uses and which applies to every date, or a LIST of dated
-#     periods written OLDEST FIRST, each carrying its own ``rate`` and
-#     ``effective_from``. A quote takes the period with the greatest
-#     ``effective_from`` that is not after the contract's date; a date before
-#     the earliest period is refused rather than priced at zero. The two
-#     shapes mix freely inside one jurisdiction - GB ``standard`` carries a
-#     history while GB ``zero`` beside it is a single undated mapping, and
-#     two histories in one jurisdiction need not begin on the same day.
+#   * ``vat.<class>``: one of three shapes. A single mapping with no
+#     ``effective_from``, which is in force for every date and says nothing
+#     about when the rate began; the same mapping WITH an ``effective_from``,
+#     which is a one-period history for a rate that has never moved; or a
+#     LIST of dated periods written OLDEST FIRST, each carrying its own
+#     ``rate`` and ``effective_from``. A quote takes the period with the
+#     greatest ``effective_from`` that is not after the contract's date; a
+#     date before the earliest period is refused rather than priced at zero.
+#     The shapes mix freely inside one jurisdiction and two histories in one
+#     jurisdiction need not begin on the same day - GB ``standard`` begins in
+#     1991, GB ``reduced`` in 1994 and GB ``zero`` in 1973. The undated shape
+#     survives in the ``gst`` blocks and in the zero-rated classes of AE and
+#     SA, and each of those is a candidate for dating rather than a decision.
 #     Out-of-order or undated periods are refused when the table loads.
 #     Dating a class changes what a quote says about it: the quote reports the
 #     ``effective_from`` of the period that priced it, and reports nothing for
@@ -68,12 +72,18 @@ jurisdictions:
       reduced:
         - { rate: 0.08, effective_from: "1994-04-01" }
         - { rate: 0.05, effective_from: "1997-09-01" }
-      # Undated for now, and not on purpose: it answers for any date,
-      # including one before 1991, while the seed tax table beside it
-      # dates the same rate from 1973-04-01. That makes this a candidate
-      # for the treatment the two classes above have just had, not a
-      # settled shape.
-      zero: { rate: 0.00, applies_to: ["residential.new_build"] }
+      # Zero-rated since VAT began here on 1973-04-01, and 0 % it has stayed.
+      # What the Finance Act 1984 withdrew from 1 June 1984 was the zero rate
+      # on ALTERATIONS to existing buildings, which is scope and not rate; the
+      # construction of new dwellings this class is scoped to has been zero-
+      # rated throughout. A contract signed before 1973-04-01 is refused
+      # because there was no VAT here to zero-rate it: what stood in its place
+      # was Purchase Tax, a different tax this table does not model.
+      #
+      # One rate and one start, so this is the single-mapping-with-a-date
+      # shape rather than a one-item list. It behaves identically and keeps
+      # ``applies_to`` where a reader expects to find it.
+      zero: { rate: 0.00, applies_to: ["residential.new_build"], effective_from: "1973-04-01" }
     stamp_duty:
       # SDLT — England + NI, bands as of 2025-04-01.
       # Wales (LTT) and Scotland (LBTT) maintain their own tables —
@@ -155,8 +165,29 @@ jurisdictions:
   AT:
     name: "Austria"
     vat:
-      standard: { rate: 0.20 }
-      reduced: { rate: 0.10 }
+      # Both classes date from 1984-01-01, when the Austrian rates rose by two
+      # points together: the standard rate from 18 % to 20 % and the reduced
+      # from 8 % to 10 %. The day is corroborated outside our own data for the
+      # standard rate, and the reduced rate moved in the same package.
+      #
+      # The earlier bands are real and are deliberately not written here:
+      # 16 % / 8 % from the 1973 introduction, 18 % / 8 % from 1976. Every
+      # source reachable gives those by YEAR and none of them gives the day
+      # the change took effect, and a boundary day is the one thing this table
+      # must not guess - a day out by three months prices a whole quarter of
+      # contracts wrong while looking entirely plausible. So a contract signed
+      # before 1984-01-01 is refused, and the refusal means what the error
+      # says it means, that the earliest rate in the table begins in 1984. It
+      # is a gap in our dating and NOT a claim that Austria had no VAT before
+      # 1984. Anyone who finds the two missing days should write the bands.
+      #
+      # The 5 % reduced rate of 1 July 2020 to 31 December 2021 is absent for
+      # the reason GB's hospitality rates are: it covered gastronomy,
+      # accommodation, culture and publications while food and everything else
+      # stayed at 10 %, so two reduced rates were in force at once and a class
+      # carrying one number cannot say which supply it means.
+      standard: { rate: 0.20, effective_from: "1984-01-01" }
+      reduced: { rate: 0.10, effective_from: "1984-01-01" }
     grunderwerbsteuer:
       flat: 0.035        # GrEStG § 7 — 3.5 % standard.
     land_registry_fee: 0.011   # 1.1 % Eintragungsgebühr.
@@ -167,8 +198,44 @@ jurisdictions:
   CH:
     name: "Switzerland"
     vat:
-      standard: { rate: 0.081 }   # MwSt 8.1 % (2024+).
-      reduced: { rate: 0.026 }
+      # MWST history, oldest first. Source: the federal tax administration's
+      # published development of the Swiss VAT rates. The standard rate opened
+      # at 6.5 % in 1995, went to 7.5 % in 1999 for AHV/IV financing and to
+      # 7.6 % in 2001 for the rail funds, rose to 8.0 % in 2011 for the IV,
+      # fell to 7.7 % in 2018 when that IV supplement expired, and reached
+      # 8.1 % in 2024 for the AHV 21 reform.
+      #
+      # A contract signed before 1995-01-01 is refused, and for a different
+      # reason from the Austrian refusal above: Switzerland genuinely had no
+      # VAT then. It levied WUST, a single-stage tax on goods with its own
+      # base and no input deduction, which is a different tax rather than an
+      # older MWST rate. Stretching 6.5 % back over it would be a wrong
+      # number, not an approximate one.
+      #
+      # The 8.0 % scheduled for 2030, when the rail supplement expires, is not
+      # written here, and the reason is mechanical rather than cautious: a
+      # quote that passes no date takes the NEWEST period because this table's
+      # reader never looks at the wall clock, so a future band would become
+      # today's answer for every caller that asks for current rates.
+      standard:
+        - { rate: 0.065, effective_from: "1995-01-01" }
+        - { rate: 0.075, effective_from: "1999-01-01" }
+        - { rate: 0.076, effective_from: "2001-01-01" }
+        - { rate: 0.08, effective_from: "2011-01-01" }
+        - { rate: 0.077, effective_from: "2018-01-01" }
+        - { rate: 0.081, effective_from: "2024-01-01" }
+      # The reduced rate moved with the standard one every time except 2018,
+      # when it stayed at 2.5 %. There is no 2018-01-01 period below for that
+      # reason, and its absence is the table saying nothing happened rather
+      # than an oversight: a period repeating the rate before it changes no
+      # answer any caller can see. The 3.8 % special rate for accommodation
+      # is a class this table does not carry at all.
+      reduced:
+        - { rate: 0.02, effective_from: "1995-01-01" }
+        - { rate: 0.023, effective_from: "1999-01-01" }
+        - { rate: 0.024, effective_from: "2001-01-01" }
+        - { rate: 0.025, effective_from: "2011-01-01" }
+        - { rate: 0.026, effective_from: "2024-01-01" }
     transfer_tax:
       # Handänderungssteuer is cantonal (0–3.3 %). Use placeholder
       # average; production callers should pick a Kanton sub-rate.
@@ -186,7 +253,11 @@ jurisdictions:
   AE:
     name: "United Arab Emirates"
     vat:
-      standard: { rate: 0.05 }
+      # VAT began in the UAE on 2018-01-01 at 5 % under the GCC framework
+      # agreement and has not moved since, so this date is the whole history
+      # rather than the most recent step of one. A contract signed before it
+      # is refused because there was no VAT in the UAE to charge.
+      standard: { rate: 0.05, effective_from: "2018-01-01" }
       zero_rated:
         rate: 0.00
         applies_to: ["residential.first_sale", "exports"]
@@ -208,7 +279,13 @@ jurisdictions:
     vat:
       # Real-estate sales are subject to RETT (5 %) instead of VAT
       # since 2020 reform; new residential first sale is zero-rated.
-      standard: { rate: 0.15 }     # General VAT, services etc.
+      # VAT began in Saudi Arabia on 2018-01-01 at 5 %, the same GCC start as
+      # the UAE above, and tripled to 15 % on 2020-07-01 as oil revenue fell.
+      # Dating this class from 2020 alone would price every 2018 and 2019
+      # contract at three times the rate that was actually in force.
+      standard:
+        - { rate: 0.05, effective_from: "2018-01-01" }     # General VAT, services etc.
+        - { rate: 0.15, effective_from: "2020-07-01" }
       zero_rated: { rate: 0.00, applies_to: ["residential.first_sale"] }
     rett: 0.05                      # Real Estate Transaction Tax 5 %.
     late_interest:
@@ -245,7 +322,19 @@ jurisdictions:
   RU:
     name: "Russia"
     vat:
-      standard: { rate: 0.20 }
+      # VAT history, oldest first. Introduced on 1992-01-01 at 28 %, cut to
+      # 20 % a year later, cut again to 18 % in 2004 and raised back to 20 %
+      # in 2019. Only the last of those four dates was on file before, so
+      # every contract signed between 2004 and 2018 was being priced two
+      # points high. A contract signed before 1992-01-01 is refused: the
+      # Soviet turnover tax this replaced is a different tax and not an older
+      # rate of this one. The 10 % reduced class that has run alongside the
+      # standard rate since 1993 is not carried here.
+      standard:
+        - { rate: 0.28, effective_from: "1992-01-01" }
+        - { rate: 0.20, effective_from: "1993-01-01" }
+        - { rate: 0.18, effective_from: "2004-01-01" }
+        - { rate: 0.20, effective_from: "2019-01-01" }
       exempt:
         applies_to:
           - "residential.transfer_between_individuals"

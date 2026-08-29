@@ -2611,11 +2611,11 @@ class ContractTaxQuote(BaseModel):
     invite clients to branch on the copy that cannot be extended.
 
     ``vat_rate_effective_from`` is the date the rate table dates the applied
-    rate from, and ``null`` says it dates it from nothing. Most classes are
-    undated: the GB and DE standard and reduced rates track their changes and
-    the rest do not, so a contract signed in 1900 and quoted at the AT reduced
-    rate gets today's 10 % with nothing in the table ever having said that
-    10 % applied in 1900. The null is
+    rate from, and ``null`` says it dates it from nothing. Most VAT classes
+    track their changes now and the undated remainder is small, so a contract
+    signed in 1900 and quoted at the SG standard GST rate gets today's 9 %
+    with nothing in the table ever having said that 9 % applied in 1900. The
+    null is
     how a client learns that the number it holds was never promised for its own
     date, and it is the one field here that a client should read before
     reusing a quote for a historical contract.

@@ -22,10 +22,11 @@ Design intent
   history, and a quote takes the band in force on the contract's own date.
   A contract signed before the earliest band the class holds is refused
   rather than priced, because the alternative is inventing a rate. The
-  refusal is scoped to a rate class, not to a jurisdiction: GB and DE date
-  both their standard and their reduced rate, each from its own earliest
-  day, while GB ``zero`` beside them is a single undated band and answers
-  for any date at all. Note the two axes
+  refusal is scoped to a rate class, not to a jurisdiction, and each class
+  begins on its own day: GB dates its standard rate from 1991, its reduced
+  rate from 1994 and its zero rate from 1973. Every VAT class in the shipped
+  table is dated now except the zero-rated classes of AE and SA, while the
+  ``gst`` blocks beside them answer for any date at all. Note the two axes
   this module calls bands: a stamp-duty band is a slice of *price*
   (:func:`_progressive_band_amount`), a rate band is a slice of *time*. The
   helpers for the second say ``period`` so the two never read alike in code.
@@ -586,10 +587,11 @@ def _rate_periods(entry: Any) -> list[dict[str, Any]]:
     three:
 
     * a single mapping, ``{ rate: 0.05 }`` - one period, in force for every
-      date unless it carries ``effective_from``. Most of the table is this
-      shape and it keeps working untouched;
+      date unless it carries ``effective_from``, and a one-period history
+      when it does. AE ``standard`` and GB ``zero`` are the dated form and
+      the ``gst`` blocks are the undated one;
     * a list of mappings written oldest first, each with its own ``rate`` and
-      ``effective_from`` - a history. GB and DE standard VAT carry one;
+      ``effective_from`` - a history. GB, DE, CH, RU and SA carry one;
     * a bare scalar, rare shorthand for ``{ rate: <scalar> }``.
 
     A class with no ``rate`` key at all - ``AE.vat.exempt`` is one, carrying
@@ -685,8 +687,10 @@ def _vat_rate_and_start(
     Returns:
         The rate as a fraction - zero when the class defines no ``rate`` key -
         and the ``effective_from`` of the period it came from. That date is
-        ``None`` whenever the period carries none, which is most of the table:
-        only GB and DE standard VAT are dated today.
+        ``None`` whenever the period carries none, which is now the smaller
+        part of the table: the VAT classes of AE, AT, CH, DE, GB, RU and SA
+        are dated, and what answers ``None`` is the ``gst`` blocks and the
+        zero-rated classes of AE and SA.
 
     Raises:
         NoVatBlockError: the table holds no VAT or GST block here.
@@ -1190,10 +1194,10 @@ def compute_total_taxes_for_contract(
 
     The ``None`` is what this field exists for. Which classes carry dated
     histories is written in ``data/tax_rates.yaml`` and every other one answers
-    any date at all with its one undated rate - AT ``reduced`` prices a 1900
-    contract at today's 10 % without the table ever having said that 10 %
-    applied in 1900. That is a number nobody promised, and before this field a
-    caller could not tell it from one that was promised.
+    any date at all with its one undated rate - SG ``standard``, a GST block,
+    prices a 1900 contract at today's 9 % without the table ever having said
+    that 9 % applied in 1900. That is a number nobody promised, and before
+    this field a caller could not tell it from one that was promised.
 
     Two situations share the ``None`` and are told apart by ``vat_provenance``
     rather than here: a class the table never dated (``source`` DECLARED, as
