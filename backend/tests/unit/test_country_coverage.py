@@ -1024,3 +1024,252 @@ def test_a_country_with_no_iban_regime_is_not_reported_as_a_gap() -> None:
             f"the verdict for {country} does not say the exemption was deliberate, so a reader cannot tell it "
             "from a row that happens to be covered"
         )
+
+
+# --------------------------------------------------------------------------- #
+# The five registries the census named and nothing asked about
+#
+# These closed a gap the census had been printing for some time: a registry no
+# probe reads is reported as neither covered nor missing, so a country can be
+# absent from it and the page says nothing either way. Four of the five live in
+# app.core.demo_projects, which imports its ORM models at module scope, so they
+# exercise the source-read path off a cluster and the import path under pytest.
+# --------------------------------------------------------------------------- #
+
+_DEMO_PROJECTS = "app.core.demo_projects"
+
+#: Dimension, a country the registry holds, and one it does not. The second is
+#: what stops these passing on a probe that answers COVERED for anything.
+_NEW_DIMENSIONS = (
+    ("estimate.markup_region", "DE", "RU"),
+    ("demo.notice_authority", "DE", "RU"),
+    ("demo.address_country_names", "DE", "RU"),
+    ("demo.notice_clause", "GB", "RU"),
+    ("demo.catalogue_projects", "DE", "RU"),
+)
+
+#: The demo dimensions that keep answering off a cluster, through the source
+#: read. All four, including the catalogue, whose registry is assembled at
+#: import time and whose fallback therefore rebuilds the merge rather than
+#: parsing a literal - which is exactly why it needs the agreement test below
+#: more than the other three do.
+_NEW_DEMO_DIMENSIONS = (
+    "demo.notice_authority",
+    "demo.address_country_names",
+    "demo.notice_clause",
+    "demo.catalogue_projects",
+)
+
+
+@pytest.mark.parametrize(("dimension", "held", "absent"), _NEW_DIMENSIONS)
+def test_the_new_registries_answer_in_both_directions(dimension, held, absent):
+    """Green on the real registry is half the evidence; this is the other half."""
+    covered = _one(held, dimension)
+    assert covered.verdict == cc.COVERED, f"{dimension} does not see {held}: {covered.detail}"
+
+    missing = _one(absent, dimension)
+    assert missing.verdict == cc.MISSING, (
+        f"{dimension} reports {missing.verdict} for {absent}, which is in none of these tables; "
+        "a probe that cannot go red will never catch the regression it exists for"
+    )
+    assert missing.population, "the probe reported a gap without naming the population it read"
+
+
+def test_the_country_name_keyed_registry_is_read_by_its_values():
+    """_COUNTRY_ISO2 is keyed by English country name, and the ISO code is the value.
+
+    The one registry on this page whose country axis is its values. A probe
+    written by copying its siblings reaches for ``set(_COUNTRY_ISO2)``, takes a
+    population of fifteen English names, and reports every country on earth
+    MISSING with a full population printed underneath to make it look measured.
+    This is the guard on that, and it fails loudly rather than quietly because
+    the wrong reading is a plausible-looking one.
+    """
+    report = _one("DE", "demo.address_country_names")
+    assert report.verdict == cc.COVERED, f"the ISO values are not being read: {report.detail}"
+    assert "Germany" not in report.population, (
+        f"the population is the English names, so the keys are being read instead of the values: {report.population}"
+    )
+    assert "DE" in report.population
+
+
+@pytest.mark.parametrize("dimension", _NEW_DEMO_DIMENSIONS)
+def test_the_demo_probes_answer_when_their_module_will_not_import(monkeypatch, dimension):
+    """Off a cluster, app.core.demo_projects raises before any literal is reachable.
+
+    Its module-scope ORM imports reach app.database, which builds an engine at
+    import time. That is the ordinary state of a developer machine with nothing
+    running, and the state the whole tool has to keep working in.
+    """
+    monkeypatch.setitem(sys.modules, _DEMO_PROJECTS, None)
+    got = _one("DE", dimension)
+    assert got.verdict != cc.UNRESOLVED, f"{dimension} went silent without its import: {got.detail}"
+    assert got.method.startswith("source"), f"a read of the file on disk must not be labelled {got.method!r}"
+
+
+def test_the_demo_source_read_and_the_import_agree_about_every_country(monkeypatch):
+    """The fallback returns what the import returns, as whole populations.
+
+    Compared as full sets rather than as verdicts over the cohort, and that is
+    the point of the test rather than a detail of it. Asked country by country
+    over nine cohort members, this passed while the catalogue rebuild was also
+    reporting NZ, which no cohort member would ever have made it mention. A
+    probe that reads its registry correctly and a probe widened until the
+    cohort stops complaining are indistinguishable from inside the cohort.
+
+    This is also the pin underneath _catalogue_from_source, which
+    re-implements the pack merge in AST. If the loader changes how it globs a
+    pack directory, names the template, maps the address or dedupes an id, this
+    is the test that has to approve it.
+    """
+    live = {dimension: _one("DE", dimension) for dimension in _NEW_DEMO_DIMENSIONS}
+    assert {d.method for d in live.values()} == {"import"}, "this test needs the import path to be the live one"
+    assert all(d.population for d in live.values()), "an empty population would make agreement meaningless"
+
+    monkeypatch.setitem(sys.modules, _DEMO_PROJECTS, None)
+    off = {dimension: _one("DE", dimension) for dimension in _NEW_DEMO_DIMENSIONS}
+    assert {d.method.split()[0] for d in off.values()} == {"source"}, "the import path was still reachable"
+
+    disagreed = {
+        dimension: (
+            sorted(set(live[dimension].population) - set(off[dimension].population)),
+            sorted(set(off[dimension].population) - set(live[dimension].population)),
+        )
+        for dimension in _NEW_DEMO_DIMENSIONS
+        if set(live[dimension].population) != set(off[dimension].population)
+    }
+    assert not disagreed, f"source read differs from the import (import-only, source-only): {disagreed}"
+
+
+@pytest.mark.parametrize(
+    ("dimension", "symbol"),
+    [
+        ("demo.notice_authority", "_AUTHORITY_BY_COUNTRY"),
+        ("demo.address_country_names", "_COUNTRY_ISO2"),
+        ("demo.notice_clause", "_NOTICE_CLAUSE_BY_COUNTRY"),
+        ("demo.catalogue_projects", "DEMO_CATALOG"),
+    ],
+)
+def test_a_demo_probe_is_unresolved_when_its_registry_is_renamed(monkeypatch, dimension, symbol):
+    """A renamed registry is a finding about the tree, not something to route around.
+
+    Each of these probes has two ways to reach its table and must not use the
+    second to paper over a symbol the first proved is gone. The import succeeds
+    here and the name does not exist, so the answer has to be UNRESOLVED rather
+    than a confident one assembled from the file on disk.
+    """
+    import app.core.demo_projects as demo
+
+    monkeypatch.delattr(demo, symbol, raising=True)
+    got = _one("DE", dimension)
+    assert got.verdict == cc.UNRESOLVED, f"a missing registry was answered anyway: {got.verdict} / {got.detail}"
+
+
+def test_a_demo_registry_emptied_is_unresolved_rather_than_everyone_missing(monkeypatch):
+    import app.core.demo_projects as demo
+
+    monkeypatch.setattr(demo, "_AUTHORITY_BY_COUNTRY", {})
+    got = _one("DE", "demo.notice_authority")
+    assert got.verdict == cc.UNRESOLVED, f"an emptied registry read as a coverage gap: {got.verdict}"
+
+
+def test_a_demo_registry_that_lost_its_shape_is_unresolved(monkeypatch):
+    """A table that stopped being a table cannot be asked about a country."""
+    import app.core.demo_projects as demo
+
+    monkeypatch.setattr(demo, "_NOTICE_CLAUSE_BY_COUNTRY", ["GB", "US"])
+    got = _one("GB", "demo.notice_clause")
+    assert got.verdict == cc.UNRESOLVED, f"a wrongly-shaped registry was answered anyway: {got.detail}"
+
+
+def test_the_five_registries_are_no_longer_in_the_unprobed_census():
+    """The census is what reports the gap, so it is where the fix has to show."""
+    unprobed = {r.symbol for r in cc.registry_census().unprobed}
+    closed = {
+        "app.modules.boq.markup_templates.REGION_BY_COUNTRY",
+        "app.core.demo_projects._AUTHORITY_BY_COUNTRY",
+        "app.core.demo_projects._COUNTRY_ISO2",
+        "app.core.demo_projects._NOTICE_CLAUSE_BY_COUNTRY",
+        "app.core.demo_projects.DEMO_CATALOG",
+    }
+    assert not (closed & unprobed), f"still reported as nobody's registry: {sorted(closed & unprobed)}"
+    assert closed <= cc.covered_symbols(), "a probe stopped naming the registry it reads"
+
+
+def _seed_catalogue_rows() -> list[dict]:
+    """The hand-written DEMO_CATALOG rows, without importing the module."""
+    return [
+        row for row in ast.literal_eval(cc._module_level_node(_DEMO_PROJECTS, "DEMO_CATALOG")) if isinstance(row, dict)
+    ]
+
+
+def test_the_catalogue_answers_off_a_cluster_out_of_the_packs_and_not_the_seeds(monkeypatch):
+    """DEMO_CATALOG is assembled at import time, so the fallback rebuilds the merge.
+
+    The five rows written in the file are seeds; register_pack_templates
+    appends one per pack template. Answering out of the literal alone was
+    measured against the import and disagreed about nine countries - CA, CN,
+    IN, BR, NL, AU, MX, SA and ZA are each in the assembled list and none of
+    them is in the literal.
+
+    So the assertion is deliberately on CA rather than on DE. DE would pass on
+    the seed rows alone and would prove only that something answered; CA can be
+    reached only by reading the pack files, which is the half of the rebuild
+    that can actually be got wrong.
+    """
+    seeded = {row["country"] for row in _seed_catalogue_rows() if row.get("country")}
+    assert "CA" not in seeded, f"CA is a seed row now, so this test no longer proves the merge was rebuilt: {seeded}"
+
+    monkeypatch.setitem(sys.modules, _DEMO_PROJECTS, None)
+    got = _one("CA", "demo.catalogue_projects")
+    assert got.verdict == cc.COVERED, f"the rebuild did not reach a pack-supplied country: {got.detail}"
+    assert got.method.startswith("source"), f"a read of the files on disk must not be labelled {got.method!r}"
+
+    absent = _one("RU", "demo.catalogue_projects")
+    assert absent.verdict == cc.MISSING, f"the rebuild reports {absent.verdict} for a country no pack covers"
+
+
+def test_the_catalogue_literal_really_is_narrower_than_the_assembled_list():
+    """The measurement the rebuild exists for, kept executable.
+
+    If somebody later stops assembling the catalogue at import time, this fails
+    and the probe may go back to reading the literal directly. Without it, the
+    reason for the whole of _catalogue_from_source lives only in a docstring.
+    """
+    import app.core.demo_projects as demo
+
+    live = {row["country"] for row in demo.DEMO_CATALOG if row.get("country")}
+    seeded = {row["country"] for row in _seed_catalogue_rows() if row.get("country")}
+    assert seeded < live, (
+        f"the literal is no longer a strict subset of the assembled catalogue (literal={sorted(seeded)}, "
+        f"live={sorted(live)}); the reason this probe rebuilds rather than parses may have gone"
+    )
+
+
+def test_no_pack_demo_id_collides_with_a_seed_row():
+    """The dedupe assumption under the rebuild, kept executable rather than assumed.
+
+    register_pack_templates appends a catalogue row only for a demo_id that is
+    not already present, which keeps a hand-written row authoritative over a
+    pack that would clash with it. _catalogue_from_source copies that rule, and
+    today the rule changes nothing: every pack id is distinct from every seed
+    id and from every other pack id, measured, so the branch never fires.
+
+    That is a fact about the tree and not a guarantee about it. This is the
+    tripwire: if a pack ever takes a seed's id, the rebuild starts depending on
+    a branch nothing has ever exercised, and somebody should look at it on
+    purpose rather than discover it through a wrong country on a report.
+    """
+    seed_ids = {str(row.get("demo_id")) for row in _seed_catalogue_rows()}
+    packs = sorted(cc._source_of(_DEMO_PROJECTS).parent.joinpath("demo_packs").glob("*.py"))
+    pack_ids = []
+    for path in packs:
+        if path.name == "__init__.py" or path.name.startswith("_"):
+            continue
+        call = cc._pack_template_call(path)
+        assert call is not None, f"{path.name} binds no module-level TEMPLATE call, so the loader would skip it"
+        pack_ids.append(str(cc._call_kwarg(call, "demo_id")))
+
+    assert len(pack_ids) > 20, f"the pack directory came back nearly empty ({len(pack_ids)}); nothing was measured"
+    assert not (seed_ids & set(pack_ids)), f"a pack now shares a seed's demo_id: {sorted(seed_ids & set(pack_ids))}"
+    assert len(pack_ids) == len(set(pack_ids)), "two packs share a demo_id, so only the first would reach the catalogue"

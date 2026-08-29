@@ -377,6 +377,45 @@ def _annotated_attributes(dotted: str, symbol: str) -> tuple[set[str], str]:
     return {c.name for c in getattr(module, symbol).__table__.columns}, "import"
 
 
+def _registry_literal(dotted: str, symbol: str) -> tuple[object, str]:
+    """A module-level literal registry, by import if possible and by parse if not.
+
+    The same two-path shape as :func:`_annotated_attributes`, for the registries
+    that are plain dict or list literals. Import first, because that reads the
+    object the product actually runs on; parse the file only when the import
+    will not come, which for a module that builds a database engine at import
+    time is every developer machine without a cluster.
+
+    Args:
+        dotted: Dotted path of a module inside the app package.
+        symbol: A module-level name bound to a literal.
+
+    Returns:
+        The registry, and the method string a report has to carry. A report that
+        inherits the ``"import"`` default after a source read claims evidence it
+        never had, which the reporter then counts among its strongest readings.
+
+    Raises:
+        AttributeError: The module imported and the symbol is gone. Deliberately
+            not caught: reaching for the parse here would answer a renamed
+            registry out of whatever the old name still matched, and a renamed
+            registry is a real finding about the tree.
+        LookupError: The module would not import and the symbol is not defined
+            at module level, or is no longer a literal this probe can evaluate.
+    """
+    try:
+        module = importlib.import_module(dotted)
+    except Exception as exc:  # noqa: BLE001 - having no cluster is an ordinary state, not a finding
+        node = _module_level_node(dotted, symbol)
+        try:
+            value = ast.literal_eval(node)
+        except ValueError as bad:
+            raise LookupError(f"{symbol} in {dotted} is not a literal this probe can evaluate") from bad
+        return value, f"source ({type(exc).__name__} on import)"
+    # Outside the handler on purpose, the same way the schedule registry does it.
+    return getattr(module, symbol), "import"
+
+
 def _keyed(
     dimension: str,
     source: str,
@@ -1302,6 +1341,273 @@ def _validation_iban_length(country: str) -> DimensionReport:
         population=tuple(sorted(validated)),
         source=source,
         method="import",
+    )
+
+
+@_probe("estimate.markup_region", covers=("app.modules.boq.markup_templates.REGION_BY_COUNTRY",))
+def _markup_region(country: str) -> DimensionReport:
+    """Which markup stack a country's bill is seeded with.
+
+    Imported rather than read from source, for the reason
+    ``cost_classification.match_standard`` is: ``markup_templates`` imports
+    nothing but ``__future__``, so the lane that runs this tool without a
+    cluster can import it, and an import reads the object the product runs on.
+
+    The region names are not a second country axis, even though most of them
+    are two uppercase letters. ``GB`` reaches a region spelled ``UK``, and
+    ``US``, ``FR``, ``IN``, ``AU``, ``JP``, ``BR``, ``CN`` and ``KR`` each name
+    a region that happens to share its spelling with the one country reaching
+    it. The discovery walk counts twenty-one country-shaped tokens here for
+    that reason, against twenty entries. The country axis is the keys, and only
+    the keys.
+    """
+    from app.modules.boq.markup_templates import REGION_BY_COUNTRY
+
+    return _keyed(
+        "estimate.markup_region",
+        "app.modules.boq.markup_templates.REGION_BY_COUNTRY",
+        set(REGION_BY_COUNTRY),
+        country,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# The demo dataset: four registries in one module, probed as four.
+#
+# ``app.core.demo_projects`` imports its ORM models at module scope, so without
+# a cluster it raises before any of these literals is reachable and every probe
+# below answers through the source read. That is why they carry a "source"
+# method where the markup probe above carries "import".
+#
+# Four dimensions rather than one, for the reason the calendars are four: they
+# were written independently, they are read at different points of the demo
+# build, and they already disagree with each other. Fifteen countries can name
+# the authority a notice of commencement goes to, eleven can name the clause it
+# is raised under, and five have a demo project at all. A single "demo" row
+# would report the union and hide exactly that spread.
+# --------------------------------------------------------------------------- #
+
+_DEMO_PROJECTS = "app.core.demo_projects"
+
+
+def _demo_dict(symbol: str) -> tuple[dict, str]:
+    """One of the demo module's country tables, and how it was read.
+
+    Raises:
+        LookupError: The symbol no longer holds a dict, so the probe cannot ask
+            its question and must say so rather than report an absence.
+    """
+    registry, method = _registry_literal(_DEMO_PROJECTS, symbol)
+    if not isinstance(registry, dict):
+        raise LookupError(f"{symbol} in {_DEMO_PROJECTS} is not a dict any more, so it has no country axis to read")
+    return registry, method
+
+
+@_probe("demo.notice_authority", covers=("app.core.demo_projects._AUTHORITY_BY_COUNTRY",))
+def _demo_notice_authority(country: str) -> DimensionReport:
+    """Whether the demo data knows who receives a notice of commencement here.
+
+    A country with no row does not break the demo; it gets the generic English
+    wording, which is the failure the table's own comment describes - a
+    correspondence register that addresses "the authority" in Heidelberg, Delhi
+    and Sao Paulo alike is not a register of anything. So the absence is worth a
+    verdict even though nothing raises.
+    """
+    registry, method = _demo_dict("_AUTHORITY_BY_COUNTRY")
+    return _keyed(
+        "demo.notice_authority",
+        "app.core.demo_projects._AUTHORITY_BY_COUNTRY",
+        {str(code) for code in registry},
+        country,
+        method=method,
+    )
+
+
+@_probe("demo.address_country_names", covers=("app.core.demo_projects._COUNTRY_ISO2",))
+def _demo_address_country_names(country: str) -> DimensionReport:
+    """Whether a pack template's address in this country resolves to an ISO code.
+
+    **The country axis here is the values, not the keys.** This table is keyed
+    by English country name - "Germany", "United Arab Emirates" - and holds the
+    ISO code as the value, the opposite way round from every other registry on
+    this page. A probe that copied its siblings and asked ``set(_COUNTRY_ISO2)``
+    would take a population of fifteen English names, find no two-letter code in
+    it, and report every country in the world MISSING with a full population
+    printed underneath to make it look measured.
+
+    That is also why the discovery walk sees this registry at all: it recognises
+    a registry by the shape of what is written, never by the field holding it,
+    so it counted the fifteen values and not the fifteen names.
+    """
+    registry, method = _demo_dict("_COUNTRY_ISO2")
+    return _keyed(
+        "demo.address_country_names",
+        "app.core.demo_projects._COUNTRY_ISO2",
+        {str(code) for code in registry.values()},
+        country,
+        method=method,
+    )
+
+
+@_probe("demo.notice_clause", covers=("app.core.demo_projects._NOTICE_CLAUSE_BY_COUNTRY",))
+def _demo_notice_clause(country: str) -> DimensionReport:
+    """Whether the demo register can cite the provision a notice is raised under.
+
+    Absence is deliberate here and the table says so: a country whose usual form
+    cannot be named with confidence is left out, because an empty clause
+    reference is honest and an invented clause number is not. Read a MISSING on
+    this dimension as "not sourced yet", never as an oversight.
+    """
+    registry, method = _demo_dict("_NOTICE_CLAUSE_BY_COUNTRY")
+    return _keyed(
+        "demo.notice_clause",
+        "app.core.demo_projects._NOTICE_CLAUSE_BY_COUNTRY",
+        {str(code) for code in registry},
+        country,
+        method=method,
+    )
+
+
+def _pack_template_call(path: Path) -> ast.Call | None:
+    """The ``TEMPLATE = DemoTemplate(...)`` call a pack file declares, if any.
+
+    Args:
+        path: A file in the pack directory.
+
+    Returns:
+        The call node, or None when the file binds no module-level ``TEMPLATE``
+        or binds something that is not a call. The loader reads the attribute
+        with a ``getattr(..., None)`` and skips a file that has not got one, so
+        None here is the same ordinary outcome and not an error.
+    """
+    for node in ast.parse(path.read_text(encoding="utf-8"), filename=str(path)).body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "TEMPLATE" for t in node.targets):
+            return node.value if isinstance(node.value, ast.Call) else None
+    return None
+
+
+def _call_kwarg(call: ast.Call, name: str) -> object | None:
+    """One keyword argument of a call, evaluated, or None if it is not a literal."""
+    for keyword in call.keywords:
+        if keyword.arg == name:
+            try:
+                return ast.literal_eval(keyword.value)
+            except ValueError:
+                return None
+    return None
+
+
+def _catalogue_from_source() -> set[str]:
+    """The catalogue's countries, rebuilt from the files the loader reads.
+
+    A re-implementation of the merge, deliberately, and worth stating plainly
+    because a re-implementation can drift from the thing it copies. It follows
+    the loader step for step: the same ``*.py`` glob over the pack directory
+    with ``__init__`` and underscore-prefixed files skipped, the same module
+    level ``TEMPLATE`` name, the same ``address["country"]`` looked up in the
+    same ``_COUNTRY_ISO2``, and the same ``demo_id`` rule that keeps a
+    hand-written row authoritative over a pack that would collide with it.
+
+    A pack this cannot read contributes nothing and raises nothing, which is
+    the loader's behaviour too: it wraps each file in its own handler so one
+    broken pack cannot take out the rest.
+
+    Returns:
+        The ISO codes with at least one catalogue row.
+
+    Raises:
+        LookupError: The seed list or the ISO map is no longer the shape this
+            reads, so the answer would be a guess.
+    """
+    try:
+        rows = ast.literal_eval(_module_level_node(_DEMO_PROJECTS, "DEMO_CATALOG"))
+        iso = ast.literal_eval(_module_level_node(_DEMO_PROJECTS, "_COUNTRY_ISO2"))
+    except ValueError as bad:
+        raise LookupError(f"DEMO_CATALOG in {_DEMO_PROJECTS} is not a literal this probe can evaluate") from bad
+    if not isinstance(rows, list) or not isinstance(iso, dict):
+        raise LookupError(f"DEMO_CATALOG in {_DEMO_PROJECTS} is not a list of rows keyed the way this probe reads")
+
+    seeds = [row for row in rows if isinstance(row, dict)]
+    known = {str(row["country"]) for row in seeds if row.get("country")}
+    seen_ids = {str(row.get("demo_id")) for row in seeds}
+
+    for path in sorted(_source_of(_DEMO_PROJECTS).parent.joinpath("demo_packs").glob("*.py")):
+        if path.name == "__init__.py" or path.name.startswith("_"):
+            continue
+        call = _pack_template_call(path)
+        if call is None:
+            continue
+        demo_id = str(_call_kwarg(call, "demo_id"))
+        address = _call_kwarg(call, "address")
+        if demo_id in seen_ids or not isinstance(address, dict):
+            continue
+        seen_ids.add(demo_id)
+        code = iso.get(str(address.get("country", "")))
+        if code:
+            known.add(str(code))
+    return known
+
+
+def _demo_catalogue_countries() -> tuple[set[str], str]:
+    """The countries the demo catalogue offers, and how they were read.
+
+    Import first, like every registry on this page, because that reads the list
+    the product actually serves. The fallback is the unusual half: this list is
+    built while the module runs, so there is no literal to parse for an answer
+    and :func:`_catalogue_from_source` rebuilds the merge instead.
+
+    The two paths are pinned against each other by a test that runs where the
+    import works, comparing the full sets rather than a cohort. That test is
+    what makes the rebuild safe to trust, and it is the thing to read first if
+    the loader ever changes how it selects a pack.
+
+    Returns:
+        The ISO codes with at least one catalogue row, and the method string a
+        report has to carry so a source reading is not printed as an import.
+    """
+    try:
+        module = importlib.import_module(_DEMO_PROJECTS)
+    except Exception as exc:  # noqa: BLE001 - having no cluster is an ordinary state, not a finding
+        return _catalogue_from_source(), f"source ({type(exc).__name__} on import)"
+    # Outside the handler on purpose, the same way _registry_literal does it: a
+    # renamed registry is a finding, not a reason to fall back to the parse.
+    catalogue = module.DEMO_CATALOG
+    if not isinstance(catalogue, list):
+        raise LookupError(f"DEMO_CATALOG in {_DEMO_PROJECTS} is not a list any more, so it has no country axis to read")
+    return {str(row.get("country")) for row in catalogue if isinstance(row, dict) and row.get("country")}, "import"
+
+
+@_probe("demo.catalogue_projects", covers=("app.core.demo_projects.DEMO_CATALOG",))
+def _demo_catalogue(country: str) -> DimensionReport:
+    """Whether a visitor from this country sees a demo project set where they work.
+
+    The narrowest country axis on the page, and the most visible: this is the
+    list somebody lands on before they have entered any data of their own, so a
+    country missing here is a country whose first look at the product is a
+    building somewhere else, under another currency and another classification
+    standard.
+
+    A list of rows rather than a keyed table, so the country arrives in a
+    ``country`` field, the same shape ``calendar.seeded_rows`` reads out of its
+    JSON file.
+
+    **Assembled at import time, so the fallback rebuilds the merge instead of
+    parsing the literal.** Alone among the four here this registry is nowhere
+    written down in full: the literal holds five hand-written rows and
+    ``register_pack_templates`` appends one per pack template. Parsing the
+    literal alone was measured against the live list and disagreed about nine
+    countries, calling CA, CN, IN, BR, NL, AU, MX, SA and ZA missing while the
+    product offers a project in every one of them. That is the known-bad proxy
+    the source-read policy above forbids; :func:`_demo_catalogue_countries`
+    says what the second path does in its place.
+    """
+    known, method = _demo_catalogue_countries()
+    return _keyed(
+        "demo.catalogue_projects",
+        "app.core.demo_projects.DEMO_CATALOG",
+        known,
+        country,
+        method=method,
     )
 
 
