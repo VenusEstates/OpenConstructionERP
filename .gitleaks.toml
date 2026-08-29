@@ -1,0 +1,53 @@
+# Configuration for the secret scan run by .github/workflows/secret-scan.yml.
+#
+# Everything gitleaks ships with stays on. What is narrowed here is one rule,
+# `generic-api-key`, the catch-all that fires on any high-entropy string near a
+# word like key, token, secret or password. Measured against the tree on
+# 2026-08-29 it produced eighteen findings and all eighteen were false: i18n
+# key props, a column id, a sentence in a comment, and fixture passwords
+# already marked `# noqa: S105`. A gate that is wrong eighteen times out of
+# eighteen stops being read, so it is scoped rather than left to rot.
+#
+# Every entry below is written against a finding that was actually measured,
+# and each one is deliberately narrower than the class it comes from. An
+# earlier draft of this file exempted every line starting with a comment
+# marker, which would have hidden a commented-out credential - the single most
+# common way one gets committed. It exempts one sentence now.
+#
+# The trade-off, stated plainly because it is the thing to revisit if this ever
+# misses something: inside test paths, a credential that no provider rule
+# recognises is not caught. Every provider rule - AWS, GitHub, Slack, Stripe,
+# private keys, JWTs - stays active everywhere, test paths included.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "i18n key props and column ids: an identifier, not a credential"
+targetRules = ["generic-api-key"]
+regexTarget = "match"
+regexes = [
+  # key: 'assemblies.std_din276'   descKey: 'integrations.n8n_desc'
+  '''(desc|label|storage|translation|i18n)?[Kk]ey['"]?\s*[:=]\s*['"][a-z0-9_]+(\.[a-z0-9_]+)+['"]''',
+  # key: 'retention_pct_d180'. Lower-case snake only, on purpose: without that
+  # anchor this also swallows key = "Xk7Qp2_Zr9Tm4Ws8Nv1Bh6Jd3Lc5Fg0".
+  '''[Kk]ey['"]?\s*[:=]\s*['"][a-z][a-z0-9_]*(_[a-z0-9]+)+['"]''',
+]
+
+[[allowlists]]
+description = "one sentence of prose in the BC3 exporter that reads as an assignment"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = [
+  '''Internal unit token -> FIEBDC''',
+]
+
+[[allowlists]]
+description = "test fixtures: provider rules still apply here, the catch-all does not"
+targetRules = ["generic-api-key"]
+paths = [
+  '''(^|[\/])tests?[\/]''',
+  '''(^|[\/])__tests__[\/]''',
+  '''[\/][^\/]*\.(test|spec)\.[jt]sx?$''',
+  '''[\/]conftest\.py$''',
+  '''[\/]test_[^\/]*\.py$''',
+]

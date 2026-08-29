@@ -70,7 +70,7 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-        args: [feat, fix, refactor, docs, test, chore, perf, ci, build, style]
+        args: [feat, fix, refactor, docs, test, chore, perf, ci, build, style, i18n]
 
   # Local hooks
   - repo: local

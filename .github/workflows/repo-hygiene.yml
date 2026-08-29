@@ -738,9 +738,12 @@ jobs:
       # This gate is declared in .pre-commit-config.yaml and was running nowhere.
       # pre-commit is not installed in this checkout, so none of that file's hooks
       # fire, and the local commit-msg shim covers only the two commit-message
-      # checks. Measured across all 21 declared gates: nineteen also have a step in
-      # this job, check_commit_subject is carried by that shim, and this one had
-      # neither. It guards German, Portuguese, Spanish and French demo text against
+      # checks. Remeasured 2026-08-29 across the 24 gates that file declares under
+      # `repo: local`: twenty-three have a step in a workflow, this one included
+      # now that it exists, and check_commit_subject is the only one left with no
+      # step anywhere, carried by that shim alone. Recount from the file rather
+      # than trust this number, which has already gone stale once.
+      # It guards German, Portuguese, Spanish and French demo text against
       # a corrected spelling reverting to its stripped form, which the people who
       # read those languages are the ones who see. Passing today over 11 files and
       # 1385 recorded spellings, so this pins a green state rather than fixing a red.
