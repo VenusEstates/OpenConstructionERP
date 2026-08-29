@@ -68,6 +68,27 @@ export const DASHBOARD_WIDGETS: readonly DashboardWidgetMeta[] = [
     descDefault: 'Guided real-world example workflows to learn the platform',
     icon: GraduationCap,
   },
+  // Which regional pack is switched on and what it set up. Sits this high on
+  // purpose: it answers "is this product configured for the country I work
+  // in", which is the question a new reader has before any number on the page
+  // means anything, and which nothing on the dashboard answered at all until
+  // now. Narrow, because it is six short rows - the dense grid flow backfills
+  // the columns beside it.
+  //
+  // labelKey is the card's own heading key rather than a
+  // dashboard.layout.w_* of its own. The layout manager lists this widget by
+  // exactly the words the card is titled with, so a second key would be the
+  // same sentence translated twice into forty-one languages with nothing to
+  // keep the two copies agreeing.
+  {
+    id: 'regional_pack',
+    labelKey: 'dashboard.regional_pack_title',
+    labelDefault: 'Your regional pack',
+    descKey: 'dashboard.layout.w_regional_pack_desc',
+    descDefault: 'Which market pack is active and what it sets up for you',
+    icon: Globe,
+    defaultSpan: 2,
+  },
   // ── Core (existing 12) ────────────────────────────────────────────────
   {
     id: 'continue_work',

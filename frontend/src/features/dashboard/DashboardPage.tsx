@@ -127,6 +127,9 @@ const InspectionsQualityCard = lazy(() =>
 const PunchListQualityCard = lazy(() =>
   import('./PunchListQualityCard').then((m) => ({ default: m.PunchListQualityCard })),
 );
+const RegionalPackCard = lazy(() =>
+  import('./RegionalPackCard').then((m) => ({ default: m.RegionalPackCard })),
+);
 
 /**
  * Widget ids whose card self-hides internally (renders `null` when its module
@@ -2593,6 +2596,12 @@ function DashboardPageInner() {
     submittals_pending: <SubmittalsPendingCard />,
     inspections_quality: <InspectionsQualityCard />,
     punch_quality: <PunchListQualityCard />,
+
+    // Never in WIDGET_NULL_FALLBACK: unlike the delivery cards above, this one
+    // always resolves to something. A deployment with no pack applied is the
+    // case it most needs to speak up in, so a self-hiding version would go
+    // silent exactly where it is needed.
+    regional_pack: <RegionalPackCard />,
 
     weather_site: <WeatherSiteWidget projects={projects} />,
     labour_cost: <LabourCostWidget />,
