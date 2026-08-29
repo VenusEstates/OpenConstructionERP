@@ -216,15 +216,27 @@ def test_no_check_script_is_unreachable() -> None:
     haystacks += sorted((BACKEND / "tests").rglob("*.py"))
     haystacks += sorted(SCRIPTS.glob("*.py"))
 
+    # One pass per file over an alternation of every name still unaccounted for,
+    # rather than one pass per name per file. The haystack is ~1900 files and the
+    # naive shape took nine seconds, which is more than the whole rest of this
+    # module and more than the accounting is worth.
     stems = {name[: -len(".py")]: name for name in on_disk}
     for path in haystacks:
-        if not path.exists() or path.resolve() == self_path:
+        wanted = {stem: name for stem, name in stems.items() if name not in referenced}
+        if not wanted:
+            break
+        # Compared without resolve(): every haystack root is built from the
+        # already-resolved BACKEND, and resolving each of ~2000 paths cost more
+        # than reading and searching all of them together.
+        if path == self_path or not path.exists():
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        for stem, name in stems.items():
-            if path.name == name:
-                continue  # a script naming itself is not a caller
-            if stem in text:
+        # Longest alternative first: no stem is a prefix of another today, but a
+        # rename that made one would otherwise leave the longer name unmatchable.
+        pattern = "|".join(sorted(map(re.escape, wanted), key=len, reverse=True))
+        for match in re.finditer(pattern, text):
+            name = wanted[match.group(0)]
+            if path.name != name:  # a script naming itself is not a caller
                 referenced.add(name)
 
     unreachable = sorted(on_disk - referenced - UNREFERENCED)
