@@ -22,9 +22,17 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'node:url';
 import { login } from '../../e2e/helpers';
 
-const SCREENSHOT_DIR = path.resolve(__dirname, 'screenshots');
+// __dirname does not exist under "type": "module", so this file threw
+// "ReferenceError: __dirname is not defined in ES module scope" at collection
+// time and took every config that loaded this directory down with it. Derived
+// from import.meta.url, the same way folder-permissions.spec.ts and
+// floating-chat.spec.ts already do it.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+const SCREENSHOT_DIR = path.resolve(HERE, 'screenshots');
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
 test.describe('Markup persistence + threaded comments', () => {
