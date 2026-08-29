@@ -7107,6 +7107,7 @@ const resource = {
     "auth.full_name_placeholder": "Jean Dupont",
     "auth.has_account": "Vous avez déjà un compte ?",
     "auth.invalid_credentials": "E-mail ou mot de passe invalide",
+    "auth.server_unavailable": "Le serveur n'a pas répondu, vos informations n'ont donc jamais été vérifiées. Réessayez dans un instant.",
     "auth.login": "Se connecter",
     "auth.login_subtitle": "Entrez vos identifiants pour accéder à votre espace de travail",
     "auth.logout": "Se déconnecter",

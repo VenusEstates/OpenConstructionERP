@@ -8288,6 +8288,7 @@ const resource = {
     "auth.full_name_placeholder": "Matti Meikäläinen",
     "auth.has_account": "Onko sinulla jo tili?",
     "auth.invalid_credentials": "Virheellinen sähköposti tai salasana",
+    "auth.server_unavailable": "Palvelin ei vastannut, joten tietojasi ei koskaan tarkistettu. Yritä hetken kuluttua uudelleen.",
     "auth.login": "Kirjaudu sisään",
     "auth.login_subtitle": "Syötä tunnuksesi päästäksesi työtilaan",
     "auth.logout": "Kirjaudu ulos",

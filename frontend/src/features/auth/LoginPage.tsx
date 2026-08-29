@@ -20,6 +20,7 @@ import { extractErrorMessageFromBody } from '@/shared/lib/api';
 import { isTauri } from '@/shared/lib/desktop';
 import { HEX_PORTRAIT_ASPECT, HEX_PORTRAIT_CLIP } from '@/shared/lib/honeycomb';
 import { APP_VERSION } from '@/shared/lib/version';
+import { loginFailureKind } from './loginError';
 import { AuthBackground } from './AuthBackground';
 import {
   shouldAttemptDesktopBootstrap,
@@ -247,6 +248,19 @@ export function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
+        // A proxy answering 502 for a backend that is down is a response, not
+        // a network error, so the catch below never sees it. Without this the
+        // outage lands on the credentials wording and the person is told the
+        // one thing we know is untrue: nothing read their password.
+        if (loginFailureKind(res.status) === 'unavailable') {
+          setError(
+            t('auth.server_unavailable', {
+              defaultValue:
+                'The server did not answer, so your details were never checked. Try again in a moment.',
+            }),
+          );
+          return;
+        }
         const data = await res.json().catch(() => null);
         const parsed = extractErrorMessageFromBody(data);
         setError(parsed || t('auth.invalid_credentials', 'Invalid email or password'));
@@ -847,7 +861,10 @@ export function LoginPage() {
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 rounded-lg bg-semantic-error-bg px-3 py-2 text-xs text-semantic-error animate-stagger-in">
+                <div
+                  data-testid="login-error"
+                  className="flex items-start gap-2 rounded-lg bg-semantic-error-bg px-3 py-2 text-xs text-semantic-error animate-stagger-in"
+                >
                   <span className="shrink-0 mt-0.5">!</span><span>{error}</span>
                 </div>
               )}

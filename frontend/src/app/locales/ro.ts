@@ -8347,6 +8347,7 @@ const resource = {
     "auth.full_name_placeholder": "Ion Popescu",
     "auth.has_account": "Aveți deja un cont?",
     "auth.invalid_credentials": "E-mail sau parolă invalidă",
+    "auth.server_unavailable": "Serverul nu a răspuns, așa că datele dumneavoastră nu au fost niciodată verificate. Încercați din nou peste puțin timp.",
     "auth.login": "Autentificare",
     "auth.login_subtitle": "Introduceți datele pentru a accesa spațiul de lucru",
     "auth.logout": "Deconectare",

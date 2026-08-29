@@ -7787,6 +7787,7 @@ const resource = {
     "auth.full_name_placeholder": "Асан Асанов",
     "auth.has_account": "Аккаунтыңыз бар ма?",
     "auth.invalid_credentials": "Дұрыс емес электрондық пошта немесе құпия сөз",
+    "auth.server_unavailable": "Сервер жауап бермеді, сондықтан деректеріңіз тексерілмеді. Сәлден соң қайта көріңіз.",
     "auth.login": "Кіру",
     "auth.login_subtitle": "Жұмыс кеңістігіңізге кіру үшін есептік деректеріңізді енгізіңіз",
     "auth.logout": "Шығу",

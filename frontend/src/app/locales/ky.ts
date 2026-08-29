@@ -3312,6 +3312,7 @@ const resource = {
     "auth.full_name_placeholder": "John Smith",
     "auth.has_account": "Аккаунтуңуз бар беле?",
     "auth.invalid_credentials": "Электрондук почта же сырсөз туура эмес",
+    "auth.server_unavailable": "Сервер жооп берген жок, ошондуктан маалыматыңыз текшерилген жок. Бир аздан кийин кайра аракет кылыңыз.",
     "auth.login": "Кирүү",
     "auth.login_subtitle": "Жумуш мейкиндигиңизге кирүү үчүн эсептик маалыматыңызды киргизиңиз",
     "auth.logout": "Чыгуу",

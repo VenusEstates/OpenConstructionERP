@@ -7787,6 +7787,7 @@ const resource = {
     "auth.full_name_placeholder": "করিম উদ্দিন",
     "auth.has_account": "ইতিমধ্যে একটি অ্যাকাউন্ট আছে?",
     "auth.invalid_credentials": "অবৈধ ইমেইল বা পাসওয়ার্ড",
+    "auth.server_unavailable": "সার্ভার সাড়া দেয়নি, তাই আপনার তথ্য যাচাই করা হয়নি। একটু পর আবার চেষ্টা করুন।",
     "auth.login": "সাইন ইন করুন",
     "auth.login_subtitle": "আপনার কর্মক্ষেত্র অ্যাক্সেস করতে আপনার ক্রেডেনশিয়াল লিখুন",
     "auth.logout": "লগ আউট",

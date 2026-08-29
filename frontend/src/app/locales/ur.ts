@@ -7787,6 +7787,7 @@ const resource = {
     "auth.full_name_placeholder": "احمد علی",
     "auth.has_account": "پہلے سے اکاؤنٹ ہے؟",
     "auth.invalid_credentials": "غلط ای میل یا پاس ورڈ",
+    "auth.server_unavailable": "سرور نے جواب نہیں دیا، اس لیے آپ کی تفصیلات کبھی نہیں جانچی گئیں۔ تھوڑی دیر میں دوبارہ کوشش کریں۔",
     "auth.login": "سائن ان کریں",
     "auth.login_subtitle": "اپنے workspace تک رسائی کے لیے اپنی اسناد درج کریں",
     "auth.logout": "لاگ آؤٹ",

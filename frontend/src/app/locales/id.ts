@@ -8283,6 +8283,7 @@ const resource = {
     "auth.full_name_placeholder": "Budi Santoso",
     "auth.has_account": "Sudah punya akun?",
     "auth.invalid_credentials": "Email atau kata sandi tidak valid",
+    "auth.server_unavailable": "Server tidak merespons, jadi data Anda tidak pernah diperiksa. Coba lagi sebentar lagi.",
     "auth.login": "Masuk",
     "auth.login_subtitle": "Masukkan kredensial Anda untuk mengakses ruang kerja",
     "auth.logout": "Keluar",

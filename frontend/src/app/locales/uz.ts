@@ -7820,6 +7820,7 @@ const resource = {
     "auth.full_name_placeholder": "John Smith",
     "auth.has_account": "Hisobingiz bormi?",
     "auth.invalid_credentials": "Email yoki parol notoʻgʻri",
+    "auth.server_unavailable": "Server javob bermadi, shuning uchun ma'lumotlaringiz hech qachon tekshirilmadi. Birozdan so'ng qayta urinib ko'ring.",
     "auth.login": "Tizimga kirish",
     "auth.login_subtitle": "Ish maydoningizga kirish uchun maʼlumotlaringizni kiriting",
     "auth.logout": "Chiqish",

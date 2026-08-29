@@ -8310,6 +8310,7 @@ const resource = {
     "auth.full_name_placeholder": "สมชาย ใจดี",
     "auth.has_account": "มีบัญชีอยู่แล้ว?",
     "auth.invalid_credentials": "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+    "auth.server_unavailable": "เซิร์ฟเวอร์ไม่ตอบสนอง ข้อมูลของคุณจึงไม่เคยถูกตรวจสอบ ลองใหม่อีกครั้งในอีกสักครู่",
     "auth.login": "เข้าสู่ระบบ",
     "auth.login_subtitle": "กรอกข้อมูลเพื่อเข้าสู่พื้นที่ทำงานของคุณ",
     "auth.logout": "ออกจากระบบ",

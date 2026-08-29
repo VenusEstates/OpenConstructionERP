@@ -8311,6 +8311,7 @@ const resource = {
     "auth.full_name_placeholder": "Ivan Horvat",
     "auth.has_account": "Već imate račun?",
     "auth.invalid_credentials": "Neispravna e-pošta ili lozinka",
+    "auth.server_unavailable": "Poslužitelj nije odgovorio, pa vaši podaci nikad nisu provjereni. Pokušajte ponovno za trenutak.",
     "auth.login": "Prijava",
     "auth.login_subtitle": "Unesite svoje podatke za pristup radnom prostoru",
     "auth.logout": "Odjava",

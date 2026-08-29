@@ -7155,6 +7155,7 @@ const resource = {
     "auth.full_name_placeholder": "Juan García",
     "auth.has_account": "¿Ya tiene una cuenta?",
     "auth.invalid_credentials": "Correo electrónico o contraseña incorrectos",
+    "auth.server_unavailable": "El servidor no respondió, así que sus datos nunca se comprobaron. Inténtelo de nuevo en un momento.",
     "auth.login": "Iniciar sesión",
     "auth.login_subtitle": "Introduzca sus credenciales para acceder a su espacio de trabajo",
     "auth.logout": "Cerrar sesión",

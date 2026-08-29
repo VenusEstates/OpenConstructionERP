@@ -7823,6 +7823,7 @@ const resource = {
     "auth.full_name_placeholder": "Γιώργος Παπαδόπουλος",
     "auth.has_account": "Έχετε ήδη λογαριασμό;",
     "auth.invalid_credentials": "Μη έγκυρο email ή κωδικός",
+    "auth.server_unavailable": "Ο διακομιστής δεν απάντησε, οπότε τα στοιχεία σας δεν ελέγχθηκαν ποτέ. Δοκιμάστε ξανά σε λίγο.",
     "auth.login": "Σύνδεση",
     "auth.login_subtitle": "Εισαγάγετε τα διαπιστευτήριά σας για πρόσβαση στον χώρο εργασίας σας",
     "auth.logout": "Αποσύνδεση",

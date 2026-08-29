@@ -7787,6 +7787,7 @@ const resource = {
     "auth.full_name_placeholder": "علی احمدی",
     "auth.has_account": "از قبل حساب دارید؟",
     "auth.invalid_credentials": "ایمیل یا رمز عبور نامعتبر",
+    "auth.server_unavailable": "سرور پاسخ نداد، بنابراین اطلاعات شما هرگز بررسی نشد. کمی بعد دوباره تلاش کنید.",
     "auth.login": "ورود",
     "auth.login_subtitle": "اعتبارنامه‌های خود را وارد کنید تا به فضای کاری خود دسترسی پیدا کنید",
     "auth.logout": "خروج",

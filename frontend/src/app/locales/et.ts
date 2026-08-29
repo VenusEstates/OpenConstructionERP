@@ -8500,6 +8500,7 @@ const resource = {
     "auth.full_name_placeholder": "Jaan Tamm",
     "auth.has_account": "Kas teil on juba konto?",
     "auth.invalid_credentials": "Vale e-post või parool",
+    "auth.server_unavailable": "Server ei vastanud, seega teie andmeid kunagi ei kontrollitud. Proovige mõne hetke pärast uuesti.",
     "auth.login": "Logi sisse",
     "auth.login_subtitle": "Sisestage oma andmed, et pääseda töökeskkonda",
     "auth.logout": "Logi välja",

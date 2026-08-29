@@ -8318,6 +8318,7 @@ const resource = {
     "auth.full_name_placeholder": "राहुल शर्मा",
     "auth.has_account": "पहले से खाता है?",
     "auth.invalid_credentials": "अमान्य ईमेल या पासवर्ड",
+    "auth.server_unavailable": "सर्वर ने जवाब नहीं दिया, इसलिए आपकी जानकारी कभी जाँची नहीं गई। थोड़ी देर में फिर कोशिश करें।",
     "auth.login": "साइन इन करें",
     "auth.login_subtitle": "अपने कार्यक्षेत्र तक पहुँचने के लिए अपने क्रेडेंशियल दर्ज करें",
     "auth.logout": "लॉग आउट",

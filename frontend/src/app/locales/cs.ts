@@ -8314,6 +8314,7 @@ const resource = {
     "auth.full_name_placeholder": "Jan Novák",
     "auth.has_account": "Máte již účet?",
     "auth.invalid_credentials": "Neplatný e-mail nebo heslo",
+    "auth.server_unavailable": "Server neodpověděl, takže vaše údaje nebyly ověřeny. Zkuste to za chvíli znovu.",
     "auth.login": "Přihlásit se",
     "auth.login_subtitle": "Zadejte přihlašovací údaje pro přístup do pracovního prostoru",
     "auth.logout": "Odhlásit se",

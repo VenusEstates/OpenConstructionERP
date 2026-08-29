@@ -7121,6 +7121,7 @@ const resource = {
     "auth.full_name_placeholder": "Jan de Vries",
     "auth.has_account": "Heeft u al een account?",
     "auth.invalid_credentials": "Ongeldig e-mailadres of wachtwoord",
+    "auth.server_unavailable": "De server reageerde niet, dus uw gegevens zijn nooit gecontroleerd. Probeer het zo weer.",
     "auth.login": "Inloggen",
     "auth.login_subtitle": "Voer uw inloggegevens in om toegang te krijgen tot uw werkruimte",
     "auth.logout": "Uitloggen",

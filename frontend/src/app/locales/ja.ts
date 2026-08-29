@@ -8295,6 +8295,7 @@ const resource = {
     "auth.full_name_placeholder": "山田太郎",
     "auth.has_account": "すでにアカウントをお持ちですか？",
     "auth.invalid_credentials": "メールアドレスまたはパスワードが正しくありません",
+    "auth.server_unavailable": "サーバーが応答しなかったため、入力内容は確認されませんでした。しばらくしてからもう一度お試しください。",
     "auth.login": "サインイン",
     "auth.login_subtitle": "認証情報を入力してワークスペースにアクセス",
     "auth.logout": "ログアウト",

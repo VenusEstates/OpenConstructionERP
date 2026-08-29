@@ -7787,6 +7787,7 @@ const resource = {
     "auth.full_name_placeholder": "Juan Dela Cruz",
     "auth.has_account": "May account ka na ba?",
     "auth.invalid_credentials": "Maling email o password",
+    "auth.server_unavailable": "Hindi sumagot ang server, kaya hindi na-check ang iyong impormasyon. Subukan ulit sandali.",
     "auth.login": "Mag-sign in",
     "auth.login_subtitle": "Ilagay ang mga kredensyal mo para maabot ang workspace mo",
     "auth.logout": "Mag-log Out",

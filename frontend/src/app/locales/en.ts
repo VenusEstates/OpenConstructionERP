@@ -3328,6 +3328,7 @@ const resource = {
     "auth.full_name_placeholder": "John Smith",
     "auth.has_account": "Already have an account?",
     "auth.invalid_credentials": "Invalid email or password",
+    "auth.server_unavailable": "The server did not answer, so your details were never checked. Try again in a moment.",
     "auth.login": "Sign in",
     "auth.login_subtitle": "Enter your credentials to access your workspace",
     "auth.logout": "Log Out",

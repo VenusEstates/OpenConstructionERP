@@ -8434,6 +8434,7 @@ const resource = {
     "auth.full_name_placeholder": "Иван Петров",
     "auth.has_account": "Вече имате акаунт?",
     "auth.invalid_credentials": "Невалиден имейл или парола",
+    "auth.server_unavailable": "Сървърът не отговори, затова данните ви не бяха проверени. Опитайте отново след малко.",
     "auth.login": "Вход",
     "auth.login_subtitle": "Въведете данните си за достъп до работното пространство",
     "auth.logout": "Изход",

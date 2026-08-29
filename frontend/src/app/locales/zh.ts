@@ -8313,6 +8313,7 @@ const resource = {
     "auth.full_name_placeholder": "张三",
     "auth.has_account": "已有账户？",
     "auth.invalid_credentials": "邮箱或密码错误",
+    "auth.server_unavailable": "服务器没有响应,因此从未核实您的信息。请稍后重试。",
     "auth.login": "登录",
     "auth.login_subtitle": "输入您的凭据以访问工作区",
     "auth.logout": "退出登录",

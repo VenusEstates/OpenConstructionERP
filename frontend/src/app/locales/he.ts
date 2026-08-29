@@ -7791,6 +7791,7 @@ const resource = {
     "auth.full_name_placeholder": "ישראל ישראלי",
     "auth.has_account": "כבר יש לכם חשבון?",
     "auth.invalid_credentials": "אימייל או סיסמה שגויים",
+    "auth.server_unavailable": "השרת לא הגיב, כך שהפרטים שלך מעולם לא נבדקו. נסו שוב בעוד רגע.",
     "auth.login": "כניסה",
     "auth.login_subtitle": "הזינו את פרטי ההתחברות שלכם כדי לגשת לסביבת העבודה שלכם",
     "auth.logout": "יציאה",

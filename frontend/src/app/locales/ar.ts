@@ -8603,6 +8603,7 @@ const resource = {
     "auth.full_name_placeholder": "محمد أحمد",
     "auth.has_account": "لديك حساب بالفعل؟",
     "auth.invalid_credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "auth.server_unavailable": "لم يستجب الخادم، لذلك لم يُتحقَّق من بياناتك قط. أعد المحاولة بعد لحظة.",
     "auth.login": "تسجيل الدخول",
     "auth.login_subtitle": "أدخل بياناتك للوصول إلى مساحة عملك",
     "auth.logout": "تسجيل الخروج",

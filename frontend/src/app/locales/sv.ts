@@ -8376,6 +8376,7 @@ const resource = {
     "auth.full_name_placeholder": "Anna Svensson",
     "auth.has_account": "Har du redan ett konto?",
     "auth.invalid_credentials": "Ogiltig e-postadress eller lösenord",
+    "auth.server_unavailable": "Servern svarade inte, så dina uppgifter kontrollerades aldrig. Försök igen om en liten stund.",
     "auth.login": "Logga in",
     "auth.login_subtitle": "Ange dina uppgifter för att komma åt din arbetsyta",
     "auth.logout": "Logga ut",

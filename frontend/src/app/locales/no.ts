@@ -8343,6 +8343,7 @@ const resource = {
     "auth.full_name_placeholder": "Ola Nordmann",
     "auth.has_account": "Har du allerede en konto?",
     "auth.invalid_credentials": "Ugyldig e-post eller passord",
+    "auth.server_unavailable": "Serveren svarte ikke, så opplysningene dine ble aldri kontrollert. Prøv igjen om et øyeblikk.",
     "auth.login": "Logg inn",
     "auth.login_subtitle": "Skriv inn paloggingsinformasjonen din for a fa tilgang til arbeidsomradet",
     "auth.logout": "Logg ut",

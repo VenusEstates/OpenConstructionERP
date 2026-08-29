@@ -8295,6 +8295,7 @@ const resource = {
     "auth.full_name_placeholder": "홍길동",
     "auth.has_account": "이미 계정이 있으신가요?",
     "auth.invalid_credentials": "이메일 또는 비밀번호가 올바르지 않습니다",
+    "auth.server_unavailable": "서버가 응답하지 않아 입력하신 정보가 확인되지 않았습니다. 잠시 후 다시 시도하세요.",
     "auth.login": "로그인",
     "auth.login_subtitle": "워크스페이스에 접속하려면 자격 증명을 입력하세요",
     "auth.logout": "로그아웃",

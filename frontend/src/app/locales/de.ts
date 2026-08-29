@@ -7818,6 +7818,7 @@ const resource = {
     "auth.full_name_placeholder": "Max Mustermann",
     "auth.has_account": "Bereits ein Konto?",
     "auth.invalid_credentials": "Ungültige E-Mail oder Passwort",
+    "auth.server_unavailable": "Der Server hat nicht geantwortet, Ihre Angaben wurden also nicht geprüft. Versuchen Sie es gleich noch einmal.",
     "auth.login": "Anmelden",
     "auth.login_subtitle": "Geben Sie Ihre Zugangsdaten ein, um auf Ihren Arbeitsbereich zuzugreifen",
     "auth.logout": "Abmelden",

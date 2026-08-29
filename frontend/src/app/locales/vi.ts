@@ -8283,6 +8283,7 @@ const resource = {
     "auth.full_name_placeholder": "Nguyễn Văn A",
     "auth.has_account": "Đã có tài khoản?",
     "auth.invalid_credentials": "Email hoặc mật khẩu không hợp lệ",
+    "auth.server_unavailable": "Máy chủ không phản hồi, nên thông tin của bạn chưa từng được kiểm tra. Hãy thử lại sau một chút.",
     "auth.login": "Đăng nhập",
     "auth.login_subtitle": "Nhập thông tin để truy cập không gian làm việc của bạn",
     "auth.logout": "Đăng xuất",

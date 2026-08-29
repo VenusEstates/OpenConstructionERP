@@ -8412,6 +8412,7 @@ const resource = {
     "auth.full_name_placeholder": "Иван Петров",
     "auth.has_account": "Уже есть аккаунт?",
     "auth.invalid_credentials": "Неверный email или пароль",
+    "auth.server_unavailable": "Сервер не ответил, поэтому ваши данные так и не были проверены. Повторите попытку через минуту.",
     "auth.login": "Войти",
     "auth.login_subtitle": "Введите учётные данные для доступа к рабочему пространству",
     "auth.logout": "Выйти",

@@ -8318,6 +8318,7 @@ const resource = {
     "auth.full_name_placeholder": "Jan Kowalski",
     "auth.has_account": "Masz już konto?",
     "auth.invalid_credentials": "Nieprawidłowy adres e-mail lub hasło",
+    "auth.server_unavailable": "Serwer nie odpowiedział, więc Twoje dane nigdy nie zostały sprawdzone. Spróbuj ponownie za chwilę.",
     "auth.login": "Zaloguj się",
     "auth.login_subtitle": "Wprowadź dane logowania, aby uzyskać dostęp do obszaru roboczego",
     "auth.logout": "Wyloguj się",

@@ -8341,6 +8341,7 @@ const resource = {
     "auth.full_name_placeholder": "Ahmet Yılmaz",
     "auth.has_account": "Zaten hesabınız var mı?",
     "auth.invalid_credentials": "Geçersiz e-posta veya şifre",
+    "auth.server_unavailable": "Sunucu yanıt vermedi, bu yüzden bilgileriniz hiç kontrol edilmedi. Birazdan tekrar deneyin.",
     "auth.login": "Giriş yap",
     "auth.login_subtitle": "Çalışma alanınıza erişmek için kimlik bilgilerinizi girin",
     "auth.logout": "Çıkış Yap",

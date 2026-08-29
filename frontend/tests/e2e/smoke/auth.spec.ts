@@ -27,13 +27,33 @@ test.describe('@smoke auth', () => {
     await captureScreen(page, 'smoke', 'post-login-redirect');
   });
 
-  test('wrong password keeps user on /login and surfaces an error', async ({ page }) => {
+  // This used to sign in as the seeded demo account with a deliberately wrong
+  // password and assert that the browser had not left /login. Two things were
+  // wrong with it, and they compounded.
+  //
+  // The account cannot carry the assertion. In any non-production install with
+  // demo seeding on, the three seeded demo emails are routed past the password
+  // check deliberately, because the seeder randomises the demo password per
+  // install and the documented credential would otherwise stop working. So the
+  // sign-in under test succeeds by design and the browser does leave /login.
+  //
+  // The assertion could not report that. "We have not navigated yet" is true
+  // for free whenever anything is slow, so it can only fail when the system is
+  // fast, which is backwards. Measured: it passed at four workers and failed at
+  // one, on the same build against the same server, and the failure was the
+  // truthful run. It also claimed to surface an error while asserting nothing
+  // about one.
+  //
+  // So the account is one the server does not know, which no shortcut exempts,
+  // and the wait is for the refusal to appear rather than for time to pass. A
+  // sign-in that wrongly succeeded produces no error to wait for and fails
+  // here, which is the direction that has to work.
+  test('an account the server does not know is refused, with the reason on screen', async ({ page }) => {
     await page.goto('/login');
-    await page.locator('input[type="email"]').fill(DEMO_USER.email);
+    await page.locator('input[type="email"]').fill('no-such-account.e2e@openconstructionerp.invalid');
     await page.locator('input[type="password"]').first().fill('this-is-deliberately-wrong-2026');
     await page.locator('button[type="submit"]').click();
-    // We don't navigate away — error message appears.
-    await page.waitForTimeout(1_500); // brief settle for inline error
+    await expect(page.getByTestId('login-error')).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/login/);
     await captureScreen(page, 'smoke', 'login-wrong-password');
   });

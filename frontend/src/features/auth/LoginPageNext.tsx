@@ -33,6 +33,7 @@ import { Button, Input, Logo, CountryFlag } from '@/shared/ui';
 import { safeNextPath } from './nextPath';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { extractErrorMessageFromBody } from '@/shared/lib/api';
+import { loginFailureKind } from './loginError';
 import { AuthBackground } from './AuthBackground';
 import { SUPPORTED_LANGUAGES } from '@/app/i18n';
 
@@ -145,6 +146,18 @@ export function LoginPageNext() {
         body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
+        // Same reasoning as the other sign-in screen: a 5xx means nothing read
+        // the password, so the credentials wording would be a claim we cannot
+        // support.
+        if (loginFailureKind(res.status) === 'unavailable') {
+          setError(
+            t('auth.server_unavailable', {
+              defaultValue:
+                'The server did not answer, so your details were never checked. Try again in a moment.',
+            }),
+          );
+          return;
+        }
         const data = await res.json().catch(() => null);
         const parsed = extractErrorMessageFromBody(data);
         setError(parsed || t('auth.invalid_credentials', 'Invalid email or password'));

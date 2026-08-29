@@ -7152,6 +7152,7 @@ const resource = {
     "auth.full_name_placeholder": "João Silva",
     "auth.has_account": "Já tem uma conta?",
     "auth.invalid_credentials": "E-mail ou palavra-passe inválidos",
+    "auth.server_unavailable": "O servidor não respondeu, pelo que os seus dados nunca foram verificados. Tente novamente daqui a pouco.",
     "auth.login": "Entrar",
     "auth.login_subtitle": "Digite suas credenciais para acessar seu espaço de trabalho",
     "auth.logout": "Sair",

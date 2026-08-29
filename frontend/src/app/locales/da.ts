@@ -8398,6 +8398,7 @@ const resource = {
     "auth.full_name_placeholder": "Jens Jensen",
     "auth.has_account": "Har du allerede en konto?",
     "auth.invalid_credentials": "Ugyldig e-mail eller adgangskode",
+    "auth.server_unavailable": "Serveren svarede ikke, så dine oplysninger blev aldrig kontrolleret. Prøv igen om lidt.",
     "auth.login": "Log ind",
     "auth.login_subtitle": "Indtast dine legitimationsoplysninger for at få adgang til dit arbejdsområde",
     "auth.logout": "Log ud",

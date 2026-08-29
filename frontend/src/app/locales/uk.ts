@@ -7768,6 +7768,7 @@ const resource = {
     "auth.full_name_placeholder": "Іван Петренко",
     "auth.has_account": "Вже маєте обліковий запис?",
     "auth.invalid_credentials": "Неправильна ел. пошта або пароль",
+    "auth.server_unavailable": "Сервер не відповів, тому ваші дані так і не перевірили. Спробуйте ще раз за хвилину.",
     "auth.login": "Увійти",
     "auth.login_subtitle": "Введіть облікові дані, щоб увійти до робочого простору",
     "auth.logout": "Вийти",

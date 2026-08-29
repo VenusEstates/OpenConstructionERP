@@ -8368,6 +8368,7 @@ const resource = {
     "auth.full_name_placeholder": "Жон Смит",
     "auth.has_account": "Бүртгэлтэй юу?",
     "auth.invalid_credentials": "Имэйл эсвэл нууц үг буруу",
+    "auth.server_unavailable": "Сервер хариу өгсөнгүй тул таны мэдээллийг шалгаагүй. Түр хүлээгээд дахин оролдоно уу.",
     "auth.login": "Нэвтрэх",
     "auth.login_subtitle": "Ажлын талбартаа нэвтрэхийн тулд мэдээллээ оруулна уу",
     "auth.logout": "Гарах",
