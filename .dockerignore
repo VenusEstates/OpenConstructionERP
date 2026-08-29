@@ -16,6 +16,22 @@
 .gitignore
 .gitattributes
 .github
+# Agent tooling scratch, and the largest single thing this file was not
+# excluding. Most of the bulk is the git worktrees under .claude/worktrees,
+# each one a second copy of the whole tree, and it also holds API tokens in
+# plain files that were being handed to the build daemon on every local build.
+#
+# No published image was ever affected and nothing leaked into an artefact.
+# Nothing under .claude is tracked, it is excluded through .git/info/exclude
+# rather than .gitignore, so actions/checkout never materialises it and the
+# release build never saw it. Dockerfile.unified has no wildcard COPY either,
+# every COPY names a path, so the context is as far as this could ever have
+# reached. That also means the repo hygiene gate and the wheel scanner had
+# nothing to say about it, which is why it went unnoticed for so long.
+#
+# Unanchored like the tool directories around it, which also takes
+# backend/.claude and frontend/.claude, the same scratch one level down.
+.claude
 .playwright-mcp
 .vscode
 .idea
