@@ -81,18 +81,13 @@ never happens to trip a given rule leaves zero trace that the rule speaks
 English there. A whole missing locale and a locale mid-translation are
 indistinguishable at every level except that log line.
 
-There is a second, sharper finding this ratchet does NOT fix (fixing it means
-editing ``messages/__init__.py``): ``MessageBundle.translate()`` does an exact-string
-match against its locale dict and then falls straight to English — it has no
-equivalent of ``app.core.i18n.locale_candidates()``'s regional-to-base chaining.
-This is currently harmless only because ``SUPPORTED_LOCALES`` is
-base-language-only, so nothing regional ever reaches ``get_locale()``. But it
-means a caller that *does* pass a regional code straight to ``translate()`` — a
-future consumer, a test, a document renderer with its own locale plumbing — gets
-100% English even where the base translation is complete: verified by calling
-``translate("boq_markup.contingency_not_on_profit.fail", locale="es-MX", ...)``,
-which returns the English sentence while ``locale="es"`` on the same key returns
-the complete Spanish one already sitting in ``es.json``.
+``MessageBundle.translate()`` resolves through
+``app.core.i18n.locale_candidates()``, so a regional code chains to its base
+language (``es-MX`` -> ``es``) before bottoming out at English, and a hit on the
+base language is not logged as a fallback because it is not one. Read the body
+of ``translate`` rather than trusting this sentence: an earlier version of this
+docstring said the opposite, correctly at the time, and went stale the morning
+``341d37ca7`` added the chaining underneath it.
 
 WHAT THIS GATE CANNOT SEE, which is more than it can. It measures BREADTH and
 only breadth: how many locale files a catalogue has, per catalogue. Three
@@ -117,6 +112,21 @@ things are outside it by construction, and the third is the one that bites.
     this gate to cover them is not a matter of adding a directory — there is no
     directory. It needs a different instrument, because the thing being counted
     stopped being a file.
+
+  * HOW A CATALOGUE RESOLVES, as opposed to what it holds. This is the limit
+    that has actually bitten, and the case is worth reading before trusting a
+    green run here. ``341d37ca7`` fixed three catalogues that answered a
+    regional locale in English while holding a complete translation for its base
+    language. Two were ``modules/requirements/intl.py`` and
+    ``modules/risk/intl.py``, in-memory tables invisible here for the reason
+    above. The third was ``modules/bcf/messages/``, which IS one of the seven
+    directories this gate watches — and this gate saw nothing, because there was
+    nothing of its kind to see. That commit changed only ``bcf/messages/__init__.py``;
+    every locale file was present before it and present after it, none added and
+    none lost, so a breadth ratchet had nothing to compare. Three catalogues
+    served English to a translated language for as long as it took someone to
+    notice by hand, and a green run of this script was true the whole time. The
+    defect was in the lookup, not in the inventory.
 
 RATCHET, not a hard requirement. ``SUPPORTED_LOCALES`` names 28 codes and no
 catalogue here answers more than 4 of them; a gate demanding 28 of 28 could not
