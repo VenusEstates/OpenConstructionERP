@@ -29,6 +29,7 @@ when available.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from typing import Any
 
@@ -198,9 +199,13 @@ def _hit_from_row(
 ) -> VectorHit:
     """Build a :class:`VectorHit` from an ORM row's display fields.
 
-    The score is irrelevant for the fused output (RRF is rank-based),
-    but we set a small positive value so any downstream consumer that
-    sorts by raw score before fusion still gets a sensible order.
+    ``rank_score`` is left at zero here because the per-collection
+    branches below have no relevance signal to offer - Postgres reports
+    only that the ILIKE matched, never how well. The score is filled in
+    afterwards by :func:`_sql_search_collection`, which sees the query
+    text alongside the assembled hit and can measure the match. Leaving
+    it at zero and never filling it in is what shipped every hit to the
+    frontend at 0%.
     """
     return VectorHit(
         id=str(row_id),
@@ -214,7 +219,129 @@ def _hit_from_row(
     )
 
 
+# Every hit handed back by the SQL track matched the ILIKE, so none of
+# them is a non-match. This is the floor the lexical scale starts from,
+# so the weakest surviving hit still reads as a match rather than as a
+# zero the reader would take for "irrelevant".
+_LEXICAL_FLOOR = 0.2
+
+
+def _lexical_score(query: str, hit: VectorHit) -> float:
+    """Score how well *hit* matches *query*, on a 0.0-1.0 scale.
+
+    The SQL track has no relevance signal of its own: an ILIKE answers
+    "matched" or "did not match", and the ``ORDER BY created_at DESC``
+    in each branch below is recency. Fusing that order alone would give
+    the caller a number that encodes only which row is newest, which is
+    an arbitrary order wearing a relevance score.
+
+    Three signals, in descending weight:
+
+    * where the phrase landed - a hit on the title outranks one buried
+      in the body text,
+    * how many of the query's terms appear at all - a two-word query
+      fully covered outranks one that matched on a single word,
+    * how much of the matched field the phrase accounts for - a short
+      title matched end to end outranks the same phrase inside a long
+      paragraph.
+
+    The result is floored at :data:`_LEXICAL_FLOOR` because the caller
+    only ever passes hits the ILIKE already accepted.
+
+    Args:
+        query: The raw user query, as typed.
+        hit: A hit assembled by :func:`_hit_from_row`.
+
+    Returns:
+        A relevance score in ``[_LEXICAL_FLOOR, 1.0]``.
+    """
+    needle = query.strip().lower()
+    if not needle:
+        return 0.0
+
+    title = (hit.title or "").lower()
+    body = (hit.text or "").lower()
+
+    if title == needle:
+        phrase = 1.0
+    elif title.startswith(needle):
+        phrase = 0.85
+    elif needle in title:
+        phrase = 0.7
+    elif needle in body:
+        phrase = 0.45
+    else:
+        # The ILIKE matched a column that is neither the display title
+        # nor the snippet - a BOQ ordinal or a risk code, say. Still a
+        # real match, just not one we can locate in the visible text.
+        phrase = 0.0
+
+    terms = [term for term in re.split(r"\W+", needle) if term]
+    haystack = f"{title} {body}"
+    term_ratio = sum(1 for term in terms if term in haystack) / len(terms) if terms else 0.0
+
+    if needle in title:
+        matched_field = title
+    elif needle in body:
+        matched_field = body
+    else:
+        # Nothing to measure coverage against - the phrase is in neither
+        # visible field, so it contributes nothing rather than a ratio
+        # taken over text it never appeared in.
+        matched_field = ""
+    coverage = min(len(needle) / len(matched_field), 1.0) if matched_field else 0.0
+
+    quality = 0.6 * phrase + 0.25 * term_ratio + 0.15 * coverage
+    return round(_LEXICAL_FLOOR + (1.0 - _LEXICAL_FLOOR) * quality, 6)
+
+
 async def _sql_search_collection(
+    session: AsyncSession,
+    collection: str,
+    query: str,
+    *,
+    project_id: str | None = None,
+    tenant_id: str | None = None,
+    allowed_project_ids: set[uuid.UUID] | None = None,
+    limit: int = 10,
+) -> list[VectorHit]:
+    """ILIKE substring search against *collection*, ranked by match quality.
+
+    Thin wrapper over :func:`_sql_search_collection_raw`: it takes the
+    rows Postgres matched and puts them in relevance order, because the
+    raw query can only order by recency. Each hit is scored by
+    :func:`_lexical_score` and the list is sorted on that score, stably,
+    so hits of equal match quality keep the newest-first order the SQL
+    branch gave them.
+
+    Args:
+        session: Live async session; one is shared across all collections.
+        collection: Canonical collection name (``oe_*``).
+        query: The raw user query, as typed.
+        project_id: Pin to a single, already-authorised project.
+        tenant_id: Reserved; most tables carry no tenant column yet.
+        allowed_project_ids: Cross-project access fence. ``None`` means
+            unrestricted, an empty set means nothing is readable.
+        limit: Maximum rows to take from the backing table.
+
+    Returns:
+        Hits in descending relevance order, each carrying a non-zero score.
+    """
+    hits = await _sql_search_collection_raw(
+        session,
+        collection,
+        query,
+        project_id=project_id,
+        tenant_id=tenant_id,
+        allowed_project_ids=allowed_project_ids,
+        limit=limit,
+    )
+    for hit in hits:
+        hit.score = _lexical_score(query, hit)
+    return sorted(hits, key=lambda hit: hit.score, reverse=True)
+
+
+async def _sql_search_collection_raw(
     session: AsyncSession,
     collection: str,
     query: str,
@@ -226,16 +353,19 @@ async def _sql_search_collection(
 ) -> list[VectorHit]:
     """ILIKE substring search against the table backing *collection*.
 
-    Returns a ranked list of :class:`VectorHit` objects with the same
-    shape as the vector path, so the fusion layer doesn't need to know
-    which track produced each hit. Empty list if the collection has
-    no SQL fallback wired (validation, chat, bim_elements - those are
-    inherently vector-only or live outside core ORM tables).
+    Recall only - call :func:`_sql_search_collection` instead, which
+    wraps this and puts the rows in relevance order. Returns a list of
+    :class:`VectorHit` objects with the same shape as the vector path,
+    so the fusion layer doesn't need to know which track produced each
+    hit. Empty list if the collection has no SQL fallback wired
+    (validation, chat, bim_elements - those are inherently vector-only
+    or live outside core ORM tables).
 
     The match is a single OR'd ILIKE across the canonical text columns
-    of each table. The ranking inside the SQL layer is "definition
-    order" - first match wins - because SQL has no semantic similarity
-    to lean on. Fusion via RRF mixes this rank with the vector rank.
+    of each table, ordered newest-first because SQL has no semantic
+    similarity to lean on. That order is recency, not relevance, which
+    is why the wrapper re-ranks; it survives here as the tie-break
+    between hits the wrapper scores equally.
 
     Access scoping: when ``project_id`` is given the query is pinned to
     that single project (the router already ran ``verify_project_access``).

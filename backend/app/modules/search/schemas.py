@@ -13,7 +13,20 @@ class UnifiedSearchHit(BaseModel):
     """One semantic-search hit returned by the unified search endpoint."""
 
     id: str
-    score: float = Field(..., ge=0.0, description="Fused RRF score (relative)")
+    score: float = Field(
+        ...,
+        ge=0.0,
+        description=(
+            "How well this item matches the query - cosine similarity when the "
+            "vector track found it, lexical match quality when the SQL track "
+            "did. Nominally 0.0-1.0; the lexical scale is capped there but a "
+            "vector backend's cosine is passed through unclamped, so treat the "
+            "ceiling as a convention rather than a guarantee. This is the hit's "
+            "own relevance, not its position: the order of the list is set by "
+            "RRF, whose raw fused values are rank artifacts (~0.016) and mean "
+            "nothing as a percentage."
+        ),
+    )
     title: str
     snippet: str
     text: str
