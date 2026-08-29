@@ -383,17 +383,36 @@ async def test_upload_rejects_binary_renamed_to_csv(
 
 
 @pytest.mark.asyncio
-async def test_upload_rejects_oversize_payload(
+async def test_upload_over_the_cap_is_rejected_before_parsing(
     http_client,
     owner_auth,
+    monkeypatch,
 ):
-    """A payload above the 25 MB cap must 413 — protects the parser
-    from being handed an arbitrary-size blob to chew on."""
+    """The size gate refuses anything larger than the cap, whatever the cap is.
+
+    This used to send 26 MB against a hard-coded expectation of a 25 MB cap.
+    That coupled a test of the MECHANISM to the VALUE, and when the value was
+    lifted to 100 MB in 4c6077812 the payload became legitimately acceptable:
+    it sailed through the size gate and died in the CSV reader instead, whose
+    default field size limit of 131072 bytes cannot hold a single 26 MB field.
+    The suite then reported a parser error for a size defect, in a file nobody
+    was working on, for twelve weeks.
+
+    So the cap is moved to the test rather than the test to the cap. Patching
+    the constant down to a kilobyte makes this independent of what we choose
+    the limit to be, and it runs instantly instead of pushing a hundred
+    megabytes through the stack to compare two integers. The value itself is
+    pinned by the test below, which is the check that was missing.
+    """
+    from app.modules.costs import router as costs_router
+
     _uid, headers = owner_auth
-    # 26 MB of zero-padded "data" — past the cap; the magic-byte gate
-    # runs after the size gate so this proves the size check fires
-    # first.
-    payload = b"a,b,c\n" + (b"x" * (26 * 1024 * 1024))
+    monkeypatch.setattr(costs_router, "_MAX_COST_UPLOAD_BYTES", 1024)
+
+    # One byte past the patched cap. The magic-byte gate runs after the size
+    # gate, so a payload that is valid CSV proves the size check fired first
+    # rather than something else refusing it on the way past.
+    payload = b"a,b,c\n" + (b"x" * 1024)
     resp = await http_client.post(
         "/api/v1/costs/import/file/",
         files={"file": ("huge.csv", payload, "text/csv")},
@@ -401,6 +420,29 @@ async def test_upload_rejects_oversize_payload(
     )
     assert resp.status_code == 413, (
         f"expected 413 Request Entity Too Large, got {resp.status_code}: {resp.text[:300]!r}"
+    )
+
+
+def test_the_upload_cap_is_the_size_we_chose() -> None:
+    """The cap is 100 MB, and moving it has to be a decision rather than a drift.
+
+    One comparison against one number, and the check this file did not have.
+    Lifting the cap in 4c6077812 was deliberate - that commit is called "Lift
+    user-facing limits across uploads, pagination and bulk ops" - but nothing
+    here said what the limit was, so the change landed silently and surfaced
+    much later as an unrelated-looking red.
+
+    A behaviour test written THROUGH the value cannot do this job and hid the
+    absence of one that does: it went red, but about a parser, in another
+    file. Whoever changes this number now gets an immediate failure naming it.
+    """
+    from app.modules.costs.router import _MAX_COST_UPLOAD_BYTES
+
+    assert _MAX_COST_UPLOAD_BYTES == 100 * 1024 * 1024, (
+        f"the cost upload cap is {_MAX_COST_UPLOAD_BYTES / (1024 * 1024):.1f} MB, not the 100 MB "
+        "this suite pins. If the change is intended, update this test in the same commit and say "
+        "why in the message; whether 100 MB is the right ceiling for a catalogue upload is an open "
+        "product question, recorded in docs/strategy."
     )
 
 
