@@ -242,12 +242,7 @@ export function CataloguesPanelCard({ preferredRegion }: Props) {
                 { region },
               ),
             });
-            await Promise.all([
-              queryClient.invalidateQueries({ queryKey: ['catalogues-v3'] }),
-              queryClient.invalidateQueries({
-                queryKey: ['match-vector-readiness'],
-              }),
-            ]);
+            await queryClient.invalidateQueries({ queryKey: ['catalogues-v3'] });
           },
           onError: (region, error) => {
             addToast({

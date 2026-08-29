@@ -1390,24 +1390,24 @@ async def vector_v3_status(
 ) -> dict[str, Any]:
     """Per-language CWICR v3 collection readiness.
 
-    Single probe of the CWICR store - does NOT trigger reindexing; that
-    lives on /costs.
-
-    This used to say it was used by the match-elements page to surface a
-    "vector DB ready / missing" banner. No such reader exists: the page's
-    readiness UI is QdrantHealthCard, which consults Qdrant directly, and
-    CataloguesPanelCard, which reads /catalogues-v3/. The frontend's
-    fetchVectorReadiness is exported and never called, and the
-    ``match-vector-readiness`` query key that two components invalidate is
-    registered by no query. The stale sentence is worth naming rather than
-    just deleting, because it was read as evidence of a user-visible
-    symptom during the fix that repointed this handler.
+    One probe of the CWICR store, the same one the ranker opens. Does NOT
+    trigger reindexing; that lives on /costs.
 
     ``status_band`` values: ``ready``, ``empty``, ``missing``,
     ``unreadable``, ``disconnected``, ``no_country``. The two that mean "we
     could not look", ``unreadable`` and ``disconnected``, carry ``error``.
     ``unreadable`` means the collection is present but could not be read,
     which is deliberately distinct from ``missing``.
+
+    This docstring deliberately does not say who calls this endpoint. It
+    used to name a match-elements banner that reads ``status_band``, and no
+    such reader existed. That sentence was repeated to a colleague, believed,
+    and turned into work: a check was commissioned against a consumer that
+    was never there. A comment naming a consumer carries the authority of
+    the source and has no gate behind it, so it cannot go stale loudly. If
+    a consumer is ever worth naming here, it needs a test that fails when
+    that consumer disappears; without one, the honest thing is to describe
+    only what this function does.
 
     When ``project_id`` is supplied, also returns ``language_mismatch``
     diagnostics so the UI can warn about a cross-language catalogue

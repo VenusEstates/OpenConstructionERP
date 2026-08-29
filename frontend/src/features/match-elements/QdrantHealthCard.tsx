@@ -93,14 +93,9 @@ export function QdrantHealthCard({ alwaysShow = false, onReachable }: Props) {
             'Qdrant is now running locally. You can install catalogues.',
           ),
         });
-        // Invalidate downstream queries so the catalogues panel and
-        // readiness pill refresh — they consult Qdrant directly.
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['catalogues-v3'] }),
-          queryClient.invalidateQueries({
-            queryKey: ['match-vector-readiness'],
-          }),
-        ]);
+        // Invalidate the catalogues panel so it refreshes — it consults
+        // Qdrant directly.
+        await queryClient.invalidateQueries({ queryKey: ['catalogues-v3'] });
         if (onReachable) onReachable();
       } else {
         addToast({

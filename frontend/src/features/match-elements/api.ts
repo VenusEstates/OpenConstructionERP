@@ -371,48 +371,6 @@ export interface TemplateLookupResponse {
   matches: Record<string, MatchTemplate>;
 }
 
-/** Vector DB readiness for the project's language. Surfaced on the page
- *  so the user can see whether the cwicr_<lang>_v3 collection is loaded
- *  and which collection a match query will hit. */
-export type VectorReadinessBand =
-  | 'ready'        // collection exists, points_count > 0
-  | 'empty'        // collection exists but is empty
-  | 'missing'      // Qdrant connected but no collection of this name
-  | 'disconnected' // Qdrant unreachable (or any backend error)
-  | 'no_country'   // engine reachable but caller didn't pass a country
-  | 'non_qdrant';  // backend is LanceDB / other — v3 layout doesn't apply
-
-/** Cross-language binding diagnostic. Returned when ``project_id`` is
- *  passed to /vector/v3-status/. Lets the UI surface a "wrong catalogue"
- *  warning when the bound CWICR catalogue speaks a different language
- *  than the project's region. */
-export type LanguageMismatchStatus =
-  | 'unknown'   // project not found, region missing, or probe failed
-  | 'unbound'   // project has no cost_database_id yet
-  | 'ok'        // project language matches catalogue language
-  | 'mismatch'; // project language ≠ catalogue language → render warning
-
-export interface LanguageMismatch {
-  status: LanguageMismatchStatus;
-  project_region: string;
-  project_language: string;
-  bound_catalogue: string;
-  bound_language: string;
-}
-
-export interface VectorReadiness {
-  engine: string;
-  connected: boolean;
-  country: string;
-  language: string;
-  collection: string;
-  exists: boolean;
-  points_count: number;
-  status_band: VectorReadinessBand;
-  error?: string;
-  language_mismatch?: LanguageMismatch;
-}
-
 /** Free / open-source language-model readiness for /match-elements.
  *  Mirrors backend ``GET /api/v1/costs/embedder/status/`` exactly
  *  (costs/router.py:embedder_status). The endpoint always returns 200 —
@@ -488,28 +446,6 @@ export type EmbedderInstallHintCode = 'pip' | 'frozen_no_extra';
  */
 export async function fetchEmbedderStatus(): Promise<EmbedderStatus> {
   return apiGet<EmbedderStatus>('/v1/costs/embedder/status/', {
-    suppressTimeoutToast: true,
-  });
-}
-
-/** GET /api/v1/costs/vector/v3-status/?country=...&project_id=...
- *  Returns the per-language CWICR v3 collection state for the active
- *  project. When ``projectId`` is passed, the response also includes
- *  ``language_mismatch`` diagnostics.
- *
- *  NOTE: nothing in the app calls this yet - it is exported surface waiting
- *  for the "wrong catalogue" warning the LanguageMismatch type describes. It
- *  goes through the wrapper for the same reasons as fetchEmbedderStatus
- *  above, so whoever wires it up inherits the token refresh rather than
- *  rediscovering the missing one. */
-export async function fetchVectorReadiness(
-  country: string,
-  projectId?: string | null,
-): Promise<VectorReadiness> {
-  const qs = new URLSearchParams();
-  if (country) qs.set('country', country);
-  if (projectId) qs.set('project_id', projectId);
-  return apiGet<VectorReadiness>(`/v1/costs/vector/v3-status/?${qs.toString()}`, {
     suppressTimeoutToast: true,
   });
 }
