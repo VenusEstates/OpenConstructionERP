@@ -70,7 +70,12 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-        args: [feat, fix, refactor, docs, test, chore, perf, ci, build, style, i18n]
+        # Ordered by how often the type actually appears in this history, not
+        # by convention, because the list exists to describe what we write.
+        # release (193) and site (52) both outrank refactor (50), which was
+        # already here: they were missing because nobody had counted, not
+        # because they were rejected.
+        args: [feat, fix, refactor, docs, test, chore, perf, ci, build, style, i18n, release, site]
 
   # Local hooks
   - repo: local
