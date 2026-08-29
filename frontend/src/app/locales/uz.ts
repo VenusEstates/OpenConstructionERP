@@ -38381,6 +38381,7 @@ const resource = {
     "modules.catalog.prefab": "Off-site / Prefab / DfMA",
     "modules.catalog.project_route": "Ish turi klassifikatori",
     "modules.catalog.qms": "Sifat menejmenti tizimi (QMS)",
+    "modules.catalog.rebar_schedule": "Armatura jadvali",
     "modules.catalog.record_publishing": "Yozuvlarni nashr etish",
     "modules.catalog.reporting": "Hisobotlar va boshqaruv panellari",
     "modules.catalog.resources": "Resurslarni rejalashtirish",
