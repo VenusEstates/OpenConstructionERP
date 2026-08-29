@@ -39337,3 +39337,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI функция векторлору",
+    "costs.tile_matching_catalogues": "Дал келтирүү каталогдору",
+    "costs.vec_items_indexed_scope": "Бул баа сунушун, классификацияны жана аномалияны текшерүүнү иштетет. Элементтерди дал келтирүү болсо орнотулган нарк каталогдорунан издейт.",

@@ -39203,3 +39203,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI فیچر ویکٹرز",
+    "costs.tile_matching_catalogues": "میل کیٹلاگز",
+    "costs.vec_items_indexed_scope": "یہ ریٹ تجویز، درجہ بندی اور بے قاعدگی چیکس کو طاقت دیتا ہے۔ ایلیمنٹ میچنگ اس کے بجائے انسٹال شدہ لاگت کیٹلاگز میں تلاش کرتی ہے۔",

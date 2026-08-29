@@ -40272,3 +40272,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Wektory funkcji AI",
+    "costs.tile_matching_catalogues": "Katalogi dopasowania",
+    "costs.vec_items_indexed_scope": "To zasila sugestie stawek, klasyfikację i sprawdzanie anomalii. Dopasowywanie elementów przeszukuje zamiast tego zainstalowane katalogi kosztów.",

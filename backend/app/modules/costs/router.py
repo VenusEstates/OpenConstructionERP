@@ -2179,8 +2179,18 @@ async def restore_qdrant_snapshot(
     import time
 
     from app.core.vector import _get_qdrant
+    from app.modules.costs.qdrant_adapter import describe_server_write_mismatch
 
     start = time.monotonic()
+
+    # Refuse BEFORE the download rather than after it. Below, this handler
+    # can spend 600 s pulling ~1.1 GB and only then discover it has nowhere
+    # to put it that the ranker will read - or worse, push it to a server
+    # the ranker never opens and report success. Resolving the target first
+    # turns that into one sentence naming both settings, and costs nothing.
+    mismatch = describe_server_write_mismatch()
+    if mismatch:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, mismatch)
 
     client = _get_qdrant()
     if client is None:
@@ -2270,7 +2280,11 @@ async def restore_qdrant_snapshot(
 
         target_url = _v3_qdrant_url()
         if not target_url:  # nowhere to send the restore request
-            detail = "Qdrant URL not configured - set QDRANT_URL or CWICR_QDRANT_URL"
+            # Unreachable in practice: the same resolution refused at the top
+            # of this handler, before the download. Kept correct rather than
+            # kept stale, and no longer offering QDRANT_URL as a remedy - it
+            # is not one, because the ranker never reads it.
+            detail = describe_server_write_mismatch() or "Qdrant URL not configured - set CWICR_QDRANT_URL"
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail)
         restore_kwargs = {
             "qdrant_url": target_url,
@@ -2396,16 +2410,23 @@ def _snapshot_error_hint(err: str) -> str | None:
 def _v3_qdrant_url() -> str | None:
     """Resolve the server-mode Qdrant URL for the v3 catalogue path.
 
-    Prefers ``settings.cwicr_qdrant_url`` (the dedicated v3 setting);
-    falls back to ``settings.qdrant_url`` which the legacy adapter uses
-    - in single-server dev they point at the same instance and the
-    fallback removes one configuration step. Returns ``None`` when
-    neither is set so the caller can surface a clear "no server" error.
-    """
-    from app.config import get_settings
+    Returns ``None`` when the store this install actually searches is the
+    embedded one, so a caller can surface a clear "no server" error.
 
-    s = get_settings()
-    return getattr(s, "cwicr_qdrant_url", None) or getattr(s, "qdrant_url", None)
+    This used to fall back to ``settings.qdrant_url`` on the grounds that
+    "in single-server dev they point at the same instance and the fallback
+    removes one configuration step". They do not point at the same instance
+    by default: ``qdrant_url`` is defaulted to ``http://localhost:6333``
+    and ``cwicr_qdrant_url`` is not defaulted at all, so the fallback made
+    this helper name a server on a fresh install while the ranker opened
+    the embedded store. The saved configuration step cost a silent wrong
+    answer on the default path, which is why it now resolves through the
+    single shared resolution instead.
+    """
+    from app.modules.costs.qdrant_adapter import resolve_cwicr_target
+
+    target = resolve_cwicr_target()
+    return target.location if target.is_server else None
 
 
 def _demo_mode_enabled() -> bool:
@@ -2569,12 +2590,15 @@ async def install_v3_catalogue(
             "OpenConstructionERP on your own machine: pip install openconstructionerp.",
         )
 
+    from app.modules.costs.qdrant_adapter import describe_server_write_mismatch
+
     qdrant_url = _v3_qdrant_url()
     if not qdrant_url:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "No Qdrant server configured. Set CWICR_QDRANT_URL or QDRANT_URL "
-            "and ensure the server is reachable (docker compose up -d qdrant).",
+            describe_server_write_mismatch()
+            or "No Qdrant server configured. Set CWICR_QDRANT_URL and ensure the server "
+            "is reachable (docker compose up -d qdrant).",
         )
 
     start = time.monotonic()

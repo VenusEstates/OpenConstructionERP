@@ -39312,3 +39312,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Vectori de funcționalități AI",
+    "costs.tile_matching_catalogues": "Cataloage de potrivire",
+    "costs.vec_items_indexed_scope": "Acest lucru alimentează sugestia de tarife, clasificarea și verificările de anomalii. Potrivirea elementelor caută în schimb în catalogele de costuri instalate.",

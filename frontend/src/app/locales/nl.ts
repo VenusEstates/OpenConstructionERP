@@ -40104,3 +40104,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI-functievectoren",
+    "costs.tile_matching_catalogues": "Matchingcatalogi",
+    "costs.vec_items_indexed_scope": "Dit stuurt tariefsuggesties, classificatie en afwijkingscontroles aan. Elementmatching doorzoekt in plaats daarvan de geïnstalleerde kostencatalogi.",

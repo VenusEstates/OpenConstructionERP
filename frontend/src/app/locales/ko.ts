@@ -39792,3 +39792,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI 기능 벡터",
+    "costs.tile_matching_catalogues": "매칭 카탈로그",
+    "costs.vec_items_indexed_scope": "이 기능은 단가 제안, 분류, 이상 검사에 사용됩니다. 요소 매칭은 대신 설치된 원가 카탈로그를 검색합니다.",

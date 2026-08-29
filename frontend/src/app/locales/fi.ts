@@ -39228,3 +39228,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Tekoälyn toimintovektorit",
+    "costs.tile_matching_catalogues": "Sovitusluettelot",
+    "costs.vec_items_indexed_scope": "Tämä tehostaa hintaehdotuksia, luokittelua ja poikkeamatarkistuksia. Elementtien sovitus sen sijaan hakee asennetuista kustannusluetteloista.",

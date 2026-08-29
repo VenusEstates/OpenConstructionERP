@@ -39203,3 +39203,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI ফিচার ভেক্টর",
+    "costs.tile_matching_catalogues": "মিলানোর ক্যাটালগ",
+    "costs.vec_items_indexed_scope": "এটি রেট সুপারিশ, শ্রেণীবিভাগ এবং অসঙ্গতি পরীক্ষাকে চালিত করে। এলিমেন্ট মিলানো এর পরিবর্তে ইনস্টল করা কস্ট ক্যাটালগে অনুসন্ধান করে।",

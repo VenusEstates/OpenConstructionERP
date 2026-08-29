@@ -41090,3 +41090,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "متجهات ميزات الذكاء الاصطناعي",
+    "costs.tile_matching_catalogues": "كتالوجات المطابقة",
+    "costs.vec_items_indexed_scope": "هذا يشغّل اقتراح الأسعار والتصنيف وفحوصات الشذوذ. أما مطابقة العناصر فتبحث بدلاً من ذلك في كتالوجات التكاليف المثبتة.",

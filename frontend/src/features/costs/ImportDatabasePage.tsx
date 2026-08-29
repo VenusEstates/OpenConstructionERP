@@ -38,6 +38,12 @@ import {
 } from './vectorIndex';
 import { fmtList, formatFileSize } from '@/shared/lib/formatters';
 import { COMMON_CURRENCIES } from '@/features/boq/boqHelpers';
+// Pure payload module, not the panel component: importing the fetcher out of
+// CataloguesPanelCard would drag that whole component into this page's graph.
+import {
+  unwrapCataloguesPayload,
+  type CataloguesPayloadCatalogue,
+} from '@/features/match-elements/catalogues-payload';
 import { fetchCostCatalogs, type CostCatalog } from './api';
 import { ResourcePriceSheetPanel } from './ResourcePriceSheetPanel';
 import { BaseCatalogBrowser } from './BaseCatalogBrowser';
@@ -1274,7 +1280,31 @@ interface VectorRegionStat {
   count: number;
 }
 
-function VectorDatabaseSection() {
+/**
+ * Second readiness source for this page, and it is a different store.
+ *
+ * This card offers two install routes that do not populate the same place.
+ * "Generate All Regions" (`POST /vector/index/`) fills the `cost_items`
+ * collection, which is what rate suggestion, classification and anomaly
+ * checks search. Restoring a published snapshot fills `cwicr_<lang>_v3`,
+ * which is what element matching searches. Neither one populates the other.
+ *
+ * `/vector/status/` can only see the first of those, so it cannot answer
+ * "is matching ready" and must not be asked to. That number comes from here.
+ *
+ * Named rather than inline: an inline envelope generic on `apiGet` trips the
+ * repo-hygiene bare-array check even when the call is correct.
+ */
+interface V3CataloguesResponse {
+  catalogues?: CataloguesPayloadCatalogue[];
+  server?: { reachable?: boolean };
+}
+
+// Exported for the readiness wiring test. This card is the only place in the
+// product that offers both install routes, so it is the only place where the
+// two vector stores can be observed disagreeing - which is the property that
+// test pins. The page below is the sole runtime consumer.
+export function VectorDatabaseSection() {
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
   const queryClient = useQueryClient();
@@ -1346,6 +1376,32 @@ function VectorDatabaseSection() {
   const totalItems = regionStats?.reduce((s, r) => s + r.count, 0) ?? 0;
   const indexedCount = vectorStatus?.cost_collection?.vectors_count ?? 0;
   const isFullyIndexed = indexedCount > 0 && indexedCount >= totalItems * 0.9;
+
+  // Matching readiness, and it is deliberately a second query rather than a
+  // second field on the first one. The catch at the bottom of
+  // `handleLoadVectors` already knows these are different collections; the
+  // summary tiles never did, so a snapshot restore left them reading 0% and a
+  // local re-index left them reading 100% over a store matching never opens.
+  //
+  // Keyed under ['costs', 'vector', ...] on purpose: both install paths
+  // already invalidate that prefix in their `finally`, so installing from
+  // this card refreshes this number without new wiring.
+  const { data: v3Catalogues } = useQuery({
+    queryKey: ['costs', 'vector', 'catalogues-v3'],
+    queryFn: () => apiGet<V3CataloguesResponse>('/v1/costs/catalogues-v3/'),
+    retry: false,
+  });
+
+  // `list_v3_catalogues` derives every row's `install_status` from a single
+  // probe of the Qdrant server. When that probe fails, or no URL is
+  // configured, each row falls back to `available` - so a bare count of
+  // `loaded` rows says 0 for "the server did not answer" in exactly the same
+  // words it says 0 for "nothing is installed". Those are different claims,
+  // so the unreachable case renders as unknown rather than as a zero.
+  const cataloguesReachable = v3Catalogues?.server?.reachable ?? false;
+  const loadedCatalogues = unwrapCataloguesPayload(v3Catalogues).filter(
+    (c) => c.install_status === 'loaded',
+  ).length;
 
   // Build a set of regions that already have vectors
   const vectorizedRegions = new Set(
@@ -1550,6 +1606,22 @@ function VectorDatabaseSection() {
     // the catch below is the single voice reporting this call.
     const startedAt = Date.now();
     const baseline = await readVectorCount();
+    // The count this button reports has always been true and has always been
+    // read as more than it says. It fills `cost_items` and nothing else, on a
+    // card whose other button installs the catalogues that element matching
+    // searches - so "N items indexed" was taken as "matching is ready now",
+    // and matching then returned nothing. The count is left exactly as it
+    // was and the scope it was missing is added after it. Composed once
+    // because both success paths below report it and they must not drift.
+    const indexedMessage = (indexed: number, duration: number) =>
+      `${t('costs.vec_items_indexed_msg', {
+        defaultValue: '{{items}} items indexed in {{duration}}s',
+        items: indexed.toLocaleString(getNumberLocale()),
+        duration,
+      })} ${t('costs.vec_items_indexed_scope', {
+        defaultValue:
+          'This powers rate suggestion, classification and anomaly checks. Element matching searches the installed cost catalogues instead.',
+      })}`;
     const refresh = () => {
       refetchStatus();
       refetchVectorRegions();
@@ -1567,11 +1639,7 @@ function VectorDatabaseSection() {
       addToast({
         type: 'success',
         title: t('costs.vector_index_created', { defaultValue: 'Vector index created' }),
-        message: t('costs.vec_items_indexed_msg', {
-          defaultValue: '{{items}} items indexed in {{duration}}s',
-          items: indexed.toLocaleString(getNumberLocale()),
-          duration,
-        }),
+        message: indexedMessage(indexed, duration),
       });
       refresh();
     } catch (err: unknown) {
@@ -1593,11 +1661,7 @@ function VectorDatabaseSection() {
         addToast({
           type: 'success',
           title: t('costs.vector_index_created', { defaultValue: 'Vector index created' }),
-          message: t('costs.vec_items_indexed_msg', {
-            defaultValue: '{{items}} items indexed in {{duration}}s',
-            items: indexed.toLocaleString(getNumberLocale()),
-            duration,
-          }),
+          message: indexedMessage(indexed, duration),
         });
       } else {
         addToast({
@@ -1756,8 +1820,14 @@ function VectorDatabaseSection() {
               })}
             </div>
 
-            {/* Summary stats */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            {/* Summary stats.
+                Four tiles over two stores, not three tiles over one. The
+                middle pair measures `cost_items`, which is what the AI
+                features search; the last measures the v3 catalogue
+                collections, which is what element matching searches. Both
+                install buttons on this card are on this page, so a single
+                "ready" number here is always wrong for one of them. */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               <div className="rounded-lg bg-surface-secondary p-3 text-center">
                 <div className="text-lg font-bold tabular-nums text-content-primary">
                   {totalItems.toLocaleString(getNumberLocale())}
@@ -1765,16 +1835,59 @@ function VectorDatabaseSection() {
                 <div className="text-2xs text-content-tertiary">Cost items</div>
               </div>
               <div className="rounded-lg bg-surface-secondary p-3 text-center">
-                <div className={`text-lg font-bold tabular-nums ${indexedCount > 0 ? 'text-purple-600' : 'text-content-tertiary'}`}>
+                <div
+                  data-testid="tile-ai-vectors"
+                  className={`text-lg font-bold tabular-nums ${indexedCount > 0 ? 'text-purple-600' : 'text-content-tertiary'}`}
+                >
                   {indexedCount.toLocaleString(getNumberLocale())}
                 </div>
-                <div className="text-2xs text-content-tertiary">Vectors indexed</div>
+                <div className="text-2xs text-content-tertiary">
+                  {t('costs.tile_ai_vectors', { defaultValue: 'AI feature vectors' })}
+                </div>
               </div>
               <div className="rounded-lg bg-surface-secondary p-3 text-center">
-                <div className={`text-lg font-bold ${isFullyIndexed ? 'text-semantic-success' : 'text-content-tertiary'}`}>
+                <div
+                  data-testid="tile-ai-coverage"
+                  className={`text-lg font-bold ${isFullyIndexed ? 'text-semantic-success' : 'text-content-tertiary'}`}
+                >
                   {isFullyIndexed ? '100%' : indexedCount > 0 ? `${Math.round((indexedCount / Math.max(totalItems, 1)) * 100)}%` : '0%'}
                 </div>
                 <div className="text-2xs text-content-tertiary">Coverage</div>
+              </div>
+              <div
+                className="rounded-lg bg-surface-secondary p-3 text-center"
+                data-testid="matching-catalogues-tile"
+                title={
+                  cataloguesReachable
+                    ? undefined
+                    : t('catalogues.server_unreachable_title', {
+                        defaultValue: 'Qdrant server unreachable',
+                      })
+                }
+              >
+                {/* An em dash, never a 0: the server not answering is not the
+                    same finding as nothing being installed, and printing the
+                    second for the first is the shape of bug this tile exists
+                    to close. */}
+                <div
+                  data-testid="tile-matching-catalogues"
+                  className={`text-lg font-bold tabular-nums ${
+                    !cataloguesReachable
+                      ? 'text-content-tertiary'
+                      : loadedCatalogues > 0
+                        ? 'text-emerald-600'
+                        : 'text-content-tertiary'
+                  }`}
+                >
+                  {cataloguesReachable
+                    ? loadedCatalogues.toLocaleString(getNumberLocale())
+                    : '—'}
+                </div>
+                <div className="text-2xs text-content-tertiary">
+                  {t('costs.tile_matching_catalogues', {
+                    defaultValue: 'Matching catalogues',
+                  })}
+                </div>
               </div>
             </div>
 

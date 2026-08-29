@@ -41572,3 +41572,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Vecteurs de fonctionnalités IA",
+    "costs.tile_matching_catalogues": "Catalogues de correspondance",
+    "costs.vec_items_indexed_scope": "Cela alimente la suggestion de taux, la classification et les vérifications d'anomalies. La correspondance des éléments recherche plutôt dans les catalogues de coûts installés.",

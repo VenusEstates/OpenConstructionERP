@@ -40184,3 +40184,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Vettori delle funzionalità AI",
+    "costs.tile_matching_catalogues": "Cataloghi di corrispondenza",
+    "costs.vec_items_indexed_scope": "Questo alimenta il suggerimento delle tariffe, la classificazione e i controlli delle anomalie. La corrispondenza degli elementi cerca invece nei cataloghi dei costi installati.",

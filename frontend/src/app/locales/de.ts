@@ -41554,3 +41554,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "KI-Funktionsvektoren",
+    "costs.tile_matching_catalogues": "Abgleichskataloge",
+    "costs.vec_items_indexed_scope": "Das treibt Ansatzvorschläge, Klassifizierung und Anomalieprüfungen an. Der Element-Abgleich durchsucht stattdessen die installierten Kostenkataloge.",

@@ -323,9 +323,15 @@ def test_load_requires_url_when_not_dry_run(tmp_path: Path, monkeypatch) -> None
 
     # Force the settings probe to return no URL (simulates a fresh install
     # where the operator forgot to set CWICR_QDRANT_URL).
+    #
+    # Patched on the adapter rather than on this module: the loader no longer
+    # reads settings itself, it resolves through the one shared
+    # ``resolve_cwicr_target``. Patching the settings the resolution reads
+    # keeps this exercising the real path instead of stubbing the resolution
+    # out, which would leave the thing under test unmeasured.
     monkeypatch.setattr(
-        "app.modules.costs.qdrant_snapshot_loader.get_settings",
-        lambda: type("S", (), {"cwicr_qdrant_url": None})(),
+        "app.modules.costs.qdrant_adapter.get_settings",
+        lambda: type("S", (), {"cwicr_qdrant_url": None, "cwicr_qdrant_path": ""})(),
     )
 
     with pytest.raises(RuntimeError, match="server-mode Qdrant URL"):

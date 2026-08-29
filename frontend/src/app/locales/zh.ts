@@ -40706,3 +40706,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI 功能向量",
+    "costs.tile_matching_catalogues": "匹配目录",
+    "costs.vec_items_indexed_scope": "这为费率建议、分类和异常检查提供支持。构件匹配则在已安装的成本目录中搜索。",

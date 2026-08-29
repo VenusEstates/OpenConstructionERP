@@ -39224,3 +39224,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI-funksjonsvektorer",
+    "costs.tile_matching_catalogues": "Matchingkataloger",
+    "costs.vec_items_indexed_scope": "Dette driver prisforslag, klassifisering og avvikssjekker. Elementmatching søker i stedet i de installerte kostnadskatalogene.",

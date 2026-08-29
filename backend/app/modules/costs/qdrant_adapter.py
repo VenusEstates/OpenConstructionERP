@@ -510,13 +510,99 @@ def _country_head_present(collection: str, head: str) -> bool:
     return present
 
 
+@dataclass(frozen=True)
+class CwicrTarget:
+    """Where the CWICR v3 store lives for a given settings object.
+
+    ``kind`` is ``"url"`` for a shared/server Qdrant, ``"embedded"`` for
+    the on-disk store this process opens itself. ``location`` is the URL
+    or the filesystem path.
+    """
+
+    kind: str
+    location: str
+
+    @property
+    def is_server(self) -> bool:
+        return self.kind == "url"
+
+
+def resolve_cwicr_target(settings: Any = None) -> CwicrTarget:
+    """Resolve the CWICR v3 store. This is THE resolution; nothing re-derives it.
+
+    It exists because four call sites used to answer this question and no
+    two of them were written from the same rule: the reader here consulted
+    ``cwicr_qdrant_url`` alone, ``qdrant_snapshot_loader`` consulted it
+    strictly in one function and leniently in another, and the router's
+    helper added ``or qdrant_url``. Writes therefore landed on a server the
+    ranker never opened, and every surface reported success.
+
+    ``qdrant_url`` is deliberately NOT consulted. It belongs to the general
+    cross-module semantic memory, while ``cwicr_qdrant_url`` is this store's
+    own setting - which is what the Makefile target, the integration test's
+    skip condition, both eval benchmarks and this module's own error strings
+    all tell an operator to set.
+
+    That distinction is load-bearing rather than stylistic, because
+    ``qdrant_url`` carries a non-None default (``http://localhost:6333``)
+    while ``cwicr_qdrant_url`` defaults to ``None``. A lenient resolver can
+    therefore never fall through, and a strict one always does, so the two
+    cannot agree until a human sets the CWICR setting. Lending this function
+    the lenient fallback would swing every unconfigured install off its
+    embedded store onto a port that is usually nothing.
+    """
+
+    s = settings if settings is not None else get_settings()
+    url = getattr(s, "cwicr_qdrant_url", None)
+    if url:
+        return CwicrTarget("url", url)
+    path = getattr(s, "cwicr_qdrant_path", "") or os.path.expanduser("~/.openestimator/qdrant_cwicr")
+    return CwicrTarget("embedded", path)
+
+
+def describe_server_write_mismatch(settings: Any = None) -> str | None:
+    """Explain why a server-mode write would be invisible, or ``None`` if it would not.
+
+    Callers that are about to push a snapshot to a Qdrant server ask this
+    FIRST, before spending a 400-900 MB download on work the ranker will
+    never see. Returns an operator-facing sentence naming both settings and
+    both concrete locations, so the message can be acted on rather than
+    merely believed.
+
+    Note for anyone tidying this later: it calls :func:`resolve_cwicr_target`
+    rather than reading the settings itself, and that is the entire point. A
+    guard that restates the reader's rule instead of invoking it is a fifth
+    resolution added to a defect whose whole content was that there were
+    four. Inlining these two lines would look like a simplification and
+    would quietly restore the class of bug this function exists to catch.
+    """
+
+    s = settings if settings is not None else get_settings()
+    target = resolve_cwicr_target(s)
+    if target.is_server:
+        return None
+
+    general = getattr(s, "qdrant_url", None)
+    return (
+        "CWICR_QDRANT_URL is not set, so the ranker will open the embedded store at "
+        f"{target.location} and would not see anything written to a server. "
+        + (
+            f"QDRANT_URL is {general}, but that setting belongs to the general vector store "
+            "and is deliberately not used for CWICR catalogues. "
+            if general
+            else ""
+        )
+        + "Set CWICR_QDRANT_URL to the Qdrant server you want the catalogues installed on, "
+        "or leave it unset and use the embedded store."
+    )
+
+
 def _get_client() -> Any:
     """Lazy-init a QdrantClient pointed at the configured store.
 
-    Prefers ``cwicr_qdrant_url`` when set (shared/server mode), falls
-    back to embedded ``cwicr_qdrant_path``. Raises :class:`RuntimeError`
-    when neither is reachable so the caller can surface a 503 to the
-    user instead of a confusing AttributeError.
+    Resolves through :func:`resolve_cwicr_target` rather than reading the
+    settings itself, so the store this opens is by construction the same
+    one every other caller resolves.
     """
 
     global _client
@@ -536,17 +622,15 @@ def _get_client() -> Any:
             + repair_hint("Install the [semantic-clients] extra: pip install openconstructionerp[semantic-clients]")
         ) from exc
 
-    s = get_settings()
-    url = getattr(s, "cwicr_qdrant_url", None)
-    if url:
-        logger.info("CWICR Qdrant: connecting to URL %s", url)
-        _client = QdrantClient(url=url)
+    target = resolve_cwicr_target()
+    if target.is_server:
+        logger.info("CWICR Qdrant: connecting to URL %s", target.location)
+        _client = QdrantClient(url=target.location)
         return _client
 
-    path = getattr(s, "cwicr_qdrant_path", "") or os.path.expanduser("~/.openestimator/qdrant_cwicr")
-    Path(path).mkdir(parents=True, exist_ok=True)
-    logger.info("CWICR Qdrant: opening embedded store at %s", path)
-    _client = QdrantClient(path=path)
+    Path(target.location).mkdir(parents=True, exist_ok=True)
+    logger.info("CWICR Qdrant: opening embedded store at %s", target.location)
+    _client = QdrantClient(path=target.location)
     return _client
 
 

@@ -40008,3 +40008,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI vektory funkcí",
+    "costs.tile_matching_catalogues": "Katalogy pro párování",
+    "costs.vec_items_indexed_scope": "Toto pohání návrhy sazeb, klasifikaci a kontroly anomálií. Párování prvků místo toho prohledává nainstalované katalogy nákladů.",

@@ -39322,3 +39322,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI vektori značajki",
+    "costs.tile_matching_catalogues": "Katalozi za podudaranje",
+    "costs.vec_items_indexed_scope": "Ovo pokreće prijedloge stopa, klasifikaciju i provjere anomalija. Podudaranje elemenata umjesto toga pretražuje instalirane kataloge troškova.",

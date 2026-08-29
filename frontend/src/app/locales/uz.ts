@@ -40453,3 +40453,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI xususiyat vektorlari",
+    "costs.tile_matching_catalogues": "Moslashtirish kataloglari",
+    "costs.vec_items_indexed_scope": "Bu narx taklifi, tasniflash va anomaliya tekshiruvlarini ta'minlaydi. Element moslashtirish esa buning o'rniga o'rnatilgan xarajat kataloglaridan qidiradi.",

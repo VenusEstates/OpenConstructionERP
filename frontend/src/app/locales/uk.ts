@@ -40837,3 +40837,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Вектори функцій ШІ",
+    "costs.tile_matching_catalogues": "Каталоги для зіставлення",
+    "costs.vec_items_indexed_scope": "Це живить пропозиції розцінок, класифікацію та перевірки аномалій. Натомість зіставлення елементів шукає у встановлених каталогах вартості.",

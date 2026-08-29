@@ -39203,3 +39203,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "بردارهای ویژگی هوش مصنوعی",
+    "costs.tile_matching_catalogues": "کاتالوگ‌های تطبیق",
+    "costs.vec_items_indexed_scope": "این ویژگی، پیشنهاد نرخ، طبقه‌بندی و بررسی ناهنجاری را ممکن می‌سازد. تطبیق اجزا به‌جای آن در کاتالوگ‌های هزینه نصب‌شده جستجو می‌کند.",

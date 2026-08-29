@@ -39166,3 +39166,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI funktsioonivektorid",
+    "costs.tile_matching_catalogues": "Sobitamise kataloogid",
+    "costs.vec_items_indexed_scope": "See toidab hinnasoovitusi, klassifitseerimist ja kõrvalekallete kontrolle. Elementide sobitamine otsib selle asemel paigaldatud kulukataloogidest.",

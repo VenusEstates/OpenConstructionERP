@@ -39203,3 +39203,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "ИИ функция векторлары",
+    "costs.tile_matching_catalogues": "Сәйкестендіру каталогтары",
+    "costs.vec_items_indexed_scope": "Бұл баға ұсынысын, жіктелуді және ауытқу тексерулерін қамтамасыз етеді. Элементтерді сәйкестендіру оның орнына орнатылған шығын каталогтарынан іздейді.",

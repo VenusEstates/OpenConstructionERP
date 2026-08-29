@@ -39203,3 +39203,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Διανύσματα λειτουργιών ΤΝ",
+    "costs.tile_matching_catalogues": "Κατάλογοι αντιστοίχισης",
+    "costs.vec_items_indexed_scope": "Αυτό τροφοδοτεί τις προτάσεις τιμών, την ταξινόμηση και τους ελέγχους ανωμαλιών. Η αντιστοίχιση στοιχείων αναζητά αντ' αυτού στους εγκατεστημένους καταλόγους κόστους.",

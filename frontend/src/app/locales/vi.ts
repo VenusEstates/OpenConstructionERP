@@ -39183,3 +39183,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Vector tính năng AI",
+    "costs.tile_matching_catalogues": "Danh mục khớp",
+    "costs.vec_items_indexed_scope": "Điều này hỗ trợ gợi ý đơn giá, phân loại và kiểm tra bất thường. Khớp phần tử thì tìm kiếm trong các danh mục chi phí đã cài đặt.",

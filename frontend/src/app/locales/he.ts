@@ -39284,3 +39284,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "וקטורי תכונות בינה מלאכותית",
+    "costs.tile_matching_catalogues": "קטלוגי התאמה",
+    "costs.vec_items_indexed_scope": "זה מפעיל את הצעת התעריף, הסיווג ובדיקות החריגות. לעומת זאת, התאמת האלמנטים מחפשת בקטלוגי העלות המותקנים.",

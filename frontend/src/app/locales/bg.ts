@@ -39228,3 +39228,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI вектори за функции",
+    "costs.tile_matching_catalogues": "Каталози за съпоставяне",
+    "costs.vec_items_indexed_scope": "Това захранва предложенията за разценки, класификацията и проверките за аномалии. Съпоставянето на елементи вместо това търси в инсталираните каталози с разходи.",

@@ -39173,3 +39173,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Vektor fitur AI",
+    "costs.tile_matching_catalogues": "Katalog pencocokan",
+    "costs.vec_items_indexed_scope": "Ini mendukung saran tarif, klasifikasi, dan pemeriksaan anomali. Pencocokan elemen justru mencari di katalog biaya yang terpasang.",

@@ -53,8 +53,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app.config import get_settings
-from app.modules.costs.qdrant_adapter import country_to_collection
+from app.modules.costs.qdrant_adapter import country_to_collection, resolve_cwicr_target
 
 logger = logging.getLogger(__name__)
 
@@ -420,7 +419,8 @@ def load_ddc_snapshot_dir(
         raise FileNotFoundError(snapshots_dir)
 
     if qdrant_url is None:
-        qdrant_url = getattr(get_settings(), "cwicr_qdrant_url", None)
+        target = resolve_cwicr_target()
+        qdrant_url = target.location if target.is_server else None
 
     if not qdrant_url and not dry_run:
         raise RuntimeError(
@@ -531,17 +531,22 @@ def enumerate_qdrant_v3_collections(
     not listed in :data:`CWICR_V3_CATALOGUES`?" - e.g. tenant-installed
     custom rate books that landed in Qdrant via the operator CLI.
 
-    Resolves ``qdrant_url`` from ``cwicr_qdrant_url`` then ``qdrant_url``
-    on :func:`get_settings` when not passed, mirroring the router's
-    ``_v3_qdrant_url`` resolver. Returns an empty list (with a DEBUG log)
+    Resolves the server through :func:`resolve_cwicr_target` when not
+    passed, so this answers about the same store the ranker opens. It used
+    to fall back to the general ``qdrant_url``, which made it enumerate a
+    server nothing reads. Returns an empty list (with a DEBUG log)
     when no server is configured or the probe fails - callers treat the
     result as authoritative only when non-empty, and the static
     registry remains the source of truth for installable cards.
     """
     if qdrant_url is None:
+        # Was `cwicr_qdrant_url or qdrant_url` while the sibling resolution
+        # 120 lines up took the first alone, so this function enumerated a
+        # server the ranker never opens. Both now go through the one
+        # resolution and answer about the same store.
         try:
-            settings = get_settings()
-            qdrant_url = getattr(settings, "cwicr_qdrant_url", None) or getattr(settings, "qdrant_url", None)
+            target = resolve_cwicr_target()
+            qdrant_url = target.location if target.is_server else None
         except Exception as exc:  # pragma: no cover - defensive
             logger.debug("enumerate_qdrant_v3_collections: settings read failed: %s", exc)
             qdrant_url = None

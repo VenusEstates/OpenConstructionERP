@@ -40994,3 +40994,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Векторы функций ИИ",
+    "costs.tile_matching_catalogues": "Каталоги для сопоставления",
+    "costs.vec_items_indexed_scope": "Это питает предложение расценок, классификацию и проверки аномалий. Сопоставление элементов вместо этого выполняет поиск по установленным каталогам стоимостей.",

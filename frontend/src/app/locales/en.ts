@@ -35935,3 +35935,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI feature vectors",
+    "costs.tile_matching_catalogues": "Matching catalogues",
+    "costs.vec_items_indexed_scope": "This powers rate suggestion, classification and anomaly checks. Element matching searches the installed cost catalogues instead.",

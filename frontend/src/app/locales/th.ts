@@ -39175,3 +39175,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "เวกเตอร์ฟีเจอร์ AI",
+    "costs.tile_matching_catalogues": "แค็ตตาล็อกการจับคู่",
+    "costs.vec_items_indexed_scope": "สิ่งนี้ขับเคลื่อนการแนะนำอัตรา การจำแนกประเภท และการตรวจสอบความผิดปกติ ส่วนการจับคู่องค์ประกอบจะค้นหาในแค็ตตาล็อกต้นทุนที่ติดตั้งไว้แทน",

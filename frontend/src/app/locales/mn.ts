@@ -39236,3 +39236,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI функцын вектор",
+    "costs.tile_matching_catalogues": "Тааруулах каталогууд",
+    "costs.vec_items_indexed_scope": "Энэ нь тарифын санал, ангилал, гажиг шалгалтыг тэжээдэг. Элемент тааруулах нь харин суулгасан үнийн каталогуудаас хайдаг.",

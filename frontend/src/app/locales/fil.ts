@@ -39203,3 +39203,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Mga AI feature vector",
+    "costs.tile_matching_catalogues": "Mga catalogue ng pagtutugma",
+    "costs.vec_items_indexed_scope": "Ito ang nagpapagana sa rate suggestion, classification, at anomaly checks. Ang element matching naman ay naghahanap sa mga naka-install na cost catalogue.",

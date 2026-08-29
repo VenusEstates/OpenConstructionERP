@@ -39227,3 +39227,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI फ़ीचर वेक्टर",
+    "costs.tile_matching_catalogues": "मिलान कैटलॉग",
+    "costs.vec_items_indexed_scope": "यह दर सुझाव, वर्गीकरण और विसंगति जाँच को सक्षम करता है। एलिमेंट मिलान इसके बजाय इंस्टॉल किए गए लागत कैटलॉग में खोजता है।",

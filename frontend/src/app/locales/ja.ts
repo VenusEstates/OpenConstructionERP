@@ -40706,3 +40706,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "AI機能ベクトル",
+    "costs.tile_matching_catalogues": "マッチング用カタログ",
+    "costs.vec_items_indexed_scope": "これは単価提案、分類、異常チェックを支えます。要素マッチングは代わりにインストール済みのコストカタログを検索します。",

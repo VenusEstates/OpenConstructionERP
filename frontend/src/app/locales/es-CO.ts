@@ -38319,3 +38319,6 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
+    "costs.tile_ai_vectors": "Vectores de funciones IA",
+    "costs.tile_matching_catalogues": "Catálogos de coincidencia",
+    "costs.vec_items_indexed_scope": "Esto impulsa la sugerencia de tarifas, la clasificación y las comprobaciones de anomalías. La coincidencia de elementos busca en cambio en los catálogos de costos instalados.",
