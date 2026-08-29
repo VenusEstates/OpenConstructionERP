@@ -100,36 +100,6 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_repo_hygiene.py
 
-      # Both kinds of file are already parsed on the way through CI, and stating
-      # that precisely matters, because the first version of this finding said
-      # nothing checked them at all and that was wrong. Workflow YAML is loaded
-      # by five unit tests: test_ci_lane_coverage.py,
-      # test_workflow_expressions_are_legal_where_they_stand.py,
-      # test_release_signing_trigger.py, test_desktop_windows_packaging.py and
-      # test_pre_commit_declares_what_the_lanes_run.py, the last of which also
-      # loads .pre-commit-config.yaml. On the JSON side 25 scripts and 80 files
-      # under backend/tests call a JSON loader over the trees they own.
-      #
-      # Every one of those readers is addressed at a named file or at a single
-      # directory glob, so the coverage is per file and not per category. A
-      # malformed file written where no reader happens to look is parsed by
-      # nothing and turns nothing red. This step closes that, and only that.
-      #
-      # For YAML the failure it prevents is the quiet kind. GitHub does not run
-      # a workflow whose YAML will not parse, and reports nothing when it
-      # declines: no job, no log, no annotation. The lane goes silent rather
-      # than red, and silence from a lane we read as authoritative is
-      # indistinguishable from consent.
-      #
-      # PyYAML is installed in the step because the guards above this line are
-      # stdlib only on purpose and nothing else in this workflow imports yaml.
-      # The constraint is the backend's own, from backend/pyproject.toml.
-      - name: Check every tracked YAML and JSON file parses
-        if: ${{ !cancelled() }}
-        run: |
-          python -m pip install --quiet "pyyaml>=6.0"
-          python scripts/check_config_file_syntax.py
-
       # The version literals are a repo-level invariant, not a backend concern, so
       # they belong beside the other whole-tree guards rather than in a test lane.
       # This check already runs in the CI workflow, and it stays there; it is
@@ -599,6 +569,37 @@ jobs:
       - name: Check the instrument runs and no country has fallen to zero
         if: ${{ !cancelled() }}
         run: python backend/scripts/country_coverage.py --strict --ignore-unprobed US CA DE BG RU CN IN BR NG
+
+      # Both kinds of file are already parsed on the way through CI, and stating
+      # that precisely matters, because the first version of this finding said
+      # nothing checked them at all and that was wrong. Workflow YAML is loaded
+      # by five unit tests: test_ci_lane_coverage.py,
+      # test_workflow_expressions_are_legal_where_they_stand.py,
+      # test_release_signing_trigger.py, test_desktop_windows_packaging.py and
+      # test_pre_commit_declares_what_the_lanes_run.py, the last of which also
+      # loads .pre-commit-config.yaml. On the JSON side 25 scripts and 80 files
+      # under backend/tests call a JSON loader over the trees they own.
+      #
+      # Every one of those readers is addressed at a named file or at a single
+      # directory glob, so the coverage is per file and not per category. A
+      # malformed file written where no reader happens to look is parsed by
+      # nothing and turns nothing red. This step closes that, and only that.
+      #
+      # For YAML the failure it prevents is the quiet kind. GitHub does not run
+      # a workflow whose YAML will not parse, and reports nothing when it
+      # declines: no job, no log, no annotation. The lane goes silent rather
+      # than red, and silence from a lane we read as authoritative is
+      # indistinguishable from consent.
+      #
+      # Below the backend install deliberately, and it has to be. It parses YAML
+      # with PyYAML, which is a base dependency of the backend and is therefore
+      # already present once the install above has run. The guards near the top
+      # of this job are stdlib only on purpose, so this one cannot sit among
+      # them, and installing a parser inside a guard step would put an unpinned
+      # dependency resolve on the gate path for no gain.
+      - name: Check every tracked YAML and JSON file parses
+        if: ${{ !cancelled() }}
+        run: python scripts/check_config_file_syntax.py
 
       # Declared only in its own docstring and running nowhere: no workflow step
       # and no entry in .pre-commit-config.yaml, and pre-commit is not installed
