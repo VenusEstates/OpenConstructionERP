@@ -28466,6 +28466,7 @@ const resource = {
     "laborRates.add_trade": "Добавяне на търговия",
     "laborRates.all_in_rate": "Всички-в почасова ставка",
     "laborRates.base_wage": "Базова почасова заплата",
+    "laborRates.base_wage_required": "Въведете базова почасова заплата над нула, за да запазите тази калкулация като шаблон.",
     "laborRates.blended": "Смешана: {{rate}}/h",
     "laborRates.breakdown": "Норма построяване",
     "laborRates.burden": "Труд товар",

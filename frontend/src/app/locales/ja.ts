@@ -28319,6 +28319,7 @@ const resource = {
     "laborRates.add_trade": "トレードを追加",
     "laborRates.all_in_rate": "オールイン時間給",
     "laborRates.base_wage": "基本時間給",
+    "laborRates.base_wage_required": "この構成をテンプレートとして保存するには、0 より大きい基本時間給を入力してください。",
     "laborRates.blended": "ブレンド:{{rate}}/h",
     "laborRates.breakdown": "レート構成",
     "laborRates.burden": "労働負担",

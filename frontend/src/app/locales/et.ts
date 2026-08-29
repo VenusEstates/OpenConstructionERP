@@ -28367,6 +28367,7 @@ const resource = {
     "laborRates.add_trade": "Lisa eriala",
     "laborRates.all_in_rate": "Kõikehõlmav tunnihind",
     "laborRates.base_wage": "Baastunnipalk",
+    "laborRates.base_wage_required": "Sisestage nullist suurem baastunnipalk, et salvestada see koostis mallina.",
     "laborRates.blended": "Segatud: {{rate}}/h",
     "laborRates.breakdown": "Hinna ülesehitus",
     "laborRates.burden": "Tööjõukulu koormus",

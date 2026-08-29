@@ -27650,6 +27650,7 @@ const resource = {
     "laborRates.add_trade": "Мамандық қосу",
     "laborRates.all_in_rate": "Толық сағаттық мөлшерлеме",
     "laborRates.base_wage": "Негізгі сағаттық жалақы",
+    "laborRates.base_wage_required": "Осы құрылымды үлгі ретінде сақтау үшін нөлден жоғары негізгі сағаттық жалақы енгізіңіз.",
     "laborRates.blended": "Аралас: {{rate}}/сағ",
     "laborRates.breakdown": "Мөлшерлеме құрылымы",
     "laborRates.burden": "Еңбек жүктемесі",

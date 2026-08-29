@@ -28317,6 +28317,7 @@ const resource = {
     "laborRates.add_trade": "직종 추가",
     "laborRates.all_in_rate": "올인 시급",
     "laborRates.base_wage": "기본 시급",
+    "laborRates.base_wage_required": "이 구성을 템플릿으로 저장하려면 0보다 큰 기본 시급을 입력하세요.",
     "laborRates.blended": "혼합: {{rate}}/시",
     "laborRates.breakdown": "요금 구성",
     "laborRates.burden": "노동 부담",

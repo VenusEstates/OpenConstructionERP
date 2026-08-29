@@ -27686,6 +27686,7 @@ const resource = {
     "laborRates.add_trade": "Προσθήκη ειδικότητας",
     "laborRates.all_in_rate": "Πλήρης ωριαία τιμή",
     "laborRates.base_wage": "Βασικός ωριαίος μισθός",
+    "laborRates.base_wage_required": "Εισαγάγετε βασικό ωριαίο μισθό μεγαλύτερο από μηδέν για να αποθηκεύσετε αυτή τη σύνθεση ως πρότυπο.",
     "laborRates.blended": "Μεικτή: {{rate}}/ώ",
     "laborRates.breakdown": "Ανάλυση τιμής",
     "laborRates.burden": "Επιβάρυνση εργατικού κόστους",

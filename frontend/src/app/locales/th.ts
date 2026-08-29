@@ -28312,6 +28312,7 @@ const resource = {
     "laborRates.add_trade": "เพิ่มการค้า",
     "laborRates.all_in_rate": "อัตราชั่วโมงรวมทั้งหมด",
     "laborRates.base_wage": "ค่าจ้างชั่วโมงพื้นฐาน",
+    "laborRates.base_wage_required": "ป้อนค่าจ้างชั่วโมงพื้นฐานที่มากกว่าศูนย์ เพื่อบันทึกโครงสร้างนี้เป็นเทมเพลต",
     "laborRates.blended": "ผสมผสาน: {{rate}}/h",
     "laborRates.breakdown": "สร้างอัตราขึ้น",
     "laborRates.burden": "ภาระแรงงาน",

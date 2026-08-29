@@ -28335,6 +28335,7 @@ const resource = {
     "laborRates.add_trade": "Thêm nghề",
     "laborRates.all_in_rate": "Mức lương trên giờ toàn bộ",
     "laborRates.base_wage": "Mức lương cơ bản trên giờ",
+    "laborRates.base_wage_required": "Nhập mức lương cơ bản trên giờ lớn hơn 0 để lưu cấu trúc này thành mẫu.",
     "laborRates.blended": "Pha trộn: {{rate}}/h",
     "laborRates.breakdown": "Tích lũy mức lương",
     "laborRates.burden": "Gánh nặng lao động",

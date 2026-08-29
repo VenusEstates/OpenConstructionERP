@@ -27650,6 +27650,7 @@ const resource = {
     "laborRates.add_trade": "Magdagdag ng trade",
     "laborRates.all_in_rate": "All-in na oras-oras na rate",
     "laborRates.base_wage": "Batayang oras-oras na sahod",
+    "laborRates.base_wage_required": "Maglagay ng batayang oras-oras na sahod na mas mataas sa zero para ma-save ang pagbuong ito bilang template.",
     "laborRates.blended": "Pinaghalong Rate: {{rate}}/oras",
     "laborRates.breakdown": "Pagbuo ng Presyo",
     "laborRates.burden": "Pasaning Gastos sa Paggawa",

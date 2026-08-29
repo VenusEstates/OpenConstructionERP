@@ -26277,6 +26277,7 @@ const resource = {
     "laborRates.cost_item_saved_msg": "\"{{code}}\" is now a cost item you can add to a BOQ.",
     "laborRates.cost_item_failed": "Could not save cost item",
     "laborRates.base_wage": "Base hourly wage",
+    "laborRates.base_wage_required": "Enter a base hourly wage above zero to save this build-up as a template.",
     "laborRates.cost_item_default_desc": "All-in labor rate",
     "laborRates.crew_cost_item_named_desc": "{{name}} - blended crew rate",
     "laborRates.crew_cost_item_desc": "Blended crew rate",

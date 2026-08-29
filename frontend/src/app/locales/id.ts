@@ -28314,6 +28314,7 @@ const resource = {
     "laborRates.add_trade": "Tambah perdagangan",
     "laborRates.all_in_rate": "Tarif per jam all-in",
     "laborRates.base_wage": "Upah per jam dasar",
+    "laborRates.base_wage_required": "Masukkan upah per jam dasar di atas nol untuk menyimpan susunan ini sebagai templat.",
     "laborRates.blended": "Tercampur: {{rate}}/j",
     "laborRates.breakdown": "Pembangun tarif",
     "laborRates.burden": "Beban buruh",

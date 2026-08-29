@@ -28454,6 +28454,7 @@ const resource = {
     "laborRates.add_trade": "Dodaj zawód",
     "laborRates.all_in_rate": "Stawka godzinowa all-in",
     "laborRates.base_wage": "Bazowa stawka godzinowa",
+    "laborRates.base_wage_required": "Podaj bazową stawkę godzinową większą od zera, aby zapisać tę kalkulację jako szablon.",
     "laborRates.blended": "Zmieszane: {{rate}}/h",
     "laborRates.breakdown": "Zestawienie stawki",
     "laborRates.burden": "Obciążenie pracą",

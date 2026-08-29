@@ -28368,6 +28368,7 @@ const resource = {
     "laborRates.add_trade": "Ticaret ekle",
     "laborRates.all_in_rate": "Hepsi dahil saatlik ücret",
     "laborRates.base_wage": "Temel saatlik ücret",
+    "laborRates.base_wage_required": "Bu yapıyı şablon olarak kaydetmek için sıfırdan büyük bir temel saatlik ücret girin.",
     "laborRates.blended": "Karışık: {{rate}}/h",
     "laborRates.breakdown": "Ücret oluşturma",
     "laborRates.burden": "İş yükü",

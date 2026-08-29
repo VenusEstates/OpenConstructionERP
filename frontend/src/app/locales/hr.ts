@@ -28392,6 +28392,7 @@ const resource = {
     "laborRates.add_trade": "Dodaj obrt",
     "laborRates.all_in_rate": "Sveobuhvatna satnica",
     "laborRates.base_wage": "Osnovna satnica",
+    "laborRates.base_wage_required": "Unesite osnovnu satnicu veću od nule kako biste ovaj izračun spremili kao predložak.",
     "laborRates.blended": "Miješana: {{rate}}/h",
     "laborRates.breakdown": "Gradnja satnice",
     "laborRates.burden": "Teret rada",

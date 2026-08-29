@@ -28439,6 +28439,7 @@ const resource = {
     "laborRates.add_trade": "Přidat řemeslo",
     "laborRates.all_in_rate": "Hodinová sazba vč. vše",
     "laborRates.base_wage": "Základní hodinová mzda",
+    "laborRates.base_wage_required": "Zadejte základní hodinovou mzdu vyšší než nula, abyste tento rozpad uložili jako šablonu.",
     "laborRates.blended": "Smíšené: {{rate}}/h",
     "laborRates.breakdown": "Rozpad sazby",
     "laborRates.burden": "Pracovní zátěž",

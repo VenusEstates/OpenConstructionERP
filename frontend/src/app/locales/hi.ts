@@ -28057,6 +28057,7 @@ const resource = {
     "laborRates.add_trade": "व्यापार जोड़ें",
     "laborRates.all_in_rate": "सभी-में प्रति घंटा दर",
     "laborRates.base_wage": "आधार प्रति घंटा वेतन",
+    "laborRates.base_wage_required": "इस गणना को टेम्पलेट के रूप में सहेजने के लिए शून्य से अधिक आधार प्रति घंटा वेतन दर्ज करें।",
     "laborRates.blended": "मिश्रित: {{rate}}/h",
     "laborRates.breakdown": "दर निर्माण",
     "laborRates.burden": "श्रम बोझ",

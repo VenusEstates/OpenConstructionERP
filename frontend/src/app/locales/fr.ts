@@ -28445,6 +28445,7 @@ const resource = {
     "laborRates.add_trade": "Ajouter un métier",
     "laborRates.all_in_rate": "Taux horaire tout compris",
     "laborRates.base_wage": "Salaire horaire de base",
+    "laborRates.base_wage_required": "Saisissez un salaire horaire de base supérieur à zéro pour enregistrer cette composition comme modèle.",
     "laborRates.blended": "Mélangé : {{rate}}/h",
     "laborRates.breakdown": "Construction du taux",
     "laborRates.burden": "Charge de main-d'œuvre",

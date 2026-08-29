@@ -28945,6 +28945,7 @@ const resource = {
     "laborRates.add_trade": "Додати вид робіт",
     "laborRates.all_in_rate": "Повна погодинна ставка",
     "laborRates.base_wage": "Базова погодинна оплата",
+    "laborRates.base_wage_required": "Укажіть базову погодинну оплату більше нуля, щоб зберегти цей розрахунок як шаблон.",
     "laborRates.blended": "Змішана: {{rate}}/год",
     "laborRates.breakdown": "Розрахунок ставки",
     "laborRates.burden": "Нарахування на працю",

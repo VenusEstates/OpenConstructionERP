@@ -22,6 +22,8 @@ import { getErrorMessage } from '@/shared/lib/api';
 import {
   laborRatesApi,
   buildComputeRequest,
+  canSaveTemplate,
+  isPositiveAmount,
   newOnCost,
   newCrewMember,
   type OnCostKind,
@@ -103,6 +105,11 @@ export function LaborRatesPage() {
   });
   const breakdown = computeQuery.data;
   const allInRate = breakdown?.all_in_rate ?? '0';
+  // The build-up preview is happy with a blank wage (it reads as zero), the
+  // template endpoint is not: it refuses a wage of zero outright. Saving is
+  // gated on the same rule here so an unfilled field is answered in the user's
+  // language instead of as a validation error from the server.
+  const baseWageOk = isPositiveAmount(baseWage);
 
   // ── Templates ─────────────────────────────────────────────────────────────
   const templatesQuery = useQuery({
@@ -867,7 +874,13 @@ export function LaborRatesPage() {
                       size="sm"
                       icon={<Save size={14} />}
                       loading={updateMutation.isPending}
-                      disabled={templateName.trim() === '' || updateMutation.isPending}
+                      disabled={
+                        !canSaveTemplate({
+                          templateName,
+                          baseWage,
+                          pending: updateMutation.isPending,
+                        })
+                      }
                       onClick={() => updateMutation.mutate(editingId)}
                     >
                       {t('laborRates.save_changes', { defaultValue: 'Save changes' })}
@@ -877,7 +890,13 @@ export function LaborRatesPage() {
                       size="sm"
                       icon={<FilePlus size={14} />}
                       loading={saveMutation.isPending}
-                      disabled={templateName.trim() === '' || saveMutation.isPending}
+                      disabled={
+                        !canSaveTemplate({
+                          templateName,
+                          baseWage,
+                          pending: saveMutation.isPending,
+                        })
+                      }
                       onClick={() => saveMutation.mutate()}
                     >
                       {t('laborRates.save_as_new', { defaultValue: 'Save as new template' })}
@@ -889,13 +908,27 @@ export function LaborRatesPage() {
                     size="sm"
                     icon={<Save size={14} />}
                     loading={saveMutation.isPending}
-                    disabled={templateName.trim() === ''}
+                    disabled={
+                      !canSaveTemplate({
+                        templateName,
+                        baseWage,
+                        pending: saveMutation.isPending,
+                      })
+                    }
                     onClick={() => saveMutation.mutate()}
                   >
                     {t('laborRates.save_template', { defaultValue: 'Save as template' })}
                   </Button>
                 )}
               </div>
+              {!baseWageOk && (
+                <p className="text-xs text-red-600 dark:text-red-400">
+                  {t('laborRates.base_wage_required', {
+                    defaultValue:
+                      'Enter a base hourly wage above zero to save this build-up as a template.',
+                  })}
+                </p>
+              )}
             </div>
 
             {/* Save as cost item: publish the computed rate(s) into the cost

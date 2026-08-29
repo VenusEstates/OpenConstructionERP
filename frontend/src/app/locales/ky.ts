@@ -25106,6 +25106,7 @@ const resource = {
     "laborRates.cost_item_saved_msg": "\"{{code}}\" азыр BOQга кошууга боло турган баа предмети.",
     "laborRates.cost_item_failed": "Баа предмети сактоо мүмкүн болгон жок",
     "laborRates.base_wage": "Баштапкы сааттык эмгек акы",
+    "laborRates.base_wage_required": "Бул түзүлүштү үлгү катары сактоо үчүн нөлдөн жогору баштапкы сааттык эмгек акы киргизиңиз.",
     "laborRates.cost_item_default_desc": "Бардыгын камтыган эмгек акы",
     "inbound.attachment_unnamed": "(аты жок файл)",
     "inbound.open_record_aria": "{{ref}} кат алышуу жазуусун ачуу",

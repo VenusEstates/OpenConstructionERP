@@ -28251,6 +28251,7 @@ const resource = {
     "laborRates.add_trade": "Agregar oficio",
     "laborRates.all_in_rate": "Tarifa horaria todo incluido",
     "laborRates.base_wage": "Salario horario base",
+    "laborRates.base_wage_required": "Ingresa un salario horario base mayor que cero para guardar este desglose como plantilla.",
     "laborRates.blended": "Combinado: {{rate}}/h",
     "laborRates.breakdown": "Construcción de tarifa",
     "laborRates.burden": "Carga laboral",

@@ -29088,6 +29088,7 @@ const resource = {
     "laborRates.add_trade": "Handwerk hinzufügen",
     "laborRates.all_in_rate": "Kompletter Stundensatz",
     "laborRates.base_wage": "Basis-Stundenlohn",
+    "laborRates.base_wage_required": "Geben Sie einen Basis-Stundenlohn über null ein, um diesen Aufbau als Vorlage zu speichern.",
     "laborRates.blended": "Gemischt: {{rate}}/h",
     "laborRates.breakdown": "Tarifaufbau",
     "laborRates.burden": "Arbeitslast",

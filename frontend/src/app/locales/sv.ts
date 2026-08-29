@@ -28328,6 +28328,7 @@ const resource = {
     "laborRates.add_trade": "Lägg till handel",
     "laborRates.all_in_rate": "All-in timlön",
     "laborRates.base_wage": "Bas timlön",
+    "laborRates.base_wage_required": "Ange en bas timlön över noll för att spara den här uppbyggnaden som mall.",
     "laborRates.blended": "Blandad: {{rate}}/h",
     "laborRates.breakdown": "Taxahöjning",
     "laborRates.burden": "Arbetsbörda",

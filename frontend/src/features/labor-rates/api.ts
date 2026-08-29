@@ -200,6 +200,44 @@ export function normalizeCount(count: number): number {
 }
 
 /**
+ * Whether a money text input resolves to an amount above zero.
+ *
+ * Reads the field through {@link normalizeAmount} so it judges the same string
+ * the request would carry, rather than the raw text.
+ */
+export function isPositiveAmount(value: string): boolean {
+  const n = Number(normalizeAmount(value));
+  return Number.isFinite(n) && n > 0;
+}
+
+/** What saving a rate template is gated on. */
+export interface TemplateSaveGateInput {
+  /** The template name typed into the editor. */
+  templateName: string;
+  /** The base hourly wage as typed, before normalisation. */
+  baseWage: string;
+  /** A save or an update is already in flight. */
+  pending: boolean;
+}
+
+/**
+ * Whether the editor may save a rate template (as a new one or over an open one).
+ *
+ * The base wage has to resolve to a positive amount, which mirrors the `gt=0`
+ * the server puts on `base_wage`. A blank wage normalises to `'0'` because the
+ * live build-up preview accepts zero, and that string used to reach the
+ * template endpoint unchecked and come back as a raw 422 with nothing the user
+ * could read. Zero is refused here for the reason the server refuses it: a
+ * template that builds up to 0.00 prices labour hours at nothing while every
+ * consumer reads it as a finished rate.
+ */
+export function canSaveTemplate(input: TemplateSaveGateInput): boolean {
+  if (input.pending) return false;
+  if (input.templateName.trim() === '') return false;
+  return isPositiveAmount(input.baseWage);
+}
+
+/**
  * Build the compute request from the editor state.
  *
  * On-costs with a blank label and crew lines with a blank trade are dropped

@@ -28897,6 +28897,7 @@ const resource = {
     "laborRates.add_trade": "Ish turi qoʻshish",
     "laborRates.all_in_rate": "Toʻliq soatlik stavka",
     "laborRates.base_wage": "Bazaviy soatlik maosh",
+    "laborRates.base_wage_required": "Ushbu tuzilmani shablon sifatida saqlash uchun noldan katta bazaviy soatlik maosh kiriting.",
     "laborRates.blended": "Aralash: {{rate}}/soat",
     "laborRates.breakdown": "Narx tarkibi",
     "laborRates.burden": "Mehnat ustamasi",

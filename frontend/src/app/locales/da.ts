@@ -28371,6 +28371,7 @@ const resource = {
     "laborRates.add_trade": "Tilføj handel",
     "laborRates.all_in_rate": "Samlet timesats",
     "laborRates.base_wage": "Grundlæggende timesats",
+    "laborRates.base_wage_required": "Angiv en grundlæggende timesats over nul for at gemme denne opbygning som skabelon.",
     "laborRates.blended": "Blandet: {{rate}}/t",
     "laborRates.breakdown": "Satsoprund",
     "laborRates.burden": "Arbejdsbyrde",

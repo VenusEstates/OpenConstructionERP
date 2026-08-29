@@ -27675,6 +27675,7 @@ const resource = {
     "laborRates.add_trade": "הוספת מקצוע",
     "laborRates.all_in_rate": "תעריף שעתי כולל הכל",
     "laborRates.base_wage": "שכר שעתי בסיסי",
+    "laborRates.base_wage_required": "הזינו שכר שעתי בסיסי גדול מאפס כדי לשמור הרכב זה כתבנית.",
     "laborRates.blended": "משוקלל: {{rate}}/שעה",
     "laborRates.breakdown": "פירוט בניית התעריף",
     "laborRates.burden": "עלויות נלוות לעבודה",

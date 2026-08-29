@@ -28342,6 +28342,7 @@ const resource = {
     "laborRates.add_trade": "Voeg beroep toe",
     "laborRates.all_in_rate": "All-in uurtarief",
     "laborRates.base_wage": "Basisuurloon",
+    "laborRates.base_wage_required": "Voer een basisuurloon boven nul in om deze opbouw als sjabloon op te slaan.",
     "laborRates.blended": "Gemengd: {{rate}}/h",
     "laborRates.breakdown": "Tariffsamengestelling",
     "laborRates.burden": "Arbeidslas",

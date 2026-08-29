@@ -28608,6 +28608,7 @@ const resource = {
     "laborRates.add_trade": "إضافة تجارة",
     "laborRates.all_in_rate": "معدل الساعة الشامل",
     "laborRates.base_wage": "الأجر الأساسي بالساعة",
+    "laborRates.base_wage_required": "أدخل أجرًا أساسيًا بالساعة أكبر من صفر لحفظ هذا التركيب كقالب.",
     "laborRates.blended": "مخلوط: {{rate}}/ساعة",
     "laborRates.breakdown": "بناء المعدل",
     "laborRates.burden": "عبء العمل",

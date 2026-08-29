@@ -28319,6 +28319,7 @@ const resource = {
     "laborRates.add_trade": "添加行业",
     "laborRates.all_in_rate": "全包小时费率",
     "laborRates.base_wage": "基本小时工资",
+    "laborRates.base_wage_required": "请输入大于零的基本小时工资，以将此构成保存为模板。",
     "laborRates.blended": "混合费率：{{rate}}/小时",
     "laborRates.breakdown": "费率构建",
     "laborRates.burden": "劳动成本",

@@ -27650,6 +27650,7 @@ const resource = {
     "laborRates.add_trade": "افزودن رسته شغلی",
     "laborRates.all_in_rate": "نرخ ساعتی تمام‌شده",
     "laborRates.base_wage": "دستمزد پایه ساعتی",
+    "laborRates.base_wage_required": "برای ذخیره این ساختار به عنوان الگو، دستمزد پایه ساعتی بزرگ‌تر از صفر وارد کنید.",
     "laborRates.blended": "ترکیبی: {{rate}}/ساعت",
     "laborRates.breakdown": "ساختار نرخ",
     "laborRates.burden": "بار جانبی نیروی کار",

@@ -28264,6 +28264,7 @@ const resource = {
     "laborRates.add_trade": "Adicionar comércio",
     "laborRates.all_in_rate": "Taxa horária all-in",
     "laborRates.base_wage": "Salário horário base",
+    "laborRates.base_wage_required": "Informe um salário horário base acima de zero para salvar esta composição como modelo.",
     "laborRates.blended": "Misturado: {{rate}}/h",
     "laborRates.breakdown": "Construção de taxa",
     "laborRates.burden": "Encargo de mão de obra",

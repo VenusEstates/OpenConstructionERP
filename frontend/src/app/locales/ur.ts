@@ -27650,6 +27650,7 @@ const resource = {
     "laborRates.add_trade": "trade شامل کریں",
     "laborRates.all_in_rate": "All-in فی گھنٹہ ریٹ",
     "laborRates.base_wage": "بنیادی فی گھنٹہ اجرت",
+    "laborRates.base_wage_required": "اس تشکیل کو ٹیمپلیٹ کے طور پر محفوظ کرنے کے لیے صفر سے زیادہ بنیادی فی گھنٹہ اجرت درج کریں۔",
     "laborRates.blended": "ملا ہوا: {{rate}}/گھنٹہ",
     "laborRates.breakdown": "ریٹ build-up",
     "laborRates.burden": "لیبر بوجھ",

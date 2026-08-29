@@ -28347,6 +28347,7 @@ const resource = {
     "laborRates.add_trade": "Lisää ammattilaji",
     "laborRates.all_in_rate": "Kaikki sisältyvä tuntikorvaus",
     "laborRates.base_wage": "Perustuntikorvaus",
+    "laborRates.base_wage_required": "Anna nollaa suurempi perustuntikorvaus, jotta voit tallentaa tämän erittelyn mallina.",
     "laborRates.blended": "Sekoitettu: {{rate}}/h",
     "laborRates.breakdown": "Korvauksien rakenne",
     "laborRates.burden": "Työvuodan rasitus",

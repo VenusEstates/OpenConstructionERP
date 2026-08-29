@@ -28480,6 +28480,7 @@ const resource = {
     "laborRates.add_trade": "Aggiungi mestiere",
     "laborRates.all_in_rate": "Tariffa oraria tutto incluso",
     "laborRates.base_wage": "Salario orario base",
+    "laborRates.base_wage_required": "Inserisci un salario orario base maggiore di zero per salvare questa composizione come modello.",
     "laborRates.blended": "Misto: {{rate}}/h",
     "laborRates.breakdown": "Accumulo della tariffa",
     "laborRates.burden": "Onere del lavoro",

@@ -27898,6 +27898,7 @@ const resource = {
     "laborRates.add_trade": "Худалдаа нэмэх",
     "laborRates.all_in_rate": "Цагийн бүрэн ханш",
     "laborRates.base_wage": "Цагийн үндсэн цалин",
+    "laborRates.base_wage_required": "Энэ бүтцийг загвар болгон хадгалахын тулд тэгээс их цагийн үндсэн цалин оруулна уу.",
     "laborRates.blended": "Нэгтгэсэн: {{rate}}/h",
     "laborRates.breakdown": "Ханш дээш байлгалыг",
     "laborRates.burden": "Ажилчны ачаалал",

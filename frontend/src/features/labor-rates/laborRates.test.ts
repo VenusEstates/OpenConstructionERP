@@ -21,6 +21,8 @@ import {
   newCrewMember,
   normalizeAmount,
   normalizeCount,
+  isPositiveAmount,
+  canSaveTemplate,
   buildComputeRequest,
   normalizeRateBreakdown,
   type RateBreakdown,
@@ -88,6 +90,50 @@ describe('normalizeCount', () => {
     expect(normalizeCount(-2)).toBe(0);
     expect(normalizeCount(Number.NaN)).toBe(0);
     expect(normalizeCount(0)).toBe(0);
+  });
+});
+
+describe('isPositiveAmount', () => {
+  it('accepts an amount above zero, trimmed', () => {
+    expect(isPositiveAmount('28.50')).toBe(true);
+    expect(isPositiveAmount('  0.01  ')).toBe(true);
+  });
+
+  it('rejects blank, zero and negative wages', () => {
+    expect(isPositiveAmount('')).toBe(false);
+    expect(isPositiveAmount('   ')).toBe(false);
+    expect(isPositiveAmount('0')).toBe(false);
+    expect(isPositiveAmount('0.00')).toBe(false);
+    expect(isPositiveAmount('-5')).toBe(false);
+  });
+
+  it('rejects text that does not read as a number', () => {
+    expect(isPositiveAmount('abc')).toBe(false);
+  });
+});
+
+describe('canSaveTemplate', () => {
+  const ready = { templateName: 'Bricklayer all-in', baseWage: '28.50', pending: false };
+
+  it('allows a save when the template is named and the wage is positive', () => {
+    expect(canSaveTemplate(ready)).toBe(true);
+  });
+
+  it('refuses a save while one is in flight', () => {
+    expect(canSaveTemplate({ ...ready, pending: true })).toBe(false);
+  });
+
+  it('refuses an unnamed template', () => {
+    expect(canSaveTemplate({ ...ready, templateName: '' })).toBe(false);
+    expect(canSaveTemplate({ ...ready, templateName: '   ' })).toBe(false);
+  });
+
+  // The blank field is the reported case: buildComputeRequest turns it into
+  // '0' for the preview, and the server refuses a base wage of zero.
+  it('refuses a blank or zero base wage, which the server answers with a 422', () => {
+    expect(canSaveTemplate({ ...ready, baseWage: '' })).toBe(false);
+    expect(canSaveTemplate({ ...ready, baseWage: '0' })).toBe(false);
+    expect(normalizeAmount('')).toBe('0');
   });
 });
 

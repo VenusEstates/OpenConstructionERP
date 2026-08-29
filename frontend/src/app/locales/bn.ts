@@ -27650,6 +27650,7 @@ const resource = {
     "laborRates.add_trade": "ট্রেড যোগ করুন",
     "laborRates.all_in_rate": "সর্বমোট ঘণ্টার রেট",
     "laborRates.base_wage": "মূল ঘণ্টার মজুরি",
+    "laborRates.base_wage_required": "এই হিসাবটি টেমপ্লেট হিসেবে সংরক্ষণ করতে শূন্যের চেয়ে বেশি একটি মূল ঘণ্টার মজুরি লিখুন।",
     "laborRates.blended": "মিশ্রিত: {{rate}}/ঘণ্টা",
     "laborRates.breakdown": "রেট বিল্ড-আপ",
     "laborRates.burden": "শ্রমের বোঝা",

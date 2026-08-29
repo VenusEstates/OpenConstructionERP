@@ -28383,6 +28383,7 @@ const resource = {
     "laborRates.add_trade": "Adăugare meserie",
     "laborRates.all_in_rate": "Tarif orar all-in",
     "laborRates.base_wage": "Salariu orar de bază",
+    "laborRates.base_wage_required": "Introduceți un salariu orar de bază mai mare decât zero pentru a salva această structură ca șablon.",
     "laborRates.blended": "Amestecat: {{rate}}/h",
     "laborRates.breakdown": "Construire tarif",
     "laborRates.burden": "Sarcină de muncă",

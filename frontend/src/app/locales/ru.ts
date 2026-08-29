@@ -28550,6 +28550,7 @@ const resource = {
     "laborRates.add_trade": "Добавить рабочую специальность",
     "laborRates.all_in_rate": "Полная почасовая ставка",
     "laborRates.base_wage": "Базовая почасовая оплата",
+    "laborRates.base_wage_required": "Укажите базовую почасовую оплату больше нуля, чтобы сохранить этот расчёт как шаблон.",
     "laborRates.blended": "Смешанная: {{rate}}/ч",
     "laborRates.breakdown": "Формирование ставки",
     "laborRates.burden": "Трудовая нагрузка",

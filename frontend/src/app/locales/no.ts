@@ -28197,6 +28197,7 @@ const resource = {
     "laborRates.add_trade": "Legg til håndverk",
     "laborRates.all_in_rate": "All-in timesats",
     "laborRates.base_wage": "Basistimelønn",
+    "laborRates.base_wage_required": "Angi en basistimelønn over null for å lagre denne oppbygningen som mal.",
     "laborRates.blended": "Blandet: {{rate}}-h",
     "laborRates.breakdown": "Satsoppbygging",
     "laborRates.burden": "Arbeidsbyrde",
