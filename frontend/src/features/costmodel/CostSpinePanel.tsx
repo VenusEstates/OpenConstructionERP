@@ -301,7 +301,6 @@ export function CostSpinePanel({ projectId, currency, boqId }: CostSpinePanelPro
                         <tr
                           key={line.cost_line_id}
                           tabIndex={0}
-                          role="button"
                           onClick={() => setDrawerLine(line)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {

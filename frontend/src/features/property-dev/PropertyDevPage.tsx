@@ -1234,7 +1234,6 @@ function BuyersTab({
                         }
                       }}
                       tabIndex={0}
-                      role="button"
                       aria-label={t('propdev.open_buyer_aria', {
                         defaultValue: 'Open buyer {{name}}',
                         name: b.full_name || b.email || b.id,
@@ -1571,7 +1570,6 @@ function LeadsTab({
                         }
                       }}
                       tabIndex={0}
-                      role="button"
                       aria-label={t('propdev.open_lead_aria', {
                         defaultValue: 'Open lead {{name}}',
                         name: l.full_name || l.email || l.id,

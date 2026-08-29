@@ -557,7 +557,6 @@ function TimelineRow({ entry, user, onOpen }: TimelineRowProps) {
         }
       }}
       tabIndex={0}
-      role="button"
       aria-label={`${entry.action} ${entry.entity_type}`}
       className={clsx(
         'group cursor-pointer border-b border-border-light bg-surface-primary',

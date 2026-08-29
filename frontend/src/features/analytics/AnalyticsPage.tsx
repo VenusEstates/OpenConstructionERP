@@ -621,7 +621,6 @@ export function AnalyticsPage() {
                 {pagedProjects.map((p) => (
                   <tr
                     key={p.id}
-                    role="button"
                     tabIndex={0}
                     aria-label={t('analytics.open_project_for', {
                       defaultValue: 'Open project {{name}}',

@@ -294,7 +294,6 @@ function InstanceRow({
     <tr
       onClick={onOpen}
       tabIndex={0}
-      role="button"
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
