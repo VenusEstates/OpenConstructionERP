@@ -179,13 +179,23 @@ class VectorHit:
 
     @property
     def title(self) -> str:
-        """Best-effort display title - falls back to a text snippet."""
+        """Best-effort display title - falls back to a text snippet, then to the kind.
+
+        The last rung is deliberately not the bare id. Both frontend consumers
+        of the unified search render this string as the row label, and one of
+        them does so with no guard of its own, so returning the identifier put
+        thirty six characters of hexadecimal in front of the reader. It names
+        nothing to a person and cannot be told apart from the next unnamed row.
+        The kind is the machine token the hit already ships as ``module``, so
+        no English prose enters here and there is nothing to translate.
+        """
         title = self.payload.get("title")
         if isinstance(title, str) and title:
             return title
         if self.text:
             return self.text[:120]
-        return self.id
+        kind = self.module or self.collection.removeprefix("oe_") or "result"
+        return f"{kind} {self.id[:8]}"
 
     @property
     def snippet(self) -> str:

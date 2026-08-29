@@ -254,3 +254,24 @@ export function collectionLabel(collection: string): string {
       return collection.replace(/^oe_/, '');
   }
 }
+
+/** The label a person can recognise a hit by.
+ *
+ *  Two shapes arrive here with nothing to say. A hit can carry an empty
+ *  title, and it can carry its own id as the title, because `VectorHit.title`
+ *  falls back to the row id when a payload holds neither a title nor any
+ *  text. The second one is truthy, so a plain `title || id` hands it straight
+ *  to the screen. Both read as a bare UUID, which names nothing to the person
+ *  scanning the list.
+ *
+ *  The last-resort wording comes from the caller so this stays a pure
+ *  function and the string stays in the locale file.
+ */
+export function hitLabel(
+  hit: UnifiedSearchHit,
+  unnamed: (kind: string, ref: string) => string,
+): string {
+  const title = (hit.title ?? '').trim();
+  if (title && title !== hit.id) return title;
+  return unnamed(collectionLabel(hit.collection), String(hit.id).slice(0, 8));
+}

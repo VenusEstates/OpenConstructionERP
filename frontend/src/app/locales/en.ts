@@ -16512,6 +16512,7 @@ const resource = {
     "global_search.searching": "Searching…",
     "global_search.no_results": "No matches yet, try a different phrasing",
     "global_search.footer_hint": "Semantic search powered by vector embeddings",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

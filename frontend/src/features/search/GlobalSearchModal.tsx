@@ -44,6 +44,7 @@ import {
   unifiedSearch,
   fetchSearchTypes,
   collectionLabel,
+  hitLabel,
   hitToHref,
   type UnifiedSearchHit,
 } from './api';
@@ -297,7 +298,13 @@ export default function GlobalSearchModal() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-[13px] font-medium text-content-primary truncate">
-                                {hit.title || hit.id}
+                                {hitLabel(hit, (kind, ref) =>
+                                  t('global_search.unnamed_hit', {
+                                    defaultValue: '{{kind}} {{ref}}',
+                                    kind,
+                                    ref,
+                                  }),
+                                )}
                               </span>
                               <span className="text-[10px] text-content-tertiary tabular-nums shrink-0">
                                 {Math.round(hit.score * 100)}%
