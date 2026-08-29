@@ -16,6 +16,11 @@ export default defineConfig({
     ['list'],
     ['json', { outputFile: 'qa-smoke/results.json' }],
     ['html', { outputFolder: 'qa-smoke-report', open: 'never' }],
+    // This is the only config CI runs a browser from, one engine per job, so
+    // it is also the only place a dead project would cost us real coverage.
+    // Fails the run if the engine this job pinned selected no test or is not
+    // installed, rather than letting an empty project report a clean sweep.
+    ['./tests/e2e/reporters/project-coverage.ts'],
   ],
   outputDir: 'qa-smoke/test-results',
   use: {
