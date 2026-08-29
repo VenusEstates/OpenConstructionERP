@@ -201,6 +201,80 @@ class TestTranslateFallback:
         assert "{ordinal}" in msg
 
 
+class TestRegionalLocaleChaining:
+    """``translate()`` must resolve a regional code through its base language.
+
+    This bundle's docstring always claimed "same resolution semantics as
+    ``app.core.i18n.t()``", but until now it was a bare exact-locale match
+    with no base-language step, so ``locale="es-MX"`` fell straight past a
+    complete ``es.json`` translation to English. Latent, not live: every
+    production caller sources its locale from ``app.core.i18n.get_locale()``,
+    which ``AcceptLanguageMiddleware`` clamps to ``SUPPORTED_LOCALES`` -
+    base-language codes only - so no regional code reaches this bundle in
+    production today. These tests exist so the fix does not silently rot the
+    day something else feeds ``translate()`` a regional code directly.
+    """
+
+    def test_regional_variant_resolves_through_its_base_language(self) -> None:
+        """es-MX has no file of its own; it must read the complete es.json translation, not English."""
+        reload_bundle()
+        es = translate("din276.cost_group_required.fail", locale="es", ordinal="01.02.0030")
+        es_mx = translate("din276.cost_group_required.fail", locale="es-MX", ordinal="01.02.0030")
+        en = translate("din276.cost_group_required.fail", locale="en", ordinal="01.02.0030")
+        assert es_mx == es
+        assert es_mx != en
+
+    def test_successful_base_language_resolution_logs_no_fallback_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A resolved regional lookup is not a fallback and must not train anyone to ignore the log."""
+        reload_bundle()
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="app.core.validation.messages"):
+            translate("din276.cost_group_required.fail", locale="es-MX", ordinal="01.02.0030")
+        assert not caplog.records, (
+            f"a resolved regional lookup must log nothing, got {[r.message for r in caplog.records]}"
+        )
+
+    def test_regional_variant_with_no_file_of_its_own_uses_base_bundle(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Isolated fixture: no es-MX.json exists on disk at all, only es.json."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "en.json").write_text(
+                json.dumps({"common": {"ok": "OK"}, "test": {"greet": "hi {name}"}}),
+                encoding="utf-8",
+            )
+            (tmp_dir / "es.json").write_text(
+                json.dumps({"common": {"ok": "OK"}, "test": {"greet": "hola {name}"}}),
+                encoding="utf-8",
+            )
+            bundle = MessageBundle(tmp_dir)
+            bundle.load()
+
+            caplog.clear()
+            with caplog.at_level(logging.WARNING, logger="app.core.validation.messages"):
+                msg = bundle.translate("test.greet", locale="es-MX", name="Ana")
+
+        assert msg == "hola Ana"
+        assert not caplog.records
+
+    def test_unknown_regional_locale_still_falls_back_to_english(self, caplog: pytest.LogCaptureFixture) -> None:
+        """A genuinely unsupported region-shaped locale must still degrade to English, never a raw key."""
+        reload_bundle()
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="app.core.validation.messages"):
+            msg = translate("din276.cost_group_required.fail", locale="xx-YY", ordinal="01")
+        assert msg == translate("din276.cost_group_required.fail", locale="en", ordinal="01")
+        assert any("falling back" in r.message.lower() for r in caplog.records)
+
+    def test_is_key_present_is_not_chained(self) -> None:
+        """is_key_present asks about ONE locale's own file - mirrors app.core.i18n's
+        is_locale_loaded (exact) vs resolve_locale (chained) split, deliberately."""
+        reload_bundle()
+        assert is_key_present("din276.cost_group_required.fail", "es")
+        assert not is_key_present("din276.cost_group_required.fail", "es-MX")
+
+
 # ── Locale coverage guarantee ─────────────────────────────────────────────
 
 

@@ -15,9 +15,16 @@ Design notes
   This keeps the module "plugin-like" - a third-party rules package can
   carry its own ``messages/`` directory and register itself without
   touching the global :mod:`app.core.i18n` locales.
-* **Same resolution semantics as ``app.core.i18n.t()``** so frontend and
-  backend stay in lockstep. Fallback chain: requested locale → ``en`` →
-  raw key (logged as WARNING).
+* **Same resolution semantics as ``app.core.i18n.t()``**, and now actually
+  implemented that way rather than merely documented that way: this used to
+  claim lockstep with ``t()`` while doing a bare exact-locale match with no
+  base-language step, so ``translate(key, locale="es-MX")`` returned English
+  even on a key ``es.json`` answers in full. Fallback chain: requested locale
+  → its base language for a regional code, via :func:`app.core.i18n.locale_candidates`
+  (the same helper ``t()`` uses - one resolution rule, not two that could
+  disagree) → ``en`` → raw key (logged as WARNING). A successful base-language
+  resolution is not itself a fallback and logs nothing; only bottoming out at
+  ``en`` does.
 * **In-memory cache.** JSON is loaded once on first access and flattened
   into a dot-notation lookup table. Explicit reload is possible via
   :func:`reload_bundle` (used by tests).
@@ -40,6 +47,8 @@ import logging
 from pathlib import Path
 from threading import Lock
 from typing import Any
+
+from app.core.i18n import locale_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -124,12 +133,20 @@ class MessageBundle:
 
         Resolution order:
             1. ``locale`` bundle (exact match)
-            2. ``en`` bundle (the source of truth)
-            3. raw ``key`` (logged as WARNING)
+            2. ``locale``'s base language, for a regional code, via the same
+               :func:`app.core.i18n.locale_candidates` chain the backend's
+               own translator uses (``es-MX`` -> ``es``; a no-op for a
+               base-only code, which every currently-reachable locale is)
+            3. ``en`` bundle (the source of truth)
+            4. raw ``key`` (logged as WARNING)
+
+        A resolution that succeeds at step 2 is not a fallback and logs
+        nothing - only bottoming out at ``en`` (step 3) does.
 
         Args:
             key: Dot-notation lookup key, e.g. ``"din276.cost_group_required.fail"``.
-            locale: ISO 639-1 locale code. Unknown locales fall back to ``en``.
+            locale: ISO 639-1 locale code, optionally with a region subtag
+                (e.g. ``"es-MX"``). Unknown locales fall back to ``en``.
             **params: ``str.format``-style interpolation values.
 
         Returns:
@@ -139,16 +156,24 @@ class MessageBundle:
             self.load()
 
         en_bundle = self._loaded.get(DEFAULT_LOCALE, {})
-        requested = self._loaded.get(locale, {})
+        candidates = locale_candidates(locale)
 
-        template = requested.get(key)
+        template: str | None = None
+        for candidate in candidates:
+            bundle = self._loaded.get(candidate)
+            if bundle is None:
+                continue
+            template = bundle.get(key)
+            if template is not None:
+                break
+
         if template is None:
             template = en_bundle.get(key)
             if template is not None and locale != DEFAULT_LOCALE:
                 warn_key = (locale, key)
                 if warn_key not in self._warned_fallbacks:
                     self._warned_fallbacks.add(warn_key)
-                    if locale in self._loaded:
+                    if any(candidate in self._loaded for candidate in candidates):
                         logger.warning(
                             "Validation message key '%s' missing for locale '%s' - falling back to '%s'",
                             key,
