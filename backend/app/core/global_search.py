@@ -7,6 +7,12 @@ Usage:
 
 Returns results from: BOQ positions, contacts, documents, RFIs,
 tasks, cost items, meetings, inspections, NCRs - ranked by relevance.
+
+One rule holds across all nine: every column a type is matched on is also a
+candidate for that type's title, so a row is always named by something the
+searcher could have typed to find it. Break that and the type gains a blank
+result the moment a record leaves its display column empty, which is legal in
+every one of them - see :func:`_title`.
 """
 
 import logging
@@ -61,7 +67,7 @@ async def global_search(
                     "module": "boq",
                     "type": "position",
                     "id": str(row.id),
-                    "title": f"{row.ordinal} - {row.description[:120]}",
+                    "title": _title(_join(row.ordinal, row.description[:120]), kind="position", row_id=row.id),
                     "subtitle": f"{row.quantity} {row.unit}",
                     "url": f"/boq/{row.boq_id}",
                     "score": score,
@@ -104,7 +110,7 @@ async def global_search(
                     "module": "contacts",
                     "type": "contact",
                     "id": str(row.id),
-                    "title": label,
+                    "title": _title(label, kind="contact", row_id=row.id),
                     "subtitle": row.contact_type,
                     "url": "/contacts",
                     "score": score,
@@ -134,7 +140,7 @@ async def global_search(
                     "module": "documents",
                     "type": "document",
                     "id": str(row.id),
-                    "title": row.name,
+                    "title": _title(row.name, row.description, kind="document", row_id=row.id),
                     "subtitle": row.category,
                     "url": f"/projects/{row.project_id}/documents",
                     "score": score,
@@ -165,7 +171,12 @@ async def global_search(
                     "module": "rfi",
                     "type": "rfi",
                     "id": str(row.id),
-                    "title": f"{row.rfi_number} - {row.subject[:120]}",
+                    "title": _title(
+                        _join(row.rfi_number, row.subject[:120]),
+                        row.question,
+                        kind="rfi",
+                        row_id=row.id,
+                    ),
                     "subtitle": row.status,
                     "url": f"/projects/{row.project_id}/rfi",
                     "score": score,
@@ -195,7 +206,7 @@ async def global_search(
                     "module": "tasks",
                     "type": "task",
                     "id": str(row.id),
-                    "title": row.title[:200],
+                    "title": _title(row.title, row.description, kind="task", row_id=row.id),
                     "subtitle": f"{row.status} / {row.priority}",
                     "url": f"/projects/{row.project_id}/tasks",
                     "score": score,
@@ -226,7 +237,7 @@ async def global_search(
                     "module": "costs",
                     "type": "cost_item",
                     "id": str(row.id),
-                    "title": f"{row.code} - {row.description[:120]}",
+                    "title": _title(_join(row.code, row.description[:120]), kind="cost_item", row_id=row.id),
                     "subtitle": f"{row.rate} {row.currency}/{row.unit}",
                     "url": "/costs",
                     "score": score,
@@ -257,7 +268,12 @@ async def global_search(
                     "module": "meetings",
                     "type": "meeting",
                     "id": str(row.id),
-                    "title": f"{row.meeting_number} - {row.title[:120]}",
+                    "title": _title(
+                        _join(row.meeting_number, row.title[:120]),
+                        row.minutes,
+                        kind="meeting",
+                        row_id=row.id,
+                    ),
                     "subtitle": row.meeting_date,
                     "url": f"/projects/{row.project_id}/meetings",
                     "score": score,
@@ -287,7 +303,11 @@ async def global_search(
                     "module": "inspections",
                     "type": "inspection",
                     "id": str(row.id),
-                    "title": f"{row.inspection_number} - {row.title[:120]}",
+                    "title": _title(
+                        _join(row.inspection_number, row.title[:120]),
+                        kind="inspection",
+                        row_id=row.id,
+                    ),
                     "subtitle": row.status,
                     "url": f"/projects/{row.project_id}/inspections",
                     "score": score,
@@ -318,7 +338,12 @@ async def global_search(
                     "module": "ncr",
                     "type": "ncr",
                     "id": str(row.id),
-                    "title": f"{row.ncr_number} - {row.title[:120]}",
+                    "title": _title(
+                        _join(row.ncr_number, row.title[:120]),
+                        row.description,
+                        kind="ncr",
+                        row_id=row.id,
+                    ),
                     "subtitle": f"{row.severity} / {row.status}",
                     "url": f"/projects/{row.project_id}/ncr",
                     "score": score,
@@ -337,6 +362,55 @@ def _boq_id_for_project(project_id: str):
     from app.modules.boq.models import BOQ
 
     return select(BOQ.id).where(BOQ.project_id == project_id).scalar_subquery()
+
+
+def _join(*parts: str | None) -> str:
+    """Join the parts that carry a value with " - ".
+
+    Composite titles here read "number - subject". Both halves are NOT NULL
+    columns but either may legitimately hold an empty string, and the plain
+    f-string then shipped the separator on its own: a record without a number
+    read as " - Slab pour check", and one without either read as " - ".
+
+    Args:
+        *parts: title fragments, in the order they should be read.
+
+    Returns:
+        The non-empty fragments joined, or an empty string when none carry a
+        value.
+    """
+    return " - ".join(part.strip() for part in parts if part and part.strip())
+
+
+def _title(*candidates: str | None, kind: str, row_id: object) -> str:
+    """Return the label a person can recognise this row by.
+
+    A row is matched on one set of columns and titled from another, usually
+    smaller, set. Match on a column the title is not built from, with the
+    title's own columns empty, and the row comes back as a blank line: found,
+    and then not named. The fix is a rule rather than a patch per module -
+    every column the WHERE clause can match on is also a title candidate here,
+    so whatever the searcher typed is in the title they get back, which is the
+    string their eye is looking for.
+
+    The last resort is the record's own type plus a short id. That type is the
+    machine token this function's caller already ships as ``type``, not English
+    prose, so it needs no translation and none is invented on the backend. It
+    is deliberately not the bare identifier: a full UUID names nothing to the
+    person reading it.
+
+    Args:
+        *candidates: display strings in preference order, empty ones skipped.
+        kind: the record type, used only when no candidate carries a value.
+        row_id: the record's id, truncated for the last-resort label.
+
+    Returns:
+        A non-empty, non-whitespace title.
+    """
+    for candidate in candidates:
+        if candidate and candidate.strip():
+            return candidate.strip()[:200]
+    return f"{kind} {str(row_id)[:8]}"
 
 
 def _score(query: str, primary: str, secondary: str) -> float:

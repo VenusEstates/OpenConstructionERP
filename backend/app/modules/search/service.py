@@ -186,6 +186,25 @@ async def _accessible_project_ids(
     return set(rows)
 
 
+def _requirement_label(req: Any) -> str:
+    """Name a requirement by the entity and attribute it constrains.
+
+    That pair is how a requirement reads on its own page, but both halves may
+    be empty while the row is still findable by its constraint value or its
+    notes, and ``f"{entity}.{attribute}"`` then leaves a lone dot standing in
+    for a title. The remaining searched columns take over in that case, so the
+    hit is always named by something the reader could have typed to find it.
+
+    Args:
+        req: A requirement row.
+
+    Returns:
+        A display label, empty only when the row answers none of its columns.
+    """
+    pair = ".".join(part for part in ((req.entity or "").strip(), (req.attribute or "").strip()) if part)
+    return (pair or (req.constraint_value or "").strip() or (req.notes or "").strip())[:160]
+
+
 def _hit_from_row(
     *,
     row_id: object,
@@ -417,12 +436,15 @@ async def _sql_search_collection_raw(
         return [
             _hit_from_row(
                 row_id=pos.id,
-                title=(pos.description or "")[:160],
+                # The ordinal is searched, so it has to be able to name the
+                # hit: an undescribed position found by its number carried no
+                # title and no snippet, and reached the reader as a bare id.
+                title=(pos.description or pos.ordinal or "")[:160],
                 snippet=(pos.description or "")[:220],
                 collection=collection,
                 project_id=str(boq.project_id) if boq.project_id else "",
                 payload={
-                    "title": (pos.description or "")[:160],
+                    "title": (pos.description or pos.ordinal or "")[:160],
                     "ordinal": pos.ordinal or "",
                     "unit": pos.unit or "",
                     "boq_id": str(pos.boq_id) if pos.boq_id else "",
@@ -483,12 +505,14 @@ async def _sql_search_collection_raw(
         return [
             _hit_from_row(
                 row_id=r.id,
-                title=(r.title or "")[:160],
+                # A risk is searched by its code as well, and a register entry
+                # can hold a code before anyone has written its title.
+                title=(r.title or r.code or "")[:160],
                 snippet=(r.description or r.title or "")[:220],
                 collection=collection,
                 project_id=str(r.project_id) if r.project_id else "",
                 payload={
-                    "title": (r.title or "")[:160],
+                    "title": (r.title or r.code or "")[:160],
                     "code": r.code or "",
                     "status": r.status or "",
                     "category": r.category or "",
@@ -550,12 +574,12 @@ async def _sql_search_collection_raw(
         return [
             _hit_from_row(
                 row_id=req.id,
-                title=f"{req.entity}.{req.attribute}"[:160],
+                title=_requirement_label(req),
                 snippet=f"{req.constraint_type} {req.constraint_value}"[:220],
                 collection=collection,
                 project_id=str(rset.project_id) if rset.project_id else "",
                 payload={
-                    "title": f"{req.entity}.{req.attribute}"[:160],
+                    "title": _requirement_label(req),
                     "constraint": (f"{req.constraint_type} {req.constraint_value}")[:160],
                     "status": req.status or "",
                     "priority": req.priority or "",
@@ -619,12 +643,14 @@ async def _sql_search_collection_raw(
         return [
             _hit_from_row(
                 row_id=s.id,
-                title=(s.title or s.submittal_number or "")[:160],
+                # The spec section is searched and is often the only thing a
+                # submittal carries while it is still being raised.
+                title=(s.title or s.submittal_number or s.spec_section or "")[:160],
                 snippet=(f"{s.submittal_number} - {s.title}" if s.submittal_number else (s.title or ""))[:220],
                 collection=collection,
                 project_id=str(s.project_id) if s.project_id else "",
                 payload={
-                    "title": (s.title or s.submittal_number or "")[:160],
+                    "title": (s.title or s.submittal_number or s.spec_section or "")[:160],
                     "submittal_number": s.submittal_number or "",
                     "status": s.status or "",
                     "submittal_type": getattr(s, "submittal_type", "") or "",
@@ -687,11 +713,13 @@ async def _sql_search_collection_raw(
         return [
             _hit_from_row(
                 row_id=item.id,
-                title=(item.description or "")[:160],
+                # The code is searched, and a rate can be filed under a code
+                # before anyone writes the description that names it.
+                title=(item.description or item.code or "")[:160],
                 snippet=f"{item.code} - {item.description}"[:220],
                 collection=collection,
                 payload={
-                    "title": (item.description or "")[:160],
+                    "title": (item.description or item.code or "")[:160],
                     "code": item.code or "",
                     "unit": item.unit or "",
                     "rate": str(item.rate) if item.rate else "",
