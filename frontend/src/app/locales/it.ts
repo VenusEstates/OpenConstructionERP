@@ -28822,7 +28822,7 @@ const resource = {
     "match_wizard.creating": "Creazione sessione e esecuzione della corrispondenza vettoriale…",
     "match_wizard.excel_drop": "Fai clic o rilascia un file Excel",
     "match_wizard.excel_hint": "Rilevamento colonna multilingue - EN/DE/RU/ES/PT/CJK/…",
-    "match_wizard.excel_label": "Carica un Bill of Quantities .xlsx",
+    "match_wizard.excel_label": "Carica un computo metrico .xlsx",
     "match_wizard.install_button": "Installa",
     "match_wizard.install_failed": "Installazione fallita",
     "match_wizard.install_finalizing": "Finalizzazione…",

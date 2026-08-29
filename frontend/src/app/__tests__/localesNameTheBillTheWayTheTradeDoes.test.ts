@@ -12,8 +12,12 @@ import { describe, expect, it } from 'vitest';
  * the trade term, so the same object was named two ways on neighbouring
  * screens, and in French three ways.
  *
- * This gate holds each converted locale to one name. It checks three things per
- * locale. The loan word is gone except where it is genuinely right. The rival
+ * This gate holds each converted locale to one name. It checks four things per
+ * locale. The loan word is gone except where it is genuinely right, and so is
+ * the loan word spelled out: a locale that swapped BOQ for its own term and
+ * left "Bill of Quantities" standing in the next sentence has moved the English
+ * from three letters to three words rather than converted, and the abbreviation
+ * check cannot see that at all. The rival
  * names the locale used to carry are gone too, because replacing only the loan
  * word would leave the file naming the object several ways in the reader's own
  * language. And the grammar the swap disturbs stays correct: gender and article
@@ -38,6 +42,14 @@ const PAIR = /^\s*"((?:[^"\\]|\\.)*)"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,?\s*$/;
 
 /** Every spelling of the loan word, including the BoQ the sweeps kept missing. */
 const BARE = /\b[Bb][Oo][Qq]s?\b/g;
+
+/**
+ * The same loan word spelled out. Kept separate from BARE rather than folded
+ * into it, because one of the checks below reads BARE as "how often does this
+ * file still say the abbreviation" and a ratio that counts two different
+ * defects answers neither question.
+ */
+const ENGLISH_NAME = /\bbills?\s+of\s+quantit(?:y|ies)\b/gi;
 
 /** The abbreviation is the artifact's own name in these markets. */
 const EXCHANGE_MODULE = /^nav\.[a-z]+_boq_exchange$/;
@@ -195,7 +207,10 @@ const LOCALES: Locale[] = [
     names: /内訳書/,
     term: '内訳書',
     glossNames: ['内訳書'],
-    rivals: [/数量明細書/, /内訳明細書/, /数量内訳書/, /数量内訳(?!書)/, /積算書/],
+    // 見積 on its own is the estimate and the file needs it in a hundred
+    // places; only 見積表, which had been naming the bill on the upload label,
+    // is the rival.
+    rivals: [/数量明細書/, /内訳明細書/, /数量内訳書/, /数量内訳(?!書)/, /積算書/, /見積表/],
     grammar: [spacedTerm('内訳書')],
   },
   {
@@ -203,7 +218,11 @@ const LOCALES: Locale[] = [
     names: /내역서/,
     term: '내역서',
     glossNames: ['내역서'],
-    rivals: [/물량\s*내역서/, /수량\s*내역서/, /물량\s*명세서/],
+    // 명세서 is a statement of anything and the locale needs it for the
+    // payslip, the bill of materials and the progress claim. 수량 명세서 is one
+    // syllable from the 물량 명세서 already listed, and it was the spelling the
+    // file actually carried.
+    rivals: [/물량\s*내역서/, /수량\s*내역서/, /물량\s*명세서/, /수량\s*명세서/],
     grammar: [KOREAN_WRONG_PARTICLE],
   },
 ];
@@ -242,13 +261,17 @@ function explained(value: string, at: number, length: number, gloss: RegExp, exc
   return gloss.test(before.slice(0, open.index));
 }
 
-function untranslated(entries: Entry[], locale: Pick<Locale, 'glossNames' | 'exchangePhrase'>): Entry[] {
+function untranslated(
+  entries: Entry[],
+  locale: Pick<Locale, 'glossNames' | 'exchangePhrase'>,
+  pattern: RegExp = BARE,
+): Entry[] {
   const gloss = glossPattern(locale.glossNames);
   return entries.filter((entry) => {
     if (EXCHANGE_MODULE.test(entry.key)) return false;
-    BARE.lastIndex = 0;
+    pattern.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = BARE.exec(entry.value))) {
+    while ((match = pattern.exec(entry.value))) {
       if (!explained(entry.value, match.index, match[0].length, gloss, locale.exchangePhrase)) return true;
     }
     return false;
@@ -271,6 +294,11 @@ describe('every converted locale names the bill the way its trade names it', () 
 
       it('leaves no unexplained BOQ', () => {
         const left = untranslated(entries, locale).map((entry) => `${entry.key}: ${entry.value}`);
+        expect(left).toEqual([]);
+      });
+
+      it('leaves no unexplained English name for the bill', () => {
+        const left = untranslated(entries, locale, ENGLISH_NAME).map((entry) => `${entry.key}: ${entry.value}`);
         expect(left).toEqual([]);
       });
 
@@ -488,5 +516,37 @@ describe('the gate recognises the defective shapes and leaves the correct ones a
     expect(hits(french, 'Ouvrir le DQE')).toBe(false);
     expect(hits(french, 'Tous les DQE de ce projet')).toBe(false);
     expect(hits(french, 'Position du DQE')).toBe(false);
+  });
+
+  it('sees the loan word spelled out, where the abbreviation check is blind', () => {
+    const italian = { glossNames: ['computo metrico'] };
+    const fixture: Entry[] = [
+      { key: 'excel_label', value: 'Carica un Bill of Quantities .xlsx' },
+      { key: 'one', value: 'Un bill of quantity per opzione' },
+      { key: 'plural', value: 'Tutti i Bills of Quantities del progetto' },
+      { key: 'ok', value: 'Carica un computo metrico .xlsx' },
+      { key: 'gloss', value: 'Il computo metrico (Bill of Quantities) elenca le lavorazioni.' },
+    ];
+    expect(untranslated(fixture, italian, ENGLISH_NAME).map((entry) => entry.key)).toEqual(['excel_label', 'one', 'plural']);
+    // None of them says BOQ, which is the whole reason this pattern exists.
+    expect(untranslated(fixture, italian)).toEqual([]);
+  });
+
+  it('sees the second local name each of these two locales had kept', () => {
+    const japanese = LOCALES.find((l) => l.code === 'ja') as Locale;
+    const korean = LOCALES.find((l) => l.code === 'ko') as Locale;
+    const hits = (locale: Locale, value: string) => locale.rivals.some((rx) => rx.test(value));
+    expect(hits(japanese, '.xlsxの見積表をアップロード')).toBe(true);
+    expect(hits(japanese, '.xlsxの内訳書をアップロード')).toBe(false);
+    // The estimate keeps its own word.
+    expect(hits(japanese, '見積もりを作成')).toBe(false);
+    expect(hits(korean, '.xlsx 수량 명세서 업로드')).toBe(true);
+    expect(hits(korean, '.xlsx 수량명세서 업로드')).toBe(true);
+    expect(hits(korean, '.xlsx 내역서 업로드')).toBe(false);
+    // 수량 alone is the quantity, and 명세서 belongs to the payslip and the
+    // bill of materials. Neither may be caught by the pair.
+    expect(hits(korean, '모델 수량 (면적, 부피, 길이, 무게)')).toBe(false);
+    expect(hits(korean, '급여 명세서')).toBe(false);
+    expect(hits(korean, '자재명세서')).toBe(false);
   });
 });
