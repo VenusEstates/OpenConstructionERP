@@ -21,7 +21,6 @@ import pytest
 from app.modules.bcf.messages import (
     DEFAULT_LOCALE,
     available_locales,
-    is_key_present,
     reload_bundle,
     translate,
 )
@@ -50,6 +49,11 @@ class TestMessages:
         assert de != en
 
     def test_translate_unknown_key_is_detected(self) -> None:
+        # Imported inline: this name is new on the shared-class rewrite and
+        # must not make the whole file fail to collect on the pre-fix
+        # version, which would hide the real (behavioural) regression below.
+        from app.modules.bcf.messages import is_key_present
+
         assert is_key_present("bcf.topic_not_found") is True
         assert is_key_present("bcf.nonexistent.key") is False
 
