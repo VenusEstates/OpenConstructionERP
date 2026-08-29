@@ -115,6 +115,20 @@ reason :class:`DataRepairReport` gives: the query below is the only answer to
 "did this repair run here", and an install that had quietly stopped being able
 to write it reported ``healthy``.
 
+A module whose ``repairs.py`` cannot be imported is the third way this pass can
+come out wrong, and for a while it was the quietest. Discovery logged the
+import error and carried on, so the repair simply was not in the registry, the
+report had no outcome for it, and every published field answered exactly as it
+does for a pass where nothing was wrong: ``data_repairs_failed: false``,
+``data_repair_ledger_failed: false``, status ``healthy``. A module broken badly
+enough not to load at all was the *most* reassuring answer the endpoint could
+give. :class:`DataRepairDiscoveryFailure` is what makes it sayable:
+:func:`discover_data_repairs` records every module it could not import,
+:attr:`DataRepairReport.discovery_failures` carries them out of the pass, and
+:func:`app.main.publish_data_repair_verdict` turns them into
+``data_repairs_failed: true``. A repair that did not run is now reported as a
+repair that did not run.
+
 A repair that runs and changes nothing is the ordinary case and stays at DEBUG;
 a repair that runs and *changes rows* is logged at INFO with the count, because
 on an upgraded install that line is the only contemporaneous evidence that the
@@ -470,6 +484,28 @@ class DataRepairOutcome:
 
 
 @dataclass(frozen=True)
+class DataRepairDiscoveryFailure:
+    """A module whose ``repairs.py`` could not be imported on this boot.
+
+    Its repairs are not in the registry, so they are not in
+    :attr:`DataRepairReport.outcomes` either - not as ``failed``, not as
+    anything. That absence is the whole hazard: an outcome that is missing
+    looks identical to an outcome that never needed to exist, and the pass
+    would otherwise report the same verdict it reports for a clean run.
+
+    Attributes:
+        module: Dotted name of the module that would not import, so the log
+            line and the health verdict point at a file somebody can open.
+        error: ``TypeName: message``. Kept as text rather than as the exception
+            because this travels onto ``app.state`` and into a report that
+            outlives the traceback.
+    """
+
+    module: str
+    error: str
+
+
+@dataclass(frozen=True)
 class DataRepairReport:
     """What the whole pass did, in a form the boot path can publish.
 
@@ -486,10 +522,22 @@ class DataRepairReport:
     :func:`app.main.publish_data_repair_verdict`, which is the only writer of
     either, so a field added here and left unpublished is a change to one
     function rather than something nobody notices.
+
+    ``discovery_failures`` is the third thing that has to travel, and it is the
+    one that cannot be derived from the other two. ``failed`` is read off the
+    outcomes, so it can only ever name a repair that RAN. A repair whose module
+    did not import produced no outcome at all, which reads back through every
+    property here as a pass with nothing wrong in it. This field is the only
+    place that difference survives.
     """
 
     outcomes: tuple[DataRepairOutcome, ...]
     ledger_written: bool
+    #: Modules whose ``repairs.py`` could not be imported during this pass, and
+    #: whose repairs therefore did not run. Empty when the caller supplied its
+    #: own ``repairs`` tuple, because no discovery happened for that pass and a
+    #: leftover answer from an earlier one would be describing a different set.
+    discovery_failures: tuple[DataRepairDiscoveryFailure, ...] = ()
 
     @property
     def attempted(self) -> int:
@@ -516,6 +564,13 @@ _REGISTRY: dict[str, DataRepair] = {}
 #: :func:`discover_data_repairs`, and scanned statically by
 #: ``scripts/check_data_rewrite_boot_repair.py``.
 REPAIRS_MODULE_NAME = "repairs"
+
+#: Modules the last :func:`discover_data_repairs` call could not import. Rewritten
+#: in place on every discovery rather than appended to, so it always describes the
+#: pass that just ran; a module fixed between two boots must not go on being
+#: reported as broken by the second one. Mutable, so read it through
+#: :func:`data_repair_discovery_failures`.
+_DISCOVERY_FAILURES: list[DataRepairDiscoveryFailure] = []
 
 
 def register_data_repair(repair: DataRepair) -> DataRepair:
@@ -576,19 +631,26 @@ def discover_data_repairs() -> tuple[DataRepair, ...]:
 
     A module whose ``repairs.py`` raises is reported and skipped rather than
     allowed to stop the boot, on the same reasoning as a failing repair: one
-    module must not take the application down. The ERROR names the module,
-    and ``tests/unit/test_data_repair_registry.py`` cross-checks the registry
-    against what the revisions declare, so a module that quietly fails to
-    register is caught by a gate rather than only by a log nobody reads.
+    module must not take the application down. Skipped is not the same as
+    forgiven, and for a while it was treated as though it were: the ERROR named
+    the module and nothing else carried it, so the pass came out looking like a
+    pass with nothing in it to go wrong. Every skip is now recorded in
+    :data:`_DISCOVERY_FAILURES`, travels out on
+    :attr:`DataRepairReport.discovery_failures`, and reaches ``/api/health`` as
+    ``data_repairs_failed: true``. ``tests/unit/test_data_repair_registry.py``
+    additionally cross-checks the registry against what the revisions declare.
 
     Returns:
-        Every repair registered after discovery, in registration order.
+        Every repair registered after discovery, in registration order. The
+        modules that could not be imported are not in that answer, by
+        definition - read them from :func:`data_repair_discovery_failures`.
     """
     import importlib
     import pkgutil
 
     import app.modules as modules_pkg
 
+    failures: list[DataRepairDiscoveryFailure] = []
     for found in pkgutil.iter_modules(modules_pkg.__path__):
         if not found.ispkg:
             continue
@@ -596,10 +658,11 @@ def discover_data_repairs() -> tuple[DataRepair, ...]:
         try:
             importlib.import_module(dotted)
         except ModuleNotFoundError as exc:
-            # No repairs.py in this module, which is the normal case. Re-raise
-            # when the missing import is something *inside* repairs.py, because
-            # that is a real broken module rather than an absent one.
+            # No repairs.py in this module, which is the normal case and not a
+            # failure. A missing import from *inside* repairs.py is a different
+            # thing entirely - a real broken module - and is recorded.
             if exc.name != dotted:
+                failures.append(DataRepairDiscoveryFailure(module=dotted, error=f"{type(exc).__name__}: {exc}"))
                 logger.error(
                     "Data repair module %s failed to import (%s: %s); any repair it registers will "
                     "NOT run on this boot.",
@@ -609,6 +672,7 @@ def discover_data_repairs() -> tuple[DataRepair, ...]:
                     exc_info=True,
                 )
         except Exception as exc:  # noqa: BLE001 - one bad module must not stop the boot
+            failures.append(DataRepairDiscoveryFailure(module=dotted, error=f"{type(exc).__name__}: {exc}"))
             logger.error(
                 "Data repair module %s failed to import (%s: %s); any repair it registers will NOT run on this boot.",
                 dotted,
@@ -617,7 +681,21 @@ def discover_data_repairs() -> tuple[DataRepair, ...]:
                 exc_info=True,
             )
 
+    _DISCOVERY_FAILURES[:] = failures
     return registered_data_repairs()
+
+
+def data_repair_discovery_failures() -> tuple[DataRepairDiscoveryFailure, ...]:
+    """Modules the last :func:`discover_data_repairs` call could not import.
+
+    Returns:
+        An immutable snapshot, empty when every module imported or when
+        discovery has not run in this process yet. Those two are not the same
+        state and nothing here can tell them apart, which is why the answer
+        that matters is taken from the report of a pass that just discovered
+        rather than from this function on its own.
+    """
+    return tuple(_DISCOVERY_FAILURES)
 
 
 def __getattr__(name: str) -> object:
@@ -924,9 +1002,19 @@ async def run_data_repairs(
         app_version: Release string recorded against each ledger row.
 
     Returns:
-        A :class:`DataRepairReport` covering every repair attempted.
+        A :class:`DataRepairReport` covering every repair attempted, and every
+        module that could not be imported to be attempted in the first place.
     """
-    selected = discover_data_repairs() if repairs is None else repairs
+    if repairs is None:
+        selected = discover_data_repairs()
+        # Read straight after the discovery that produced them, so the report
+        # describes this pass. A caller supplying its own tuple gets none:
+        # nothing was discovered for it, and handing it the previous pass's
+        # answer would attribute somebody else's broken module to this run.
+        discovery_failures = data_repair_discovery_failures()
+    else:
+        selected = repairs
+        discovery_failures = ()
     outcomes: list[DataRepairOutcome] = []
     ledger_written = True
 
@@ -984,4 +1072,8 @@ async def run_data_repairs(
                 exc_info=True,
             )
 
-    return DataRepairReport(outcomes=tuple(outcomes), ledger_written=ledger_written)
+    return DataRepairReport(
+        outcomes=tuple(outcomes),
+        ledger_written=ledger_written,
+        discovery_failures=discovery_failures,
+    )

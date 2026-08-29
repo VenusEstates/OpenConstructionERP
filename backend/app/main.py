@@ -130,6 +130,17 @@ def publish_data_repair_verdict(app: FastAPI, report: "DataRepairReport | None")
     ``data_repairs_failed: false``. Nothing anywhere could then answer "did this
     repair run on this install", which is the only question a ledger exists for.
 
+    ``discovery_failures`` is the same mistake one step earlier and is folded
+    into ``data_repairs_failed`` here. A module whose ``repairs.py`` did not
+    import registers nothing, so its repairs are absent from ``failed`` for the
+    only reason ``failed`` can be read: that property lists repairs that RAN and
+    raised. Reading it alone answered ``false`` for a module broken badly enough
+    not to load, which is to say the more thoroughly broken module got the more
+    reassuring answer. A repair that did not run and a repair that ran and found
+    nothing wrong must not produce the same verdict, so a discovery failure
+    degrades exactly as a raising repair does, and the module names go on
+    ``data_repairs_failed_ids`` beside the repair ids.
+
     Args:
         app: The application whose ``state`` carries the verdict.
         report: What the pass returned, or ``None`` when the pass could not run
@@ -146,8 +157,13 @@ def publish_data_repair_verdict(app: FastAPI, report: "DataRepairReport | None")
         app.state.data_repair_ledger_failed = True
         return
 
-    app.state.data_repairs_failed = bool(report.failed)
-    app.state.data_repairs_failed_ids = report.failed
+    # Marked so a support log can tell a repair that raised from a module that
+    # never loaded. The two need different first moves - one is a database the
+    # repair could not touch, the other is a build that shipped a broken file -
+    # and an unmarked dotted path in a list of repair ids reads as neither.
+    unimported = tuple(f"<{failure.module} did not import>" for failure in report.discovery_failures)
+    app.state.data_repairs_failed = bool(report.failed) or bool(unimported)
+    app.state.data_repairs_failed_ids = report.failed + unimported
     # Inverted on the way out so the published field keeps the polarity of the
     # two beside it: ``true`` is the bad news on every one of them, and a
     # monitor should not need a second, opposite predicate for this one field.
@@ -1950,12 +1966,19 @@ def create_app() -> FastAPI:
         # current, this says whether the corrections that go with it landed.
         #
         # Three answers again, and the same polarity as ``schema_heal_failed``:
-        # ``true`` at least one repair raised, ``false`` every repair completed,
+        # ``true`` at least one repair raised or a module that registers repairs
+        # could not be imported, ``false`` every registered repair completed,
         # ``null`` the pass never ran (a deployment whose database is not
-        # PostgreSQL). Read with ``is True`` and not as a truth value. Which
-        # repairs failed is not published for the same reason the heal's cause
-        # is not - see this endpoint's docstring - and is on
-        # ``app.state.data_repairs_failed_ids`` and in the boot log.
+        # PostgreSQL). The import case belongs on this field rather than beside
+        # it: both mean the same thing to whoever reads this payload - a
+        # row-level correction this release ships did not land here - and a
+        # module that fails to load is the version of that which used to answer
+        # ``false``, because a repair that never registered cannot appear among
+        # the repairs that raised. Read with ``is True`` and not as a truth
+        # value. Which repairs failed, and which module did not import, is not
+        # published for the same reason the heal's cause is not - see this
+        # endpoint's docstring - and is on ``app.state.data_repairs_failed_ids``
+        # and in the boot log.
         _repairs_failed = getattr(app.state, "data_repairs_failed", None)
         result["data_repairs_failed"] = _repairs_failed
         if _repairs_failed is True:
@@ -3505,6 +3528,15 @@ def create_app() -> FastAPI:
                         "reported separately above and may well have landed; what is missing is the "
                         "record of them, so nothing can answer what this install has run. "
                         "/api/health reports data_repair_ledger_failed=true."
+                    )
+                if _repair_report.discovery_failures:
+                    logger.error(
+                        "Data repair modules did not import: %s. Whatever they register was never in "
+                        "the registry, so those repairs were not attempted on this boot and will not "
+                        "appear among the failures below - a repair that never loaded cannot be a "
+                        "repair that raised. This is a broken build rather than a database problem. "
+                        "/api/health reports data_repairs_failed=true.",
+                        ", ".join(f"{f.module} ({f.error})" for f in _repair_report.discovery_failures),
                     )
                 if _repair_report.failed:
                     logger.error(
