@@ -30,6 +30,12 @@ import { describe, expect, it } from 'vitest';
  * label reads closer to "budget" - and which of the two moves is a question
  * for a native speaker, not for a test.
  *
+ * The seventeen on validation.subtitle were arrived at twice, by two methods
+ * sharing no code: a stem and inflection reading of each pair, which accepts
+ * Turkish keşif özetini for keşif özeti, and the normalised substring
+ * containment this file implements. Both name the same seventeen locales, so
+ * doubting the list means doubting two instruments rather than one.
+ *
  * What the containment rule cannot see: where the catalogue label is a generic
  * word for money on a page - Raming, Rozpočet, Kosztorys, Presupuesto - any
  * occurrence of that word anywhere in the value satisfies the check, including
@@ -41,9 +47,24 @@ import { describe, expect, it } from 'vitest';
  * phrase verbatim, which is internal consistency and not a translation.
  */
 
-const LOCALES_DIR = ['src/app/locales', 'frontend/src/app/locales']
+const RESOLVED = ['src/app/locales', 'frontend/src/app/locales']
   .map((p) => resolve(process.cwd(), p))
   .find(existsSync);
+if (!RESOLVED) {
+  throw new Error(
+    'no locale directory at src/app/locales or frontend/src/app/locales: run this from frontend or from the repository root',
+  );
+}
+
+/**
+ * Narrowed once here rather than cast at each use. A cast only silences the
+ * compiler, and the undefined it hides would arrive at the readdirSync below,
+ * which runs while the file is being collected rather than inside a test. A
+ * collection error takes the whole file down, and vitest reports that as no
+ * tests, which reads like nothing to check rather than like a broken
+ * instrument. Failing here instead costs one line and names the cause.
+ */
+const LOCALES_DIR = RESOLVED;
 
 /** `  "key": "value",` - the shape every line in a locale file has. */
 const PAIR = /^\s*"((?:[^"\\]|\\.)*)"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,?\s*$/;
@@ -125,7 +146,7 @@ const BASELINE: Record<(typeof NAMING_KEYS)[number], Record<string, string>> = {
 
 function read(code: string): Map<string, string> {
   const values = new Map<string, string>();
-  for (const line of readFileSync(resolve(LOCALES_DIR as string, `${code}.ts`), 'utf8').split(/\r?\n/)) {
+  for (const line of readFileSync(resolve(LOCALES_DIR, `${code}.ts`), 'utf8').split(/\r?\n/)) {
     const [, key, value] = PAIR.exec(line) ?? [];
     if (key !== undefined && value !== undefined) values.set(key, value);
   }
@@ -138,7 +159,7 @@ function read(code: string): Map<string, string> {
  * overlay that renames this very object to Bid Schedule and is exactly the
  * kind of file where half a rename would survive unnoticed.
  */
-const CODES = readdirSync(LOCALES_DIR as string)
+const CODES = readdirSync(LOCALES_DIR)
   .filter((file) => file.endsWith('.ts'))
   .map((file) => file.replace(/\.ts$/, ''))
   .filter((code) => code !== 'en')
