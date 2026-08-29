@@ -1069,7 +1069,7 @@ export default function PayrollPage() {
                             <button
                               type="button"
                               onClick={() => toggleEntry(e.id)}
-                              className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs text-content-tertiary transition hover:bg-surface-hover hover:text-content-primary"
+                              className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-xs text-content-tertiary transition hover:bg-surface-secondary hover:text-content-primary"
                               aria-expanded={isOpen}
                               aria-label={t('payroll.toggle_deductions', {
                                 defaultValue: 'Show deductions',

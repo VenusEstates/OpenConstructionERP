@@ -2192,7 +2192,7 @@ export function CostDatabaseSearchModal({
                 <button
                   type="button"
                   onClick={() => setSectionMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border-light bg-surface-primary hover:bg-surface-hover text-content-secondary"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-border-light bg-surface-primary hover:bg-surface-secondary text-content-secondary"
                   data-testid="cost-modal-section-picker"
                   aria-haspopup="listbox"
                   aria-expanded={sectionMenuOpen}
@@ -2231,7 +2231,7 @@ export function CostDatabaseSearchModal({
                         setSectionMenuOpen(false);
                       }}
                       className={
-                        'w-full px-3 py-2 flex items-center justify-between gap-3 text-start hover:bg-surface-hover ' +
+                        'w-full px-3 py-2 flex items-center justify-between gap-3 text-start hover:bg-surface-secondary ' +
                         (selectedParentId === null
                           ? 'bg-blue-50/40 dark:bg-blue-950/20'
                           : '')
@@ -2258,7 +2258,7 @@ export function CostDatabaseSearchModal({
                           setSectionMenuOpen(false);
                         }}
                         className={
-                          'w-full px-3 py-2 flex items-center justify-between gap-3 text-start hover:bg-surface-hover ' +
+                          'w-full px-3 py-2 flex items-center justify-between gap-3 text-start hover:bg-surface-secondary ' +
                           (selectedParentId === s.id
                             ? 'bg-blue-50/40 dark:bg-blue-950/20'
                             : '')

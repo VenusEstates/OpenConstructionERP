@@ -109,7 +109,7 @@ export function FundingSourcesSection({ projectId, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border-light">
                 {(fsQ.data ?? []).map((fs) => (
-                  <tr key={fs.id} className="hover:bg-surface-hover/40">
+                  <tr key={fs.id} className="hover:bg-surface-secondary/40">
                     <td className="px-3 py-2 font-mono text-xs text-content-secondary">{fs.code}</td>
                     <td className="px-3 py-2 text-content-primary">{fs.name}</td>
                     {!readOnly && (
@@ -118,7 +118,7 @@ export function FundingSourcesSection({ projectId, readOnly }: Props) {
                           <button
                             type="button"
                             onClick={() => setModal({ open: true, initial: fs })}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-content-tertiary hover:bg-surface-hover hover:text-content-primary"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-content-tertiary hover:bg-surface-secondary hover:text-content-primary"
                             aria-label={t('common.edit', { defaultValue: 'Edit' })}
                           >
                             <Pencil size={13} />

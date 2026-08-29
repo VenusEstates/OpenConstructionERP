@@ -99,7 +99,7 @@ export function StageRail({
                 isCurrent
                   ? 'bg-oe-blue/10 ring-1 ring-oe-blue/30'
                   : reachable
-                    ? 'hover:bg-surface-muted'
+                    ? 'hover:bg-surface-secondary'
                     : 'opacity-50 cursor-not-allowed',
               )}
               aria-current={isCurrent ? 'step' : undefined}

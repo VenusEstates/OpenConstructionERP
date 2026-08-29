@@ -119,7 +119,7 @@ export function ThresholdRulesModal({
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-hover transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-secondary transition-colors"
             aria-label={t('common.close', { defaultValue: 'Close' })}
           >
             <X size={18} />
@@ -306,7 +306,7 @@ export function ThresholdRulesModal({
             <button
               onClick={resetDefaults}
               disabled={draft.length === 0}
-              className="h-8 px-2.5 rounded-md text-xs text-content-tertiary hover:text-content-primary hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+              className="h-8 px-2.5 rounded-md text-xs text-content-tertiary hover:text-content-primary hover:bg-surface-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
               data-testid="threshold-reset"
             >
               <RotateCcw size={13} />

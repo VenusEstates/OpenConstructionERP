@@ -658,7 +658,7 @@ function ModelReviewInner({ projectId }: { projectId: string }) {
         <button
           type="button"
           onClick={() => setChecksOpen((v) => !v)}
-          className="flex items-center gap-1.5 rounded-lg border border-border-light px-2.5 py-1.5 text-sm text-content-secondary hover:bg-surface-hover"
+          className="flex items-center gap-1.5 rounded-lg border border-border-light px-2.5 py-1.5 text-sm text-content-secondary hover:bg-surface-secondary"
           aria-pressed={checksOpen}
         >
           {checksOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
@@ -667,7 +667,7 @@ function ModelReviewInner({ projectId }: { projectId: string }) {
         <button
           type="button"
           onClick={() => setIssuesOpen((v) => !v)}
-          className="flex items-center gap-1.5 rounded-lg border border-border-light px-2.5 py-1.5 text-sm text-content-secondary hover:bg-surface-hover"
+          className="flex items-center gap-1.5 rounded-lg border border-border-light px-2.5 py-1.5 text-sm text-content-secondary hover:bg-surface-secondary"
           aria-pressed={issuesOpen}
         >
           {issuesOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}

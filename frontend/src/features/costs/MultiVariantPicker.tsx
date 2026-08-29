@@ -339,7 +339,7 @@ export function MultiVariantPicker({
           </div>
           <button
             onClick={onCancel}
-            className="p-1.5 rounded-lg hover:bg-surface-hover text-content-tertiary"
+            className="p-1.5 rounded-lg hover:bg-surface-secondary text-content-tertiary"
             aria-label={t('common.close', { defaultValue: 'Close' })}
             data-testid="multi-variant-picker-close"
           >
@@ -395,7 +395,7 @@ export function MultiVariantPicker({
                 {/* Slot header — always visible, click to expand */}
                 <button
                   onClick={() => setExpandedSlot(expanded ? null : slot.slotId)}
-                  className="w-full px-4 py-3 flex items-start gap-3 hover:bg-surface-hover text-start"
+                  className="w-full px-4 py-3 flex items-start gap-3 hover:bg-surface-secondary text-start"
                   aria-expanded={expanded}
                   aria-controls={`mvp-slot-body-${slot.slotId}`}
                 >
@@ -497,7 +497,7 @@ export function MultiVariantPicker({
                             setSlotPick(slot.slotId, { kind: 'variant', variant: v })
                           }
                           className={
-                            'w-full px-4 py-2.5 flex items-start gap-3 text-start hover:bg-surface-hover ' +
+                            'w-full px-4 py-2.5 flex items-start gap-3 text-start hover:bg-surface-secondary ' +
                             (checked ? 'bg-blue-50/50 dark:bg-blue-950/30 ring-1 ring-inset ring-oe-blue/30' : '')
                           }
                           data-testid={`mvp-row-${slot.slotId}-${v.index}`}
@@ -611,7 +611,7 @@ function BulkChip({
   return (
     <button
       onClick={onClick}
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-surface-primary border border-border-light hover:bg-surface-hover text-content-secondary transition-colors"
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-surface-primary border border-border-light hover:bg-surface-secondary text-content-secondary transition-colors"
       data-testid={testId}
     >
       {icon}
@@ -637,7 +637,7 @@ function DefaultRow({
     <button
       onClick={onPick}
       className={
-        'w-full px-4 py-2.5 flex items-start gap-3 text-start hover:bg-surface-hover ' +
+        'w-full px-4 py-2.5 flex items-start gap-3 text-start hover:bg-surface-secondary ' +
         (picked ? 'bg-blue-50/50 dark:bg-blue-950/30 ring-1 ring-inset ring-oe-blue/30' : '')
       }
       data-testid={`mvp-row-${slot.slotId}-default-${strategy}`}

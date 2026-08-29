@@ -1135,7 +1135,7 @@ export function CreateProjectModal({
           <button
             onClick={requestClose}
             aria-label={t('common.close', { defaultValue: 'Close' })}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-hover transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-secondary transition-colors"
           >
             <X size={18} />
           </button>

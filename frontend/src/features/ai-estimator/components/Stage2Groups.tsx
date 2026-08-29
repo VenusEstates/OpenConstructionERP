@@ -308,7 +308,7 @@ export function Stage2Groups({
                       <button
                         type="button"
                         onClick={() => setSplitGroupId(g.id)}
-                        className="inline-flex items-center justify-center rounded p-1 text-content-tertiary hover:bg-surface-muted hover:text-oe-blue"
+                        className="inline-flex items-center justify-center rounded p-1 text-content-tertiary hover:bg-surface-secondary hover:text-oe-blue"
                         title={t('aiest.groups.split', { defaultValue: 'Split group' })}
                         aria-label={t('aiest.groups.split', { defaultValue: 'Split group' })}
                       >

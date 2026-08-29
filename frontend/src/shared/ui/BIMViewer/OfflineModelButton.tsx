@@ -137,7 +137,7 @@ export function OfflineModelButton({ modelId, className }: OfflineModelButtonPro
       <button
         type="button"
         onClick={handleClick}
-        className={`${base} border-border-light text-content-secondary hover:bg-surface-hover ${className ?? ''}`}
+        className={`${base} border-border-light text-content-secondary hover:bg-surface-secondary ${className ?? ''}`}
         title={t('bim.offline_cancel_hint', { defaultValue: 'Downloading - click to cancel' })}
       >
         <Loader2 size={15} className="animate-spin" />
@@ -184,7 +184,7 @@ export function OfflineModelButton({ modelId, className }: OfflineModelButtonPro
     <button
       type="button"
       onClick={handleClick}
-      className={`${base} border-border-light text-content-secondary hover:bg-surface-hover ${className ?? ''}`}
+      className={`${base} border-border-light text-content-secondary hover:bg-surface-secondary ${className ?? ''}`}
       title={t('bim.offline_save_hint', {
         defaultValue: 'Download this model to this device so it opens with no network on site.',
       })}

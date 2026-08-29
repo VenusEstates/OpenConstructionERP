@@ -1034,7 +1034,7 @@ export function BcfIssuesPanel({
                   'flex h-8 w-8 items-center justify-center rounded-lg border transition-colors',
                   showDashboard
                     ? 'border-oe-blue/40 bg-oe-blue-subtle/40 text-oe-blue'
-                    : 'border-border-light text-content-secondary hover:bg-surface-hover',
+                    : 'border-border-light text-content-secondary hover:bg-surface-secondary',
                 )}
               >
                 <BarChart3 size={15} />
@@ -1045,7 +1045,7 @@ export function BcfIssuesPanel({
                   onClick={() => setShowCoordination(true)}
                   title={t('bcf.coordination_mode', { defaultValue: 'Coordination mode' })}
                   aria-label={t('bcf.coordination_mode', { defaultValue: 'Coordination mode' })}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-hover"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-secondary"
                 >
                   <Presentation size={15} />
                 </button>
@@ -1055,7 +1055,7 @@ export function BcfIssuesPanel({
                 onClick={handlePrintReport}
                 title={t('bcf.print_report', { defaultValue: 'Print report' })}
                 aria-label={t('bcf.print_report', { defaultValue: 'Print report' })}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-hover"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-secondary"
               >
                 <Printer size={15} />
               </button>

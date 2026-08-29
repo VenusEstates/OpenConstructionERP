@@ -226,7 +226,7 @@ function FilterChip({
         'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium transition-colors',
         active
           ? 'border-oe-blue/50 bg-oe-blue-subtle/50 text-oe-blue'
-          : 'border-border-light text-content-secondary hover:bg-surface-hover',
+          : 'border-border-light text-content-secondary hover:bg-surface-secondary',
       )}
     >
       {label}
@@ -281,7 +281,7 @@ function ReviewRow({
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-oe-blue/40',
         active
           ? 'border-oe-blue/50 bg-oe-blue-subtle/30'
-          : 'border-border-light bg-surface-primary hover:bg-surface-hover',
+          : 'border-border-light bg-surface-primary hover:bg-surface-secondary',
         done && 'opacity-70',
       )}
     >
@@ -406,7 +406,7 @@ function ReviewIssueDetail({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs font-medium text-content-secondary hover:bg-surface-hover"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs font-medium text-content-secondary hover:bg-surface-secondary"
         >
           <ArrowLeft size={13} />
           {t('bim.review_back_to_list', { defaultValue: 'All issues' })}
@@ -426,7 +426,7 @@ function ReviewIssueDetail({
           type="button"
           onClick={onPrev}
           disabled={!onPrev}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-content-secondary hover:bg-surface-hover disabled:opacity-30"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-content-secondary hover:bg-surface-secondary disabled:opacity-30"
           title={t('bcf.coordination_prev', { defaultValue: 'Previous issue' })}
           aria-label={t('bcf.coordination_prev', { defaultValue: 'Previous issue' })}
         >
@@ -436,7 +436,7 @@ function ReviewIssueDetail({
           type="button"
           onClick={onNext}
           disabled={!onNext}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-content-secondary hover:bg-surface-hover disabled:opacity-30"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-content-secondary hover:bg-surface-secondary disabled:opacity-30"
           title={t('bcf.coordination_next', { defaultValue: 'Next issue' })}
           aria-label={t('bcf.coordination_next', { defaultValue: 'Next issue' })}
         >
@@ -871,7 +871,7 @@ export function ReviewIssuesDock({
           type="button"
           onClick={onExport}
           disabled={visible.length === 0 || exporting}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-hover disabled:opacity-40"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-secondary disabled:opacity-40"
           title={t('bim.review_export_visible', {
             defaultValue: 'Export these issues as .bcfzip',
           })}
@@ -885,7 +885,7 @@ export function ReviewIssuesDock({
           type="button"
           onClick={onPrint}
           disabled={visible.length === 0}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-hover disabled:opacity-40"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-secondary disabled:opacity-40"
           title={t('bcf.print_report', { defaultValue: 'Print report' })}
           aria-label={t('bcf.print_report', { defaultValue: 'Print report' })}
         >
@@ -894,7 +894,7 @@ export function ReviewIssuesDock({
         <button
           type="button"
           onClick={onOpenRegister}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-hover"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-light text-content-secondary transition-colors hover:bg-surface-secondary"
           title={t('bim.review_open_register', { defaultValue: 'Open the full issue register' })}
           aria-label={t('bim.review_open_register', { defaultValue: 'Open the full issue register' })}
         >
@@ -941,7 +941,7 @@ export function ReviewIssuesDock({
                 <button
                   type="button"
                   onClick={() => patch({ search: '' })}
-                  className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-content-tertiary hover:bg-surface-hover"
+                  className="absolute end-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-content-tertiary hover:bg-surface-secondary"
                   aria-label={t('common.clear', { defaultValue: 'Clear' })}
                 >
                   <X size={12} />
@@ -986,7 +986,7 @@ export function ReviewIssuesDock({
                 type="button"
                 onClick={() => setShowFilters((v) => !v)}
                 aria-pressed={showFilters}
-                className="ms-auto rounded-md px-1.5 py-0.5 text-2xs font-medium text-content-secondary hover:bg-surface-hover"
+                className="ms-auto rounded-md px-1.5 py-0.5 text-2xs font-medium text-content-secondary hover:bg-surface-secondary"
               >
                 {showFilters
                   ? t('bim.review_fewer_filters', { defaultValue: 'Less' })

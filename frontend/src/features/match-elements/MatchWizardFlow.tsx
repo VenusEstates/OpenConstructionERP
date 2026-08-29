@@ -242,7 +242,7 @@ function StageRail({
                 isCurrent
                   ? 'bg-oe-blue/10 ring-1 ring-oe-blue/30'
                   : reachable
-                    ? 'hover:bg-surface-muted'
+                    ? 'hover:bg-surface-secondary'
                     : 'opacity-50 cursor-not-allowed',
               )}
               aria-current={isCurrent ? 'step' : undefined}
@@ -454,7 +454,7 @@ function LaneSection({
         {groups.map((g) => (
           <li
             key={g.id}
-            className="flex flex-wrap items-center gap-3 px-4 py-2.5 hover:bg-surface-muted"
+            className="flex flex-wrap items-center gap-3 px-4 py-2.5 hover:bg-surface-secondary"
           >
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium text-content-primary">
@@ -1239,7 +1239,7 @@ export function MatchWizardFlow() {
           <button
             type="button"
             onClick={() => setShowTemplates(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm font-medium text-content-primary transition-colors hover:bg-surface-muted"
+            className="inline-flex items-center gap-2 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm font-medium text-content-primary transition-colors hover:bg-surface-secondary"
           >
             <Library className="h-4 w-4 text-indigo-500" />
             {t('match.wizard.openTemplateLibrary', {
@@ -1593,7 +1593,7 @@ export function MatchWizardFlow() {
                             'rounded-lg border px-3 py-2 text-sm transition-colors',
                             useNet === opt.v
                               ? 'border-oe-blue bg-oe-blue/5 text-oe-blue'
-                              : 'border-border-light hover:bg-surface-muted',
+                              : 'border-border-light hover:bg-surface-secondary',
                           )}
                         >
                           {opt.l}

@@ -158,7 +158,7 @@ export function Stage1Intake(props: Stage1IntakeProps) {
                 'flex flex-col gap-1.5 rounded-xl border p-3 text-left transition-all',
                 active
                   ? 'border-oe-blue bg-oe-blue/5 ring-1 ring-oe-blue/30'
-                  : 'border-border-light hover:border-border hover:bg-surface-muted',
+                  : 'border-border-light hover:border-border hover:bg-surface-secondary',
               )}
             >
               <span className={clsx('text-content-primary', active && 'text-oe-blue')}>
@@ -209,7 +209,7 @@ export function Stage1Intake(props: Stage1IntakeProps) {
                 'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors',
                 dragOver
                   ? 'border-oe-blue bg-oe-blue/5'
-                  : 'border-border-light hover:border-border hover:bg-surface-muted',
+                  : 'border-border-light hover:border-border hover:bg-surface-secondary',
               )}
             >
               <Upload className="h-7 w-7 text-content-tertiary" />
@@ -285,7 +285,7 @@ export function Stage1Intake(props: Stage1IntakeProps) {
                   const checked = selectedDocIds.includes(d.id);
                   return (
                     <li key={d.id}>
-                      <label className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm hover:bg-surface-muted">
+                      <label className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm hover:bg-surface-secondary">
                         <input
                           type="checkbox"
                           checked={checked}

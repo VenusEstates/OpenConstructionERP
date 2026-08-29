@@ -2516,7 +2516,7 @@ function DrillDownModal({
             onClick={onClose}
             data-testid="chart-drill-close"
             aria-label={t('common.close', { defaultValue: 'Close' })}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-hover"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-secondary"
           >
             <X size={18} />
           </button>
@@ -2598,7 +2598,7 @@ function ViewsDrawer({ open, onClose }: ViewsDrawerProps) {
           <button
             onClick={onClose}
             aria-label={t('common.close', { defaultValue: 'Close' })}
-            className="h-7 w-7 rounded-lg hover:bg-surface-hover flex items-center justify-center"
+            className="h-7 w-7 rounded-lg hover:bg-surface-secondary flex items-center justify-center"
             data-testid="views-drawer-close"
           >
             <X size={16} />
@@ -2987,7 +2987,7 @@ function CreateBOQFromPivotModal({ open, onClose, groups, groupByColumns, aggCol
           <button
             onClick={onClose}
             aria-label={t('common.close', { defaultValue: 'Close' })}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-hover transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-secondary transition-colors"
           >
             <X size={18} />
           </button>

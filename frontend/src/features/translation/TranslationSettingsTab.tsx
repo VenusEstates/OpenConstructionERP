@@ -351,7 +351,7 @@ const DictionariesTable = memo(function DictionariesTable({
             {entries.map(({ kind, entry }) => (
               <tr
                 key={`${kind}-${entry.pair}`}
-                className="hover:bg-surface-hover/40"
+                className="hover:bg-surface-secondary/40"
                 data-testid={`translation-dict-row-${kind}-${entry.pair}`}
               >
                 <td className="px-4 py-2.5">

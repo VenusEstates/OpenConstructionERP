@@ -679,7 +679,7 @@ function ActionCard({ icon, title, subtitle, loading, disabled, onClick, expande
             aria-label={expanded
               ? t('common.collapse', { defaultValue: 'Collapse' })
               : t('common.expand', { defaultValue: 'Expand' })}
-            className="shrink-0 p-1 rounded hover:bg-surface-hover transition-colors"
+            className="shrink-0 p-1 rounded hover:bg-surface-secondary transition-colors"
           >
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>

@@ -211,7 +211,7 @@ export function CoordinationMode({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-hover"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-secondary"
               aria-label={t('common.close', { defaultValue: 'Close' })}
             >
               <X size={16} />
