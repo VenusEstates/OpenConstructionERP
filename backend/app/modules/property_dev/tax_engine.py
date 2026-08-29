@@ -1253,8 +1253,19 @@ def compute_transfer_fee(
     if not isinstance(block, Mapping):
         return _money(_ZERO)
     if emirate is None:
-        # Caller didn't specify - default to the most-used emirate.
-        # Convention: first key alphabetically gives deterministic output.
+        # Caller didn't specify, so this falls back to whichever subcode sorts
+        # first. That is the whole rule: it is not the most-used emirate, and
+        # nothing here knows which one that would be. The sort only buys a
+        # repeatable answer, not a defensible one.
+        #
+        # Note the asymmetry with the check below, which is the risk worth
+        # seeing before changing anything here. A subcode we do not recognise
+        # raises; a subcode nobody supplied is filled in silently and prices
+        # the contract at some other emirate's rate. Transfer rates differ
+        # across the emirates, so on a property deal that gap is money rather
+        # than rounding, and the caller gets no signal that a default was used.
+        # Making this raise as well would be symmetric, but it changes the
+        # behaviour of a shipped API and is a decision rather than a fix.
         keys = sorted(block.keys())
         if not keys:
             return _money(_ZERO)
