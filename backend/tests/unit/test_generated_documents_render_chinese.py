@@ -507,6 +507,7 @@ def build_report(*, chinese: bool) -> bytes:
             generated_at=generated_at,
             template_data={},
             data_snapshot={"summary": {"分部工程": CN_SECTION, "清单项目": CN_ITEM}},
+            locale="zh",
         )
     return _export_pdf(
         title="Kostenübersicht",
@@ -516,6 +517,7 @@ def build_report(*, chinese: bool) -> bytes:
         generated_at=generated_at,
         template_data={},
         data_snapshot={"summary": {"Gewerk": DE_SECTION, "Position": DE_ITEM}},
+        locale="de",
     )
 
 

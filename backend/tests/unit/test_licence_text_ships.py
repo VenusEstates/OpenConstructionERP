@@ -171,11 +171,25 @@ def test_every_bundled_licence_notice_names_exists(path: Path) -> None:
     exist and which binary each covers, so a path here that names nothing is a
     notice claiming an attribution the artefact does not carry.
     """
-    referenced = sorted(set(re.findall(r"backend/(app/core/licenses/[A-Za-z0-9_./-]+)", _text(path))))
+    # The last character has to be one a filename can actually end on. A dot is
+    # allowed inside the path because a licence text may carry an extension, but
+    # NOTICE is prose and two of these paths end a sentence, so a trailing run of
+    # dots belongs to the sentence rather than to the file. Matching it produced
+    # a failure naming ``LICENSE_GPL_3_0.`` and ``LICENSE_OPENSSL_SSLEAY.`` while
+    # both files sat in the tree correctly named, which is the gate failing on
+    # its own data: the notice was right, the files were right, and the reader
+    # was wrong. The third reference passed only because it happens to end a line.
+    referenced = sorted(set(re.findall(r"backend/(app/core/licenses/[A-Za-z0-9_./-]*[A-Za-z0-9_-])", _text(path))))
 
-    # Anti-vacuity: three entries name a licence text today. An empty match set
-    # would pass the loop below on any file at all, including one with the
-    # section deleted.
+    # Anti-vacuity: seven entries name a licence text today, not the three this
+    # said before the reader was fixed. Two of the seven were being read with a
+    # sentence's full stop attached and a further four were never reached at
+    # all, so the number written here had been describing the reader rather than
+    # the notice. The floor stays well under seven because a dependency that
+    # stops bundling somebody else's object code should be able to drop its
+    # entry without failing this, but note what that costs: the assertion below
+    # catches the section being deleted and would not catch it being gutted.
+    # An empty match set would otherwise pass the loop on any file at all.
     assert len(referenced) >= 2, (
         f"{path.relative_to(REPO_ROOT)} names {referenced} under app/core/licenses. The notice used "
         "to point at a committed licence text for every bundled binary that ships without one, so a "
