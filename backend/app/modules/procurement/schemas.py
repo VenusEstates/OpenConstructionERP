@@ -174,6 +174,22 @@ class POItemResponse(BaseModel):
     updated_at: datetime
 
 
+class POCancelRequest(BaseModel):
+    """Void a purchase order, keeping the row and its number.
+
+    A cancellation is a fact about a commercial document, so it carries a
+    reason: the PO survives with ``status="cancelled"`` and the reason stored
+    beside it, and the next person to open the register can see why a number
+    in the sequence buys nothing. The field is optional because a cancel that
+    refused to proceed without prose would only teach people to type a full
+    stop.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    reason: str | None = Field(default=None, max_length=1000)
+
+
 class POResponse(BaseModel):
     """Purchase order returned from the API."""
 

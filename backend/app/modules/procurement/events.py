@@ -643,6 +643,11 @@ async def _on_supplier_rating_update(event: Event) -> None:
 #   * procurement.po.updated            - PO fields changed
 #   * procurement.po.approved           - PO transitioned to 'approved'
 #   * procurement.po.issued             - PO transitioned to 'issued'
+#   * procurement.po.cancelled          - PO voided out of a committed state;
+#                                         finance decrements ``committed`` by
+#                                         exactly what this PO committed
+#   * procurement.po.reverted           - PO taken back to draft, same effect
+#   * procurement.po.deleted            - a never-issued draft PO removed
 #   * procurement.gr.created            - new goods receipt inserted
 #   * procurement.gr.confirmed          - goods receipt confirmed
 #   * procurement.po.retainage_released - withheld retainage released (Gap F)
@@ -659,6 +664,9 @@ PUBLISHED_EVENTS = (
     "procurement.po.updated",
     "procurement.po.approved",
     "procurement.po.issued",
+    "procurement.po.cancelled",
+    "procurement.po.reverted",
+    "procurement.po.deleted",
     "procurement.gr.created",
     "procurement.gr.confirmed",
     "procurement.po.retainage_released",

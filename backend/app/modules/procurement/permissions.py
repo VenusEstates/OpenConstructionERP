@@ -28,6 +28,11 @@ def register_procurement_permissions() -> None:
             # MANAGER-level gate, the same tier as issuing it.
             "procurement.approve": Role.MANAGER,
             "procurement.issue": Role.MANAGER,
+            # Voiding a purchase order withdraws a commitment a supplier has
+            # already been told about, so it sits at the same tier as making
+            # that commitment in the first place. An EDITOR who may raise and
+            # amend a PO may not take one back out of circulation.
+            "procurement.cancel": Role.MANAGER,
             "procurement.confirm_receipt": Role.EDITOR,
             # R7 (2026-05-24): PO → Invoice conversion is a financial
             # commitment, MANAGER-only.

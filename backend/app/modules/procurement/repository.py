@@ -6,6 +6,7 @@ All database queries for procurement entities live here.
 No business logic - pure data access.
 """
 
+import logging
 import uuid
 
 from sqlalchemy import delete, func, select, update
@@ -15,10 +16,18 @@ from app.core.orm_write import apply_update
 from app.modules.procurement.models import (
     GoodsReceipt,
     GoodsReceiptItem,
+    MaterialRequisition,
     PORetainageRelease,
     PurchaseOrder,
     PurchaseOrderItem,
 )
+
+logger = logging.getLogger(__name__)
+
+#: Statuses a PO can only reach by leaving ``draft``. Recorded in the
+#: status-change audit trail, they are what proves a PO was once live even
+#: after ``cancelled -> draft`` has put it back in ``draft``.
+_POST_DRAFT_PO_STATUSES = ("approved", "issued", "partially_received", "completed")
 
 
 class PurchaseOrderRepository:
@@ -225,6 +234,94 @@ class PurchaseOrderRepository:
         )
         max_suffix = (await self.session.execute(stmt)).scalar_one()
         return f"PO-{max_suffix + 1:03d}"
+
+    # ── Removal support: who is holding this PO ──────────────────────────
+    #
+    # Counting queries, one per holder kind, so a refusal can name what is in
+    # the way instead of saying "in use". They are separate rather than one
+    # UNION because the kinds do not share a table and a caller that only
+    # needs one should not pay for the rest.
+
+    async def count_goods_receipts(self, po_id: uuid.UUID) -> int:
+        """Number of goods receipts booked against this PO, any status."""
+        stmt = select(func.count()).select_from(GoodsReceipt).where(GoodsReceipt.po_id == po_id)
+        return int((await self.session.execute(stmt)).scalar_one() or 0)
+
+    async def count_retainage_releases(self, po_id: uuid.UUID) -> int:
+        """Number of retainage releases already paid out against this PO."""
+        stmt = select(func.count()).select_from(PORetainageRelease).where(PORetainageRelease.po_id == po_id)
+        return int((await self.session.execute(stmt)).scalar_one() or 0)
+
+    async def count_requisitions(self, po_id: uuid.UUID) -> int:
+        """Number of material requisitions this PO was raised from.
+
+        ``MaterialRequisition.po_id`` is ``ON DELETE SET NULL``, so a raw
+        delete of the PO does not fail here - it silently unlinks the
+        requisition and the requisition's own history stops explaining what
+        was bought against it. That silence is exactly why it is counted.
+        """
+        stmt = select(func.count()).select_from(MaterialRequisition).where(MaterialRequisition.po_id == po_id)
+        return int((await self.session.execute(stmt)).scalar_one() or 0)
+
+    async def count_payable_invoices(self, po_id: uuid.UUID, project_id: uuid.UUID) -> int:
+        """Number of payable invoices raised from this PO.
+
+        Finance is an optional module and its ``Invoice`` carries no foreign
+        key to a PO - ``create_invoice_from_po`` stamps the link into
+        ``Invoice.metadata_["po_id"]``. This reads that same stamp, which is
+        the link ``get_match_status`` already relies on; a check reading
+        anything else would report zero for every invoice ever created.
+
+        The metadata filter is applied in Python for the same reason
+        ``get_match_status`` does it: the JSON key lookup is not portable
+        across the backends the test suite runs on, and the candidate set is
+        one project's payables.
+        """
+        try:
+            from app.modules.finance.models import Invoice
+        except Exception:  # noqa: BLE001 - finance is an optional module
+            logger.debug("Finance module unavailable; PO %s invoice holders not counted", po_id)
+            return 0
+
+        stmt = select(Invoice.metadata_).where(
+            Invoice.project_id == project_id,
+            Invoice.invoice_direction == "payable",
+        )
+        rows = (await self.session.execute(stmt)).all()
+        return sum(1 for (meta,) in rows if isinstance(meta, dict) and str(meta.get("po_id")) == str(po_id))
+
+    async def has_left_draft(self, po_id: uuid.UUID) -> bool:
+        """True when this PO has ever been approved, issued or received against.
+
+        Current status cannot answer this on its own. The PO state machine
+        allows ``cancelled -> draft``, so a PO that was approved, issued,
+        cancelled and then reopened sits in ``draft`` again while its number
+        is already in a supplier's inbox. The status-change audit trail is the
+        only record of that history, and every door into ``approved`` and
+        ``issued`` writes one.
+        """
+        from app.core.audit_log import ActivityLog
+
+        stmt = (
+            select(func.count())
+            .select_from(ActivityLog)
+            .where(
+                ActivityLog.entity_type == "purchase_order",
+                ActivityLog.entity_id == str(po_id),
+                ActivityLog.to_status.in_(_POST_DRAFT_PO_STATUSES),
+            )
+        )
+        return int((await self.session.execute(stmt)).scalar_one() or 0) > 0
+
+    async def delete(self, po_id: uuid.UUID) -> None:
+        """Hard-delete a PO and, by cascade, its own line items.
+
+        Callers must have cleared :meth:`count_goods_receipts` and friends
+        first. This is the raw verb; the decision about whether a PO may be
+        deleted at all belongs to the service.
+        """
+        await self.session.execute(delete(PurchaseOrder).where(PurchaseOrder.id == po_id))
+        await self.session.flush()
 
 
 class POItemRepository:

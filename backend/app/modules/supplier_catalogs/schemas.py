@@ -169,6 +169,34 @@ class CatalogItemCreate(BaseModel):
     commodity_scheme: str = Field(default="unspsc", max_length=16)
 
 
+class CatalogItemUpdate(BaseModel):
+    """Patch a catalog item.
+
+    ``sku`` is absent on purpose, for the same reason ``VendorUpdate`` leaves
+    ``code`` out: it is the item's unique business key, and price lists,
+    requisition lines and order lines all quote it. Correcting a typo in a
+    name or a unit is one operation; rekeying an item every other record
+    points at is a different one, and it is not this route.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=4000)
+    category_id: UUID | None = None
+    unit_of_measure: str | None = Field(default=None, min_length=1, max_length=20)
+    manufacturer: str | None = Field(default=None, max_length=255)
+    mpn: str | None = Field(default=None, max_length=100)
+    spec: dict[str, Any] | None = None
+    hazard_class: str | None = Field(default=None, max_length=50)
+    shelf_life_days: int | None = Field(default=None, ge=0)
+    reorder_point: Decimal | None = Field(default=None, ge=0)
+    gtin: str | None = Field(default=None, max_length=20)
+    commodity_code: str | None = Field(default=None, max_length=32)
+    commodity_scheme: str | None = Field(default=None, max_length=16)
+    active: bool | None = None
+
+
 class CatalogItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -518,6 +546,34 @@ class WarehouseCreate(BaseModel):
     code: str = Field(..., min_length=1, max_length=50)
     name: str = Field(..., min_length=1, max_length=255)
     project_id: UUID | None = None
+    address: str | None = Field(default=None, max_length=1000)
+    manager_user_id: str | None = Field(default=None, max_length=36)
+
+
+class WarehouseUpdate(BaseModel):
+    """Patch a warehouse.
+
+    Two columns are deliberately out of reach here.
+
+    ``code`` is the unique business key, as ``code`` is on a vendor and
+    ``sku`` is on a catalog item.
+
+    ``project_id`` decides who is allowed to read this warehouse's balances
+    and costs, so moving it is an access change rather than a correction; it
+    would have to be authorised against the project the warehouse is leaving
+    as well as the one it is joining, which is a different route from this
+    one.
+
+    ``status`` is absent for a third reason, and it is worth writing down:
+    nothing in the module reads it. It is written once as ``"active"`` on
+    create and no query, service branch or screen ever looks at it again, so
+    a field that let a user change it would look like closing a warehouse
+    while changing nothing at all.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
     address: str | None = Field(default=None, max_length=1000)
     manager_user_id: str | None = Field(default=None, max_length=36)
 
