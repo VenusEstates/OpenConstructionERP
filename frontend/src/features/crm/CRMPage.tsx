@@ -60,6 +60,7 @@ import {
   Clock,
   Network,
   FileSignature,
+  Trash2,
 } from 'lucide-react';
 import {
   Button,
@@ -74,6 +75,8 @@ import {
   CollapsibleSection,
 } from '@/shared/ui';
 import { PageHeader } from '@/shared/ui/PageHeader';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { crmGuide } from './crmGuide';
 import {
   WideModal,
@@ -101,6 +104,8 @@ import {
   createActivity,
   qualifyLead,
   disqualifyLead,
+  deleteLead,
+  parseRemovalRefusal,
   convertLead,
   moveOpportunityStage,
   winOpportunity,
@@ -120,6 +125,7 @@ import {
   type LeadSource,
   type OpportunityStatus,
   type ActivityKind,
+  type RemovalRefusal,
 } from './api';
 
 type View = 'pipeline' | 'list' | 'leads' | 'activities' | 'insights';
@@ -2066,6 +2072,14 @@ function LeadDrawer({
   const lead = leads.find((l) => l.id === leadId);
   const [notes, setNotes] = useState(lead?.qualification_notes ?? '');
   const [showConvert, setShowConvert] = useState(false);
+  // Deleting a lead is gated on MANAGER server-side (`crm.delete`), so the
+  // control is hidden below that rather than offered and refused with a 403.
+  const userRole = useAuthStore((s) => s.userRole);
+  const canDelete = userRole === 'admin' || userRole === 'manager';
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  // The server's structured 409, kept so the drawer can name what is holding
+  // the lead instead of showing a bare error toast that disappears.
+  const [deleteRefusal, setDeleteRefusal] = useState<RemovalRefusal | null>(null);
   const [convForm, setConvForm] = useState({
     title: '',
     account_id: '',
@@ -2124,6 +2138,35 @@ function LeadDrawer({
       });
     },
     onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  // Delete a lead outright. Reserved for the duplicate and the typo: the
+  // backend refuses with a 409 naming the holders when the lead has been
+  // converted to a deal or carries logged activities, because deleting either
+  // erases the provenance of an open deal or takes the activity log with it.
+  const deleteMut = useMutation({
+    mutationFn: () => deleteLead(leadId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crm', 'leads'] });
+      addToast({
+        type: 'success',
+        title: t('crm.lead_deleted', { defaultValue: 'Lead deleted' }),
+      });
+      setConfirmDelete(false);
+      onClose();
+    },
+    onError: (err) => {
+      setConfirmDelete(false);
+      const refusal = parseRemovalRefusal(err);
+      if (refusal) {
+        // Shown in the drawer, not as a toast: the reader needs to be able to
+        // re-read what is holding the lead while deciding what to do.
+        setDeleteRefusal(refusal);
+        return;
+      }
+      setDeleteRefusal(null);
+      addToast({ type: 'error', title: getErrorMessage(err) });
+    },
   });
 
   // Convert a qualified lead into an opportunity — the central CRM workflow.
@@ -2421,8 +2464,131 @@ function LeadDrawer({
               </p>
             </Card>
           )}
+
+          {/* Removing a lead. This is for the duplicate and the mistyped row,
+              not for a lead somebody has worked: a converted lead is where an
+              open deal came from, and logged activities cascade away with it.
+              A lead already converted is not offered the control at all - the
+              drawer can see that from `converted_opportunity_id` and there is
+              no point offering a button whose only outcome is a refusal. */}
+          {canDelete && (
+            <Card padding="sm">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-content-secondary">
+                {t('crm.remove_lead_heading', { defaultValue: 'Remove lead' })}
+              </p>
+              {lead.converted_opportunity_id ? (
+                <p className="text-xs text-content-tertiary">
+                  {t('crm.remove_lead_converted_hint', {
+                    defaultValue:
+                      'This lead became a deal, so it stays on record. Deleting it would erase where that deal came from.',
+                  })}
+                </p>
+              ) : (
+                <>
+                  <p className="mb-2 text-xs text-content-tertiary">
+                    {t('crm.remove_lead_hint', {
+                      defaultValue:
+                        'For a duplicate or a mistyped row. A lead that has been converted or has logged activity stays on record.',
+                    })}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    icon={<Trash2 size={14} />}
+                    onClick={() => {
+                      setDeleteRefusal(null);
+                      setConfirmDelete(true);
+                    }}
+                    disabled={deleteMut.isPending}
+                    className="text-semantic-error hover:bg-semantic-error/10"
+                  >
+                    {t('crm.remove_lead_action', { defaultValue: 'Delete lead' })}
+                  </Button>
+                </>
+              )}
+
+              {/* The server's refusal, spelled out. Rendered from the
+                  structured `holders` list so the counts read in the user's
+                  own language rather than as the English sentence the server
+                  built for callers that are not this app. */}
+              {deleteRefusal && (
+                <div
+                  role="alert"
+                  className="mt-3 rounded-lg border border-semantic-error/40 bg-semantic-error/5 px-3 py-2"
+                >
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle
+                      size={14}
+                      className="mt-0.5 shrink-0 text-semantic-error"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-content-primary">
+                        {t('crm.remove_lead_blocked_title', {
+                          defaultValue: 'This lead cannot be deleted',
+                        })}
+                      </p>
+                      {deleteRefusal.holders.length > 0 && (
+                        <>
+                          <p className="mt-1 text-xs text-content-secondary">
+                            {t('crm.remove_lead_blocked_intro', {
+                              defaultValue: 'These records still refer to it:',
+                            })}
+                          </p>
+                          <ul className="mt-1.5 space-y-1">
+                            {deleteRefusal.holders.map((holder) => (
+                              <li
+                                key={holder.kind}
+                                className="flex items-baseline justify-between gap-3 text-xs"
+                              >
+                                <span className="text-content-secondary">
+                                  {holder.kind === 'opportunity'
+                                    ? t('crm.holder_opportunity', {
+                                        defaultValue: 'Deals',
+                                      })
+                                    : holder.kind === 'activity'
+                                      ? t('crm.holder_activity', {
+                                          defaultValue: 'Logged activities',
+                                        })
+                                      : holder.kind.replace(/_/g, ' ')}
+                                </span>
+                                <span className="font-semibold tabular-nums text-content-primary">
+                                  {holder.count}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      <p className="mt-2 text-xs text-content-tertiary">
+                        {deleteRefusal.code === 'lead_has_dependents'
+                          ? t('crm.remove_lead_blocked_body', {
+                              defaultValue:
+                                'Disqualify the lead to take it out of the pipeline instead - that keeps the trail intact.',
+                            })
+                          : deleteRefusal.message}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
       </div>
+
+      {/* Confirm step - says what is about to go before it goes. */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => deleteMut.mutate()}
+        loading={deleteMut.isPending}
+        title={t('crm.remove_lead_confirm_title', { defaultValue: 'Delete this lead?' })}
+        message={t('crm.remove_lead_confirm_message', {
+          defaultValue:
+            'The lead {{name}} and everything recorded on it are removed for good. This cannot be undone.',
+          name: lead.contact_name,
+        })}
+        confirmLabel={t('crm.remove_lead_action', { defaultValue: 'Delete lead' })}
+      />
     </div>
   );
 }

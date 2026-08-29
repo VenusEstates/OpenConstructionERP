@@ -9,7 +9,59 @@
  * pipeline metrics and win/loss analytics.
  */
 
-import { apiGet, apiPost, apiPatch, apiDelete } from '@/shared/lib/api';
+import { ApiError, apiGet, apiPost, apiPatch, apiDelete } from '@/shared/lib/api';
+
+/* ── Refused removals ─────────────────────────────────────────────────── */
+
+export interface RemovalHolder {
+  kind: string;
+  count: number;
+}
+
+/**
+ * The structured 409 body returned when a record cannot be deleted because
+ * something still refers to it:
+ *
+ *     {"detail": {"code", "message", "remediation", "holders": [...]}}
+ *
+ * `holders` carries the kind and the count rather than a sentence, so the UI
+ * can name what is in the way in the reader's own language. `message` is the
+ * English fallback the server builds for callers that are not this app.
+ */
+export interface RemovalRefusal {
+  code: string;
+  message: string;
+  remediation: string;
+  holders: RemovalHolder[];
+}
+
+/**
+ * Pull the structured refusal out of a thrown error, or null if this is not
+ * one. A caller that gets null falls back to `getErrorMessage`, which already
+ * renders `detail.message` readably, so nothing ever shows "[object Object]".
+ */
+export function parseRemovalRefusal(err: unknown): RemovalRefusal | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const body = err.body as { detail?: unknown } | null | undefined;
+  const detail = body?.detail;
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return null;
+  const d = detail as Record<string, unknown>;
+  if (typeof d.code !== 'string' || typeof d.message !== 'string') return null;
+  const holders = Array.isArray(d.holders)
+    ? d.holders.flatMap((h): RemovalHolder[] => {
+        if (!h || typeof h !== 'object') return [];
+        const entry = h as Record<string, unknown>;
+        if (typeof entry.kind !== 'string' || typeof entry.count !== 'number') return [];
+        return [{ kind: entry.kind, count: entry.count }];
+      })
+    : [];
+  return {
+    code: d.code,
+    message: d.message,
+    remediation: typeof d.remediation === 'string' ? d.remediation : '',
+    holders,
+  };
+}
 
 /* ── Enums ────────────────────────────────────────────────────────────── */
 
@@ -371,6 +423,15 @@ export function updateLead(id: string, data: Partial<LeadCreatePayload>): Promis
   return apiPatch<Lead>(`/v1/crm/leads/${id}`, data);
 }
 
+/**
+ * Delete a lead outright.
+ *
+ * The backend refuses with a structured 409 when the lead has been converted
+ * to an opportunity or carries logged activities - deleting either would erase
+ * where a live deal came from, or take the activity log with it via the
+ * CASCADE on `CrmActivity.lead_id`. Pass the thrown error to
+ * `parseRemovalRefusal` to find out which.
+ */
 export function deleteLead(id: string): Promise<void> {
   return apiDelete(`/v1/crm/leads/${id}`);
 }
