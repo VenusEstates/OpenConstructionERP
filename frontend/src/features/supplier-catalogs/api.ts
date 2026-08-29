@@ -6,7 +6,7 @@
  * Backed by /api/v1/supplier-catalogs/ — see backend/app/modules/supplier_catalogs/router.py
  */
 
-import { apiGet, apiPost, apiPatch, type Page } from '@/shared/lib/api';
+import { apiGet, apiPost, apiPatch, apiDelete, type Page } from '@/shared/lib/api';
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -236,6 +236,49 @@ export interface CreateCatalogItemPayload {
   reorder_point?: number | string;
 }
 
+/* The three Update payloads below deliberately drop the record's business key,
+   `code` on a vendor and a warehouse and `sku` on a catalog item, because the
+   PATCH routes do not accept it. Every other record in the module quotes that
+   key, so rekeying is not a correction and is not offered here. A warehouse
+   also cannot be moved to another project this way: the project decides who
+   may read its balances. */
+
+export interface UpdateVendorPayload {
+  name?: string;
+  legal_name?: string;
+  tax_id?: string;
+  currency?: string;
+  payment_terms_days?: number;
+  country_code?: string;
+  region?: string;
+  categories?: string[];
+  preferred_for?: string[];
+  notes?: string;
+  tolerance_profile_name?: string;
+}
+
+export interface UpdateCatalogItemPayload {
+  name?: string;
+  description?: string;
+  category_id?: string;
+  unit_of_measure?: string;
+  manufacturer?: string;
+  mpn?: string;
+  hazard_class?: string;
+  shelf_life_days?: number;
+  reorder_point?: number | string;
+  gtin?: string;
+  commodity_code?: string;
+  commodity_scheme?: string;
+  active?: boolean;
+}
+
+export interface UpdateWarehousePayload {
+  name?: string;
+  address?: string;
+  manager_user_id?: string;
+}
+
 export interface CreatePRPayload {
   project_id: string;
   needed_by?: string;
@@ -320,6 +363,22 @@ export function createVendor(data: CreateVendorPayload): Promise<Vendor> {
   return apiPost<Vendor>('/v1/supplier-catalogs/vendors', data);
 }
 
+export function updateVendor(id: string, data: UpdateVendorPayload): Promise<Vendor> {
+  return apiPatch<Vendor>(`/v1/supplier-catalogs/vendors/${id}`, data);
+}
+
+/**
+ * Delete a vendor nothing references.
+ *
+ * The backend refuses with 409 and a structured reason when price lists,
+ * purchase orders, invoices or KYC documents point at it, and that reason
+ * names suspend and blacklist as what to do instead. `ApiError.message`
+ * already carries the sentence, so callers show it rather than composing one.
+ */
+export function deleteVendor(id: string): Promise<void> {
+  return apiDelete<void>(`/v1/supplier-catalogs/vendors/${id}`);
+}
+
 export function suspendVendor(id: string, reason?: string): Promise<Vendor> {
   return apiPatch<Vendor>(`/v1/supplier-catalogs/vendors/${id}/suspend${qs({ reason })}`, {});
 }
@@ -346,6 +405,18 @@ export function listCatalogItems(params?: {
 
 export function createCatalogItem(data: CreateCatalogItemPayload): Promise<CatalogItem> {
   return apiPost<CatalogItem>('/v1/supplier-catalogs/catalog-items', data);
+}
+
+export function updateCatalogItem(
+  id: string,
+  data: UpdateCatalogItemPayload,
+): Promise<CatalogItem> {
+  return apiPatch<CatalogItem>(`/v1/supplier-catalogs/catalog-items/${id}`, data);
+}
+
+/** Delete a catalog item. Refused with 409 when a line or a balance quotes it. */
+export function deleteCatalogItem(id: string): Promise<void> {
+  return apiDelete<void>(`/v1/supplier-catalogs/catalog-items/${id}`);
 }
 
 export function comparePrices(itemId: string): Promise<PriceComparisonRow[]> {
@@ -405,6 +476,15 @@ export function listWarehouses(): Promise<Warehouse[]> {
 
 export function createWarehouse(data: CreateWarehousePayload): Promise<Warehouse> {
   return apiPost<Warehouse>('/v1/supplier-catalogs/warehouses', data);
+}
+
+export function updateWarehouse(id: string, data: UpdateWarehousePayload): Promise<Warehouse> {
+  return apiPatch<Warehouse>(`/v1/supplier-catalogs/warehouses/${id}`, data);
+}
+
+/** Delete a warehouse. Refused with 409 while stock or receipts remain. */
+export function deleteWarehouse(id: string): Promise<void> {
+  return apiDelete<void>(`/v1/supplier-catalogs/warehouses/${id}`);
 }
 
 export function listWarehouseBalances(warehouseId: string): Promise<StockBalance[]> {
@@ -538,6 +618,17 @@ export function updateToleranceProfile(
     `/v1/supplier-catalogs/tolerance-profiles/${id}`,
     data,
   );
+}
+
+/**
+ * Delete a tolerance profile.
+ *
+ * Refused with 409 when vendors are matched against it (the link is by name,
+ * so nothing in the database would have stopped it) or when it is the tenant
+ * default.
+ */
+export function deleteToleranceProfile(id: string): Promise<void> {
+  return apiDelete<void>(`/v1/supplier-catalogs/tolerance-profiles/${id}`);
 }
 
 /* ── KYC documents ─────────────────────────────────────────────────────── */

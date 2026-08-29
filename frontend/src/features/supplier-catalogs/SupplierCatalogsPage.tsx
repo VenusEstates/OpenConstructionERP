@@ -3,7 +3,7 @@
 import { useState, useMemo, Fragment, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import clsx from 'clsx';
 import {
   ShoppingCart,
@@ -21,6 +21,10 @@ import {
   Network,
   ArrowRight,
   Coins,
+  Pencil,
+  Trash2,
+  PauseCircle,
+  Ban,
 } from 'lucide-react';
 import {
   Button,
@@ -32,6 +36,7 @@ import {
   DismissibleInfo,
   ModuleGuideButton,
   CollapsibleSection,
+  ConfirmDialog,
 } from '@/shared/ui';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { TruncationNotice } from '@/shared/ui/TruncationNotice';
@@ -53,6 +58,15 @@ import {
   createVendor,
   createCatalogItem,
   createWarehouse,
+  updateVendor,
+  updateCatalogItem,
+  updateWarehouse,
+  deleteVendor,
+  deleteCatalogItem,
+  deleteWarehouse,
+  suspendVendor,
+  blacklistVendor,
+  rateVendor,
   type Vendor,
   type CatalogItem,
   type Warehouse,
@@ -202,6 +216,14 @@ export function SupplierCatalogsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [priceItem, setPriceItem] = useState<CatalogItem | null>(null);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('');
+  const [editVendor, setEditVendor] = useState<Vendor | null>(null);
+  const [editItem, setEditItem] = useState<CatalogItem | null>(null);
+  const [editWarehouse, setEditWarehouse] = useState<Warehouse | null>(null);
+  const [statusTarget, setStatusTarget] = useState<VendorStatusTarget | null>(null);
+  const [ratingVendor, setRatingVendor] = useState<Vendor | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const qc = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
 
   const vendorsQ = useQuery({
     queryKey: ['sc', 'vendors', statusFilter],
@@ -296,6 +318,47 @@ export function SupplierCatalogsPage() {
   // this module, so they keep a create action. PR / PO / match are read-only
   // summaries here (the records belong to /procurement), so no create button.
   const canCreateHere = tab === 'vendors' || tab === 'catalog' || tab === 'warehouses';
+
+  /* Deletion is the only action here that cannot be taken back, so it is the
+     only one that asks first - through the shared ConfirmDialog, never a
+     native prompt, because a browser dialog is unstyled, untranslated and
+     cannot say what the record is.
+
+     The backend refuses to delete a record other records point at and answers
+     with a sentence naming what holds it and what to do instead. That
+     sentence is what the toast carries: `getErrorMessage` reads the
+     structured 409 body, so replacing it with a generic "could not delete"
+     would throw away the only part a buyer can act on. */
+  const deleteMutation = useMutation({
+    mutationFn: (target: DeleteTarget) =>
+      target.kind === 'vendors'
+        ? deleteVendor(target.id)
+        : target.kind === 'catalog'
+          ? deleteCatalogItem(target.id)
+          : deleteWarehouse(target.id),
+    onSuccess: (_result, target) => {
+      addToast({ type: 'success', title: deletedLabel(target.kind, t) });
+      if (target.kind === 'vendors') {
+        qc.invalidateQueries({ queryKey: ['sc', 'vendors'] });
+      } else if (target.kind === 'catalog') {
+        // The warehouse tab resolves stock rows to a SKU through the same
+        // ['sc','items'] prefix, so both readers refresh from one call.
+        qc.invalidateQueries({ queryKey: ['sc', 'items'] });
+        qc.invalidateQueries({ queryKey: ['sc', 'balances'] });
+      } else {
+        qc.invalidateQueries({ queryKey: ['sc', 'warehouses'] });
+        qc.invalidateQueries({ queryKey: ['sc', 'balances'] });
+        // The picker holds the id of a warehouse that no longer exists; left
+        // set, the balances query would keep asking the server for it.
+        setSelectedWarehouseId('');
+      }
+      setDeleteTarget(null);
+    },
+    onError: (err) => {
+      addToast({ type: 'error', title: getErrorMessage(err) });
+      setDeleteTarget(null);
+    },
+  });
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -435,9 +498,22 @@ export function SupplierCatalogsPage() {
             <SkeletonTable rows={8} columns={5} />
           </div>
         ) : tab === 'vendors' ? (
-          <VendorTable rows={filteredVendors} onAction={() => setCreateOpen(true)} />
+          <VendorTable
+            rows={filteredVendors}
+            onAction={() => setCreateOpen(true)}
+            onEdit={(v) => setEditVendor(v)}
+            onRate={(v) => setRatingVendor(v)}
+            onStatus={(vendor, action) => setStatusTarget({ vendor, action })}
+            onDelete={(v) => setDeleteTarget({ kind: 'vendors', id: v.id, label: `${v.code} - ${v.name}` })}
+          />
         ) : tab === 'catalog' ? (
-          <CatalogTable rows={filteredItems} onSelectPrice={(it) => setPriceItem(it)} onAction={() => setCreateOpen(true)} />
+          <CatalogTable
+            rows={filteredItems}
+            onSelectPrice={(it) => setPriceItem(it)}
+            onAction={() => setCreateOpen(true)}
+            onEdit={(it) => setEditItem(it)}
+            onDelete={(it) => setDeleteTarget({ kind: 'catalog', id: it.id, label: `${it.sku} - ${it.name}` })}
+          />
         ) : tab === 'procurement' ? (
           <ProcurementHandoffPanel />
         ) : (
@@ -447,6 +523,8 @@ export function SupplierCatalogsPage() {
             balances={balancesArr}
             itemLookup={itemLookup}
             onAction={() => setCreateOpen(true)}
+            onEdit={(w) => setEditWarehouse(w)}
+            onDelete={(w) => setDeleteTarget({ kind: 'warehouses', id: w.id, label: `${w.code} - ${w.name}` })}
           />
         )}
       </Card>
@@ -468,6 +546,33 @@ export function SupplierCatalogsPage() {
           item={priceItem}
           vendors={vendorsQ.data?.items ?? []}
           onClose={() => setPriceItem(null)}
+        />
+      )}
+      {editVendor && <EditVendorModal vendor={editVendor} onClose={() => setEditVendor(null)} />}
+      {editItem && <EditItemModal item={editItem} onClose={() => setEditItem(null)} />}
+      {editWarehouse && (
+        <EditWarehouseModal warehouse={editWarehouse} onClose={() => setEditWarehouse(null)} />
+      )}
+      {statusTarget && (
+        <VendorStatusModal
+          vendor={statusTarget.vendor}
+          action={statusTarget.action}
+          onClose={() => setStatusTarget(null)}
+        />
+      )}
+      {ratingVendor && (
+        <VendorRatingModal vendor={ratingVendor} onClose={() => setRatingVendor(null)} />
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          title={deleteTitle(deleteTarget.kind, t)}
+          message={deleteMessage(deleteTarget, t)}
+          confirmLabel={t('common.delete', { defaultValue: 'Delete' })}
+          cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
+          loading={deleteMutation.isPending}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTarget)}
         />
       )}
     </div>
@@ -501,6 +606,68 @@ function createLabel(tab: Tab, t: (k: string, opts?: Record<string, unknown>) =>
   }
 }
 
+/** What the confirm dialog is about to delete, and how to name it on screen. */
+type DeleteTarget = { kind: CreateTab; id: string; label: string };
+
+/** Which of the vendor's two closing actions a modal is collecting a reason for. */
+type VendorStatusTarget = { vendor: Vendor; action: 'suspend' | 'blacklist' };
+
+function deletedLabel(kind: CreateTab, t: (k: string, opts?: Record<string, unknown>) => string): string {
+  switch (kind) {
+    case 'vendors':
+      return t('supplier_catalogs.vendor_deleted', { defaultValue: 'Vendor deleted' });
+    case 'catalog':
+      return t('supplier_catalogs.item_deleted', { defaultValue: 'Item deleted' });
+    case 'warehouses':
+      return t('supplier_catalogs.warehouse_deleted', { defaultValue: 'Warehouse deleted' });
+  }
+}
+
+function deleteTitle(kind: CreateTab, t: (k: string, opts?: Record<string, unknown>) => string): string {
+  switch (kind) {
+    case 'vendors':
+      return t('supplier_catalogs.delete_vendor_title', { defaultValue: 'Delete this vendor?' });
+    case 'catalog':
+      return t('supplier_catalogs.delete_item_title', { defaultValue: 'Delete this item?' });
+    case 'warehouses':
+      return t('supplier_catalogs.delete_warehouse_title', { defaultValue: 'Delete this warehouse?' });
+  }
+}
+
+/**
+ * What the dialog says before the request goes out.
+ *
+ * It names the record and states the rule the server will apply, so the
+ * refusal that may follow is not a surprise. The record's own name is an
+ * interpolation value rather than part of the sentence: a translator has to
+ * be able to put it where their language puts it.
+ */
+function deleteMessage(
+  target: DeleteTarget,
+  t: (k: string, opts?: Record<string, unknown>) => string,
+): string {
+  switch (target.kind) {
+    case 'vendors':
+      return t('supplier_catalogs.delete_vendor_body', {
+        name: target.label,
+        defaultValue:
+          '{{name}} will be removed for good. A vendor with price lists, orders, invoices or compliance documents against it is kept instead, and the refusal will say what holds it - suspend or blacklist that vendor rather than deleting it.',
+      });
+    case 'catalog':
+      return t('supplier_catalogs.delete_item_body', {
+        name: target.label,
+        defaultValue:
+          '{{name}} will be removed for good. An item quoted on a requisition line, an order line or a vendor price list, or one that still has stock on hand, is kept instead and the refusal will say what holds it.',
+      });
+    case 'warehouses':
+      return t('supplier_catalogs.delete_warehouse_body', {
+        name: target.label,
+        defaultValue:
+          '{{name}} will be removed for good. A location that still holds stock, or that goods were received into, is kept instead and the refusal will say what holds it.',
+      });
+  }
+}
+
 function filterByText<T>(rows: T[], search: string, getter: (r: T) => string): T[] {
   if (!search.trim()) return rows;
   const q = search.toLowerCase();
@@ -531,7 +698,21 @@ function StarRating({ rating }: { rating: number | null }) {
 
 /* ── Tables ────────────────────────────────────────────────────────────── */
 
-function VendorTable({ rows, onAction }: { rows: Vendor[]; onAction: () => void }) {
+function VendorTable({
+  rows,
+  onAction,
+  onEdit,
+  onRate,
+  onStatus,
+  onDelete,
+}: {
+  rows: Vendor[];
+  onAction: () => void;
+  onEdit: (vendor: Vendor) => void;
+  onRate: (vendor: Vendor) => void;
+  onStatus: (vendor: Vendor, action: 'suspend' | 'blacklist') => void;
+  onDelete: (vendor: Vendor) => void;
+}) {
   const { t } = useTranslation();
   if (rows.length === 0) {
     return (
@@ -556,6 +737,7 @@ function VendorTable({ rows, onAction }: { rows: Vendor[]; onAction: () => void 
             <th className="px-4 py-2.5 text-left">{t('supplier_catalogs.rating', { defaultValue: 'Rating' })}</th>
             <th className="px-4 py-2.5 text-left">{t('supplier_catalogs.payment_terms', { defaultValue: 'Terms' })}</th>
             <th className="px-4 py-2.5 text-left">{t('supplier_catalogs.status', { defaultValue: 'Status' })}</th>
+            <th className="px-4 py-2.5 text-right">{t('supplier_catalogs.actions', { defaultValue: 'Actions' })}</th>
           </tr>
         </thead>
         <tbody>
@@ -575,6 +757,45 @@ function VendorTable({ rows, onAction }: { rows: Vendor[]; onAction: () => void 
                   {r.status}
                 </Badge>
               </td>
+              {/* Suspend and blacklist are shown only where the backend's own
+                  transition table allows them: blacklist is terminal, and a
+                  button that can only ever return an error is worse than no
+                  button. Reactivation is deliberately absent - the service has
+                  the operation but no route exposes it, so there is nothing to
+                  call yet. */}
+              <td className="px-4 py-2">
+                <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => onEdit(r)}>
+                    {t('common.edit', { defaultValue: 'Edit' })}
+                  </Button>
+                  <Button variant="ghost" size="sm" icon={<Star size={13} />} onClick={() => onRate(r)}>
+                    {t('supplier_catalogs.rate', { defaultValue: 'Rate' })}
+                  </Button>
+                  {r.status === 'active' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<PauseCircle size={13} />}
+                      onClick={() => onStatus(r, 'suspend')}
+                    >
+                      {t('supplier_catalogs.suspend', { defaultValue: 'Suspend' })}
+                    </Button>
+                  )}
+                  {(r.status === 'active' || r.status === 'suspended') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<Ban size={13} />}
+                      onClick={() => onStatus(r, 'blacklist')}
+                    >
+                      {t('supplier_catalogs.blacklist', { defaultValue: 'Blacklist' })}
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={() => onDelete(r)}>
+                    {t('common.delete', { defaultValue: 'Delete' })}
+                  </Button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -587,10 +808,14 @@ function CatalogTable({
   rows,
   onSelectPrice,
   onAction,
+  onEdit,
+  onDelete,
 }: {
   rows: CatalogItem[];
   onSelectPrice: (item: CatalogItem) => void;
   onAction: () => void;
+  onEdit: (item: CatalogItem) => void;
+  onDelete: (item: CatalogItem) => void;
 }) {
   const { t } = useTranslation();
   if (rows.length === 0) {
@@ -622,14 +847,34 @@ function CatalogTable({
           {rows.map((r) => (
             <tr key={r.id} className="border-t border-border-light hover:bg-surface-secondary">
               <td className="px-4 py-2 font-mono text-xs text-content-secondary">{r.sku}</td>
-              <td className="px-4 py-2 font-medium text-content-primary truncate max-w-[320px]">{r.name}</td>
+              {/* The inactive marker is the visible half of the Active box in
+                  the edit modal. Without it the flag would be a setting the
+                  user can change and never see again. */}
+              <td className="px-4 py-2 font-medium text-content-primary truncate max-w-[320px]">
+                <span className="inline-flex items-center gap-2">
+                  {r.name}
+                  {r.active === false && (
+                    <Badge variant="neutral">
+                      {t('supplier_catalogs.inactive', { defaultValue: 'Inactive' })}
+                    </Badge>
+                  )}
+                </span>
+              </td>
               <td className="px-4 py-2 text-content-secondary text-xs">{r.unit_of_measure}</td>
               <td className="px-4 py-2 text-content-secondary text-xs">{r.manufacturer || '—'}</td>
               <td className="px-4 py-2 text-right text-xs tabular-nums">{String(r.reorder_point)}</td>
               <td className="px-4 py-2 text-right">
-                <Button variant="ghost" size="sm" onClick={() => onSelectPrice(r)}>
-                  {t('supplier_catalogs.compare_prices', { defaultValue: 'Compare prices' })}
-                </Button>
+                <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+                  <Button variant="ghost" size="sm" onClick={() => onSelectPrice(r)}>
+                    {t('supplier_catalogs.compare_prices', { defaultValue: 'Compare prices' })}
+                  </Button>
+                  <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => onEdit(r)}>
+                    {t('common.edit', { defaultValue: 'Edit' })}
+                  </Button>
+                  <Button variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={() => onDelete(r)}>
+                    {t('common.delete', { defaultValue: 'Delete' })}
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}
@@ -741,12 +986,16 @@ function WarehousePanel({
   balances,
   itemLookup,
   onAction,
+  onEdit,
+  onDelete,
 }: {
   warehouses: Warehouse[];
   selectedId: string;
   balances: StockBalance[];
   itemLookup: Map<string, CatalogItem>;
   onAction: () => void;
+  onEdit: (warehouse: Warehouse) => void;
+  onDelete: (warehouse: Warehouse) => void;
 }) {
   const { t } = useTranslation();
   if (warehouses.length === 0) {
@@ -782,6 +1031,19 @@ function WarehousePanel({
               {t('supplier_catalogs.address', { defaultValue: 'Address' })}
             </p>
             <p className="text-xs text-content-secondary truncate max-w-[320px]">{selected.address}</p>
+          </div>
+        )}
+        {/* The warehouses tab shows one location at a time through the picker
+            above, so its row actions belong to the selected one rather than
+            to a table row. */}
+        {selected && (
+          <div className="ml-auto flex items-center gap-1 whitespace-nowrap">
+            <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => onEdit(selected)}>
+              {t('common.edit', { defaultValue: 'Edit' })}
+            </Button>
+            <Button variant="ghost" size="sm" icon={<Trash2 size={13} />} onClick={() => onDelete(selected)}>
+              {t('common.delete', { defaultValue: 'Delete' })}
+            </Button>
           </div>
         )}
       </div>
@@ -1301,3 +1563,544 @@ function CreateModal({
   );
 }
 
+/* ── Edit modals ───────────────────────────────────────────────────────── */
+
+/*
+ * One modal per record kind rather than one parameterised over three, because
+ * the three field sets share nothing but the shape of the form. Each owns its
+ * own mutation: the record it edits is the record it invalidates, and a
+ * failure is answered where it happened.
+ *
+ * A note on blanks. Free-text fields are sent exactly as typed, empty string
+ * included, so clearing a value in the form clears it on the record. Currency
+ * and payment terms are the exceptions: their columns cannot be null, and an
+ * empty box means "leave it alone" rather than "set it to nothing".
+ */
+
+function EditVendorModal({ vendor, onClose }: { vendor: Vendor; onClose: () => void }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+  const [form, setForm] = useState({
+    name: vendor.name,
+    legal_name: vendor.legal_name ?? '',
+    tax_id: vendor.tax_id ?? '',
+    currency: vendor.currency ?? '',
+    payment_terms_days: String(vendor.payment_terms_days ?? ''),
+    country_code: vendor.country_code ?? '',
+    notes: vendor.notes ?? '',
+  });
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateVendor(vendor.id, {
+        name: form.name.trim(),
+        legal_name: form.legal_name,
+        tax_id: form.tax_id,
+        country_code: form.country_code,
+        notes: form.notes,
+        currency: form.currency.trim() || undefined,
+        payment_terms_days: form.payment_terms_days.trim()
+          ? Number(form.payment_terms_days)
+          : undefined,
+      }),
+    onSuccess: () => {
+      addToast({
+        type: 'success',
+        title: t('supplier_catalogs.vendor_updated', { defaultValue: 'Vendor updated' }),
+      });
+      qc.invalidateQueries({ queryKey: ['sc', 'vendors'] });
+      onClose();
+    },
+    onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  return (
+    <WideModal
+      open
+      onClose={onClose}
+      title={t('supplier_catalogs.edit_vendor', { defaultValue: 'Edit vendor' })}
+      subtitle={vendor.code}
+      size="lg"
+      busy={save.isPending}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={save.isPending}>
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => save.mutate()}
+            loading={save.isPending}
+            disabled={!form.name.trim()}
+          >
+            {t('common.save', { defaultValue: 'Save' })}
+          </Button>
+        </>
+      }
+    >
+      <WideModalSection columns={2}>
+        <WideModalField
+          label={t('supplier_catalogs.name', { defaultValue: 'Name' })}
+          required
+          span={2}
+        >
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.legal_name', { defaultValue: 'Legal name' })} span={2}>
+          <input
+            value={form.legal_name}
+            onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.tax_id', { defaultValue: 'Tax ID' })}>
+          <input
+            value={form.tax_id}
+            onChange={(e) => setForm({ ...form, tax_id: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.country', { defaultValue: 'Country' })}>
+          <input
+            value={form.country_code}
+            onChange={(e) => setForm({ ...form, country_code: e.target.value })}
+            className={inputCls}
+            maxLength={3}
+            placeholder="DE / FR / US"
+          />
+        </WideModalField>
+        <WideModalField label={t('common.currency', { defaultValue: 'Currency' })}>
+          <input
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            className={inputCls}
+            maxLength={3}
+          />
+        </WideModalField>
+        <WideModalField
+          label={t('supplier_catalogs.payment_terms', { defaultValue: 'Payment terms (days)' })}
+        >
+          <input
+            type="number"
+            value={form.payment_terms_days}
+            onChange={(e) => setForm({ ...form, payment_terms_days: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('common.notes', { defaultValue: 'Notes' })} span={2}>
+          <textarea
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            rows={2}
+            className={clsx(inputCls, 'h-auto py-2')}
+          />
+        </WideModalField>
+      </WideModalSection>
+      {/* The code is what every other record quotes, so it is shown and not
+          offered for editing. Saying so is better than a disabled box with no
+          explanation. */}
+      <p className="mt-3 text-2xs text-content-tertiary">
+        {t('supplier_catalogs.code_not_editable', {
+          defaultValue:
+            'The vendor code cannot be changed here: price lists, orders and invoices are all filed under it.',
+        })}
+      </p>
+    </WideModal>
+  );
+}
+
+function EditItemModal({ item, onClose }: { item: CatalogItem; onClose: () => void }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+  const [form, setForm] = useState({
+    name: item.name,
+    description: item.description ?? '',
+    unit_of_measure: item.unit_of_measure ?? '',
+    manufacturer: item.manufacturer ?? '',
+    mpn: item.mpn ?? '',
+    reorder_point: String(item.reorder_point ?? ''),
+    active: item.active !== false,
+  });
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateCatalogItem(item.id, {
+        name: form.name.trim(),
+        description: form.description,
+        manufacturer: form.manufacturer,
+        mpn: form.mpn,
+        unit_of_measure: form.unit_of_measure.trim() || undefined,
+        reorder_point: form.reorder_point.trim() || undefined,
+        active: form.active,
+      }),
+    onSuccess: () => {
+      addToast({
+        type: 'success',
+        title: t('supplier_catalogs.item_updated', { defaultValue: 'Item updated' }),
+      });
+      qc.invalidateQueries({ queryKey: ['sc', 'items'] });
+      onClose();
+    },
+    onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  return (
+    <WideModal
+      open
+      onClose={onClose}
+      title={t('supplier_catalogs.edit_item', { defaultValue: 'Edit item' })}
+      subtitle={item.sku}
+      size="lg"
+      busy={save.isPending}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={save.isPending}>
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => save.mutate()}
+            loading={save.isPending}
+            disabled={!form.name.trim()}
+          >
+            {t('common.save', { defaultValue: 'Save' })}
+          </Button>
+        </>
+      }
+    >
+      <WideModalSection columns={2}>
+        <WideModalField label={t('supplier_catalogs.name', { defaultValue: 'Name' })} required span={2}>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.uom', { defaultValue: 'UoM' })}>
+          <input
+            value={form.unit_of_measure}
+            onChange={(e) => setForm({ ...form, unit_of_measure: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.reorder', { defaultValue: 'Reorder' })}>
+          <input
+            type="number"
+            value={form.reorder_point}
+            onChange={(e) => setForm({ ...form, reorder_point: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.manufacturer', { defaultValue: 'Manufacturer' })}>
+          <input
+            value={form.manufacturer}
+            onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.mpn', { defaultValue: 'Manufacturer part number' })}>
+          <input
+            value={form.mpn}
+            onChange={(e) => setForm({ ...form, mpn: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField
+          label={t('supplier_catalogs.description_field', { defaultValue: 'Description' })}
+          span={2}
+        >
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            rows={2}
+            className={clsx(inputCls, 'h-auto py-2')}
+          />
+        </WideModalField>
+        <WideModalField
+          span={2}
+          hint={t('supplier_catalogs.active_hint', {
+            defaultValue:
+              'An inactive item is marked as no longer bought and shows as Inactive in the catalog list. It stays on the records that already quote it.',
+          })}
+        >
+          <label className="flex items-center gap-2 text-sm text-content-primary">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+              className="h-4 w-4 rounded border-border"
+            />
+            {t('common.active', { defaultValue: 'Active' })}
+          </label>
+        </WideModalField>
+      </WideModalSection>
+      <p className="mt-3 text-2xs text-content-tertiary">
+        {t('supplier_catalogs.sku_not_editable', {
+          defaultValue:
+            'The SKU cannot be changed here: requisition lines, order lines and vendor price lists all quote it.',
+        })}
+      </p>
+    </WideModal>
+  );
+}
+
+function EditWarehouseModal({
+  warehouse,
+  onClose,
+}: {
+  warehouse: Warehouse;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+  const [form, setForm] = useState({
+    name: warehouse.name,
+    address: warehouse.address ?? '',
+  });
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateWarehouse(warehouse.id, { name: form.name.trim(), address: form.address }),
+    onSuccess: () => {
+      addToast({
+        type: 'success',
+        title: t('supplier_catalogs.warehouse_updated', { defaultValue: 'Warehouse updated' }),
+      });
+      qc.invalidateQueries({ queryKey: ['sc', 'warehouses'] });
+      onClose();
+    },
+    onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  return (
+    <WideModal
+      open
+      onClose={onClose}
+      title={t('supplier_catalogs.edit_warehouse', { defaultValue: 'Edit warehouse' })}
+      subtitle={warehouse.code}
+      size="lg"
+      busy={save.isPending}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={save.isPending}>
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => save.mutate()}
+            loading={save.isPending}
+            disabled={!form.name.trim()}
+          >
+            {t('common.save', { defaultValue: 'Save' })}
+          </Button>
+        </>
+      }
+    >
+      <WideModalSection columns={2}>
+        <WideModalField label={t('supplier_catalogs.name', { defaultValue: 'Name' })} required span={2}>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className={inputCls}
+          />
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.address', { defaultValue: 'Address' })} span={2}>
+          <textarea
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            rows={2}
+            className={clsx(inputCls, 'h-auto py-2')}
+          />
+        </WideModalField>
+      </WideModalSection>
+      <p className="mt-3 text-2xs text-content-tertiary">
+        {t('supplier_catalogs.warehouse_code_not_editable', {
+          defaultValue:
+            'The code and the project a warehouse belongs to are fixed here: the project decides who may see its stock.',
+        })}
+      </p>
+    </WideModal>
+  );
+}
+
+/* ── Vendor status & rating ────────────────────────────────────────────── */
+
+/**
+ * Suspend or blacklist, with the optional reason the backend records.
+ *
+ * The two actions share a modal because they differ only in the sentence
+ * above the box and in which endpoint is called; splitting them would
+ * duplicate the reason field and the failure handling for no gain.
+ */
+function VendorStatusModal({
+  vendor,
+  action,
+  onClose,
+}: {
+  vendor: Vendor;
+  action: 'suspend' | 'blacklist';
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+  const [reason, setReason] = useState('');
+
+  const apply = useMutation({
+    mutationFn: () =>
+      action === 'suspend'
+        ? suspendVendor(vendor.id, reason.trim() || undefined)
+        : blacklistVendor(vendor.id, reason.trim() || undefined),
+    onSuccess: () => {
+      addToast({
+        type: 'success',
+        title:
+          action === 'suspend'
+            ? t('supplier_catalogs.vendor_suspended', { defaultValue: 'Vendor suspended' })
+            : t('supplier_catalogs.vendor_blacklisted', { defaultValue: 'Vendor blacklisted' }),
+      });
+      qc.invalidateQueries({ queryKey: ['sc', 'vendors'] });
+      onClose();
+    },
+    onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  return (
+    <WideModal
+      open
+      onClose={onClose}
+      title={
+        action === 'suspend'
+          ? t('supplier_catalogs.suspend_vendor_title', { defaultValue: 'Suspend vendor' })
+          : t('supplier_catalogs.blacklist_vendor_title', { defaultValue: 'Blacklist vendor' })
+      }
+      subtitle={`${vendor.code} · ${vendor.name}`}
+      size="md"
+      busy={apply.isPending}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={apply.isPending}>
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button variant="primary" onClick={() => apply.mutate()} loading={apply.isPending}>
+            {action === 'suspend'
+              ? t('supplier_catalogs.suspend', { defaultValue: 'Suspend' })
+              : t('supplier_catalogs.blacklist', { defaultValue: 'Blacklist' })}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-content-secondary">
+        {action === 'suspend'
+          ? t('supplier_catalogs.suspend_vendor_desc', {
+              defaultValue:
+                'A suspended vendor keeps its history and stops being offered for new orders. It can be made active again.',
+            })
+          : t('supplier_catalogs.blacklist_vendor_desc', {
+              defaultValue:
+                'Blacklisting closes the vendor. Its history is kept and it cannot be suspended afterwards, only reopened deliberately.',
+            })}
+      </p>
+      <div className="mt-4">
+        <WideModalSection columns={1}>
+          <WideModalField
+            label={t('supplier_catalogs.reason', { defaultValue: 'Reason' })}
+            hint={t('supplier_catalogs.reason_hint', {
+              defaultValue: 'Optional. Recorded with the status change so the decision can be traced.',
+            })}
+          >
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              className={clsx(inputCls, 'h-auto py-2')}
+            />
+          </WideModalField>
+        </WideModalSection>
+      </div>
+    </WideModal>
+  );
+}
+
+function VendorRatingModal({ vendor, onClose }: { vendor: Vendor; onClose: () => void }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+  const [rating, setRating] = useState(vendor.rating ?? 3);
+  const [comment, setComment] = useState('');
+
+  const submit = useMutation({
+    mutationFn: () => rateVendor(vendor.id, rating, comment.trim() || undefined),
+    onSuccess: () => {
+      addToast({
+        type: 'success',
+        title: t('supplier_catalogs.vendor_rated', { defaultValue: 'Rating saved' }),
+      });
+      qc.invalidateQueries({ queryKey: ['sc', 'vendors'] });
+      onClose();
+    },
+    onError: (err) => addToast({ type: 'error', title: getErrorMessage(err) }),
+  });
+
+  return (
+    <WideModal
+      open
+      onClose={onClose}
+      title={t('supplier_catalogs.rate_vendor_title', { defaultValue: 'Rate vendor' })}
+      subtitle={`${vendor.code} · ${vendor.name}`}
+      size="md"
+      busy={submit.isPending}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={submit.isPending}>
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button variant="primary" onClick={() => submit.mutate()} loading={submit.isPending}>
+            {t('common.save', { defaultValue: 'Save' })}
+          </Button>
+        </>
+      }
+    >
+      <WideModalSection columns={1}>
+        <WideModalField
+          label={t('supplier_catalogs.rating', { defaultValue: 'Rating' })}
+          required
+          hint={t('supplier_catalogs.rate_vendor_hint', {
+            defaultValue: 'One to five. It shows on the vendor list and beside every quoted price.',
+          })}
+        >
+          <div className="flex items-center gap-3">
+            <select
+              value={String(rating)}
+              onChange={(e) => setRating(Number(e.target.value))}
+              className={clsx(inputCls, 'max-w-[120px]')}
+              aria-label={t('supplier_catalogs.rating', { defaultValue: 'Rating' })}
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <StarRating rating={rating} />
+          </div>
+        </WideModalField>
+        <WideModalField label={t('supplier_catalogs.rating_comment', { defaultValue: 'Comment' })}>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+            className={clsx(inputCls, 'h-auto py-2')}
+          />
+        </WideModalField>
+      </WideModalSection>
+    </WideModal>
+  );
+}
