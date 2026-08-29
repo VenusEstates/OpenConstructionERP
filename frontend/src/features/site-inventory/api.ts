@@ -9,7 +9,7 @@
  * quantities cross the wire as canonical decimal STRINGS, never floats.
  */
 
-import { apiGet, apiPatch, apiPost } from '@/shared/lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/lib/api';
 
 /* -- Types ----------------------------------------------------------------- */
 
@@ -239,6 +239,15 @@ export async function createLocation(
   return apiPost<StockLocation, LocationCreate>(`${base(projectId)}/locations`, data);
 }
 
+/** Delete a storage location that nothing points at.
+ *
+ *  Refuses with 409 while any movement names it on either leg, any item
+ *  defaults to it, or stock is still standing there. See `deleteGuard.ts` for
+ *  why the database would not refuse on its own. */
+export async function deleteLocation(projectId: string, locationId: string): Promise<void> {
+  await apiDelete<void>(`${base(projectId)}/locations/${locationId}`);
+}
+
 /* -- Items ----------------------------------------------------------------- */
 
 export async function fetchItems(projectId: string): Promise<StockItem[]> {
@@ -257,10 +266,39 @@ export async function updateItem(
   return apiPatch<StockItem, StockItemUpdate>(`${base(projectId)}/items/${itemId}`, data);
 }
 
+/** Delete a stock item that has never moved.
+ *
+ *  Refuses with 409 once anything has been booked against it: the movement
+ *  rows cascade, so the delete would take the ledger with it. */
+export async function deleteItem(projectId: string, itemId: string): Promise<void> {
+  await apiDelete<void>(`${base(projectId)}/items/${itemId}`);
+}
+
 /* -- Movements ------------------------------------------------------------- */
 
 export async function fetchMovements(projectId: string, limit = 200): Promise<StockMovement[]> {
   const params = new URLSearchParams({ limit: String(limit) });
+  return apiGet<StockMovement[]>(`${base(projectId)}/movements?${params.toString()}`);
+}
+
+/** The movements that name one item, or one location on either leg.
+ *
+ *  A separate call rather than more parameters on {@link fetchMovements},
+ *  which feeds the ledger table and wants the project's recent movements. This
+ *  one asks a yes/no question about a single row and wants the server's own
+ *  filter to answer it: `item_id` and `location_id` here are the same filters
+ *  the delete guard counts with, and the location filter matches the source
+ *  and the destination leg exactly as that count does.
+ *
+ *  `limit` is the endpoint's maximum. A project past it has long since
+ *  answered the only question being asked - whether anything holds the row. */
+export async function fetchMovementsFor(
+  projectId: string,
+  filter: { itemId?: string; locationId?: string },
+): Promise<StockMovement[]> {
+  const params = new URLSearchParams({ limit: '5000' });
+  if (filter.itemId) params.set('item_id', filter.itemId);
+  if (filter.locationId) params.set('location_id', filter.locationId);
   return apiGet<StockMovement[]>(`${base(projectId)}/movements?${params.toString()}`);
 }
 
@@ -275,6 +313,17 @@ export async function recordMovement(
 
 export async function fetchStockOnHand(projectId: string): Promise<StockOnHandResponse> {
   return apiGet<StockOnHandResponse>(`${base(projectId)}/stock-on-hand`);
+}
+
+/** Stock on hand inside one storage location - the balances that would be left
+ *  standing nowhere if that location were removed. Rows with a zero balance are
+ *  returned too, so a caller counting what is stored there has to skip them. */
+export async function fetchStockOnHandAt(
+  projectId: string,
+  locationId: string,
+): Promise<StockOnHandResponse> {
+  const params = new URLSearchParams({ location_id: locationId });
+  return apiGet<StockOnHandResponse>(`${base(projectId)}/stock-on-hand?${params.toString()}`);
 }
 
 export async function fetchPositionCoverage(

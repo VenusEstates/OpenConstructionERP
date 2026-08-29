@@ -20,10 +20,11 @@ import {
   X,
 } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, SkeletonTable, TabBar } from '@/shared/ui';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { DateDisplay } from '@/shared/ui/DateDisplay';
 import { RequiresProject } from '@/shared/auth/RequiresProject';
-import { apiGet, getErrorMessage } from '@/shared/lib/api';
+import { ApiError, apiGet, getErrorMessage } from '@/shared/lib/api';
 import { normalizeListResponse } from '@/shared/lib/apiHelpers';
 import { formatCurrency } from '@/shared/lib/money';
 import { formatValue } from '@/shared/lib/numberFormat';
@@ -33,6 +34,8 @@ import { InsightsPanel, InsightsToggleButton, useModuleInsights } from '@/featur
 import {
   createItem,
   createLocation,
+  deleteItem,
+  deleteLocation,
   fetchItems,
   fetchLocations,
   fetchMovements,
@@ -56,6 +59,12 @@ import {
   type UnfixedValueResponse,
   type UnitAgreement,
 } from './api';
+import {
+  holderList,
+  probeHolders,
+  type DeleteTarget,
+  type Holder,
+} from './deleteGuard';
 import { buildSiteInventoryInsights } from './siteInventoryInsights';
 
 /* -- Shared styling + small helpers --------------------------------------- */
@@ -992,6 +1001,12 @@ export function SiteInventoryPage() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   // The item whose bill link is being changed from the items table, if any.
   const [linkTarget, setLinkTarget] = useState<StockItem | null>(null);
+  // The row a delete was asked for, and - once the server has refused one -
+  // what it said was holding that row. `null` means "not refused"; an empty
+  // array means "refused, and we could not name the holder", which is a
+  // different sentence from "nothing holds it".
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [refusedHolders, setRefusedHolders] = useState<Holder[] | null>(null);
 
   /* -- Queries ------------------------------------------------------------ */
   const stockQuery = useQuery({
@@ -1172,6 +1187,117 @@ export function SiteInventoryPage() {
     onError: toastError,
   });
 
+  /* -- Delete ------------------------------------------------------------- */
+  // What holds the row somebody asked to delete. Asked once that row is named
+  // rather than per table row, so listing items and locations costs nothing
+  // extra. The one answer writes both the sentence before the delete and the
+  // sentence after a refused one, so the two cannot tell different stories.
+  const holdersQuery = useQuery({
+    queryKey: [
+      'site-inventory',
+      'delete-holders',
+      projectId,
+      deleteTarget?.kind ?? '',
+      deleteTarget?.id ?? '',
+    ],
+    queryFn: () => probeHolders(projectId, deleteTarget as DeleteTarget, items),
+    enabled: !!projectId && !!deleteTarget,
+    // The app's defaults hold a query fresh for 30s and cached for 5 minutes,
+    // which is right for a table and wrong for this. Reopening the dialog on
+    // the same row inside that window would answer from the cache, and the
+    // answer decides whether an irreversible action is offered: a movement
+    // booked by somebody else in between would not be counted, and the dialog
+    // would say nothing depends on the row while something already did. Ask
+    // every time, and keep nothing once the dialog closes.
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const closeDelete = useCallback(() => {
+    setDeleteTarget(null);
+    setRefusedHolders(null);
+  }, []);
+
+  const deleteMut = useMutation({
+    mutationFn: (target: DeleteTarget) =>
+      target.kind === 'item'
+        ? deleteItem(projectId, target.id)
+        : deleteLocation(projectId, target.id),
+    onSuccess: (_result, target) => {
+      if (target.kind === 'item') {
+        qc.invalidateQueries({ queryKey: ['site-inventory', 'items', projectId] });
+        qc.invalidateQueries({ queryKey: ['site-inventory', 'stock-on-hand', projectId] });
+        invalidateBillReports();
+      } else {
+        qc.invalidateQueries({ queryKey: ['site-inventory', 'locations', projectId] });
+      }
+      closeDelete();
+      addToast({
+        type: 'success',
+        title:
+          target.kind === 'item'
+            ? t('site_inventory.item_deleted', { defaultValue: 'Stock item deleted' })
+            : t('site_inventory.location_deleted', { defaultValue: 'Storage location deleted' }),
+      });
+    },
+    onError: async (err) => {
+      // A 409 here is the guard doing its job, not a failure: something came to
+      // hold the row between the check and the button. Ask again so the reason
+      // can be named in the reader's language - the server's own answer is one
+      // English sentence it composed, which is the thing this must not show.
+      if (err instanceof ApiError && err.status === 409) {
+        const fresh = await holdersQuery.refetch();
+        setRefusedHolders(fresh.data ?? []);
+        return;
+      }
+      toastError(err);
+    },
+  });
+
+  // "Not fetching" is not the same as "answered": between the target being
+  // named and the request going out there is a render with no data and no
+  // fetch in flight, and treating that as an answer would flash the sentence
+  // saying nothing holds this row before anything had been checked.
+  const holdersKnown = !holdersQuery.isFetching && holdersQuery.data !== undefined;
+  const probingHolders = deleteTarget !== null && !holdersKnown && !holdersQuery.isError;
+  // Refused either because the server said so, or because the check already
+  // named a holder - in which case there is nothing to confirm and no request
+  // worth sending. While the check is in flight, or if it failed, neither is
+  // claimed: the dialog says so and the server stays the one that decides.
+  const deleteRefused =
+    refusedHolders !== null || (holdersKnown && (holdersQuery.data?.length ?? 0) > 0);
+  const shownHolders = refusedHolders ?? holdersQuery.data ?? [];
+
+  // Four things the confirmation can honestly say, and it has to say the right
+  // one. The removable wording is the point of the whole dialog: it names the
+  // reason this row may go, so "delete" is a decision rather than a gamble.
+  let deleteMessage = '';
+  const deleteName = deleteTarget?.name ?? '';
+  if (probingHolders) {
+    deleteMessage = t('site_inventory.delete_checking', {
+      defaultValue: 'Checking what depends on {{name}}...',
+      name: deleteName,
+    });
+  } else if (holdersQuery.isError) {
+    deleteMessage = t('site_inventory.delete_check_failed', {
+      defaultValue:
+        'What depends on {{name}} could not be checked from here. The server checks again before it removes anything, and refuses if something still points at it.',
+      name: deleteName,
+    });
+  } else if (deleteTarget?.kind === 'location') {
+    deleteMessage = t('site_inventory.delete_location_free', {
+      defaultValue:
+        'No movement names {{name}}, no stock is standing there and no item defaults to it, so nothing is lost with it. Deleting it cannot be undone.',
+      name: deleteName,
+    });
+  } else {
+    deleteMessage = t('site_inventory.delete_item_free', {
+      defaultValue:
+        'Nothing has ever been booked against {{name}}, so there is no movement history to lose with it. Deleting it cannot be undone.',
+      name: deleteName,
+    });
+  }
+
   /* -- Tabs --------------------------------------------------------------- */
   const countBadge = (n: number) =>
     n > 0 ? (
@@ -1319,6 +1445,7 @@ export function SiteInventoryPage() {
               items={items}
               onCreate={() => setShowItemModal(true)}
               onLink={setLinkTarget}
+              onDelete={(it) => setDeleteTarget({ kind: 'item', id: it.id, name: it.name })}
             />
           )}
           {activeTab === 'locations' && (
@@ -1326,6 +1453,9 @@ export function SiteInventoryPage() {
               query={locationsQuery}
               locations={locations}
               onCreate={() => setShowLocationModal(true)}
+              onDelete={(loc) =>
+                setDeleteTarget({ kind: 'location', id: loc.id, name: loc.name })
+              }
             />
           )}
         </div>
@@ -1365,6 +1495,67 @@ export function SiteInventoryPage() {
           onSubmit={(data) => locationMut.mutate(data)}
           isPending={locationMut.isPending}
         />
+      )}
+      {deleteTarget !== null && !deleteRefused && (
+        <ConfirmDialog
+          open
+          title={
+            deleteTarget.kind === 'location'
+              ? t('site_inventory.delete_location_title', {
+                  defaultValue: 'Delete this storage location?',
+                })
+              : t('site_inventory.delete_item_title', { defaultValue: 'Delete this stock item?' })
+          }
+          message={deleteMessage}
+          loading={probingHolders || deleteMut.isPending}
+          onConfirm={() => deleteMut.mutate(deleteTarget)}
+          onCancel={closeDelete}
+        />
+      )}
+      {deleteTarget !== null && deleteRefused && (
+        <Modal
+          title={t('site_inventory.delete_blocked_title', {
+            defaultValue: 'This cannot be deleted',
+          })}
+          onClose={closeDelete}
+          maxWidth="max-w-md"
+          footer={
+            <Button variant="secondary" onClick={closeDelete}>
+              {t('site_inventory.close', { defaultValue: 'Close' })}
+            </Button>
+          }
+        >
+          <div className="flex gap-3">
+            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-semantic-warning" />
+            <div className="space-y-2">
+              <p className="text-sm text-content-primary">
+                {shownHolders.length > 0
+                  ? t('site_inventory.delete_blocked', {
+                      defaultValue:
+                        '{{name}} is referenced by {{holders}}. Deleting it would take that record away with it, so it is kept.',
+                      name: deleteTarget.name,
+                      holders: holderList(shownHolders, t),
+                    })
+                  : t('site_inventory.delete_blocked_unnamed', {
+                      defaultValue:
+                        'Something now points at {{name}}. Deleting it would take that record away with it, so it is kept.',
+                      name: deleteTarget.name,
+                    })}
+              </p>
+              <p className="text-sm text-content-secondary">
+                {deleteTarget.kind === 'location'
+                  ? t('site_inventory.delete_blocked_location_advice', {
+                      defaultValue:
+                        'Transfer the stock out and repoint the items that default to it, or clear the Active flag so this location stops being offered while its movement history stays readable.',
+                    })
+                  : t('site_inventory.delete_blocked_item_advice', {
+                      defaultValue:
+                        'The movement ledger is the record of what arrived and what was installed. Clear the Active flag instead, so the item stops being offered on new movements and its history stays readable.',
+                    })}
+              </p>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -1588,11 +1779,13 @@ function ItemsPanel({
   items,
   onCreate,
   onLink,
+  onDelete,
 }: {
   query: QueryLike;
   items: StockItem[];
   onCreate: () => void;
   onLink: (item: StockItem) => void;
+  onDelete: (item: StockItem) => void;
 }) {
   const { t } = useTranslation();
   if (query.isLoading) return <SkeletonTable rows={5} columns={6} />;
@@ -1633,6 +1826,9 @@ function ItemsPanel({
             <th className={clsx(thCls, 'text-center')}>
               {t('site_inventory.col_active', { defaultValue: 'Active' })}
             </th>
+            <th className={clsx(thCls, 'text-right')}>
+              {t('site_inventory.col_actions', { defaultValue: 'Actions' })}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -1669,6 +1865,20 @@ function ItemsPanel({
                     ? t('site_inventory.active_yes', { defaultValue: 'Yes' })
                     : t('site_inventory.active_no', { defaultValue: 'No' })}
                 </Badge>
+              </td>
+              <td className={clsx(tdCls, 'text-right')}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Trash2 size={13} />}
+                  onClick={() => onDelete(it)}
+                  aria-label={t('site_inventory.delete_aria', {
+                    defaultValue: 'Delete {{name}}',
+                    name: it.name,
+                  })}
+                  title={t('site_inventory.delete', { defaultValue: 'Delete' })}
+                  className="text-content-tertiary hover:text-semantic-error"
+                />
               </td>
             </tr>
           ))}
@@ -1903,10 +2113,12 @@ function LocationsPanel({
   query,
   locations,
   onCreate,
+  onDelete,
 }: {
   query: QueryLike;
   locations: StockLocation[];
   onCreate: () => void;
+  onDelete: (location: StockLocation) => void;
 }) {
   const { t } = useTranslation();
   if (query.isLoading) return <SkeletonTable rows={4} columns={4} />;
@@ -1938,6 +2150,9 @@ function LocationsPanel({
             <th className={clsx(thCls, 'text-center')}>
               {t('site_inventory.col_active', { defaultValue: 'Active' })}
             </th>
+            <th className={clsx(thCls, 'text-right')}>
+              {t('site_inventory.col_actions', { defaultValue: 'Actions' })}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -1955,6 +2170,20 @@ function LocationsPanel({
                     ? t('site_inventory.active_yes', { defaultValue: 'Yes' })
                     : t('site_inventory.active_no', { defaultValue: 'No' })}
                 </Badge>
+              </td>
+              <td className={clsx(tdCls, 'text-right')}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Trash2 size={13} />}
+                  onClick={() => onDelete(loc)}
+                  aria-label={t('site_inventory.delete_aria', {
+                    defaultValue: 'Delete {{name}}',
+                    name: loc.name,
+                  })}
+                  title={t('site_inventory.delete', { defaultValue: 'Delete' })}
+                  className="text-content-tertiary hover:text-semantic-error"
+                />
               </td>
             </tr>
           ))}
