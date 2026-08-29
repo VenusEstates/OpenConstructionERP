@@ -38,6 +38,16 @@ identified is the failure mode this module exists to prevent: the process would
 come up, build a schema and take writes on a server whose capabilities nobody
 checked, and the first symptom would arrive much later as a broken query. The
 caller in ``app.main`` logs the cause and re-raises, so startup stops here.
+
+**Two entry points, one rule.** :func:`validate_postgres_version` is the
+application's, over the async engine it serves requests on.
+:func:`validate_postgres_version_sync` is ``alembic/env.py``'s, over the sync
+engine migrations run on - a database is reached that way too, by an operator
+who has not booted the app, and that path builds the whole schema on a blank
+server. Both are thin: they run the same two statements and hand the results to
+:func:`_resolve_version`, which holds the entire rule. Nothing about the floor,
+the authoritative source or the fallback is written down twice, because two
+copies of a version floor drift apart.
 """
 
 from __future__ import annotations
@@ -45,6 +55,7 @@ from __future__ import annotations
 import logging
 import re
 
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 logger = logging.getLogger(__name__)
@@ -87,6 +98,20 @@ async def _scalar(engine: AsyncEngine, statement: str) -> object:
 
     async with engine.connect() as conn:
         result = await conn.execute(text(statement))
+        return result.scalar()
+
+
+def _scalar_sync(engine: Engine, statement: str) -> object:
+    """:func:`_scalar` over a synchronous engine, for the alembic entry point.
+
+    Same one connection per probe, for the same reason: an errored statement
+    aborts its transaction, and the fallback needs the banner readable exactly
+    when the number was not.
+    """
+    from sqlalchemy import text
+
+    with engine.connect() as conn:
+        result = conn.execute(text(statement))
         return result.scalar()
 
 
@@ -149,42 +174,42 @@ def _major_from_banner(version_string: str) -> int:
     return int(match.group(1))
 
 
-async def validate_postgres_version(engine: AsyncEngine) -> tuple[int, str]:
-    """Validate that the connected PostgreSQL meets the minimum version.
+def _resolve_version(
+    raw_number: object,
+    number_error: Exception | None,
+    banner: object,
+    banner_error: Exception | None,
+) -> tuple[int, str]:
+    """Turn the two probe results into a verified major version, or refuse.
+
+    The whole rule lives here: which source is authoritative, when the banner
+    is allowed to stand in for the number, and what the floor is. The entry
+    points differ only in how they run the two statements, so neither of them
+    restates any part of this.
 
     Args:
-        engine: SQLAlchemy AsyncEngine connected to PostgreSQL.
+        raw_number: What ``server_version_num`` returned, if it was queryable.
+        number_error: The exception that statement raised, or ``None``.
+        banner: What ``SELECT version()`` returned, if it was queryable.
+        banner_error: The exception that statement raised, or ``None``.
 
     Returns:
-        Tuple of ``(major_version, version_string)``. The string is the
-        ``SELECT version()`` banner when the server gave one, otherwise a
-        synthesised description of the number that was read.
+        Tuple of ``(major_version, version_string)``.
 
     Raises:
-        PostgreSQLVersionError: If the server cannot be reached, cannot be
-            identified, or reports a major version below
-            :data:`MIN_REQUIRED_PG_VERSION`. There is no path that returns
-            normally without having read a version.
+        PostgreSQLVersionError: For every shape of failure. There is no path
+            that returns normally without having read a version.
     """
-    try:
-        raw_number = await _scalar(engine, _VERSION_NUM_SQL)
-    except Exception as exc:  # noqa: BLE001 - any driver/server failure means "unavailable"
-        number_error: Exception | None = exc
-        raw_number = None
-    else:
-        number_error = None
-
-    try:
-        banner = await _scalar(engine, _VERSION_BANNER_SQL)
-    except Exception as exc:
+    if banner_error is not None:
         if number_error is not None:
             # Neither probe ran: the server is unreachable, not merely unusual.
             raise PostgreSQLVersionError(
-                f"Could not query PostgreSQL version. Make sure the database is running and accessible. Error: {exc}"
-            ) from exc
+                "Could not query PostgreSQL version. Make sure the database is running and accessible. "
+                f"Error: {banner_error}"
+            ) from banner_error
         # The number is authoritative and it arrived; losing the banner costs
         # only the readable description.
-        logger.warning("PostgreSQL banner query failed (%s); reporting the numeric version only", exc)
+        logger.warning("PostgreSQL banner query failed (%s); reporting the numeric version only", banner_error)
         banner = None
 
     version_string = str(banner).strip() if banner else ""
@@ -218,8 +243,85 @@ async def validate_postgres_version(engine: AsyncEngine) -> tuple[int, str]:
     return major_version, version_string
 
 
+async def validate_postgres_version(engine: AsyncEngine) -> tuple[int, str]:
+    """Validate that the connected PostgreSQL meets the minimum version.
+
+    Args:
+        engine: SQLAlchemy AsyncEngine connected to PostgreSQL.
+
+    Returns:
+        Tuple of ``(major_version, version_string)``. The string is the
+        ``SELECT version()`` banner when the server gave one, otherwise a
+        synthesised description of the number that was read.
+
+    Raises:
+        PostgreSQLVersionError: If the server cannot be reached, cannot be
+            identified, or reports a major version below
+            :data:`MIN_REQUIRED_PG_VERSION`. There is no path that returns
+            normally without having read a version.
+    """
+    try:
+        raw_number = await _scalar(engine, _VERSION_NUM_SQL)
+    except Exception as exc:  # noqa: BLE001 - any driver/server failure means "unavailable"
+        number_error: Exception | None = exc
+        raw_number = None
+    else:
+        number_error = None
+
+    try:
+        banner = await _scalar(engine, _VERSION_BANNER_SQL)
+    except Exception as exc:  # noqa: BLE001 - the banner is optional; _resolve_version decides
+        banner_error: Exception | None = exc
+        banner = None
+    else:
+        banner_error = None
+
+    return _resolve_version(raw_number, number_error, banner, banner_error)
+
+
+def validate_postgres_version_sync(engine: Engine) -> tuple[int, str]:
+    """Validate the minimum version over a synchronous engine.
+
+    The alembic entry point. ``alembic upgrade head`` reaches a database
+    without the application ever booting, and on a blank server it builds the
+    entire schema, so it has to ask the same question the application asks -
+    and ask it of the engine the migration itself runs on, rather than of a
+    second one built from the async URL, which a deployment is free to point
+    somewhere else.
+
+    Args:
+        engine: SQLAlchemy Engine connected to PostgreSQL.
+
+    Returns:
+        Tuple of ``(major_version, version_string)``, as
+        :func:`validate_postgres_version`.
+
+    Raises:
+        PostgreSQLVersionError: On every failure shape the async entry point
+            raises on, for the same reasons.
+    """
+    try:
+        raw_number = _scalar_sync(engine, _VERSION_NUM_SQL)
+    except Exception as exc:  # noqa: BLE001 - any driver/server failure means "unavailable"
+        number_error: Exception | None = exc
+        raw_number = None
+    else:
+        number_error = None
+
+    try:
+        banner = _scalar_sync(engine, _VERSION_BANNER_SQL)
+    except Exception as exc:  # noqa: BLE001 - the banner is optional; _resolve_version decides
+        banner_error: Exception | None = exc
+        banner = None
+    else:
+        banner_error = None
+
+    return _resolve_version(raw_number, number_error, banner, banner_error)
+
+
 __all__ = [
     "MIN_REQUIRED_PG_VERSION",
     "PostgreSQLVersionError",
     "validate_postgres_version",
+    "validate_postgres_version_sync",
 ]

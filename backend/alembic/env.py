@@ -208,6 +208,7 @@ from app.core.alembic_version_table import (  # noqa: E402
     ensure_wide_version_table,
     install_wide_version_table,
 )
+from app.core.postgres_version import validate_postgres_version_sync  # noqa: E402
 
 install_wide_version_table()
 
@@ -260,6 +261,10 @@ def _bootstrap_fresh_db(connection: sa.engine.Connection) -> None:
 
 
 def run_migrations_offline() -> None:
+    # No version check here, and it is not an oversight. ``--sql`` renders
+    # statements for a database it never connects to, so there is no server to
+    # ask. The floor is enforced on the online path below, which is the one
+    # that touches a database.
     url = settings.database_sync_url
     context.configure(
         url=url,
@@ -273,6 +278,22 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     connectable = create_engine(settings.database_sync_url, poolclass=pool.NullPool)
+
+    # The version floor, before anything is read from or written to the
+    # server. ``app.main`` checks it ahead of its own create_all, but the app
+    # is not the only way a database gets reached: an operator who deploys the
+    # wheel and runs ``alembic upgrade head`` before ever booting it arrives
+    # here instead, and on a blank server the shortcut below builds the entire
+    # schema. That is exactly the situation the check exists to stop - a schema
+    # built and writes taken on a server whose capabilities nobody asked about,
+    # with the first symptom arriving much later as a broken query.
+    #
+    # Asked of ``connectable`` rather than of a second engine built from the
+    # async URL, so what gets verified is the server the migration actually
+    # runs against. The rule itself is not restated here; a second copy of a
+    # version floor drifts away from the first one.
+    if connectable.dialect.name == "postgresql":
+        validate_postgres_version_sync(connectable)
 
     # Fresh-blank-DB shortcut: create every table at the latest schema
     # via Base.metadata.create_all and stamp the alembic version
