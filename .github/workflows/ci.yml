@@ -28,7 +28,14 @@ on:
 # its own group, separate from refs/heads/main.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Not an unconditional true. This workflow fires on every push to main and
+  # we push straight to main without PRs, so cancelling in progress means each
+  # push kills the run from the push before it and main produces no verdict at
+  # all. Measured 2026-08-29: 28 of the last 30 ci.yml runs on main were
+  # cancelled, 19 of the last 20 consecutively. What that costs is not a wrong
+  # answer, it is NO answer. A cancelled run has no conclusion, nothing goes
+  # red, and the silence is indistinguishable from health.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   version-sync:
