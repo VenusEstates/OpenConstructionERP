@@ -28,6 +28,16 @@ name: CI (PostgreSQL)
 # which also runs the step when the whole run is cancelled: that is a different
 # behaviour and the difference was corrected once already, in 6a5af0b34.
 #
+# The bare form has one accepted cost, and it is written here so the next reader
+# does not read it as an oversight and remove the condition. There is exactly one
+# bare step, the frontend existence check, and if the CHECKOUT is what failed it
+# runs against a missing tree and reports every named file as absent. That is a
+# screenful naming the wrong cause, the same shape the exemptions below exist to
+# avoid. It is accepted rather than fixed because a failed checkout is already
+# the loudest thing in the log, whereas a failed `npm ci` is the case where that
+# step's verdict is worth having and a step condition naming the install would
+# throw it away.
+#
 # Two places carry no condition on purpose. The environment steps at the top of
 # each job, meaning checkout, interpreter, the dist stub and the install, are
 # not verdicts about anything, and running them after one of them has already
