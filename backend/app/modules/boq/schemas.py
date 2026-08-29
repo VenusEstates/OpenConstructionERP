@@ -149,7 +149,18 @@ class BOQUpdate(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=5000)
-    status: str | None = Field(default=None, pattern=r"^(draft|final|archived)$")
+    #: The whole state set a bill of quantities has. ``draft`` is where every
+    #: bill starts, ``final`` is what approving one produces, and ``archived``
+    #: retires it. There is no separate "approved" state: approval and
+    #: finalisation are one act here - ``POST /boqs/{id}/lock`` records the
+    #: approver in ``approved_by`` / ``approved_at`` and sets the status to
+    #: ``final`` - and ``POST /boqs/{id}/unlock`` returns it to ``draft``.
+    status: str | None = Field(
+        default=None,
+        pattern=r"^(draft|final|archived)$",
+        description="Lifecycle state: draft (editable), final (approved), archived (retired).",
+        examples=["final"],
+    )
     metadata: dict[str, Any] | None = None
     estimate_type: str | None = Field(default=None, max_length=50)
     base_date: str | None = Field(default=None, max_length=20)

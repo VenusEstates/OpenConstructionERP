@@ -11792,7 +11792,15 @@ async def install_demo_project(
         project_id=project.id,
         name=budget_boq_name,
         description=f"Budget-level estimate for {template.project_name}",
-        status="approved",
+        # "final", not "approved". The seeder writes this column directly and
+        # so is the one writer that never meets ``BOQUpdate``'s pattern, which
+        # permits draft / final / archived. "approved" was a fourth spelling
+        # reachable from nowhere in the API: the only act that approves a bill
+        # is ``POST /boqs/{id}/lock``, and it records the approver in
+        # ``approved_by`` / ``approved_at`` while setting the status to
+        # "final". Seeding a status no transition produces put demo data in a
+        # state the product could neither reach nor leave.
+        status="final",
         metadata_={"estimate_class": 2, "accuracy": "±15–20%"},
     )
     session.add(budget_boq)
