@@ -155,13 +155,46 @@ def _core_rates() -> dict[tuple[str, str], Decimal]:
     return out
 
 
+def _declares_a_rate(entry: object) -> bool:
+    """Whether a yaml rate class states a rate at all, in any shape it may be written in."""
+    if isinstance(entry, list):
+        return any(isinstance(period, dict) and "rate" in period for period in entry)
+    if isinstance(entry, dict):
+        return "rate" in entry
+    return entry is not None
+
+
+def _current_yaml_rate(entry: object) -> Decimal | None:
+    """The rate a yaml class charges today, from either of the two shapes it uses.
+
+    A class is either a single mapping or a list of dated periods written
+    oldest first. The newest period is the comparable one, because the other
+    two tables carry current rates and nothing else: ``core/tax.py`` has no
+    dates at all and only the seed's open rows are read.
+
+    Returns None for a class that states no rate anywhere, such as the UAE and
+    Russian ``exempt`` entries, which name what they apply to and have nothing
+    to compare against.
+    """
+    if isinstance(entry, list):
+        periods = [period for period in entry if isinstance(period, dict) and "rate" in period]
+        if not periods:
+            return None
+        newest = max(periods, key=lambda period: str(period.get("effective_from") or ""))
+        return Decimal(str(newest["rate"]))
+    if isinstance(entry, dict) and "rate" in entry:
+        return Decimal(str(entry["rate"]))
+    return None
+
+
 def _yaml_rates() -> dict[tuple[str, str], Decimal]:
     doc = yaml.safe_load(_YAML.read_text(encoding="utf-8"))
     out: dict[tuple[str, str], Decimal] = {}
     for country, block in (doc.get("jurisdictions") or {}).items():
         for cls, entry in ((block or {}).get("vat") or {}).items():
-            if isinstance(entry, dict) and "rate" in entry:
-                out[(country, cls)] = Decimal(str(entry["rate"]))
+            rate = _current_yaml_rate(entry)
+            if rate is not None:
+                out[(country, cls)] = rate
     return out
 
 
@@ -233,6 +266,39 @@ def test_the_compared_population_is_not_empty() -> None:
         f"gone vacuous. Either a table stopped parsing, _CLASS_OF stopped matching, or the "
         f"comparison stopped comparing."
     )
+
+
+def test_every_yaml_vat_class_is_either_compared_or_states_no_rate() -> None:
+    """A class this reader cannot parse must fail here rather than drop out quietly.
+
+    The reader used to accept a single mapping only. When GB and DE standard
+    VAT were rewritten as dated histories they stopped being mappings, left the
+    comparison, and this file went on passing over a population two keys
+    smaller - the two headline rates the platform quotes most. That is the
+    vacuous pass the module docstring is about, arriving through the shape of
+    the data rather than through the tax-code mapping, and nothing here noticed.
+
+    The rule: every VAT class in the yaml is either compared or states no rate
+    at all, which is the only honest reason to have nothing to compare.
+    """
+    doc = yaml.safe_load(_YAML.read_text(encoding="utf-8"))
+    compared = set(_yaml_rates())
+
+    unread = sorted(
+        f"{country}.{cls}"
+        for country, block in (doc.get("jurisdictions") or {}).items()
+        for cls, entry in ((block or {}).get("vat") or {}).items()
+        if (country, cls) not in compared and _declares_a_rate(entry)
+    )
+
+    assert unread == [], (
+        f"{unread} state a rate the yaml reader did not return, so they have dropped out of the "
+        f"drift comparison rather than failing it. Teach _current_yaml_rate the shape they use."
+    )
+    # Named as well as covered by the rule above: these two are the classes the
+    # rule was written for, and a reader that lost them again would otherwise
+    # only be caught by a count.
+    assert {("GB", "standard"), ("DE", "standard")} <= compared
 
 
 def test_every_seed_country_still_has_an_open_period() -> None:

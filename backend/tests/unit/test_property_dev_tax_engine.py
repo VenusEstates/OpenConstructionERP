@@ -878,7 +878,7 @@ def test_a_single_mapping_that_does_carry_a_date_still_refuses_an_earlier_one(tm
 # ── 8f. The quote says how its VAT figure was arrived at ───────────────
 
 
-def _quote(jurisdiction: str, rate_class: str = "standard") -> dict[str, Any]:
+def _quote(jurisdiction: str, rate_class: str = "standard", effective_on: date | None = None) -> dict[str, Any]:
     """A quote for a 100k contract, with whatever else that jurisdiction needs."""
     return compute_total_taxes_for_contract(
         {"net": Decimal("100000"), "currency": "USD"},
@@ -886,6 +886,7 @@ def _quote(jurisdiction: str, rate_class: str = "standard") -> dict[str, Any]:
         vat_rate_class=rate_class,
         region_subcode=_SUBCODE.get(jurisdiction),
         emirate="dubai" if jurisdiction == "AE" else None,
+        effective_on=effective_on,
     )
 
 
@@ -1023,6 +1024,118 @@ def test_grand_total_still_adds_a_vat_it_has_just_called_unusable() -> None:
     assert br["vat_provenance"].usable is False
     assert br["grand_total"] == br["net"] + br["vat"] + br["subtotal_taxes"]
     assert br["vat"] == Decimal("0.00")
+
+
+# ── 8g. The quote says whether the rate it used is one the table dated ──
+
+
+@pytest.mark.parametrize(
+    ("jurisdiction", "signed_on", "began_on"),
+    [
+        ("GB", date(2015, 6, 1), date(2011, 1, 4)),
+        ("GB", date(2009, 6, 1), date(2008, 12, 1)),
+        ("DE", date(2020, 8, 1), date(2020, 7, 1)),
+        ("DE", date(2005, 1, 1), date(1998, 4, 1)),
+    ],
+    ids=["gb-current", "gb-temporary-cut", "de-temporary-cut", "de-sixteen-percent-era"],
+)
+def test_the_quote_names_the_day_the_rate_it_used_began(jurisdiction: str, signed_on: date, began_on: date) -> None:
+    """The date reported follows the period, not the class.
+
+    Four contracts, two of them priced at a rate the class has since moved off,
+    and each reports the day its own period opened. A field reporting the
+    class's newest period instead would be right for the first row and quietly
+    wrong for the other three, which is the failure worth having a test for.
+    """
+    assert _quote(jurisdiction, effective_on=signed_on)["vat_rate_effective_from"] == began_on
+
+
+def test_a_class_the_table_never_dated_reports_no_date_beside_one_that_is() -> None:
+    """The defect this field exists to close, stated as a test.
+
+    Same jurisdiction, same contract date, two rate classes. GB standard is
+    dated and the table stands behind 17.5 % for a 1997 contract. GB reduced is
+    a single undated mapping, so the same contract is priced at today's 5 %
+    with nothing in the table ever having said 5 % applied in 1997.
+
+    The two amounts are quoted the same way and look equally authoritative.
+    The date beside them is the only thing that separates a promise from an
+    assumption, so both halves are asserted: the number that was never promised
+    is pinned as well, because a field saying "undated" beside a refusal would
+    be describing something else entirely.
+    """
+    signed_on = date(1997, 5, 1)
+    dated = _quote("GB", effective_on=signed_on)
+    undated = _quote("GB", rate_class="reduced", effective_on=signed_on)
+
+    assert dated["vat_rate_effective_from"] == date(1991, 4, 1)
+    assert undated["vat_rate_effective_from"] is None
+    assert dated["vat"] == Decimal("17500.00")
+    assert undated["vat"] == Decimal("5000.00")
+
+
+def test_the_date_describes_the_rate_and_not_the_question_that_was_asked() -> None:
+    """A quote with no contract date still reports when its rate began.
+
+    ``effective_on=None`` means current rates, and the current GB standard rate
+    has run since 2011-01-04 whatever a caller asked. Reporting None here
+    instead would make "no date was resolved" and "the table dates this rate
+    from nothing" the same answer, and telling those apart is the whole job of
+    the field.
+    """
+    assert _quote("GB")["vat_rate_effective_from"] == date(2011, 1, 4)
+
+
+def test_three_quotes_reporting_no_date_are_three_different_situations() -> None:
+    """The join this field deliberately does not do on its own.
+
+    An undated class, a jurisdiction that levies no VAT, and a jurisdiction
+    this table does not model all report no date, because none of them has a
+    dated period. Only the first has a rate at all, and ``vat_provenance`` is
+    what says so; a date cannot describe a rate that does not exist.
+
+    Pinned rather than left to the docstring, so that a later attempt to make
+    this field self-sufficient has to change a test that says why it is not.
+    """
+    undated = _quote("GB", rate_class="reduced", effective_on=date(1997, 5, 1))
+    no_vat_in_law = _quote("US")
+    not_modelled = _quote("BR")
+
+    quotes = (undated, no_vat_in_law, not_modelled)
+    assert [q["vat_rate_effective_from"] for q in quotes] == [None, None, None]
+    assert [q["vat_provenance"].source for q in quotes] == [
+        Source.DECLARED,
+        Source.FALLBACK,
+        Source.UNAVAILABLE,
+    ]
+
+
+def test_the_quote_and_compute_vat_still_agree_about_the_amount() -> None:
+    """The seam the new field opened, measured.
+
+    The quote resolves its own rate now, because it has to report the period
+    that produced it, so it no longer reaches the figure through
+    :func:`compute_vat`. They share the arithmetic helper; this is what would
+    notice if one of them ever stopped.
+    """
+    for jurisdiction, signed_on in (("GB", date(2009, 6, 1)), ("DE", date(2020, 8, 1)), ("GB", None)):
+        quote = _quote(jurisdiction, effective_on=signed_on)
+        assert quote["vat"] == compute_vat(Decimal("100000"), jurisdiction, effective_on=signed_on)
+
+
+def test_the_date_crosses_the_wire_as_an_iso_string_or_as_null() -> None:
+    """The response model has to carry the field for any of this to reach a client.
+
+    ``ContractTaxQuote`` drops keys it does not declare, so a field the engine
+    fills and the schema has not heard of is invisible over HTTP while every
+    engine test stays green. That is what this asserts: the round trip, in both
+    states, through the model the endpoint actually returns.
+    """
+    dated = ContractTaxQuote.model_validate(_quote("GB", effective_on=date(2015, 6, 1)))
+    undated = ContractTaxQuote.model_validate(_quote("GB", rate_class="reduced"))
+
+    assert dated.model_dump(mode="json")["vat_rate_effective_from"] == "2011-01-04"
+    assert undated.model_dump(mode="json")["vat_rate_effective_from"] is None
 
 
 # ── 9. Unsupported jurisdiction handling ────────────────────────────────

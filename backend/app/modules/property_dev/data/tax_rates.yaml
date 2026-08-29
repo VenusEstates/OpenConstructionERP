@@ -21,6 +21,9 @@
 #     shapes mix freely inside one jurisdiction - GB ``standard`` carries a
 #     history while GB ``reduced`` beside it is a single undated mapping.
 #     Out-of-order or undated periods are refused when the table loads.
+#     Dating a class changes what a quote says about it: the quote reports the
+#     ``effective_from`` of the period that priced it, and reports nothing for
+#     a class written as a single undated mapping.
 #   * ``stamp_duty.bands``: progressive bands, each ``up_to`` exclusive
 #     of next band; final band uses ``up_to: null`` for the open-ended
 #     "anything above". Rates are marginal — applied only to the

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
 from uuid import UUID
@@ -2609,12 +2609,27 @@ class ContractTaxQuote(BaseModel):
     properties rather than fields and so do not cross the wire, which is
     deliberate: they are derivable from ``source``, and shipping both would
     invite clients to branch on the copy that cannot be extended.
+
+    ``vat_rate_effective_from`` is the date the rate table dates the applied
+    rate from, and ``null`` says it dates it from nothing. Most classes are
+    undated: only GB and DE standard VAT track their rate changes today, so a
+    contract signed in 1997 and quoted at the GB reduced rate gets today's 5 %
+    with nothing in the table ever having said 5 % applied in 1997. The null is
+    how a client learns that the number it holds was never promised for its own
+    date, and it is the one field here that a client should read before
+    reusing a quote for a historical contract.
+
+    A jurisdiction with no VAT rate at all also serialises ``null``, so telling
+    that apart from an undated class means reading ``vat_provenance.source``
+    beside it. That join is deliberate and documented rather than hidden: a
+    date field cannot describe a rate that does not exist.
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
     jurisdiction: str
     vat_provenance: Provenance
+    vat_rate_effective_from: date | None = None
     region_subcode: str | None = None
     currency: str = ""
     net: Decimal = Decimal("0")

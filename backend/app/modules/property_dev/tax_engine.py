@@ -28,6 +28,9 @@ Design intent
   this module calls bands: a stamp-duty band is a slice of *price*
   (:func:`_progressive_band_amount`), a rate band is a slice of *time*. The
   helpers for the second say ``period`` so the two never read alike in code.
+  A quote reports the date its rate is dated from, or reports that the table
+  dates it from nothing, so an undated class is visible to a caller instead of
+  being indistinguishable from a promise.
 * **No currency conversion** - the caller supplies the price in the
   contract's currency. Mixing currencies is a finance-module job, not
   a tax-engine job.
@@ -659,19 +662,68 @@ def _period_in_force(
     return max(in_force, key=lambda pair: pair[1] or date.min)[0]
 
 
+def _vat_rate_and_start(
+    jur_table: dict[str, Any],
+    jurisdiction: str,
+    rate_class: str,
+    effective_on: date | None,
+) -> tuple[Decimal, date | None]:
+    """The VAT/GST rate to apply, and the date the table dates it from.
+
+    One resolution answers both, because the second is a description of the
+    first. A caller told that its rate has been in force since 2011-01-04 is
+    being told something about the very period that produced the figure beside
+    it, and resolving twice is two chances to describe a different one.
+
+    Args:
+        jur_table: the jurisdiction's block.
+        jurisdiction: ISO-3166 alpha-2 code.
+        rate_class: ``standard`` | ``reduced`` | ``zero_rated`` etc.
+        effective_on: the contract's date, or ``None`` for current rates.
+
+    Returns:
+        The rate as a fraction - zero when the class defines no ``rate`` key -
+        and the ``effective_from`` of the period it came from. That date is
+        ``None`` whenever the period carries none, which is most of the table:
+        only GB and DE standard VAT are dated today.
+
+    Raises:
+        NoVatBlockError: the table holds no VAT or GST block here.
+        UnknownRateClassError: the block holds no such class.
+        RateNotInForceError: the date precedes every period of that class.
+    """
+    entry = _vat_entry_or_raise(jur_table, jurisdiction, rate_class)
+    period = _period_in_force(_rate_periods(entry), jurisdiction, rate_class, effective_on)
+    return _D(period.get("rate", 0)), _period_date(period)
+
+
+def _vat_amount(net: Any, rate: Decimal) -> Decimal:
+    """The VAT on ``net`` at ``rate``, rounded HALF_UP to 2 dp.
+
+    Shared by :func:`compute_vat` and by the quote, which resolves its own rate
+    so that it can also say where that rate came from. One arithmetic rule in
+    one place is what keeps the quote from becoming a second way of arriving at
+    a figure the public function already owns.
+    """
+    return _money(_D(net) * rate)
+
+
 def _vat_rate_in_force(
     jur_table: dict[str, Any],
     jurisdiction: str,
     rate_class: str,
     effective_on: date | None,
 ) -> Decimal:
-    """The VAT/GST rate to apply, having resolved both the class and the date.
+    """The rate alone, for the callers that price without explaining themselves.
 
     One function for what used to be the same six lines in :func:`compute_vat`
     and in :func:`net_from_gross`. Two copies of a date rule are two places to
     extend it, and the history support this now carries would have had to land
     in both of them to keep an inclusive price and an exclusive one agreeing
     about the same contract.
+
+    See :func:`_vat_rate_and_start` for the resolution itself; this drops the
+    date rather than resolving anything of its own.
 
     Args:
         jur_table: the jurisdiction's block.
@@ -687,9 +739,7 @@ def _vat_rate_in_force(
         UnknownRateClassError: the block holds no such class.
         RateNotInForceError: the date precedes every period of that class.
     """
-    entry = _vat_entry_or_raise(jur_table, jurisdiction, rate_class)
-    period = _period_in_force(_rate_periods(entry), jurisdiction, rate_class, effective_on)
-    return _D(period.get("rate", 0))
+    return _vat_rate_and_start(jur_table, jurisdiction, rate_class, effective_on)[0]
 
 
 def compute_vat(
@@ -727,8 +777,7 @@ def compute_vat(
     """
     jur = _table_for(jurisdiction)
     rate = _vat_rate_in_force(jur, jurisdiction, rate_class, effective_on)
-    amount = _D(net) * rate
-    return _money(amount)
+    return _vat_amount(net, rate)
 
 
 def gross_from_net(
@@ -1106,6 +1155,7 @@ def compute_total_taxes_for_contract(
         {
           "jurisdiction": "GB",
           "vat_provenance": Provenance(axis="vat", ...),
+          "vat_rate_effective_from": date(2011, 1, 4) | None,
           "region_subcode": None,
           "currency": "GBP",
           "net": Decimal(...),
@@ -1131,6 +1181,25 @@ def compute_total_taxes_for_contract(
     Branch on its ``source``, never on the text of ``used``; see
     :mod:`app.core.provenance`.
 
+    ``vat_rate_effective_from`` is the date the table dates the applied rate
+    from, and ``None`` says the table dates it from nothing at all. It is a
+    statement about the rate rather than about the quote: it is filled in the
+    same way whether or not ``effective_on`` was given, because a rate that has
+    run since 2011-01-04 has run since 2011-01-04 no matter what was asked.
+
+    The ``None`` is what this field exists for. Only GB and DE standard VAT
+    carry dated histories, so every other class answers any date at all with
+    its one undated rate - GB ``reduced`` prices a 1997 contract at today's 5 %
+    without the table ever having said that 5 % applied in 1997. That is a
+    number nobody promised, and before this field a caller could not tell it
+    from one that was promised.
+
+    Two situations share the ``None`` and are told apart by ``vat_provenance``
+    rather than here: a class the table never dated (``source`` DECLARED, as
+    above) and a jurisdiction with no VAT rate at all (US, BR - FALLBACK or
+    UNAVAILABLE). A caller that needs the difference must read both fields,
+    which is a join, and it is called out here rather than papered over.
+
     Note that ``grand_total`` adds ``vat`` whatever the provenance says, so for
     an unmodelled jurisdiction it is a total with a placeholder in it. That is
     unchanged from before this field existed, and the field is what makes it
@@ -1141,9 +1210,9 @@ def compute_total_taxes_for_contract(
         UnknownRateClassError.
         RateNotInForceError: the contract's date precedes the earliest band
             the table holds for its rate class. Nothing here catches it: the one
-            ``try`` below covers ``UnknownRateClassError`` alone, so this
-            propagates from both the :func:`net_from_gross` and
-            :func:`compute_vat` calls to whatever maps it for the caller.
+            ``try`` below covers :class:`NoVatBlockError` alone, so this
+            propagates from both the :func:`net_from_gross` call in step 1 and
+            the rate resolution in step 2 to whatever maps it for the caller.
     """
     jur = _table_for(jurisdiction)
     # Normalised once, and used both for the provenance below and for the
@@ -1174,12 +1243,17 @@ def compute_total_taxes_for_contract(
 
     # ── 2. VAT / GST ────────────────────────────────────────────
     try:
-        vat = compute_vat(
-            net,
+        # Resolved here rather than through compute_vat because the quote says
+        # which period priced it, and a second resolution to fetch that date
+        # could name a different period from the one the money came from. The
+        # arithmetic is still compute_vat's, via the helper they share.
+        vat_rate, vat_rate_effective_from = _vat_rate_and_start(
+            jur,
             jurisdiction,
-            rate_class=vat_rate_class,
-            effective_on=effective_on,
+            vat_rate_class,
+            effective_on,
         )
+        vat = _vat_amount(net, vat_rate)
         vat_provenance = declared(VAT_AXIS, quoted_jurisdiction)
     except NoVatBlockError:
         # The table models no VAT here, so a quote is still the right answer and
@@ -1198,6 +1272,9 @@ def compute_total_taxes_for_contract(
         # setting it in both places would be two chances to disagree about one
         # contract; this call is unconditional, so one place covers every path.
         vat_provenance = _provenance_for_absent_vat(quoted_jurisdiction)
+        # No rate applied, so there is no period and no date to report. The
+        # field beside it carries which of the two absences this is.
+        vat_rate_effective_from = None
 
     # ── 3. Stamp duty / transfer tax ────────────────────────────
     # Conventionally applied to the consideration (net headline
@@ -1273,6 +1350,7 @@ def compute_total_taxes_for_contract(
     return {
         "jurisdiction": quoted_jurisdiction,
         "vat_provenance": vat_provenance,
+        "vat_rate_effective_from": vat_rate_effective_from,
         "region_subcode": (region_subcode or "").upper() or None,
         "currency": (contract.get("currency") or "").upper(),
         "net": _money(net),
