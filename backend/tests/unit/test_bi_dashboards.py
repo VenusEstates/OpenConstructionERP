@@ -2339,3 +2339,87 @@ async def test_evaluate_dashboard_scopes_portfolio_to_allowed_projects(
     admin = await svc.evaluate_dashboard(dashboard.id, allowed_project_ids=None)
     assert admin is not None
     assert admin.widgets[0].value >= Decimal("2")
+
+
+# ── safety_trir: a rate with no denominator has to say so ──────────────
+
+
+async def _make_incident(
+    session: AsyncSession,
+    project_id: uuid.UUID,
+    *,
+    number: str,
+    man_hours: float | None = None,
+) -> None:
+    """One OSHA-recordable incident, with or without its exposure hours."""
+    from app.modules.safety.models import SafetyIncident
+
+    session.add(
+        SafetyIncident(
+            id=uuid.uuid4(),
+            project_id=project_id,
+            incident_number=number,
+            incident_date="2026-05-10",
+            incident_type="injury",
+            title="Recordable injury",
+            description="Fall from height",
+            severity="major",
+            osha_recordable=True,
+            metadata_={} if man_hours is None else {"man_hours_total": man_hours},
+        )
+    )
+    await session.flush()
+
+
+@pytest.mark.asyncio
+async def test_safety_trir_reports_no_data_when_exposure_hours_are_missing(
+    session: AsyncSession,
+) -> None:
+    """TRIR is incidents x 200000 / hours worked, and nothing in the platform
+    writes ``man_hours_total``, so the denominator is routinely absent.
+
+    A rate computed against an absent denominator is a wrong answer rather
+    than a missing one, and it is wrong in the direction that reads as
+    plausible: with the fallback denominator equal to the OSHA numerator
+    constant, TRIR came back numerically equal to the incident count and was
+    charted as a rate. The formula has to decline instead.
+    """
+    from app.modules.bi_dashboards import kpis
+
+    proj = await _make_project(session, currency="EUR")
+    await _make_incident(session, proj.id, number="INC-001")
+    await _make_incident(session, proj.id, number="INC-002")
+
+    result = await kpis.compute("safety_trir", session, project_id=proj.id)
+
+    # ``source_record_count == 0`` is this module's no-data signal, not a
+    # style choice: it is what stops the value reaching KPIValue
+    # (service.py:408) and being averaged into a benchmark (kpis.py:3813),
+    # and it is what makes the controls tile render an em dash and the
+    # words "no data" instead of a number (ControlsTile.tsx:25).
+    assert result.source_record_count == 0
+    assert result.value == Decimal("0")
+    assert result.breakdown.get("reason") == "no_exposure_hours"
+    # The incidents themselves are not lost, they are just not a rate.
+    assert result.breakdown.get("recordable_incidents") == 2
+
+
+@pytest.mark.asyncio
+async def test_safety_trir_computes_the_rate_when_exposure_hours_are_recorded(
+    session: AsyncSession,
+) -> None:
+    """Control for the test above: the refusal has to be conditional.
+
+    Without this, a formula that returned no-data unconditionally would pass
+    the test above while being just as broken in the other direction.
+    """
+    from app.modules.bi_dashboards import kpis
+
+    proj = await _make_project(session, currency="EUR")
+    await _make_incident(session, proj.id, number="INC-001", man_hours=100_000)
+
+    result = await kpis.compute("safety_trir", session, project_id=proj.id)
+
+    assert result.source_record_count == 1
+    assert result.value == Decimal("2")  # 1 x 200000 / 100000
+    assert Decimal(result.breakdown["hours_worked"]) == Decimal("100000")

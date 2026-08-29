@@ -1692,8 +1692,33 @@ async def safety_trir_kpi(
     allowed_project_ids: set[uuid.UUID] | None = None,
     **_: Any,
 ) -> KPIComputation:
+    """Recordable incidents x 200000 / hours worked, or no data.
+
+    The denominator has no fallback on purpose. It used to default to
+    ``Decimal("200000")``, the same constant as the OSHA normaliser in the
+    numerator, so whenever exposure hours were absent the "rate" came out
+    numerically equal to the recordable count and was still labelled and
+    charted as a rate. That is the expensive kind of wrong: not a refusal a
+    reader notices, but a plausible number a safety manager acts on.
+
+    Nothing in the platform writes ``man_hours_total`` today, so the absent
+    case is the normal one rather than an edge. Where exposure hours should
+    come from is a product decision that has not been taken, and guessing
+    one here would hide the question. Until it is taken this KPI reports no
+    data, which the controls tile renders as an em dash and "no data".
+
+    Both halves are held by
+    ``tests/unit/test_bi_dashboards.py::test_safety_trir_reports_no_data_when_exposure_hours_are_missing``
+    and its control
+    ``::test_safety_trir_computes_the_rate_when_exposure_hours_are_recorded``.
+    The control is the load-bearing one: without it a formula that refused
+    unconditionally would pass the first test and be just as broken.
+    """
     incidents = 0
-    hours_worked = Decimal("200000")  # Industry-standard normaliser fallback
+    # ``None``, not a number. This is what makes the no-data return below
+    # reachable at all; the previous initialiser meant ``hours_worked > 0``
+    # could never be false.
+    hours_worked: Decimal | None = None
     try:
         # The model is ``SafetyIncident`` (there is no ``Incident`` alias);
         # importing the wrong name silently zeroed this KPI. Mirror the
@@ -1747,7 +1772,26 @@ async def safety_trir_kpi(
     except Exception:
         logger.exception("safety_trir: probe failed")
 
-    trir = Decimal(incidents) * Decimal("200000") / hours_worked if hours_worked > 0 else Decimal("0")
+    if hours_worked is None or hours_worked <= 0:
+        # Decline rather than divide. ``source_record_count=0`` is this
+        # module's no-data signal, and it is load-bearing in three places:
+        # the value is not written to KPIValue (service.py), it is left out
+        # of benchmark medians (:func:`_benchmark`), and the controls tile
+        # renders "no data" instead of a figure. The incidents are reported
+        # in the breakdown so the count is not lost with the rate.
+        return KPIComputation(
+            value=Decimal("0"),
+            unit="ratio",
+            source_record_count=0,
+            breakdown={
+                "reason": "no_exposure_hours",
+                "recordable_incidents": incidents,
+            },
+        )
+
+    # 200000 here is the OSHA normaliser (100 full-time workers x 2000 h),
+    # not the removed denominator default that happened to share its value.
+    trir = Decimal(incidents) * Decimal("200000") / hours_worked
     return KPIComputation(
         value=trir,
         unit="ratio",
@@ -2312,19 +2356,20 @@ async def incident_count_kpi(
 ) -> KPIComputation:
     """Raw incident count, optionally windowed by ``incident_date``.
 
-    Uses the real ``SafetyIncident`` model. This KPI exists as a separate
-    count surface because ``safety_trir`` once imported a non-existent
-    ``Incident`` and so silently read zero. ``d1e556037`` (v8.8.3) fixed
-    that by importing ``SafetyIncident as Incident``, in
-    ``safety_trir_kpi`` and in the ``safety_trir`` record provider alike,
-    and both have read real rows ever since.
+    Uses the real ``SafetyIncident`` model, and so does ``safety_trir``.
+    Both read real rows today, and that claim is held by
+    ``tests/unit/test_bi_dashboards.py::test_safety_trir_computes_the_rate_when_exposure_hours_are_recorded``
+    rather than by this sentence, so it cannot quietly stop being true.
 
-    The past tense above is deliberate. The sentence this replaces said in
-    the present that ``safety_trir`` counts zero, was left untouched by the
-    fix, and was later read as a measurement rather than as history, which
-    is how two phantom always-zero KPIs reached a defect register. A note
-    about a bug needs a date and a past tense, or it outlives its subject
-    and gets re-filed as a live one.
+    The history is kept because the note that used to stand here is what
+    went wrong. It said in the present tense that ``safety_trir`` imports a
+    non-existent ``Incident`` and counts zero. That held until
+    ``d1e556037`` (v8.8.3) aliased ``SafetyIncident as Incident`` at both
+    call sites, and then the note stayed behind. Read afterwards as a
+    measurement rather than as history, it put two phantom always-zero KPIs
+    on a defect register. A comment asserting a defect needs the same
+    expiry discipline as the fix, and the cheapest form of that discipline
+    is to name the test that fails when the claim stops holding.
     """
     count = 0
     try:
