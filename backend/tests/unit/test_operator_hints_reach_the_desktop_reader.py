@@ -36,7 +36,10 @@ by being absent from a hand-maintained roster:
   and a register entry that happens to name a package is not a remedy handed to
   anybody. A determiner in front of the word is what tells the two apart.
 
-Measured on 2026-08-23 against the tree: 34 sites in the population, all routed.
+Measured on 2026-08-29 against the tree: 34 sites in the population, all routed.
+The figure was also 34 on 2026-08-23, under a detector that additionally counted
+one register entry describing an install, so a number that matches is not by
+itself evidence that the corpus and the reading of it both stood still.
 A count on its own would let this pass by going blind, so the population size
 carries a floor, the extractor's vocabulary comes from the lock and from
 pyproject rather than from a regex guess after the word "install", and the
