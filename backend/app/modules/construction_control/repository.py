@@ -691,10 +691,11 @@ class ReferenceCountRepository:
     async def count_ncrs_on_inspection(self, inspection_id: uuid.UUID) -> int:
         """Non-conformance reports raised against this inspection.
 
-        Lazy-imported for the same reason ``ncr_bridge`` lazy-imports: the NCR
-        module may be disabled, and construction control has to keep working
-        without it. A missing NCR module means no NCR can hold anything, so the
-        honest count in that case is zero.
+        Lazy-imported so construction control keeps working in a deployment that
+        does not have the NCR module. The reachable case is the module missing
+        from disk rather than disabled: ``oe_ncr`` is core and the loader refuses
+        to disable it, but nothing enforces ``depends`` at startup, so this module
+        boots without it.
 
         The catch is narrowed to that one case on purpose. A blanket
         ``except ImportError`` also swallows an NCR module that is present but
@@ -706,12 +707,23 @@ class ReferenceCountRepository:
         longer defines ``NCR`` raises plain ``ImportError`` rather than
         ``ModuleNotFoundError`` and propagates for the same reason.
 
-        Note what zero actually defends. Both write paths that create these
-        NCRs, ``ncr_bridge.raise_ncr`` and the service's
-        ``_raise_ncr_for_failure``, lazy-import with no guard at all, so with
-        the NCR module genuinely absent raising an NCR fails outright and none
-        can exist. Zero is honest here precisely because there is nothing for
-        it to miss, not because a holder is being waved through.
+        Be precise about what the zero claims. It means no NCR can be COUNTED,
+        not that none exists: rows written while the module was present outlive
+        its removal in the database, so the zero is sound for a deployment that
+        never had the NCR module and optimistic for one that lost it.
+
+        Zero is still the right answer here, because the alternative is worse.
+        This is a read-only count feeding a delete guard, so raising instead
+        would turn every delete in the module into a 500 the moment the NCR
+        module went missing, which fails closed in the wrong direction. The
+        trade is a narrow stale-count risk against breaking deletion outright.
+
+        That trade holds only while the write path refuses to degrade.
+        ``ncr_bridge.raise_ncr`` and ``ConstructionControlService._raise_ncr_for_failure``
+        raise rather than returning ``None`` when the NCR module is gone, which is
+        what keeps the window narrow: nothing new can be written that this count
+        would then miss. If either is ever made to degrade, this zero stops being
+        a narrow risk and becomes a hole, and has to be revisited with it.
         """
         try:
             from app.modules.ncr.models import NCR

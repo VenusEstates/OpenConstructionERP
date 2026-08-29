@@ -415,8 +415,15 @@ class ConstructionControlService:
     async def _raise_ncr_for_failure(self, inspection: Inspection, *, severity: str, user_id: str | None) -> str:
         """Create an NCR for a failed/conditional inspection via the NCR module.
 
-        Lazy-imported so the construction-control module degrades gracefully if the
-        NCR module is ever disabled (it then records the failure without an NCR).
+        The import is lazy to keep the module-level import graph acyclic, not as a
+        degradation guard, and this docstring used to claim otherwise. With the NCR
+        module unavailable this raises and recording the result fails, which is
+        deliberate: ``oe_ncr`` is a hard ``depends`` entry of this module, the caller
+        stores the returned id in ``raised_ncr_id``, and ``None`` there would be
+        indistinguishable from "the inspection passed and no NCR was due".
+
+        See ``ncr_bridge.raise_ncr`` for the reasoning in full, and for the two places
+        this module does degrade, both of which carry a real guard rather than a promise.
         """
         from app.modules.ncr.schemas import NCRCreate
         from app.modules.ncr.service import NCRService
