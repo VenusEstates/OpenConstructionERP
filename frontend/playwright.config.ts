@@ -44,6 +44,12 @@ const localeUrl = (locale: string): string => {
   return u.toString();
 };
 
+// Specs that only make sense at a phone viewport. `mobile-chromium` selects
+// them; every desktop project has to deselect them with the SAME expression,
+// or a spec called "fits in an iPhone SE viewport" also runs at 1280x720 and
+// measures nothing there. One constant so the two halves cannot drift.
+const MOBILE_ONLY = /@mobile|@responsive/;
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Only run specs under named module folders (smoke/, boq/, etc.).
@@ -98,26 +104,41 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      grepInvert: MOBILE_ONLY,
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      grepInvert: MOBILE_ONLY,
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      grepInvert: MOBILE_ONLY,
     },
     {
       // Mobile-responsive checks: iPhone SE viewport (375x667).
       name: 'mobile-chromium',
       use: {
         ...devices['iPhone SE'],
+        // `devices['iPhone SE']` carries `defaultBrowserType: 'webkit'`, so
+        // this project launched WebKit despite its name and died with
+        // "Executable doesn't exist at ...\webkit-2311" on any machine that
+        // installed chromium only. It never mattered while the @mobile specs
+        // were also being picked up by the desktop chromium project; now that
+        // they are correctly filtered out of it, this project is the only
+        // place they run, and an unrunnable project would mean they run
+        // nowhere. The phone metrics below are what the specs actually assert
+        // against, and Chromium honours all of them.
+        browserName: 'chromium',
         viewport: { width: 375, height: 667 },
       },
-      grep: /@mobile|@responsive/,
+      grep: MOBILE_ONLY,
     },
     {
-      // RTL / Arabic locale project — verifies direction handling.
+      // RTL / Arabic locale project — verifies direction handling. Desktop
+      // Chrome, so it deselects the phone-only specs too: a spec tagged
+      // @i18n @mobile would otherwise land here at 1280x720.
       name: 'rtl-arabic',
       use: {
         ...devices['Desktop Chrome'],
@@ -125,6 +146,7 @@ export default defineConfig({
         locale: 'ar-SA',
       },
       grep: /@rtl|@i18n/,
+      grepInvert: MOBILE_ONLY,
     },
   ],
 
