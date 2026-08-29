@@ -452,6 +452,20 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Verify every Playwright project still selects tests
+        # A project whose grep matches no spec is the one kind of dead test
+        # lane Playwright reports nothing about: it contributes no failures and
+        # the summary reads as a pass. This lists the suite without launching
+        # anything, so it needs no browsers and takes about a second.
+        # OE_E2E_VERIFY_CONFIG_ONLY drops the companion check that each
+        # project's browser is on disk, which is true of a machine rather than
+        # of the config and would fail everything on a runner that installs no
+        # browsers. That half belongs to whoever is about to run the tests, and
+        # runs by default for them.
+        env:
+          OE_E2E_VERIFY_CONFIG_ONLY: "1"
+        run: npm run test:e2e:verify-projects
+
       - name: Type check
         # tsc --noEmit whole-program check OOMs at the old 6 GB ceiling
         # ("Reached heap limit Allocation failed", exit 134). ubuntu and windows

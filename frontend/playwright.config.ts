@@ -61,6 +61,7 @@ export default defineConfig({
     '**/fixtures/**',
     '**/helpers/**',
     '**/runner/**',
+    '**/reporters/**',
     '**/node_modules/**',
     // Legacy specs sitting directly under tests/e2e/ (one-level deep)
     // are invoked via their dedicated configs at the repo root.
@@ -81,6 +82,11 @@ export default defineConfig({
     ['html', { outputFolder: 'qa-report', open: 'never' }],
     ['list'],
     ['json', { outputFile: 'qa-results.json' }],
+    // Fails the run if a project declared above contributed no tests, or needs
+    // a browser that is not installed. Playwright is loud about the second and
+    // completely silent about the first, and a project that quietly selected
+    // nothing leaves a green summary that reads as coverage we do not have.
+    ['./tests/e2e/reporters/project-coverage.ts'],
   ],
 
   outputDir: 'test-results',
