@@ -98,6 +98,27 @@ async def list_locations(
     return await service.list_locations(project_id)  # type: ignore[return-value]
 
 
+@router.delete(
+    "/projects/{project_id}/locations/{location_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[_WRITE],
+)
+async def delete_location(
+    project_id: uuid.UUID,
+    location_id: uuid.UUID,
+    user_id: CurrentUserId,
+    session: SessionDep,
+) -> None:
+    """Delete an empty storage location.
+
+    Refuses with 409, naming what holds it, when any movement was booked at the
+    location or any item defaults to it.
+    """
+    await verify_project_access(project_id, user_id, session)
+    service = _get_service(session)
+    await service.delete_location(project_id, location_id)
+
+
 # -- Items ------------------------------------------------------------------
 
 
@@ -151,6 +172,27 @@ async def update_item(
     await verify_project_access(project_id, user_id, session)
     service = _get_service(session)
     return await service.update_item(project_id, item_id, payload)  # type: ignore[return-value]
+
+
+@router.delete(
+    "/projects/{project_id}/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[_WRITE],
+)
+async def delete_item(
+    project_id: uuid.UUID,
+    item_id: uuid.UUID,
+    user_id: CurrentUserId,
+    session: SessionDep,
+) -> None:
+    """Delete a stock item that has never moved.
+
+    Refuses with 409, naming the movement count, once anything has been booked
+    against the item - deleting it would cascade the ledger away with it.
+    """
+    await verify_project_access(project_id, user_id, session)
+    service = _get_service(session)
+    await service.delete_item(project_id, item_id)
 
 
 # -- Movements --------------------------------------------------------------

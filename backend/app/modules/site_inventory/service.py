@@ -14,12 +14,13 @@ their own project.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Collection
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.modules.site_inventory import ledger
 from app.modules.site_inventory.models import StockItem, StockLocation, StockMovement
@@ -35,6 +36,45 @@ if TYPE_CHECKING:
     )
 
 _ZERO = Decimal("0")
+
+
+class _Holder(NamedTuple):
+    """How many records of one kind point at the row being deleted."""
+
+    singular: str
+    plural: str
+    total: int  # not "count": on a NamedTuple that name shadows tuple.count
+
+    def phrase(self) -> str:
+        """Render as ``"3 recorded movements"`` / ``"1 stock item"``."""
+        return f"{self.total} {self.singular if self.total == 1 else self.plural}"
+
+
+def _refuse_if_held(subject: str, holders: list[_Holder], *, advice: str) -> None:
+    """Raise ``409`` naming the holders by count and kind, or return quietly.
+
+    The stock ledger enforces none of this itself: a movement's ``item_id``
+    cascades on delete and its location columns are ``SET NULL``, so without
+    this guard removing an item silently destroys its movement history and
+    removing a location silently blanks the location off every movement that
+    happened there. Both report success while doing it.
+
+    Args:
+        subject: The thing being deleted, as it should read in the sentence.
+        holders: Counts per holding kind. Zero counts are dropped.
+        advice: What the caller can do instead, appended as its own sentence.
+
+    Raises:
+        HTTPException: 409 when at least one holder was counted.
+    """
+    phrases = [h.phrase() for h in holders if h.total > 0]
+    if not phrases:
+        return
+    named = phrases[0] if len(phrases) == 1 else f"{', '.join(phrases[:-1])} and {phrases[-1]}"
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=f"This {subject} is referenced by {named} and cannot be deleted. {advice}",
+    )
 
 
 def _to_decimal(value: object) -> Decimal:
@@ -89,6 +129,67 @@ class SiteInventoryService:
             StockLocation.project_id == project_id,
         )
         return (await self.session.execute(stmt)).scalar_one_or_none()
+
+    async def delete_location(self, project_id: uuid.UUID, location_id: uuid.UUID) -> None:
+        """Delete a storage location nothing has been stored at or booked to.
+
+        An empty, freshly created location goes. A location that any movement
+        names, on either the source or the destination leg, does not: the
+        movement's ``location_id`` and ``to_location_id`` are ``SET NULL``, so
+        the delete would succeed and quietly turn a history of where material
+        went into a history of nowhere. Stock still standing at the location is
+        counted and named separately, because that is the holder an operator
+        recognises.
+        """
+        location = await self.get_location(project_id, location_id)
+        if location is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Storage location not found in this project",
+            )
+
+        ref = str(location_id)
+        movements = [_to_ledger_movement(r) for r in await self._all_movements(project_id)]
+        on_hand = ledger.stock_on_hand_by_item_at_location(movements, ref)
+        stocked = sum(1 for quantity in on_hand.values() if quantity != _ZERO)
+
+        touching = (
+            await self.session.execute(
+                select(func.count())
+                .select_from(StockMovement)
+                .where(
+                    StockMovement.project_id == project_id,
+                    (StockMovement.location_id == location_id) | (StockMovement.to_location_id == location_id),
+                ),
+            )
+        ).scalar_one()
+        defaulting = (
+            await self.session.execute(
+                select(func.count())
+                .select_from(StockItem)
+                .where(StockItem.project_id == project_id, StockItem.default_location_id == location_id),
+            )
+        ).scalar_one()
+
+        _refuse_if_held(
+            f"storage location {location.name}",
+            [
+                _Holder(
+                    "stock item with stock still on hand there",
+                    "stock items with stock still on hand there",
+                    int(stocked),
+                ),
+                _Holder("recorded movement", "recorded movements", int(touching)),
+                _Holder("stock item that defaults to it", "stock items that default to it", int(defaulting)),
+            ],
+            advice=(
+                "Transfer the stock out and repoint those items first, or clear the is_active flag "
+                "so this location stops being offered while its movement history stays readable."
+            ),
+        )
+
+        await self.session.delete(location)
+        await self.session.flush()
 
     # -- Items --------------------------------------------------------------
 
@@ -168,6 +269,40 @@ class SiteInventoryService:
             setattr(item, name, value)
         await self.session.flush()
         return item
+
+    async def delete_item(self, project_id: uuid.UUID, item_id: uuid.UUID) -> None:
+        """Delete a stock item that has never moved.
+
+        A wrongly created item with no movements is a typo and goes. An item
+        with a movement history does not: the ORM relationship carries
+        ``delete-orphan`` and the database foreign key carries ``ON DELETE
+        CASCADE``, so deleting the item takes every inbound, consumption, waste
+        and transfer row with it, and the stock, variance and coverage reports
+        silently lose the quantities those rows carried.
+        """
+        item = await self.get_item(project_id, item_id)
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stock item not found in this project")
+
+        booked = (
+            await self.session.execute(
+                select(func.count())
+                .select_from(StockMovement)
+                .where(StockMovement.project_id == project_id, StockMovement.item_id == item_id),
+            )
+        ).scalar_one()
+
+        _refuse_if_held(
+            f"stock item {item.name}",
+            [_Holder("recorded movement", "recorded movements", int(booked))],
+            advice=(
+                "The movement ledger is the record of what arrived and what was installed. "
+                "Clear the is_active flag instead so the item stops being offered on new movements."
+            ),
+        )
+
+        await self.session.delete(item)
+        await self.session.flush()
 
     # -- Movements ----------------------------------------------------------
 
@@ -475,7 +610,7 @@ class SiteInventoryService:
     async def _position_budgets(
         self,
         project_id: uuid.UUID,
-        position_ids: set[str | None],
+        position_ids: Collection[str | None],
     ) -> dict[str, Decimal]:
         """Budgeted material cost per BoQ position, scoped to the project.
 
@@ -515,7 +650,7 @@ class SiteInventoryService:
     async def _position_refs(
         self,
         project_id: uuid.UUID,
-        position_ids: set[str | None],
+        position_ids: Collection[str | None],
     ) -> dict[str, ledger.PositionRef]:
         """Load the BoQ positions behind a set of ids, scoped to the project.
 
@@ -559,7 +694,7 @@ class SiteInventoryService:
     async def _ordered_refs(
         self,
         project_id: uuid.UUID,
-        req_item_ids: set[uuid.UUID | None],
+        req_item_ids: Collection[str | None],
     ) -> dict[str, ledger.OrderedRef]:
         """Load the ordered quantity of a set of requisition lines, in-project.
 
@@ -592,7 +727,7 @@ class SiteInventoryService:
         return refs
 
 
-def _as_uuid_list(values: set[str | None] | set[uuid.UUID | None]) -> list[uuid.UUID]:
+def _as_uuid_list(values: Collection[str | uuid.UUID | None]) -> list[uuid.UUID]:
     """Coerce a set of ids to ``UUID``, dropping blanks and unparsable entries."""
     out: list[uuid.UUID] = []
     for value in values:
