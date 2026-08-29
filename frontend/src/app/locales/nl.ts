@@ -16600,6 +16600,7 @@ const resource = {
     "bi.kpi_identity_section": "De KPI zelf",
     "bi.kpi_label_field": "Elke groep benoemen met",
     "bi.kpi_label_field_hint": "Optioneel. Een uitsplitsing op basis van een id toont een kolom met id's; dit veld geeft elke groep een naam.",
+    "bi.kpi_label_field_hint_defaulted": "Een uitsplitsing met een id als sleutel leest als een kolom met id's, dus krijgt hij zijn naam van {{field}} tenzij u hier een ander veld kiest.",
     "bi.kpi_label_field_none": "Groepswaarde ongewijzigd laten",
     "bi.kpi_measure_section": "Wat het meet",
     "bi.kpi_name_placeholder": "Bedrag-gewogen biedvertrouwen",

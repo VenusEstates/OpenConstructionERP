@@ -7042,6 +7042,7 @@ const resource = {
     "bi.kpi_group_by_none": "Ingen opdeling",
     "bi.kpi_label_field": "Navngiv hver gruppe efter",
     "bi.kpi_label_field_hint": "Valgfrit. En opdeling grupperet efter et id vises som en kolonne med id'er; dette felt giver hver af dem et navn.",
+    "bi.kpi_label_field_hint_defaulted": "En opdeling nøglet på et id læses som en kolonne af id'er, så den navngives efter {{field}}, medmindre du vælger et andet felt her.",
     "bi.kpi_label_field_none": "Lad gruppeværdien stå, som den er",
     "bi.kpi_filters_empty": "Ingen filtre, så alle rækker tælles.",
     "bi.kpi_filter_field": "Filterfelt",

@@ -7004,6 +7004,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI itse",
     "bi.kpi_label_field": "Nimeä kukin ryhmä",
     "bi.kpi_label_field_hint": "Valinnainen. Id:n mukaan jaoteltu näkyy id-sarakkeena; tämä kenttä antaa jokaiselle nimen.",
+    "bi.kpi_label_field_hint_defaulted": "Tunnuksen mukaan ryhmitelty erittely näkyy tunnusten sarakkeena, joten se nimetään kentän {{field}} mukaan, ellet valitse tähän toista kenttää.",
     "bi.kpi_label_field_none": "Jätä ryhmän arvo ennalleen",
     "bi.kpi_measure_section": "Mitä se mittaa",
     "bi.kpi_name_placeholder": "Summapainotettu tarjousvarmuus",

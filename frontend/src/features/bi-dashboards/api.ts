@@ -348,6 +348,14 @@ export interface KpiSpecEntity {
   numeric_fields: string[];
   /** Fields a breakdown can be keyed by, or a group labelled with. */
   groupable_fields: string[];
+  /**
+   * Id field -> the field that names it.
+   *
+   * Grouping by an id gives a breakdown keyed by identifiers, and the
+   * server fills the label in from this map when the spec leaves it out.
+   * The form reads the same map so what it shows is what will be stored.
+   */
+  display_name_for: Record<string, string>;
 }
 
 /**

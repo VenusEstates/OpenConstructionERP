@@ -16629,6 +16629,7 @@ const resource = {
     "bi.kpi_group_by_none": "Sin desglose",
     "bi.kpi_label_field": "Nombrar cada grupo por",
     "bi.kpi_label_field_hint": "Opcional. Un desglose indexado por un id se muestra como una columna de ids; este campo le da un nombre a cada uno.",
+    "bi.kpi_label_field_hint_defaulted": "Un desglose con clave de identificador se lee como una columna de identificadores, por lo que se nombra por {{field}} a menos que elijas otro campo aquí.",
     "bi.kpi_label_field_none": "Dejar el valor del grupo tal cual",
     "bi.kpi_filters_empty": "Sin filtros, así que se cuentan todas las filas.",
     "bi.kpi_filter_field": "Campo del filtro",

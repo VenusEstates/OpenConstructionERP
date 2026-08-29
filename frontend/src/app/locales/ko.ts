@@ -7012,6 +7012,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI 정보",
     "bi.kpi_label_field": "그룹 이름 기준",
     "bi.kpi_label_field_hint": "선택 사항. id로 구분한 그룹은 id 목록으로 표시됩니다. 여기서 지정한 필드가 각 그룹에 이름을 부여합니다.",
+    "bi.kpi_label_field_hint_defaulted": "ID를 키로 하는 분류는 ID 목록으로 표시되므로, 여기서 다른 필드를 고르지 않으면 {{field}}(으)로 이름을 붙입니다.",
     "bi.kpi_label_field_none": "그룹 값을 그대로 사용",
     "bi.kpi_measure_section": "측정 대상",
     "bi.kpi_name_placeholder": "금액 가중 입찰 신뢰도",

@@ -16498,6 +16498,7 @@ const resource = {
   "bi.kpi_identity_section": "O próprio KPI",
   "bi.kpi_label_field": "Nomear cada grupo por",
   "bi.kpi_label_field_hint": "Opcional. Um detalhamento indexado por um id aparece como uma coluna de ids; este é o campo que dá um nome a cada um.",
+  "bi.kpi_label_field_hint_defaulted": "Uma divisão cuja chave é um identificador aparece como uma coluna de identificadores, por isso é nomeada por {{field}}, a menos que você escolha outro campo aqui.",
   "bi.kpi_label_field_none": "Deixar o valor do grupo como está",
   "bi.kpi_measure_section": "O que ele mede",
   "bi.kpi_name_placeholder": "Confiança da proposta ponderada pelo valor",

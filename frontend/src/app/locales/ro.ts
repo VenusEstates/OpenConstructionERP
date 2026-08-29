@@ -7044,6 +7044,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI-ul în sine",
     "bi.kpi_label_field": "Denumiți fiecare grup după",
     "bi.kpi_label_field_hint": "Opțional. O defalcare indexată după un id apare ca o coloană de id-uri; acesta este câmpul care dă un nume fiecăreia.",
+    "bi.kpi_label_field_hint_defaulted": "O defalcare cu cheie de tip identificator se citește ca o coloană de identificatori, așa că este denumită după {{field}}, dacă nu alegeți aici alt câmp.",
     "bi.kpi_label_field_none": "Lăsați valoarea grupului așa cum este",
     "bi.kpi_measure_section": "Ce măsoară",
     "bi.kpi_name_placeholder": "Încredere în ofertă ponderată cu suma",

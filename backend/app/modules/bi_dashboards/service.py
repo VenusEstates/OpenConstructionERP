@@ -1528,9 +1528,24 @@ class BIDashboardsService:
             allowed_project_ids=allowed_project_ids,
         )
         if not records:
-            # Fallback: synthesise rows from the breakdown + history
+            # Fallback: synthesise rows from the breakdown + history.
+            #
+            # Every custom KPI lands here - a spec has no registered record
+            # provider, so ``drilldown`` returns nothing for it - which
+            # makes this the drill-down a custom KPI actually shows. A
+            # labelled group carries its name inside ``value``, so a
+            # breakdown per estimate arrived as a column of ids with the
+            # names buried one level down. The name is a field of the
+            # record, beside the id rather than under it, so it reaches
+            # every reader of the drill-down and not just the drawer.
             for k, v in (result.breakdown or {}).items():
-                records.append({"kind": "breakdown", "key": k, "value": v})
+                record: dict[str, Any] = {"kind": "breakdown", "key": k}
+                if isinstance(v, dict) and "label" in v and "value" in v:
+                    record["label"] = v["label"]
+                    record["value"] = v["value"]
+                else:
+                    record["value"] = v
+                records.append(record)
             history = await self.repo.list_kpi_values(
                 code,
                 project_id=project_id,

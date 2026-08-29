@@ -32,6 +32,7 @@ import {
   type KpiSpecEntity,
   type KpiSpecFilter,
 } from './api';
+import { defaultLabelField } from './breakdownLabel';
 
 const inputCls =
   'h-9 w-full rounded-lg border border-border bg-surface-primary px-3 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue';
@@ -171,7 +172,13 @@ export function CustomKpiModal({
       ? weightField
       : (numericFields[0] ?? '')
     : '';
-  const effectiveLabel = canLabel && groupableFields.includes(labelField) ? labelField : '';
+  // The field the server fills the label in with when the spec leaves it
+  // out, because grouping by an id and reading back ids is nobody's
+  // question. Shown pre-selected rather than left blank: a picker reading
+  // "leave the group value as it is" beside a server that will not leave
+  // it is a form disagreeing with what it submits.
+  const defaultLabel = canLabel ? defaultLabelField(entity, groupBy) : '';
+  const effectiveLabel = canLabel && groupableFields.includes(labelField) ? labelField : defaultLabel;
 
   const kindOf = (field: string): string =>
     allFields.find((f) => f.name === field)?.kind ?? 'text';
@@ -598,19 +605,29 @@ export function CustomKpiModal({
             {canLabel && (
               <WideModalField
                 label={t('bi.kpi_label_field', { defaultValue: 'Name each group by' })}
-                hint={t('bi.kpi_label_field_hint', {
-                  defaultValue:
-                    'Optional. A breakdown keyed by an id reads as a column of ids; this is the field that gives each one a name.',
-                })}
+                hint={
+                  defaultLabel !== ''
+                    ? t('bi.kpi_label_field_hint_defaulted', {
+                        defaultValue:
+                          'A breakdown keyed by an id reads as a column of ids, so it is named by {{field}} unless you pick another field here.',
+                        field: humanizeToken(defaultLabel),
+                      })
+                    : t('bi.kpi_label_field_hint', {
+                        defaultValue:
+                          'Optional. A breakdown keyed by an id reads as a column of ids; this is the field that gives each one a name.',
+                      })
+                }
               >
                 <select
                   value={effectiveLabel}
                   onChange={(e) => setLabelField(e.target.value)}
                   className={inputCls}
                 >
-                  <option value="">
-                    {t('bi.kpi_label_field_none', { defaultValue: 'Leave the group value as it is' })}
-                  </option>
+                  {defaultLabel === '' && (
+                    <option value="">
+                      {t('bi.kpi_label_field_none', { defaultValue: 'Leave the group value as it is' })}
+                    </option>
+                  )}
                   {groupableFields.map((f) => (
                     <option key={f} value={f}>
                       {humanizeToken(f)}

@@ -85,6 +85,7 @@ import {
   type WidgetType,
 } from './api';
 import { CustomKpiModal } from './CustomKpiModal';
+import { drillFieldText } from './breakdownLabel';
 import { biDashboardsGuide } from './biDashboardsGuide';
 import { useDashboardFilters } from '@/stores/useDashboardFilters';
 import { fmtPercent, fmtFixed } from '@/shared/lib/formatters';
@@ -907,27 +908,6 @@ function KpiLibraryCard({ kpi }: { kpi: KpiDefinition }) {
 // implying the user is seeing every source row.
 const DRILL_DOWN_LIMIT = 100;
 
-/**
- * Render one drill-down field.
- *
- * A breakdown group can be a `{label, value}` record rather than a bare
- * number - the `top_by` aggregation has always returned them, and a
- * breakdown that names its groups now does too - and `String()` on one
- * prints "[object Object]" at the reader. The report writer already spells
- * this shape "label: value"; this is the same sentence on screen.
- */
-function drillFieldText(v: unknown): string {
-  if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-    const rec = v as Record<string, unknown>;
-    const keys = Object.keys(rec);
-    if (keys.length === 2 && keys.includes('label') && keys.includes('value')) {
-      return `${String(rec['label'])}: ${String(rec['value'])}`;
-    }
-    return JSON.stringify(v);
-  }
-  return String(v);
-}
-
 function KpiSourceRecordsDrawer({
   kpi,
   open,
@@ -938,6 +918,12 @@ function KpiSourceRecordsDrawer({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  // What the reserved key reads as here. A group with no value and an
+  // estimate nobody named both arrive as the token, and both are the same
+  // sentence to the person looking at the row: the field has nothing in
+  // it. That sentence already has a key, so it is that one rather than a
+  // second wording of it that every locale would have to be told about.
+  const unnamedGroup = t('common.not_set', { defaultValue: 'Not set' });
   const drillQ = useQuery({
     queryKey: ['bi', 'kpi-drill', kpi.code],
     queryFn: () => drillDownKpi(kpi.code, { limit: DRILL_DOWN_LIMIT }),
@@ -1003,12 +989,12 @@ function KpiSourceRecordsDrawer({
                     ([k, v]) =>
                       k !== 'project_id' &&
                       v != null &&
-                      drillFieldText(v).trim() !== '',
+                      drillFieldText(v, unnamedGroup).trim() !== '',
                   )
                   .map(([k, v]) => (
                     <div key={k} className="contents">
                       <dt className="font-medium">{humanizeToken(k)}</dt>
-                      <dd className="truncate tabular-nums">{drillFieldText(v)}</dd>
+                      <dd className="truncate tabular-nums">{drillFieldText(v, unnamedGroup)}</dd>
                     </div>
                   ))}
               </dl>

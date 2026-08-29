@@ -7012,6 +7012,7 @@ const resource = {
     "bi.kpi_identity_section": "KPIの基本情報",
     "bi.kpi_label_field": "各グループの名称",
     "bi.kpi_label_field_hint": "任意。IDで区分した内訳はID列として表示されます。ここで指定したフィールドが各グループに名前を付けます。",
+    "bi.kpi_label_field_hint_defaulted": "ID をキーにした内訳は ID の列として表示されるため、ここで別のフィールドを選ばないかぎり {{field}} で名前を付けます。",
     "bi.kpi_label_field_none": "グループの値をそのまま使用",
     "bi.kpi_measure_section": "測定内容",
     "bi.kpi_name_placeholder": "金額加重の入札確度",

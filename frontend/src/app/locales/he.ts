@@ -6368,6 +6368,7 @@ const resource = {
     "bi.kpi_identity_section": "מדד הביצוע עצמו",
     "bi.kpi_label_field": "לתת שם לכל קבוצה לפי",
     "bi.kpi_label_field_hint": "אופציונלי. פילוח שממופתח לפי מזהה נקרא כעמודת מזהים; זה השדה שנותן לכל אחד שם.",
+    "bi.kpi_label_field_hint_defaulted": "פילוח שמפתחו מזהה נקרא כעמודה של מזהים, ולכן הוא נקרא לפי {{field}} אלא אם תבחרו כאן שדה אחר.",
     "bi.kpi_label_field_none": "להשאיר את ערך הקבוצה כפי שהוא",
     "bi.kpi_measure_section": "מה הוא מודד",
     "bi.kpi_name_placeholder": "רמת ביטחון בהצעת מחיר משוקללת לפי סכום",

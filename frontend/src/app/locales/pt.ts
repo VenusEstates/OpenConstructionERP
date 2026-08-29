@@ -16660,6 +16660,7 @@ const resource = {
   "bi.kpi_identity_section": "O KPI em si",
   "bi.kpi_label_field": "Nomear cada grupo por",
   "bi.kpi_label_field_hint": "Opcional. Um agrupamento indexado por um id aparece como uma coluna de ids; este é o campo que dá um nome a cada um.",
+  "bi.kpi_label_field_hint_defaulted": "Uma divisão cuja chave é um identificador lê-se como uma coluna de identificadores, por isso é nomeada por {{field}} a não ser que escolha aqui outro campo.",
   "bi.kpi_label_field_none": "Manter o valor do grupo como está",
   "bi.kpi_measure_section": "O que mede",
   "bi.kpi_name_placeholder": "Confiança da proposta ponderada pelo valor",

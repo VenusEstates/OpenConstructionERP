@@ -16767,6 +16767,7 @@ const resource = {
     "bi.kpi_identity_section": "Il KPI stesso",
     "bi.kpi_label_field": "Assegna un nome a ogni gruppo tramite",
     "bi.kpi_label_field_hint": "Facoltativo. Una suddivisione basata su un id appare come una colonna di id; questo è il campo che dà un nome a ciascuno.",
+    "bi.kpi_label_field_hint_defaulted": "Una scomposizione con chiave un identificativo si legge come una colonna di identificativi, quindi viene denominata da {{field}} a meno che qui non si scelga un altro campo.",
     "bi.kpi_label_field_none": "Lascia il valore del gruppo così com'è",
     "bi.kpi_measure_section": "Cosa misura",
     "bi.kpi_name_placeholder": "Affidabilità dell'offerta ponderata per importo",

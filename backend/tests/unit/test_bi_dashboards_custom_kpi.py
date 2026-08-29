@@ -427,10 +427,15 @@ async def test_weighted_confidence_computes_per_bid(session: AsyncSession) -> No
     # (0.9*1000 + 0.4*4000 + 0.2*1000) / (1000 + 4000 + 1000) = 2700/6000
     assert result.value == pytest.approx(Decimal("0.45"), abs=Decimal("0.0001"))
     assert result.unit == "ratio"
-    assert Decimal(result.breakdown[str(bid_a)]) == pytest.approx(Decimal("0.5"), abs=Decimal("0.0001"))
+    # The spec names no label and still gets one: ``boq_id`` is an id the
+    # catalog knows the name of, so the breakdown reads as bids rather
+    # than as uuids. See test_bi_dashboards_a_breakdown_by_id_reads_as_names.
+    assert result.breakdown[str(bid_a)]["label"] == "Bid A"
+    assert Decimal(result.breakdown[str(bid_a)]["value"]) == pytest.approx(Decimal("0.5"), abs=Decimal("0.0001"))
     # Bid B's unscored provisional sum is excluded rather than counted as
     # zero confidence, which would have dragged the bid to 0.1.
-    assert Decimal(result.breakdown[str(bid_b)]) == pytest.approx(Decimal("0.2"), abs=Decimal("0.0001"))
+    assert result.breakdown[str(bid_b)]["label"] == "Bid B"
+    assert Decimal(result.breakdown[str(bid_b)]["value"]) == pytest.approx(Decimal("0.2"), abs=Decimal("0.0001"))
     assert result.source_record_count == 3
 
 
@@ -476,10 +481,14 @@ async def test_a_grouped_breakdown_names_each_group_it_returns(session: AsyncSes
     ``boq_position`` already carries for project scoping, and it is
     aggregated rather than grouped by, so one group stays one row.
 
-    Without a label the breakdown keeps its plain ``{key: value}`` shape -
-    see :func:`test_weighted_confidence_computes_per_bid` - because
-    changing it for everything already reading one would be the silent
-    contract break this module exists to avoid.
+    Asking for the label by name is still the way to point it somewhere
+    the entity does not choose for you. Where the catalog declares which
+    field names an id, leaving ``label_field`` out now resolves to that
+    field when the definition is created, so the label here is the
+    explicit spelling of what a group by ``boq_id`` gets anyway - see
+    test_bi_dashboards_a_breakdown_by_id_reads_as_names. A group keyed by
+    something with no declared name, and a stored spec written before the
+    default existed, both keep the plain ``{key: value}`` shape.
     """
     project_id, bid_a, bid_b = await _seed_two_bids(session)
     service = BIDashboardsService(session)

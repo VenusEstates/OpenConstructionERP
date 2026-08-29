@@ -7082,6 +7082,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI ise",
     "bi.kpi_label_field": "Nimeta iga rühm",
     "bi.kpi_label_field_hint": "Valikuline. Id järgi rühmitatu näeb välja nagu idde veerg; see väli annab igaühele nime.",
+    "bi.kpi_label_field_hint_defaulted": "Tunnuse järgi rühmitatud jaotus kuvatakse tunnuste veeruna, seetõttu nimetatakse see välja {{field}} järgi, kui te siin teist välja ei vali.",
     "bi.kpi_label_field_none": "Jäta rühma väärtus muutmata",
     "bi.kpi_measure_section": "Mida see mõõdab",
     "bi.kpi_name_placeholder": "Summaga kaalutud pakkumuse usaldusväärsus",

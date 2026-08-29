@@ -7034,6 +7034,7 @@ const resource = {
     "bi.kpi_identity_section": "Sam wskaźnik KPI",
     "bi.kpi_label_field": "Nazwij każdą grupę według",
     "bi.kpi_label_field_hint": "Opcjonalne. Podział oparty na identyfikatorze wyświetla się jako kolumna identyfikatorów; to pole nadaje nazwę każdej grupie.",
+    "bi.kpi_label_field_hint_defaulted": "Podział kluczowany identyfikatorem czyta się jak kolumna identyfikatorów, dlatego jest nazywany polem {{field}}, chyba że wybierzesz tutaj inne pole.",
     "bi.kpi_label_field_none": "Pozostaw wartość grupy bez zmian",
     "bi.kpi_measure_section": "Co mierzy",
     "bi.kpi_name_placeholder": "Pewność oferty ważona kwotą",

@@ -7036,6 +7036,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI स्वयं",
     "bi.kpi_label_field": "हर समूह को इसके अनुसार नाम दें",
     "bi.kpi_label_field_hint": "वैकल्पिक। किसी id से की गई विभाजन id की एक कॉलम जैसी दिखती है; यह वह फ़ील्ड है जो हर एक को नाम देती है।",
+    "bi.kpi_label_field_hint_defaulted": "आईडी के आधार पर बना विभाजन आईडी के एक कॉलम जैसा दिखता है, इसलिए जब तक आप यहाँ कोई दूसरा फ़ील्ड न चुनें, इसका नाम {{field}} से रखा जाता है।",
     "bi.kpi_label_field_none": "समूह के मान को जैसा है वैसा छोड़ दें",
     "bi.kpi_measure_section": "यह क्या मापता है",
     "bi.kpi_name_placeholder": "राशि-भारित बोली विश्वास",

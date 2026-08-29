@@ -7016,6 +7016,7 @@ const resource = {
     "bi.kpi_group_by_none": "Bez rozdělení",
     "bi.kpi_label_field": "Pojmenovat každou skupinu podle",
     "bi.kpi_label_field_hint": "Volitelné. Rozdělení podle id se zobrazí jako sloupec id; toto pole dá každé skupině název.",
+    "bi.kpi_label_field_hint_defaulted": "Rozpad klíčovaný podle id se čte jako sloupec identifikátorů, proto se pojmenuje podle pole {{field}}, pokud zde nevyberete jiné pole.",
     "bi.kpi_label_field_none": "Ponechat hodnotu skupiny beze změny",
     "bi.kpi_filters_empty": "Žádné filtry, počítají se tedy všechny řádky.",
     "bi.kpi_filter_field": "Pole filtru",

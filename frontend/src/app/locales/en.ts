@@ -15823,6 +15823,7 @@ const resource = {
     "bi.kpi_group_by_none": "No breakdown",
     "bi.kpi_label_field": "Name each group by",
     "bi.kpi_label_field_hint": "Optional. A breakdown keyed by an id reads as a column of ids; this is the field that gives each one a name.",
+    "bi.kpi_label_field_hint_defaulted": "A breakdown keyed by an id reads as a column of ids, so it is named by {{field}} unless you pick another field here.",
     "bi.kpi_label_field_none": "Leave the group value as it is",
     "bi.kpi_filters_empty": "No filters, so every row is counted.",
     "bi.kpi_filter_field": "Filter field",

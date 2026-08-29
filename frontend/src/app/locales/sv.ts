@@ -7035,6 +7035,7 @@ const resource = {
     "bi.kpi_identity_section": "Själva KPI:et",
     "bi.kpi_label_field": "Namnge varje grupp efter",
     "bi.kpi_label_field_hint": "Valfritt. En uppdelning nycklad med ett id ser ut som en kolumn med id:n; det här är fältet som ger var och en ett namn.",
+    "bi.kpi_label_field_hint_defaulted": "En uppdelning med ett id som nyckel läses som en kolumn med id:n, så den namnges av {{field}} om du inte väljer ett annat fält här.",
     "bi.kpi_label_field_none": "Lämna gruppvärdet som det är",
     "bi.kpi_measure_section": "Vad det mäter",
     "bi.kpi_name_placeholder": "Beloppsviktad budkonfidens",

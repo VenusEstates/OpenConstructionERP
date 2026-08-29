@@ -6364,6 +6364,7 @@ const resource = {
     "bi.kpi_identity_section": "Ang KPI mismo",
     "bi.kpi_label_field": "Pangalanan ang bawat grupo gamit ang",
     "bi.kpi_label_field_hint": "Opsyonal. Ang paghahating naka-key sa isang id ay parang column ng mga id kapag binasa; ito ang field na nagbibigay ng pangalan sa bawat isa.",
+    "bi.kpi_label_field_hint_defaulted": "Ang breakdown na naka-key sa isang id ay nababasa bilang hanay ng mga id, kaya pinapangalanan ito ng {{field}} maliban kung pumili ka ng ibang field dito.",
     "bi.kpi_label_field_none": "Iwanan na lang ang value ng grupo",
     "bi.kpi_measure_section": "Ano ang sinusukat nito",
     "bi.kpi_name_placeholder": "Kumpiyansa sa bid na batay sa timbang ng halaga",

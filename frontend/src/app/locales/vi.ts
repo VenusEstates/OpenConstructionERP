@@ -6981,6 +6981,7 @@ const resource = {
     "bi.kpi_identity_section": "Chính KPI này",
     "bi.kpi_label_field": "Đặt tên mỗi nhóm theo",
     "bi.kpi_label_field_hint": "Tùy chọn. Một phân tách theo id sẽ hiển thị như một cột id; đây là trường đặt tên cho từng nhóm.",
+    "bi.kpi_label_field_hint_defaulted": "Phân tách lấy khóa là một mã định danh sẽ hiển thị thành một cột mã định danh, nên nó được đặt tên theo {{field}} trừ khi bạn chọn trường khác ở đây.",
     "bi.kpi_label_field_none": "Giữ nguyên giá trị nhóm",
     "bi.kpi_measure_section": "Nó đo gì",
     "bi.kpi_name_placeholder": "Độ tin cậy của giá thầu tính theo trọng số giá trị",

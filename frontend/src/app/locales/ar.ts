@@ -7164,6 +7164,7 @@ const resource = {
     "bi.kpi_group_by_none": "بلا تقسيم",
     "bi.kpi_label_field": "تسمية كل مجموعة حسب",
     "bi.kpi_label_field_hint": "اختياري. يظهر التقسيم المفهرس بمعرّف كعمود من المعرّفات؛ هذا الحقل يمنح كل واحدة اسمًا.",
+    "bi.kpi_label_field_hint_defaulted": "التقسيم المفهرس بمعرّف يظهر كعمود من المعرّفات، لذلك تتم تسميته بـ {{field}} ما لم تختر حقلاً آخر هنا.",
     "bi.kpi_label_field_none": "ترك قيمة المجموعة كما هي",
     "bi.kpi_filters_empty": "لا توجد فلاتر، لذا تُحسب جميع الصفوف.",
     "bi.kpi_filter_field": "حقل الفلتر",

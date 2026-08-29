@@ -7011,6 +7011,7 @@ const resource = {
     "bi.kpi_identity_section": "Sam KPI",
     "bi.kpi_label_field": "Imenuj svaku skupinu po",
     "bi.kpi_label_field_hint": "Neobavezno. Razvrstavanje ključano po id-u čita se kao stupac id-ova; ovo je polje koje svakom daje naziv.",
+    "bi.kpi_label_field_hint_defaulted": "Raščlamba ključana identifikatorom čita se kao stupac identifikatora, pa se imenuje poljem {{field}} osim ako ovdje ne odaberete drugo polje.",
     "bi.kpi_label_field_none": "Ostavi vrijednost skupine kakva jest",
     "bi.kpi_measure_section": "Što mjeri",
     "bi.kpi_name_placeholder": "Pouzdanost ponude ponderirana iznosom",

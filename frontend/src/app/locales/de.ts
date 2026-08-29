@@ -16958,6 +16958,7 @@ const resource = {
     "bi.kpi_group_by_none": "Keine Aufschlüsselung",
     "bi.kpi_label_field": "Jede Gruppe benennen nach",
     "bi.kpi_label_field_hint": "Optional. Eine nach einer ID gruppierte Aufschlüsselung erscheint als Spalte von IDs; dieses Feld gibt jeder einen Namen.",
+    "bi.kpi_label_field_hint_defaulted": "Eine nach einer ID gruppierte Aufschlüsselung liest sich als Spalte von IDs, deshalb wird sie über {{field}} benannt, sofern Sie hier kein anderes Feld wählen.",
     "bi.kpi_label_field_none": "Gruppenwert unverändert lassen",
     "bi.kpi_filters_empty": "Keine Filter, es werden also alle Zeilen gezählt.",
     "bi.kpi_filter_field": "Filterfeld",

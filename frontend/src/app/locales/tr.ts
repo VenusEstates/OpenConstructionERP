@@ -7039,6 +7039,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI'nin kendisi",
     "bi.kpi_label_field": "Her grubu şuna göre adlandır",
     "bi.kpi_label_field_hint": "İsteğe bağlı. Bir kimliğe göre yapılan kırılım, kimliklerden oluşan bir sütun gibi görünür; bu, her birine bir ad veren alandır.",
+    "bi.kpi_label_field_hint_defaulted": "Kimliğe göre anahtarlanan bir dağılım kimlik sütunu olarak okunur, bu yüzden burada başka bir alan seçmezseniz {{field}} ile adlandırılır.",
     "bi.kpi_label_field_none": "Grup değerini olduğu gibi bırak",
     "bi.kpi_measure_section": "Neyi ölçtüğü",
     "bi.kpi_name_placeholder": "Tutara göre ağırlıklandırılmış teklif güveni",

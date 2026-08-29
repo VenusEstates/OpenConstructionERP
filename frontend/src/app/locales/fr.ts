@@ -16461,6 +16461,7 @@ const resource = {
   "bi.kpi_identity_section": "Le KPI lui-même",
   "bi.kpi_label_field": "Nommer chaque groupe par",
   "bi.kpi_label_field_hint": "Facultatif. Une répartition indexée par un id se lit comme une colonne d'id ; c'est ce champ qui donne un nom à chacun.",
+  "bi.kpi_label_field_hint_defaulted": "Une ventilation dont la clé est un identifiant se lit comme une colonne d'identifiants, elle est donc nommée par {{field}} sauf si vous choisissez ici un autre champ.",
   "bi.kpi_label_field_none": "Laisser la valeur du groupe telle quelle",
   "bi.kpi_measure_section": "Ce qu'il mesure",
   "bi.kpi_name_placeholder": "Confiance des offres pondérée par montant",

@@ -123,6 +123,14 @@ MAX_IN_VALUES = 100
 #: typed, and cannot be localised once it is a dict key, by which point it
 #: is indistinguishable from a real value like ``m3``. A name a consumer
 #: can test for is mapped to whatever label that consumer speaks.
+#:
+#: It also stands in for a label nobody can read. A key must keep the data
+#: apart - an empty-string group is not a NULL one and SQL keeps them
+#: apart - but a label answers "what is this row called", and a name that
+#: is empty or all whitespace answers it the same way an absent one does.
+#: A blank label is worse than a missing one, because it renders as
+#: nothing at all and the row looks like a bug rather than like an
+#: estimate somebody never named.
 NULL_GROUP_KEY = "__null__"
 
 
@@ -174,6 +182,15 @@ class CatalogEntity:
     description: str
     #: field name -> kind
     fields: dict[str, str]
+    #: id field -> the field that names it.
+    #:
+    #: An id is what the database groups by and a name is what a person
+    #: reads, and only the entity knows which of its fields is the second
+    #: one for the first. Declaring the pair here means a spec that groups
+    #: by an id gets the name without its author having to know that
+    #: ``boq_name`` exists, and it is served in the catalog so the form
+    #: offers the same answer the server would.
+    display_name_for: dict[str, str] = field(default_factory=dict)
 
     def numeric_fields(self) -> list[str]:
         return sorted(n for n, k in self.fields.items() if k == KIND_NUMERIC)
@@ -195,6 +212,7 @@ class CatalogEntity:
             "fields": [{"name": n, "kind": k} for n, k in sorted(self.fields.items())],
             "numeric_fields": self.numeric_fields(),
             "groupable_fields": self.groupable_fields(),
+            "display_name_for": dict(self.display_name_for),
         }
 
 
@@ -226,6 +244,7 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "validation_status": KIND_TEXT,
             "node_type": KIND_TEXT,
         },
+        display_name_for={"boq_id": "boq_name"},
     ),
     "boq": CatalogEntity(
         name="boq",
@@ -367,10 +386,22 @@ def check_catalog_binding_parity() -> dict[str, dict[str, list[str]]]:
         declared = set(entry.fields)
         built = set(bound.fields)
         wrong_kind = sorted(n for n in declared & built if entry.fields[n] != bound.fields[n].kind)
+        # A display name is a promise that grouping by one field can be
+        # read through another, and the promise is kept by whoever writes
+        # the catalog rather than by the type system. Either half naming a
+        # field that is not declared makes the default silently do
+        # nothing, and a numeric name is one the label rule rejects at
+        # creation time - a spec the server itself generated.
+        bad_display_name = sorted(
+            f"{id_field}->{name_field}"
+            for id_field, name_field in entry.display_name_for.items()
+            if id_field not in declared or name_field not in declared or entry.fields[name_field] == KIND_NUMERIC
+        )
         diff = {
             "declared_only": sorted(declared - built),
             "bound_only": sorted(built - declared),
             "kind_mismatch": wrong_kind,
+            "bad_display_name": bad_display_name,
         }
         if any(diff.values()):
             report[name] = diff
@@ -672,6 +703,17 @@ def validate_spec(raw: Any) -> dict[str, Any]:
                 allowed=entry.groupable_fields(),
             )
         normalised["label_field"] = label
+    elif "group_by" in normalised:
+        # Nobody asks for a breakdown keyed by an id in order to read the
+        # ids. The catalog knows which field names this one, so the
+        # default is that name, written into the stored spec rather than
+        # applied while computing: an existing definition keeps whatever
+        # shape it was created with, and the author can see what they got
+        # and change it. Absent a declared name there is nothing to
+        # default to, and the group stays a bare value.
+        default_label = entry.display_name_for.get(normalised["group_by"])
+        if default_label is not None:
+            normalised["label_field"] = default_label
 
     raw_filters = raw.get("filters") or []
     if not isinstance(raw_filters, list):
@@ -823,6 +865,29 @@ def _group_key(value: Any) -> str:
     return str(value)
 
 
+def _label_key(value: Any) -> str:
+    """The label for one group, as something a reader can use.
+
+    Unlike :func:`_group_key`, this does not have to keep two different
+    values apart - the key beside it already does - so it may answer for
+    the blank as well as the absent. A ``boq_name`` is NOT NULL and still
+    reaches here empty: the create schema checks ``min_length`` before the
+    HTML sanitiser runs, so a name of ``<script>x</script>`` is accepted
+    and stored as ``''``.
+
+    Args:
+        value: The label column's value for the group.
+
+    Returns:
+        ``str(value)``, or :data:`NULL_GROUP_KEY` when there is no name in
+        it for a person to read.
+    """
+    if value is None:
+        return NULL_GROUP_KEY
+    text = str(value)
+    return text if text.strip() else NULL_GROUP_KEY
+
+
 async def _evaluate_top_by(
     session: AsyncSession,
     bound: BoundEntity,
@@ -875,9 +940,9 @@ async def _evaluate_top_by(
     breakdown: dict[str, Any] = {}
     if group_name:
         for grp, lbl, val in rows:
-            breakdown[_group_key(grp)] = {"label": _group_key(lbl), "value": str(_to_decimal(val))}
+            breakdown[_group_key(grp)] = {"label": _label_key(lbl), "value": str(_to_decimal(val))}
     else:
-        breakdown["top"] = {"label": _group_key(rows[0][1]), "value": str(_to_decimal(rows[0][2]))}
+        breakdown["top"] = {"label": _label_key(rows[0][1]), "value": str(_to_decimal(rows[0][2]))}
     return SpecResult(
         value=_to_decimal(rows[0][2]),
         source_record_count=len(rows),
@@ -980,7 +1045,7 @@ async def evaluate_spec(
             # for every existing breakdown would be a silent contract break
             # for the widgets already reading them.
             if label_name:
-                label_value = _group_key(parts.pop(0))
+                label_value = _label_key(parts.pop(0))
                 result.breakdown[key] = {"label": label_value, "value": str(_fold(aggregation, parts))}
             else:
                 result.breakdown[key] = str(_fold(aggregation, parts))

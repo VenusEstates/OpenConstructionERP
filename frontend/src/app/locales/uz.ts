@@ -16789,6 +16789,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI ning oʻzi",
     "bi.kpi_label_field": "Har bir guruhni shu boʻyicha nomlang",
     "bi.kpi_label_field_hint": "Ixtiyoriy. Identifikator boʻyicha boʻlingan guruhlash idlar ustuniga oʻxshab koʻrinadi; bu maydon har biriga nom beradi.",
+    "bi.kpi_label_field_hint_defaulted": "Identifikator bo'yicha guruhlangan taqsimot identifikatorlar ustuni ko'rinishida o'qiladi, shuning uchun bu yerda boshqa maydon tanlanmasa, u {{field}} maydoni bo'yicha nomlanadi.",
     "bi.kpi_label_field_none": "Guruh qiymatini oʻzgartirmasdan qoldiring",
     "bi.kpi_measure_section": "Nima oʻlchanadi",
     "bi.kpi_name_placeholder": "Summaga qarab vaznlangan taklif ishonchi",

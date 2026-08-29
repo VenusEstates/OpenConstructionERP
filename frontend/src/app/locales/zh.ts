@@ -7024,6 +7024,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI 本身",
     "bi.kpi_label_field": "以此字段命名各分组",
     "bi.kpi_label_field_hint": "可选。按 id 细分时会显示为一列 id；此字段为每个分组提供名称。",
+    "bi.kpi_label_field_hint_defaulted": "以 id 为键的细分读起来就是一列 id，因此除非你在这里选择其他字段，否则会用 {{field}} 来命名。",
     "bi.kpi_label_field_none": "分组值保持原样",
     "bi.kpi_measure_section": "衡量内容",
     "bi.kpi_name_placeholder": "按金额加权的投标信心度",

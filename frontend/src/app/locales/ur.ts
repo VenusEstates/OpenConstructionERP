@@ -6363,6 +6363,7 @@ const resource = {
     "bi.kpi_identity_section": "خود KPI",
     "bi.kpi_label_field": "ہر گروپ کا نام اس کے مطابق رکھیں",
     "bi.kpi_label_field_hint": "اختیاری۔ id کے مطابق تقسیم شدہ گروپ بندی ids کے کالم کی طرح نظر آتی ہے؛ یہ وہ فیلڈ ہے جو ہر ایک کو نام دیتی ہے۔",
+    "bi.kpi_label_field_hint_defaulted": "شناخت کنندہ کو کلید بنانے والی تقسیم شناخت کنندگان کے کالم کی طرح پڑھی جاتی ہے، اس لیے جب تک آپ یہاں کوئی اور فیلڈ منتخب نہ کریں، اسے {{field}} سے نام دیا جاتا ہے۔",
     "bi.kpi_label_field_none": "گروپ ویلیو کو ویسے ہی رہنے دیں",
     "bi.kpi_measure_section": "یہ کیا ناپتا ہے",
     "bi.kpi_name_placeholder": "رقم کے حساب سے وزنی بولی کا اعتماد",

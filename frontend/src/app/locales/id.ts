@@ -6982,6 +6982,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI itu sendiri",
     "bi.kpi_label_field": "Beri nama tiap kelompok berdasarkan",
     "bi.kpi_label_field_hint": "Opsional. Pengelompokan yang berkunci id terbaca sebagai kolom id; bidang inilah yang memberi nama pada tiap kelompok.",
+    "bi.kpi_label_field_hint_defaulted": "Rincian yang dikunci oleh id terbaca sebagai kolom id, jadi rincian itu dinamai oleh {{field}} kecuali Anda memilih bidang lain di sini.",
     "bi.kpi_label_field_none": "Biarkan nilai kelompok apa adanya",
     "bi.kpi_measure_section": "Apa yang diukurnya",
     "bi.kpi_name_placeholder": "Kepercayaan penawaran tertimbang jumlah",

@@ -7004,6 +7004,7 @@ const resource = {
     "bi.kpi_identity_section": "Selve KPI-en",
     "bi.kpi_label_field": "Navngi hver gruppe med",
     "bi.kpi_label_field_hint": "Valgfritt. En oppdeling nøkkelbasert på en id vises som en kolonne med id-er; dette er feltet som gir hver av dem et navn.",
+    "bi.kpi_label_field_hint_defaulted": "En fordeling med en id som nøkkel leses som en kolonne med id-er, så den navngis av {{field}} med mindre du velger et annet felt her.",
     "bi.kpi_label_field_none": "La gruppeverdien være som den er",
     "bi.kpi_measure_section": "Hva den måler",
     "bi.kpi_name_placeholder": "Beløpsvektet budtillit",

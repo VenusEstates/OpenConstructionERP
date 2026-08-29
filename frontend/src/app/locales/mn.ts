@@ -7026,6 +7026,7 @@ const resource = {
     "bi.kpi_identity_section": "KPI-н тухай",
     "bi.kpi_label_field": "Бүлэг тус бүрийг нэрлэх",
     "bi.kpi_label_field_hint": "Заавал биш. id-аар задалсан бүлэг id-н багана шиг харагдана; энэ талбар бүлэг бүрд нэр өгнө.",
+    "bi.kpi_label_field_hint_defaulted": "Танигчаар бүлэглэсэн задаргаа танигчийн багана болж харагддаг тул энд өөр талбар сонгоогүй бол {{field}} талбараар нэрлэгдэнэ.",
     "bi.kpi_label_field_none": "Бүлгийн утгыг хэвээр үлдээх",
     "bi.kpi_measure_section": "Юу хэмжих",
     "bi.kpi_name_placeholder": "Дүнгээр жинлэсэн үнийн саналын итгэлцэл",

@@ -16623,6 +16623,7 @@ const resource = {
     "bi.kpi_identity_section": "El KPI en sí",
     "bi.kpi_label_field": "Nombrar cada grupo por",
     "bi.kpi_label_field_hint": "Opcional. Un desglose identificado por un id se lee como una columna de ids; este es el campo que le da un nombre a cada uno.",
+    "bi.kpi_label_field_hint_defaulted": "Un desglose con clave de identificador se lee como una columna de identificadores, por lo que se nombra por {{field}} a menos que elijas otro campo aquí.",
     "bi.kpi_label_field_none": "Dejar el valor del grupo tal cual",
     "bi.kpi_measure_section": "Qué mide",
     "bi.kpi_name_placeholder": "Confianza de oferta ponderada por monto",
