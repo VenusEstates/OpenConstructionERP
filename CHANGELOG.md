@@ -343,6 +343,23 @@ accepted as a legacy alias on the way in, since files written against our own
 documentation exist and have to keep working, but a file carrying both spellings
 with different values is refused rather than resolved by precedence.
 
+The labour rates screen opens on something. Fifty three modules ship seed data
+and this was not one of them, so a fresh install met an empty template picker,
+and the cost of that landed one screen away rather than on the page itself: the
+norm expansion build panel prices labour from a rate template, its own norms
+are seeded, and with no template to pick it told the user to go and create one
+first, which is a dead end on the screen that turns a production norm into a
+priced assembly. Six build-ups now ship, in euro, sterling, dollars and dirham,
+so the picker covers the currencies the demonstration portfolio is priced in,
+each hand authored in its own currency rather than converted from one base, and
+each a generic starting point an estimator is expected to tune per project and
+region. Saving a template with a blank base wage also stops failing the way it
+did. A blank field normalises to zero, which the live preview accepts and the
+save refuses, so a user who typed a name and pressed save got the server's
+validation text back with nothing in it to say which field was at fault. All
+three save buttons now read the same rule the server applies, with a line under
+them saying a base wage above zero is what saving needs.
+
 A material is matched by name before it is scored. It used to go to the lexical
 matcher alone, so a name present in the catalogue word for word could still be
 answered by a different row that merely scored well. An exact tier runs first
@@ -471,6 +488,15 @@ not found that names the file. A project with no currency policy stopped being
 filed as an error on every visit to the currencies screen, since having no
 policy yet is the ordinary state. And the demonstration data stopped writing a
 bill status that nothing in the product can produce or move a bill out of.
+
+Twenty strings that had been English in every language since the day they were
+written are translated. None of them is new. A key that carries its English
+text at the point it is called never puts a raw key on screen and never fails a
+type check or a build, so nothing reported these and nothing could: five are in
+the people picker on a project, three are the subtotal lines in the assembly
+library, eight are the help text of the matching wizard, and four are on the
+validation page. Eight of them were answered by no locale at all, English
+included.
 
 The share text says 41 languages, which is what the picker offers, rather than
 the 26 it had been claiming.
