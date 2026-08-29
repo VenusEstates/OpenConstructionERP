@@ -557,6 +557,8 @@ const resource = {
     "tax_rates.no_country_data_body": "ไม่มีข้อมูลบันทึกไว้สำหรับ {{country}} ณ วันที่ {{date}} โปรดเพิ่มอัตราภาษีในทะเบียนการตั้งค่าภาษี",
     "tax_rates.rates_conflict_title": "อัตราภาษีที่บันทึกไว้ไม่ได้ให้คำตอบเดียวที่ชัดเจน",
     "tax_rates.rates_conflict_body": "มีอัตราภาษีมากกว่าหนึ่งอัตราที่มีผลบังคับใช้สำหรับ {{jurisdiction}} ณ วันที่ {{date}} และไม่มีอัตราใดถูกทำเครื่องหมายว่าเป็นอัตรามาตรฐาน โปรดทำเครื่องหมายอัตราหนึ่งให้เป็นค่าเริ่มต้นในทะเบียนการตั้งค่าภาษี",
+    "tax_rates.standard_rate_not_started_title": "อัตรามาตรฐานที่บันทึกไว้เริ่มหลังจากวันที่นี้",
+    "tax_rates.standard_rate_not_started_body": "อัตรามาตรฐานที่บันทึกไว้สำหรับ {{jurisdiction}} เริ่มหลังจาก {{date}} อัตราที่มีผลบังคับใช้ในวันดังกล่าวเป็นอัตราลดหย่อน ไม่ใช่อัตรามาตรฐาน โปรดเพิ่มอัตรามาตรฐานที่ใช้ในขณะนั้นพร้อมวันที่ของอัตรานั้น",
     "tax_rates.no_number_note": "ที่นี่จงใจไม่แสดงตัวเลขใดๆ อัตราภาษีที่ดูน่าเชื่อถือแย่กว่าการไม่มีอัตราภาษีเลย เพราะมันอ่านเหมือนอัตราที่ถูกต้องทุกประการและจบลงในเอกสารประกวดราคา",
     "tax_rates.refused_other_title": "ไม่สามารถกำหนดอัตราภาษีได้",
     "tax_rates.refused_other_body": "ไม่สามารถรวมอัตราภาษีที่บันทึกไว้สำหรับ {{jurisdiction}} ได้ โปรดตรวจสอบในทะเบียนการตั้งค่าภาษี",
@@ -13483,12 +13485,15 @@ const resource = {
     "costs.snapshot_restored_msg": "กู้คืนเวกเตอร์ {{vectors}} รายการภายใน {{duration}} วินาที",
     "costs.snapshot_restored_no_count": "กู้คืนสแนปช็อตแล้ว ฐานข้อมูลเวกเตอร์ไม่ได้รายงานว่ามีเวกเตอร์อยู่กี่รายการ",
     "costs.snapshot_restored_title": "กู้คืนสแนปช็อตของ {{name}} แล้ว",
+    "costs.tile_ai_vectors": "เวกเตอร์ฟีเจอร์ AI",
+    "costs.tile_matching_catalogues": "แค็ตตาล็อกการจับคู่",
     "costs.vec_generated_local_msg": "จัดทำดัชนีเวกเตอร์ {{vectors}} รายการในเครื่องใน {{duration}} วินาที",
     "costs.vec_generated_title": "สร้างเวกเตอร์สำหรับ {{name}} แล้ว",
     "costs.vec_index_failed_title": "จัดทำดัชนีเวกเตอร์สำหรับ {{name}} ไม่สำเร็จ",
     "costs.vec_indexing_all": "กำลังสร้างเวกเตอร์สำหรับทุกภูมิภาค...",
     "costs.vec_indexing_region": "กำลังสร้างเวกเตอร์สำหรับ {{name}}...",
     "costs.vec_items_indexed_msg": "จัดทำดัชนี {{items}} รายการใน {{duration}} วินาที",
+    "costs.vec_items_indexed_scope": "สิ่งนี้ขับเคลื่อนการแนะนำอัตรา การจำแนกประเภท และการตรวจสอบความผิดปกติ ส่วนการจับคู่องค์ประกอบจะค้นหาในแค็ตตาล็อกต้นทุนที่ติดตั้งไว้แทน",
     "costs.vec_phase_checking": "กำลังตรวจสอบเวกเตอร์ที่สร้างไว้ล่วงหน้าบน GitHub...",
     "costs.vec_phase_embedding": "กำลังสร้าง embedding 384 มิติจากรายการต้นทุน...",
     "costs.vec_phase_indexing": "กำลังสร้างดัชนีใน LanceDB และรีเฟรชสถิติ...",
@@ -39175,6 +39180,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "เวกเตอร์ฟีเจอร์ AI",
-    "costs.tile_matching_catalogues": "แค็ตตาล็อกการจับคู่",
-    "costs.vec_items_indexed_scope": "สิ่งนี้ขับเคลื่อนการแนะนำอัตรา การจำแนกประเภท และการตรวจสอบความผิดปกติ ส่วนการจับคู่องค์ประกอบจะค้นหาในแค็ตตาล็อกต้นทุนที่ติดตั้งไว้แทน",

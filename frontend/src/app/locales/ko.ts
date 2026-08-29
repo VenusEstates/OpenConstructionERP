@@ -557,6 +557,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{date}} 기준으로 {{country}}에 대해 등록된 내용이 없습니다. 세금 설정 등록부에 세율을 추가하세요.",
     "tax_rates.rates_conflict_title": "등록된 세율이 하나의 답을 주지 않습니다",
     "tax_rates.rates_conflict_body": "{{jurisdiction}}에는 {{date}} 기준으로 둘 이상의 세율이 유효하며, 그중 어느 것도 표준으로 표시되어 있지 않습니다. 세금 설정 등록부에서 정확히 하나를 기본값으로 표시하세요.",
+    "tax_rates.standard_rate_not_started_title": "등록된 표준 세율은 이 날짜 이후에 시작됩니다",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}}에 등록된 표준 세율은 {{date}} 이후에 시작됩니다. 해당 날짜에 적용되는 세율은 표준 세율이 아니라 경감 세율입니다. 그 당시 적용되던 표준 세율을 해당 기간과 함께 추가하세요.",
     "tax_rates.no_number_note": "여기에는 의도적으로 어떤 숫자도 표시하지 않습니다. 그럴듯해 보이는 세율은 세율이 없는 것보다 나쁩니다. 정확한 세율과 똑같이 읽혀 결국 입찰서에 반영되기 때문입니다.",
     "tax_rates.refused_other_title": "세율을 확정할 수 없었습니다",
     "tax_rates.refused_other_body": "{{jurisdiction}}에 등록된 세율을 결합할 수 없었습니다. 세금 설정 등록부에서 확인하세요.",
@@ -13499,12 +13501,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}}개 벡터를 {{duration}}초 만에 복원했습니다",
     "costs.snapshot_restored_no_count": "스냅샷이 복원되었습니다. 벡터 데이터베이스가 보유한 벡터 수를 보고하지 않았습니다.",
     "costs.snapshot_restored_title": "{{name}} 스냅샷을 복원했습니다",
+    "costs.tile_ai_vectors": "AI 기능 벡터",
+    "costs.tile_matching_catalogues": "매칭 카탈로그",
     "costs.vec_generated_local_msg": "{{vectors}}개 벡터를 {{duration}}초 만에 로컬로 인덱싱했습니다",
     "costs.vec_generated_title": "{{name}} 벡터 생성 완료",
     "costs.vec_index_failed_title": "{{name}} 벡터 인덱싱 실패",
     "costs.vec_indexing_all": "모든 지역의 벡터 생성 중...",
     "costs.vec_indexing_region": "{{name}}의 벡터 생성 중...",
     "costs.vec_items_indexed_msg": "{{items}}개 항목을 {{duration}}초 만에 인덱싱했습니다",
+    "costs.vec_items_indexed_scope": "이 기능은 단가 제안, 분류, 이상 검사에 사용됩니다. 요소 매칭은 대신 설치된 원가 카탈로그를 검색합니다.",
     "costs.vec_phase_checking": "GitHub의 사전 빌드된 벡터 확인 중...",
     "costs.vec_phase_embedding": "단가 항목에서 384d 임베딩 생성 중...",
     "costs.vec_phase_indexing": "LanceDB로 인덱싱 및 통계 새로고침 중...",
@@ -39792,6 +39797,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI 기능 벡터",
-    "costs.tile_matching_catalogues": "매칭 카탈로그",
-    "costs.vec_items_indexed_scope": "이 기능은 단가 제안, 분류, 이상 검사에 사용됩니다. 요소 매칭은 대신 설치된 원가 카탈로그를 검색합니다.",

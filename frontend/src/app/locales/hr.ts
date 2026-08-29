@@ -589,6 +589,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Za {{country}} na dan {{date}} ništa nije evidentirano. Dodajte stopu u registar porezne konfiguracije.",
     "tax_rates.rates_conflict_title": "Evidentirane stope ne daju jedinstven odgovor",
     "tax_rates.rates_conflict_body": "Za {{jurisdiction}} na dan {{date}} vrijedi više stopa i nijedna nije označena kao standardna. Označite točno jednu kao zadanu u registru porezne konfiguracije.",
+    "tax_rates.standard_rate_not_started_title": "Zabilježena osnovna stopa počinje nakon ovog datuma",
+    "tax_rates.standard_rate_not_started_body": "Osnovna stopa zabilježena za {{jurisdiction}} počinje nakon {{date}}. Stope koje su na snazi tog datuma snižene su stope, a ne osnovna. Dodajte osnovnu stopu koja je tada vrijedila, s vlastitim datumima.",
     "tax_rates.no_number_note": "Ovdje se namjerno ne prikazuje nikakav broj. Uvjerljiva stopa gora je od nikakve: čita se jednako kao ispravna i završi u ponudi.",
     "tax_rates.refused_other_title": "Stopu nije bilo moguće utvrditi",
     "tax_rates.refused_other_body": "Stope evidentirane za {{jurisdiction}} nije bilo moguće kombinirati. Provjerite ih u registru porezne konfiguracije.",
@@ -13338,12 +13340,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vektora obnovljeno za {{duration}}s",
     "costs.snapshot_restored_no_count": "Snimak je obnovljen. Vektorska baza podataka nije prijavila koliko vektora sadrži.",
     "costs.snapshot_restored_title": "Snimak za {{name}} obnovljen",
+    "costs.tile_ai_vectors": "AI vektori značajki",
+    "costs.tile_matching_catalogues": "Katalozi za podudaranje",
     "costs.vec_generated_local_msg": "{{vectors}} vektora indeksirano lokalno za {{duration}}s",
     "costs.vec_generated_title": "Vektori za {{name}} generirani",
     "costs.vec_index_failed_title": "Indeksiranje vektora za {{name}} nije uspjelo",
     "costs.vec_indexing_all": "Generating vectors za sve regije...",
     "costs.vec_indexing_region": "Generiranje vektora za {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} stavki indeksirano za {{duration}}s",
+    "costs.vec_items_indexed_scope": "Ovo pokreće prijedloge stopa, klasifikaciju i provjere anomalija. Podudaranje elemenata umjesto toga pretražuje instalirane kataloge troškova.",
     "costs.vec_phase_checking": "Provjera pre-built vectors na GitHub...",
     "costs.vec_phase_embedding": "Generating 384d embeddings od trošak stavke...",
     "costs.vec_phase_indexing": "Indeksiranje u LanceDB i osvježavanje statistika...",
@@ -39322,6 +39327,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI vektori značajki",
-    "costs.tile_matching_catalogues": "Katalozi za podudaranje",
-    "costs.vec_items_indexed_scope": "Ovo pokreće prijedloge stopa, klasifikaciju i provjere anomalija. Podudaranje elemenata umjesto toga pretražuje instalirane kataloge troškova.",

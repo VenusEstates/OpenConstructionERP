@@ -310,6 +310,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Maalle {{country}} ei ole rekisteröity mitään päivämäränä {{date}}. Lisää kanta verokonfiguraatiorekisteriin.",
     "tax_rates.rates_conflict_title": "Rekisteröidyt kannat eivät anna yhtä vastausta",
     "tax_rates.rates_conflict_body": "Alueelle {{jurisdiction}} on voimassa useampi kuin yksi kanta päivämääränä {{date}}, eikä yhtäkään niistä ole merkitty vakiokannaksi. Merkitse verokonfiguraatiorekisterissä täsmälleen yksi oletukseksi.",
+    "tax_rates.standard_rate_not_started_title": "Kirjattu yleinen verokanta alkaa tätä päivää myöhemmin",
+    "tax_rates.standard_rate_not_started_body": "Kohteelle {{jurisdiction}} kirjattu yleinen verokanta alkaa vasta {{date}} jälkeen. Kyseisenä päivänä voimassa olevat kannat ovat alennettuja kantoja, eivät yleistä kantaa. Lisää tuolloin voimassa ollut yleinen verokanta omine päivämäärineen.",
     "tax_rates.no_number_note": "Tässä ei tarkoituksella näytetä mitään lukua. Uskottavan tuntuinen kanta on pahempi kuin kannan puuttuminen: se lukee täsmälleen kuin oikea kanta ja päätyy tarjoukseen.",
     "tax_rates.refused_other_title": "Kantaa ei saatu määritettyä",
     "tax_rates.refused_other_body": "Alueelle {{jurisdiction}} rekisteröityjä kantoja ei saatu yhdistettyä. Tarkista ne verokonfiguraatiorekisterissä.",
@@ -13461,12 +13463,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vektoria palautettu {{duration}} sekunnissa",
     "costs.snapshot_restored_no_count": "Tilannevedos palautettiin. Vektoritietokanta ei ilmoittanut, kuinka monta vektoria se sisältää.",
     "costs.snapshot_restored_title": "{{name}}-tilannevedos palautettu",
+    "costs.tile_ai_vectors": "Tekoälyn toimintovektorit",
+    "costs.tile_matching_catalogues": "Sovitusluettelot",
     "costs.vec_generated_local_msg": "{{vectors}} vektoria indeksoitu paikallisesti {{duration}} sekunnissa",
     "costs.vec_generated_title": "Vektorit luotu alueelle {{name}}",
     "costs.vec_index_failed_title": "Alueen {{name}} vektorien indeksointi epäonnistui",
     "costs.vec_indexing_all": "Luodaan vektoreita kaikille alueille...",
     "costs.vec_indexing_region": "Luodaan vektoreita alueelle {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} kohdetta indeksoitu {{duration}} sekunnissa",
+    "costs.vec_items_indexed_scope": "Tämä tehostaa hintaehdotuksia, luokittelua ja poikkeamatarkistuksia. Elementtien sovitus sen sijaan hakee asennetuista kustannusluetteloista.",
     "costs.vec_phase_checking": "Tarkistetaan valmiiksi rakennettuja vektoreita GitHubista...",
     "costs.vec_phase_embedding": "Luodaan 384-ulotteisia upotusvektoreita kustannusnimikkeistä...",
     "costs.vec_phase_indexing": "Indeksoidaan LanceDB:hen ja päivitetään tilastot...",
@@ -39228,6 +39233,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Tekoälyn toimintovektorit",
-    "costs.tile_matching_catalogues": "Sovitusluettelot",
-    "costs.vec_items_indexed_scope": "Tämä tehostaa hintaehdotuksia, luokittelua ja poikkeamatarkistuksia. Elementtien sovitus sen sijaan hakee asennetuista kustannusluetteloista.",

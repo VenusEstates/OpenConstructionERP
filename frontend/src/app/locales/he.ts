@@ -9773,12 +9773,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} וקטורים שוחזרו תוך {{duration}} שנ'",
     "costs.snapshot_restored_no_count": "תמונת המצב שוחזרה. מסד נתוני הווקטורים לא דיווח כמה וקטורים הוא מכיל.",
     "costs.snapshot_restored_title": "תמונת המצב של {{name}} שוחזרה",
+    "costs.tile_ai_vectors": "וקטורי תכונות בינה מלאכותית",
+    "costs.tile_matching_catalogues": "קטלוגי התאמה",
     "costs.vec_generated_local_msg": "{{vectors}} וקטורים נוספו לאינדקס מקומית תוך {{duration}} שנ'",
     "costs.vec_generated_title": "נוצרו וקטורים עבור {{name}}",
     "costs.vec_index_failed_title": "האינדוקס של הווקטורים עבור {{name}} נכשל",
     "costs.vec_indexing_all": "יוצר וקטורים לכל האזורים...",
     "costs.vec_indexing_region": "יוצר וקטורים עבור {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} פריטים נוספו לאינדקס תוך {{duration}} שנ'",
+    "costs.vec_items_indexed_scope": "זה מפעיל את הצעת התעריף, הסיווג ובדיקות החריגות. לעומת זאת, התאמת האלמנטים מחפשת בקטלוגי העלות המותקנים.",
     "costs.vec_phase_checking": "בודק וקטורים מוכנים מראש ב-GitHub...",
     "costs.vec_phase_embedding": "יוצר הטמעות 384d מפריטי עלות...",
     "costs.vec_phase_indexing": "מאנדקס ל-LanceDB ומרענן סטטיסטיקות...",
@@ -37332,6 +37335,8 @@ const resource = {
     "tax_rates.no_country_data_body": "לא רשום דבר עבור {{country}} בתאריך {{date}}. הוסף שיעור במרשם הגדרות המס.",
     "tax_rates.rates_conflict_title": "השיעורים הרשומים אינם נותנים תשובה אחת",
     "tax_rates.rates_conflict_body": "עבור {{jurisdiction}} בתאריך {{date}} בתוקף יותר משיעור אחד ואף אחד מהם אינו מסומן כשיעור התקן. סמן במרשם הגדרות המס בדיוק אחד כברירת מחדל.",
+    "tax_rates.standard_rate_not_started_title": "שיעור המס הרגיל הרשום מתחיל אחרי התאריך הזה",
+    "tax_rates.standard_rate_not_started_body": "שיעור המס הרגיל הרשום עבור {{jurisdiction}} מתחיל אחרי {{date}}. השיעורים שבתוקף באותו תאריך הם שיעורים מופחתים ולא השיעור הרגיל. הוסיפו את השיעור הרגיל שחל אז, עם התאריכים שלו.",
     "tax_rates.no_number_note": "בכוונה לא מוצג כאן מספר. שיעור סביר גרוע יותר מאשר היעדר שיעור: הוא נקרא בדיוק כמו שיעור נכון ומגיע להצעת מחיר.",
     "tax_rates.refused_other_title": "לא ניתן היה לקבוע את השיעור",
     "tax_rates.refused_other_body": "לא ניתן היה לשלב את השיעורים הרשומים עבור {{jurisdiction}}. בדוק אותם במרשם הגדרות המס.",
@@ -39284,6 +39289,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "וקטורי תכונות בינה מלאכותית",
-    "costs.tile_matching_catalogues": "קטלוגי התאמה",
-    "costs.vec_items_indexed_scope": "זה מפעיל את הצעת התעריף, הסיווג ובדיקות החריגות. לעומת זאת, התאמת האלמנטים מחפשת בקטלוגי העלות המותקנים.",

@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Voor {{country}} is op {{date}} niets vastgelegd. Voeg een tarief toe in het belastingconfiguratieregister.",
     "tax_rates.rates_conflict_title": "De vastgelegde tarieven geven geen eenduidig antwoord",
     "tax_rates.rates_conflict_body": "Voor {{jurisdiction}} gelden op {{date}} meerdere tarieven en geen daarvan is als standaard gemarkeerd. Markeer er precies één als standaard in het belastingconfiguratieregister.",
+    "tax_rates.standard_rate_not_started_title": "Het vastgelegde standaardtarief begint na deze datum",
+    "tax_rates.standard_rate_not_started_body": "Het voor {{jurisdiction}} vastgelegde standaardtarief begint na {{date}}. De tarieven die op die datum gelden zijn verlaagde tarieven, niet het standaardtarief. Voeg het standaardtarief van toen toe, met eigen datums.",
     "tax_rates.no_number_note": "Hier wordt bewust geen cijfer getoond. Een plausibel tarief is erger dan geen tarief: het leest precies als een correct tarief en belandt zo in een aanbieding.",
     "tax_rates.refused_other_title": "Het tarief kon niet worden vastgesteld",
     "tax_rates.refused_other_body": "De voor {{jurisdiction}} vastgelegde tarieven konden niet worden gecombineerd. Controleer ze in het belastingconfiguratieregister.",
@@ -12761,12 +12763,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vectoren hersteld in {{duration}}s",
     "costs.snapshot_restored_no_count": "Het snapshot is hersteld. De vectordatabase heeft niet gemeld hoeveel vectoren deze bevat.",
     "costs.snapshot_restored_title": "Snapshot van {{name}} hersteld",
+    "costs.tile_ai_vectors": "AI-functievectoren",
+    "costs.tile_matching_catalogues": "Matchingcatalogi",
     "costs.vec_generated_local_msg": "{{vectors}} vectoren lokaal geïndexeerd in {{duration}}s",
     "costs.vec_generated_title": "Vectoren voor {{name}} gegenereerd",
     "costs.vec_index_failed_title": "Indexeren van vectoren voor {{name}} mislukt",
     "costs.vec_indexing_all": "Vectoren genereren voor alle regio's...",
     "costs.vec_indexing_region": "Vectoren genereren voor {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} items geïndexeerd in {{duration}}s",
+    "costs.vec_items_indexed_scope": "Dit stuurt tariefsuggesties, classificatie en afwijkingscontroles aan. Elementmatching doorzoekt in plaats daarvan de geïnstalleerde kostencatalogi.",
     "costs.vec_phase_checking": "Voorgebouwde vectoren controleren op GitHub...",
     "costs.vec_phase_embedding": "384d-embeddings genereren uit kostenposten...",
     "costs.vec_phase_indexing": "Indexeren in LanceDB en statistieken vernieuwen...",
@@ -40104,6 +40109,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI-functievectoren",
-    "costs.tile_matching_catalogues": "Matchingcatalogi",
-    "costs.vec_items_indexed_scope": "Dit stuurt tariefsuggesties, classificatie en afwijkingscontroles aan. Elementmatching doorzoekt in plaats daarvan de geïnstalleerde kostencatalogi.",

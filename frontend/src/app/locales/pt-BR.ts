@@ -12632,12 +12632,15 @@ const resource = {
     "costs.variant_use_average": "Usar taxa média",
     "costs.variant_use_default_tooltip": "Aplicar a taxa média sem selecionar uma variante específica. Pode refinar mais tarde clicando na linha.",
     "costs.variant_use_median": "Usar taxa mediana",
+    "costs.tile_ai_vectors": "Vetores de funcionalidades IA",
+    "costs.tile_matching_catalogues": "Catálogos de correspondência",
     "costs.vec_generated_local_msg": "{{vectors}} vetores indexados localmente em {{duration}}s",
     "costs.vec_generated_title": "Vetores de {{name}} gerados",
     "costs.vec_index_failed_title": "Falha ao indexar os vetores de {{name}}",
     "costs.vec_indexing_all": "A gerar vetores para todas as regiões...",
     "costs.vec_indexing_region": "A gerar vetores para {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} itens indexados em {{duration}}s",
+    "costs.vec_items_indexed_scope": "Isso alimenta a sugestão de taxas, a classificação e as verificações de anomalias. A correspondência de elementos pesquisa, em vez disso, nos catálogos de custos instalados.",
     "costs.vec_phase_checking": "A verificar vetores pré-construídos no GitHub...",
     "costs.vec_phase_embedding": "A gerar embeddings 384d a partir de itens de custo...",
     "costs.vec_phase_indexing": "A indexar em LanceDB e a atualizar estatísticas...",
@@ -38277,6 +38280,8 @@ const resource = {
     "tax_withholding.state_not_yet": "Ainda não iniciado",
     "tax_withholding.state_expiring": "Prestes a expirar",
     "tax_withholding.state_current": "Vigente",
+    "tax_rates.standard_rate_not_started_title": "A alíquota padrão cadastrada começa depois desta data",
+    "tax_rates.standard_rate_not_started_body": "A alíquota padrão cadastrada para {{jurisdiction}} começa depois de {{date}}. As alíquotas em vigor nessa data são alíquotas reduzidas, não a padrão. Cadastre a alíquota padrão vigente naquela época, com as próprias datas.",
     "dashboard.regional_pack_title": "Seu pacote regional",
     "dashboard.layout.w_regional_pack_desc": "Qual pacote de mercado está ativo e o que ele configura para você",
     "dashboard.regional_pack_subtitle": "Já configurado para o seu mercado, para que você não precise fazer isso",
@@ -38309,6 +38314,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vetores de funcionalidades IA",
-    "costs.tile_matching_catalogues": "Catálogos de correspondência",
-    "costs.vec_items_indexed_scope": "Isso alimenta a sugestão de taxas, a classificação e as verificações de anomalias. A correspondência de elementos pesquisa, em vez disso, nos catálogos de custos instalados.",

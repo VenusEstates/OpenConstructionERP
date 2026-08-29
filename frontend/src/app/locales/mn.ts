@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}}-ийн хувьд {{date}}-ний өдөр ямар ч мэдээлэл бүртгэгдээгүй байна. Татварын тохиргооны бүртгэлд хувь хэмжээ нэмнэ үү.",
     "tax_rates.rates_conflict_title": "Бүртгэгдсэн хувь хэмжээнүүд нэг тодорхой хариулт өгөхгүй байна",
     "tax_rates.rates_conflict_body": "{{jurisdiction}}-д {{date}}-ний өдөр нэгээс олон хувь хэмжээ хүчинтэй бөгөөд аль нь ч стандарт гэж тэмдэглэгдээгүй байна. Татварын тохиргооны бүртгэлд яг нэгийг нь өгөгдмөл гэж тэмдэглэнэ үү.",
+    "tax_rates.standard_rate_not_started_title": "Бүртгэгдсэн үндсэн хувь хэмжээ энэ огнооны дараа эхэлдэг",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}}-д бүртгэгдсэн үндсэн хувь хэмжээ {{date}}-ны дараа эхэлнэ. Тухайн огноонд хүчин төгөлдөр байгаа хувь хэмжээ нь хөнгөлөлттэй хувь хэмжээ бөгөөд үндсэн нь биш. Тухайн үед үйлчилж байсан үндсэн хувь хэмжээг өөрийн огноотой нь нэмнэ үү.",
     "tax_rates.no_number_note": "Энд санаатайгаар ямар ч тоо харуулаагүй байна. Итгэмээр харагдах хувь хэмжээ нь огт байхгүйгээс ч дор: энэ нь зөв хувь хэмжээтэй яг адилхан харагддаг бөгөөд эцэст нь тендерт орж ирдэг.",
     "tax_rates.refused_other_title": "Хувь хэмжээг тодорхойлж чадсангүй",
     "tax_rates.refused_other_body": "{{jurisdiction}}-ийн хувьд бүртгэгдсэн хувь хэмжээнүүдийг нэгтгэж чадсангүй. Тэдгээрийг татварын тохиргооны бүртгэлээс шалгана уу.",
@@ -10348,12 +10350,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} векторыг {{duration}} секундэд сэргээлээ",
     "costs.snapshot_restored_no_count": "Снапшотыг сэргээлээ. Векторын өгөгдлийн сан хэдэн вектор агуулж байгаагаа мэдээлээгүй байна.",
     "costs.snapshot_restored_title": "{{name}}-ийн снапшотыг сэргээлээ",
+    "costs.tile_ai_vectors": "AI функцын вектор",
+    "costs.tile_matching_catalogues": "Тааруулах каталогууд",
     "costs.vec_generated_local_msg": "{{vectors}} векторыг {{duration}} секундэд дотоод байдлаар индекслэлээ",
     "costs.vec_generated_title": "{{name}}-ийн векторууд үүслээ",
     "costs.vec_index_failed_title": "{{name}}-ийн векторуудыг индексжүүлж чадсангүй",
     "costs.vec_indexing_all": "Үүсгэж байна вектор -д зориулсан бүх бүсүүд...",
     "costs.vec_indexing_region": "Үүсгэж байна вектор -д зориулсан {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} зүйлийг {{duration}} секундэд индекслэлээ",
+    "costs.vec_items_indexed_scope": "Энэ нь тарифын санал, ангилал, гажиг шалгалтыг тэжээдэг. Элемент тааруулах нь харин суулгасан үнийн каталогуудаас хайдаг.",
     "costs.vec_phase_checking": "Шалгаж байна pre-барьсан вектор дээр GitHub...",
     "costs.vec_phase_embedding": "Үүсгэж байна 384d embeddings -аас өртөг зүйлс...",
     "costs.vec_phase_indexing": "Indexing руу LanceDB ба сэргээж байна stats...",
@@ -39236,6 +39241,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI функцын вектор",
-    "costs.tile_matching_catalogues": "Тааруулах каталогууд",
-    "costs.vec_items_indexed_scope": "Энэ нь тарифын санал, ангилал, гажиг шалгалтыг тэжээдэг. Элемент тааруулах нь харин суулгасан үнийн каталогуудаас хайдаг.",

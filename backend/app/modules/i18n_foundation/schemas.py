@@ -181,7 +181,9 @@ TaxCombination = Literal[
 ]
 
 #: Mirrors ``ResolutionStatus`` in tax_rules.py. How the resolver reached its
-#: answer, and in two cases why it declined to give one.
+#: answer, or why it declined to give one. Every member of that Literal has to
+#: be here too: this one is what the response model validates against, so a
+#: status added only over there fails the request instead of reporting it.
 TaxResolutionStatus = Literal[
     "harmonised",
     "stacked",
@@ -191,6 +193,7 @@ TaxResolutionStatus = Literal[
     "subdivision_unknown",
     "no_configuration",
     "default_rate_ambiguous",
+    "default_rate_not_in_force",
 ]
 
 

@@ -9766,12 +9766,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{duration}}s-এ {{vectors}}টি ভেক্টর পুনরুদ্ধার করা হয়েছে",
     "costs.snapshot_restored_no_count": "স্ন্যাপশটটি পুনরুদ্ধার করা হয়েছে। ভেক্টর ডেটাবেস কতগুলো ভেক্টর ধারণ করে তা রিপোর্ট করেনি।",
     "costs.snapshot_restored_title": "{{name}} স্ন্যাপশট পুনরুদ্ধার করা হয়েছে",
+    "costs.tile_ai_vectors": "AI ফিচার ভেক্টর",
+    "costs.tile_matching_catalogues": "মিলানোর ক্যাটালগ",
     "costs.vec_generated_local_msg": "{{duration}}s-এ স্থানীয়ভাবে {{vectors}}টি ভেক্টর ইনডেক্স করা হয়েছে",
     "costs.vec_generated_title": "{{name}}-এর ভেক্টর তৈরি হয়েছে",
     "costs.vec_index_failed_title": "{{name}}-এর ভেক্টর ইনডেক্স করা যায়নি",
     "costs.vec_indexing_all": "সব অঞ্চলের জন্য ভেক্টর তৈরি করা হচ্ছে...",
     "costs.vec_indexing_region": "{{name}}-এর জন্য ভেক্টর তৈরি করা হচ্ছে...",
     "costs.vec_items_indexed_msg": "{{duration}}s-এ {{items}}টি আইটেম ইনডেক্স করা হয়েছে",
+    "costs.vec_items_indexed_scope": "এটি রেট সুপারিশ, শ্রেণীবিভাগ এবং অসঙ্গতি পরীক্ষাকে চালিত করে। এলিমেন্ট মিলানো এর পরিবর্তে ইনস্টল করা কস্ট ক্যাটালগে অনুসন্ধান করে।",
     "costs.vec_phase_checking": "GitHub-এ পূর্ব-নির্মিত ভেক্টর পরীক্ষা করা হচ্ছে...",
     "costs.vec_phase_embedding": "কস্ট আইটেম থেকে 384d এমবেডিং তৈরি করা হচ্ছে...",
     "costs.vec_phase_indexing": "LanceDB-তে ইনডেক্স করা হচ্ছে এবং পরিসংখ্যান রিফ্রেশ করা হচ্ছে...",
@@ -37017,6 +37020,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}}-এর জন্য {{date}} তারিখে কিছুই নথিভুক্ত নেই। কর কনফিগারেশন রেজিস্টারে একটি হার যোগ করুন।",
     "tax_rates.rates_conflict_title": "নথিভুক্ত হারগুলো একটিমাত্র উত্তর দেয় না",
     "tax_rates.rates_conflict_body": "{{jurisdiction}}-এর জন্য {{date}} তারিখে একাধিক হার কার্যকর এবং কোনোটিই মানক হিসেবে চিহ্নিত নয়। কর কনফিগারেশন রেজিস্টারে ঠিক একটিকে ডিফল্ট হিসেবে চিহ্নিত করুন।",
+    "tax_rates.standard_rate_not_started_title": "নথিভুক্ত মানক হার এই তারিখের পরে শুরু হয়",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}}-এর জন্য নথিভুক্ত মানক হার {{date}}-এর পরে শুরু হয়। ওই তারিখে কার্যকর হারগুলি হ্রাসকৃত হার, মানক হার নয়। তখন প্রযোজ্য মানক হারটি তার নিজস্ব তারিখসহ যোগ করুন।",
     "tax_rates.no_number_note": "এখানে ইচ্ছাকৃতভাবে কোনো সংখ্যা দেখানো হয় না। একটি বিশ্বাসযোগ্য মনে হওয়া হার কোনো হার না থাকার চেয়েও খারাপ: এটি ঠিক সঠিক হারের মতো পড়া যায় এবং একটি দরপত্রে চলে যায়।",
     "tax_rates.refused_other_title": "হার নির্ধারণ করা যায়নি",
     "tax_rates.refused_other_body": "{{jurisdiction}}-এর জন্য নথিভুক্ত হারগুলো একত্র করা যায়নি। কর কনফিগারেশন রেজিস্টারে সেগুলো যাচাই করুন।",
@@ -39203,6 +39208,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI ফিচার ভেক্টর",
-    "costs.tile_matching_catalogues": "মিলানোর ক্যাটালগ",
-    "costs.vec_items_indexed_scope": "এটি রেট সুপারিশ, শ্রেণীবিভাগ এবং অসঙ্গতি পরীক্ষাকে চালিত করে। এলিমেন্ট মিলানো এর পরিবর্তে ইনস্টল করা কস্ট ক্যাটালগে অনুসন্ধান করে।",

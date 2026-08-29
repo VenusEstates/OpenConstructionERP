@@ -310,6 +310,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}} kohta ei ole seisuga {{date}} midagi kirjas. Lisage määr maksukonfiguratsiooni registrisse.",
     "tax_rates.rates_conflict_title": "Kirjas olevad määrad ei anna ühest vastust",
     "tax_rates.rates_conflict_body": "{{jurisdiction}} kohta kehtib seisuga {{date}} rohkem kui üks määr ja ühtegi neist pole märgitud standardseks. Märkige maksukonfiguratsiooni registris täpselt üks vaikimisi määraks.",
+    "tax_rates.standard_rate_not_started_title": "Salvestatud harilik maksumäär algab hiljem kui see kuupäev",
+    "tax_rates.standard_rate_not_started_body": "Jurisdiktsiooni {{jurisdiction}} jaoks salvestatud harilik maksumäär algab pärast kuupäeva {{date}}. Sel kuupäeval kehtivad määrad on vähendatud määrad, mitte harilik määr. Lisa tollal kehtinud harilik määr koos oma kuupäevadega.",
     "tax_rates.no_number_note": "Siin ei näidata tahtlikult ühtegi arvu. Usutav määr on halvem kui selle puudumine: see loetakse täpselt nagu õige ja jõuab pakkumisse.",
     "tax_rates.refused_other_title": "Määra ei õnnestunud kindlaks teha",
     "tax_rates.refused_other_body": "{{jurisdiction}} kohta kirjas olevaid määrasid ei õnnestunud kombineerida. Kontrollige neid maksukonfiguratsiooni registris.",
@@ -10485,12 +10487,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vektorit taastatud {{duration}} s jooksul",
     "costs.snapshot_restored_no_count": "Tõmmis taastati. Vektorandmebaas ei teatanud, mitu vektorit see sisaldab.",
     "costs.snapshot_restored_title": "{{name}} tõmmis taastatud",
+    "costs.tile_ai_vectors": "AI funktsioonivektorid",
+    "costs.tile_matching_catalogues": "Sobitamise kataloogid",
     "costs.vec_generated_local_msg": "{{vectors}} vektorit indekseeriti lokaalselt {{duration}} s jooksul",
     "costs.vec_generated_title": "{{name}} vektorid on genereeritud",
     "costs.vec_index_failed_title": "{{name}} vektorite indekseerimine ebaõnnestus",
     "costs.vec_indexing_all": "Vektorite genereerimine kõigile piirkondadele...",
     "costs.vec_indexing_region": "Vektorite genereerimine: {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} kirjet indekseeriti {{duration}} s jooksul",
+    "costs.vec_items_indexed_scope": "See toidab hinnasoovitusi, klassifitseerimist ja kõrvalekallete kontrolle. Elementide sobitamine otsib selle asemel paigaldatud kulukataloogidest.",
     "costs.vec_phase_checking": "Eelehitatud vektorite kontrollimine GitHubis...",
     "costs.vec_phase_embedding": "384-mõõtmeliste vektorite genereerimine kulukirjetest...",
     "costs.vec_phase_indexing": "Indekseerimine LanceDB-sse ja statistika värskendamine...",
@@ -39166,6 +39171,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI funktsioonivektorid",
-    "costs.tile_matching_catalogues": "Sobitamise kataloogid",
-    "costs.vec_items_indexed_scope": "See toidab hinnasoovitusi, klassifitseerimist ja kõrvalekallete kontrolle. Elementide sobitamine otsib selle asemel paigaldatud kulukataloogidest.",

@@ -9767,12 +9767,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} بردار در {{duration}} ثانیه بازیابی شد",
     "costs.snapshot_restored_no_count": "اسنپ‌شات بازیابی شد. پایگاه‌داده برداری گزارش نداد چند بردار دارد.",
     "costs.snapshot_restored_title": "اسنپ‌شات {{name}} بازیابی شد",
+    "costs.tile_ai_vectors": "بردارهای ویژگی هوش مصنوعی",
+    "costs.tile_matching_catalogues": "کاتالوگ‌های تطبیق",
     "costs.vec_generated_local_msg": "{{vectors}} بردار به صورت محلی در {{duration}} ثانیه ایندکس شد",
     "costs.vec_generated_title": "بردارهای {{name}} تولید شد",
     "costs.vec_index_failed_title": "ایندکسگذاری بردارهای {{name}} ناموفق بود",
     "costs.vec_indexing_all": "در حال تولید بردار برای همه مناطق...",
     "costs.vec_indexing_region": "در حال تولید بردار برای {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} مورد در {{duration}} ثانیه ایندکس شد",
+    "costs.vec_items_indexed_scope": "این ویژگی، پیشنهاد نرخ، طبقه‌بندی و بررسی ناهنجاری را ممکن می‌سازد. تطبیق اجزا به‌جای آن در کاتالوگ‌های هزینه نصب‌شده جستجو می‌کند.",
     "costs.vec_phase_checking": "در حال بررسی بردارهای از پیش ساخته‌شده در GitHub...",
     "costs.vec_phase_embedding": "در حال تولید embedding 384 بعدی از اقلام هزینه...",
     "costs.vec_phase_indexing": "در حال ایندکس‌گذاری در LanceDB و به‌روزرسانی آمار...",
@@ -37280,6 +37283,8 @@ const resource = {
     "tax_rates.no_country_data_body": "برای {{country}} در تاریخ {{date}} چیزی ثبت نشده است. نرخی در فهرست پیکربندی مالیات اضافه کنید.",
     "tax_rates.rates_conflict_title": "نرخ‌های ثبت‌شده یک پاسخ واحد نمی‌دهند",
     "tax_rates.rates_conflict_body": "برای {{jurisdiction}} در تاریخ {{date}} بیش از یک نرخ معتبر است و هیچ‌کدام به‌عنوان نرخ استاندارد علامت‌گذاری نشده است. دقیقاً یکی را در فهرست پیکربندی مالیات به‌عنوان پیش‌فرض علامت بزنید.",
+    "tax_rates.standard_rate_not_started_title": "نرخ استاندارد ثبت‌شده پس از این تاریخ آغاز می‌شود",
+    "tax_rates.standard_rate_not_started_body": "نرخ استاندارد ثبت‌شده برای {{jurisdiction}} پس از {{date}} آغاز می‌شود. نرخ‌های معتبر در آن تاریخ نرخ‌های کاهش‌یافته هستند، نه نرخ استاندارد. نرخ استاندارد آن زمان را با تاریخ‌های خودش اضافه کنید.",
     "tax_rates.no_number_note": "عمداً هیچ عددی در اینجا نشان داده نمی‌شود. نرخی باورپذیر بدتر از نبود نرخ است: دقیقاً مانند نرخی درست خوانده می‌شود و به یک پیشنهاد قیمت راه می‌یابد.",
     "tax_rates.refused_other_title": "نرخ قابل تعیین نبود",
     "tax_rates.refused_other_body": "نرخ‌های ثبت‌شده برای {{jurisdiction}} قابل ترکیب نبودند. آن‌ها را در فهرست پیکربندی مالیات بررسی کنید.",
@@ -39203,6 +39208,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "بردارهای ویژگی هوش مصنوعی",
-    "costs.tile_matching_catalogues": "کاتالوگ‌های تطبیق",
-    "costs.vec_items_indexed_scope": "این ویژگی، پیشنهاد نرخ، طبقه‌بندی و بررسی ناهنجاری را ممکن می‌سازد. تطبیق اجزا به‌جای آن در کاتالوگ‌های هزینه نصب‌شده جستجو می‌کند.",

@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Nothing is recorded for {{country}} on {{date}}. Add a rate in the tax configuration register.",
     "tax_rates.rates_conflict_title": "The rates on file do not give one answer",
     "tax_rates.rates_conflict_body": "More than one rate is in force for {{jurisdiction}} on {{date}} and none of them is marked as the standard one. Mark exactly one as the default in the tax configuration register.",
+    "tax_rates.standard_rate_not_started_title": "The standard rate on file starts later than this date",
+    "tax_rates.standard_rate_not_started_body": "The standard rate recorded for {{jurisdiction}} begins after {{date}}. The rates in force on that date are reduced tiers, not the standard rate. Add the standard rate that applied then, with its own dates.",
     "tax_rates.no_number_note": "No figure is shown here on purpose. A plausible rate is worse than none: it reads exactly like a correct one and travels into a tender.",
     "tax_rates.refused_other_title": "The rate could not be worked out",
     "tax_rates.refused_other_body": "The rates recorded for {{jurisdiction}} could not be combined. Check them in the tax configuration register.",
@@ -4989,12 +4991,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vectors restored in {{duration}}s",
     "costs.snapshot_restored_no_count": "The snapshot was restored. The vector database did not report how many vectors it holds.",
     "costs.snapshot_restored_title": "{{name}} snapshot restored",
+    "costs.tile_ai_vectors": "AI feature vectors",
+    "costs.tile_matching_catalogues": "Matching catalogues",
     "costs.vec_generated_local_msg": "{{vectors}} vectors indexed locally in {{duration}}s",
     "costs.vec_generated_title": "{{name}} vectors generated",
     "costs.vec_index_failed_title": "Failed to index {{name}} vectors",
     "costs.vec_indexing_all": "Generating vectors for all regions...",
     "costs.vec_indexing_region": "Generating vectors for {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} items indexed in {{duration}}s",
+    "costs.vec_items_indexed_scope": "This powers rate suggestion, classification and anomaly checks. Element matching searches the installed cost catalogues instead.",
     "costs.vec_phase_checking": "Checking pre-built vectors on GitHub...",
     "costs.vec_phase_embedding": "Generating 384d embeddings from cost items...",
     "costs.vec_phase_indexing": "Indexing into LanceDB and refreshing stats...",
@@ -35935,6 +35940,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI feature vectors",
-    "costs.tile_matching_catalogues": "Matching catalogues",
-    "costs.vec_items_indexed_scope": "This powers rate suggestion, classification and anomaly checks. Element matching searches the installed cost catalogues instead.",

@@ -7,12 +7,14 @@
  * whole feature rests on, and it should be testable without rendering
  * anything.
  *
- * The server has eight statuses and three of them mean "no rate". Those three
- * are not three ways of saying the same thing, and one of them is not even one
- * thing: `subdivision_unknown` is returned for three different situations that
- * a reader has to act on differently. They are told apart by the shape of the
- * response rather than by reading the server's English `reason`, because
- * matching on prose breaks the first time somebody rewords a sentence.
+ * Several of the server's statuses mean "no rate", and they are not several
+ * ways of saying the same thing - each one names a different thing that is
+ * missing and a different person who can supply it. One of them is not even a
+ * single thing: `subdivision_unknown` is returned for three different
+ * situations that a reader has to act on differently. They are told apart by
+ * the shape of the response rather than by reading the server's English
+ * `reason`, because matching on prose breaks the first time somebody rewords
+ * a sentence.
  */
 
 import type { TaxRateComponent, TaxResolution } from './api';
@@ -38,7 +40,15 @@ export type Classification =
   /** Nothing at all on file for this country on this date. */
   | { kind: 'no_country_data' }
   /** Rows are in force that do not resolve to a single standard rate. */
-  | { kind: 'rates_conflict' };
+  | { kind: 'rates_conflict' }
+  /**
+   * The country's standard rate begins after the date asked about, and what
+   * is in force instead is a reduced tier. Its own kind rather than a share
+   * of `rates_conflict`, because the two need opposite things done: there,
+   * somebody flags one of the rows already on file; here, the row that would
+   * answer does not exist yet and has to be added.
+   */
+  | { kind: 'standard_rate_not_started' };
 
 export type ResolutionKind = Classification['kind'];
 
@@ -50,11 +60,13 @@ export const UNANSWERED_KINDS: readonly ResolutionKind[] = [
   'rates_unlabelled',
   'no_country_data',
   'rates_conflict',
+  'standard_rate_not_started',
 ];
 
 export function classifyResolution(r: TaxResolution): Classification {
   if (r.status === 'no_configuration') return { kind: 'no_country_data' };
   if (r.status === 'default_rate_ambiguous') return { kind: 'rates_conflict' };
+  if (r.status === 'default_rate_not_in_force') return { kind: 'standard_rate_not_started' };
 
   if (r.status === 'subdivision_unknown') {
     // Three causes, three different people who can fix them, told apart by

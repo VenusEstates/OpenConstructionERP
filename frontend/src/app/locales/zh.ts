@@ -557,6 +557,8 @@ const resource = {
     "tax_rates.no_country_data_body": "截至{{date}}，未记录{{country}}的任何数据。请在税务配置登记表中添加税率。",
     "tax_rates.rates_conflict_title": "已记录的税率无法给出唯一答案",
     "tax_rates.rates_conflict_body": "截至{{date}}，{{jurisdiction}}有多个生效税率，且没有一个被标记为标准税率。请在税务配置登记表中将其中一个明确标记为默认。",
+    "tax_rates.standard_rate_not_started_title": "已登记的标准税率在此日期之后才开始生效",
+    "tax_rates.standard_rate_not_started_body": "为 {{jurisdiction}} 登记的标准税率在 {{date}} 之后才开始生效。该日期生效的税率是减免税率，而不是标准税率。请添加当时适用的标准税率，并填写其自身的生效日期。",
     "tax_rates.no_number_note": "此处故意不显示任何数字。看似合理的税率比没有税率更糟：它读起来和正确税率一模一样，最终会写进投标文件。",
     "tax_rates.refused_other_title": "无法确定税率",
     "tax_rates.refused_other_body": "无法合并{{jurisdiction}}已记录的税率。请在税务配置登记表中检查它们。",
@@ -13500,12 +13502,15 @@ const resource = {
     "costs.snapshot_restored_msg": "已恢复 {{vectors}} 个向量，耗时 {{duration}} 秒",
     "costs.snapshot_restored_no_count": "快照已恢复。向量数据库未报告其包含多少个向量。",
     "costs.snapshot_restored_title": "已恢复 {{name}} 快照",
+    "costs.tile_ai_vectors": "AI 功能向量",
+    "costs.tile_matching_catalogues": "匹配目录",
     "costs.vec_generated_local_msg": "已在本地索引 {{vectors}} 个向量，耗时 {{duration}} 秒",
     "costs.vec_generated_title": "{{name}} 向量已生成",
     "costs.vec_index_failed_title": "{{name}} 向量索引失败",
     "costs.vec_indexing_all": "生成中向量所有地区...",
     "costs.vec_indexing_region": "生成中向量用于 {{name}}...",
     "costs.vec_items_indexed_msg": "已索引 {{items}} 项，耗时 {{duration}} 秒",
+    "costs.vec_items_indexed_scope": "这为费率建议、分类和异常检查提供支持。构件匹配则在已安装的成本目录中搜索。",
     "costs.vec_phase_checking": "正在检查 GitHub 上的预构建向量...",
     "costs.vec_phase_embedding": "正在根据造价条目生成 384 维嵌入向量...",
     "costs.vec_phase_indexing": "正在索引到 LanceDB 并刷新统计数据...",
@@ -40706,6 +40711,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI 功能向量",
-    "costs.tile_matching_catalogues": "匹配目录",
-    "costs.vec_items_indexed_scope": "这为费率建议、分类和异常检查提供支持。构件匹配则在已安装的成本目录中搜索。",

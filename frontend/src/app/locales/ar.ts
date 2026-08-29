@@ -637,6 +637,8 @@ const resource = {
     "tax_rates.no_country_data_body": "لا يوجد أي شيء مسجَّل لـ {{country}} بتاريخ {{date}}. أضف معدلًا في سجل إعدادات الضرائب.",
     "tax_rates.rates_conflict_title": "المعدلات المسجَّلة لا تعطي إجابة واحدة",
     "tax_rates.rates_conflict_body": "يسري أكثر من معدل لـ {{jurisdiction}} بتاريخ {{date}} ولم يُحدَّد أي منها كمعدل قياسي. حدِّد واحدًا بالضبط كافتراضي في سجل إعدادات الضرائب.",
+    "tax_rates.standard_rate_not_started_title": "المعدل القياسي المسجل يبدأ بعد هذا التاريخ",
+    "tax_rates.standard_rate_not_started_body": "المعدل القياسي المسجل لـ {{jurisdiction}} يبدأ بعد {{date}}. المعدلات السارية في ذلك التاريخ معدلات مخفضة وليست المعدل القياسي. أضف المعدل القياسي الذي كان مطبقاً حينها مع تواريخه الخاصة.",
     "tax_rates.no_number_note": "لا يُعرض أي رقم هنا، وذلك عن قصد. المعدل المحتمل أسوأ من عدم وجود معدل: فهو يُقرأ تمامًا مثل المعدل الصحيح وينتهي في عرض تقديم.",
     "tax_rates.refused_other_title": "تعذّر تحديد المعدل",
     "tax_rates.refused_other_body": "تعذّر دمج المعدلات المسجَّلة لـ {{jurisdiction}}. راجعها في سجل إعدادات الضرائب.",
@@ -10596,12 +10598,15 @@ const resource = {
     "costs.snapshot_restored_msg": "تمت استعادة {{vectors}} متجه في {{duration}} ثانية",
     "costs.snapshot_restored_no_count": "تمت استعادة اللقطة. لم تُبلغ قاعدة بيانات المتجهات عن عدد المتجهات التي تحتفظ بها.",
     "costs.snapshot_restored_title": "تمت استعادة لقطة {{name}}",
+    "costs.tile_ai_vectors": "متجهات ميزات الذكاء الاصطناعي",
+    "costs.tile_matching_catalogues": "كتالوجات المطابقة",
     "costs.vec_generated_local_msg": "تمت فهرسة {{vectors}} متجه محليًا في {{duration}} ثانية",
     "costs.vec_generated_title": "تم توليد متجهات {{name}}",
     "costs.vec_index_failed_title": "فشل فهرسة متجهات {{name}}",
     "costs.vec_indexing_all": "جارٍ توليد المتجهات لكل المناطق...",
     "costs.vec_indexing_region": "جارٍ توليد المتجهات لـ {{name}}...",
     "costs.vec_items_indexed_msg": "تمت فهرسة {{items}} عنصر في {{duration}} ثانية",
+    "costs.vec_items_indexed_scope": "هذا يشغّل اقتراح الأسعار والتصنيف وفحوصات الشذوذ. أما مطابقة العناصر فتبحث بدلاً من ذلك في كتالوجات التكاليف المثبتة.",
     "costs.vec_phase_checking": "جارٍ فحص المتجهات الجاهزة على GitHub...",
     "costs.vec_phase_embedding": "جارٍ توليد متجهات 384 بُعد من بنود التكلفة...",
     "costs.vec_phase_indexing": "جارٍ الفهرسة في LanceDB وتحديث الإحصاءات...",
@@ -41090,6 +41095,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "متجهات ميزات الذكاء الاصطناعي",
-    "costs.tile_matching_catalogues": "كتالوجات المطابقة",
-    "costs.vec_items_indexed_scope": "هذا يشغّل اقتراح الأسعار والتصنيف وفحوصات الشذوذ. أما مطابقة العناصر فتبحث بدلاً من ذلك في كتالوجات التكاليف المثبتة.",

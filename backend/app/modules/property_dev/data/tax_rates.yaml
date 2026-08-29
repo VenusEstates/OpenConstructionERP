@@ -403,7 +403,22 @@ jurisdictions:
       # points high. A contract signed before 1992-01-01 is refused: the
       # Soviet turnover tax this replaced is a different tax and not an older
       # rate of this one. The 10 % reduced class that has run alongside the
-      # standard rate since 1993 is not carried here.
+      # standard rate since 1993 is not carried here. That is a scope
+      # decision rather than an oversight: this table prices the standard
+      # rate of a development contract, and the reduced class covers food,
+      # medicine and children's goods.
+      #
+      # OPEN QUESTION for a domain reader, and it is about the other table
+      # rather than this one. The reduced class is carried in the seed the
+      # platform ships, as NDS_RED in
+      # i18n_foundation/seed_data/tax_configurations.json, dated 2004-01-01.
+      # That is exactly the day the standard rate moved from 20 % to 18 %,
+      # which is a suspicious day for the reduced rate to share: the 10 %
+      # class is older than that, and the two changes have nothing to do with
+      # each other. It reads like a date taken from the neighbouring row. No
+      # source consulted gave a day for it, so none was written in its place;
+      # a plausible date would have made the doubt invisible, which is the
+      # thing this note exists to stop.
       standard:
         - { rate: 0.28, effective_from: "1992-01-01" }
         - { rate: 0.20, effective_from: "1993-01-01" }

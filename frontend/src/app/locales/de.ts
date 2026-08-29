@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Für {{country}} ist am {{date}} nichts hinterlegt. Tragen Sie einen Satz im Steuerkonfigurationsregister nach.",
     "tax_rates.rates_conflict_title": "Die hinterlegten Sätze ergeben keine eindeutige Antwort",
     "tax_rates.rates_conflict_body": "Für {{jurisdiction}} gelten am {{date}} mehrere Sätze, und keiner ist als Standard markiert. Markieren Sie im Steuerkonfigurationsregister genau einen als Standard.",
+    "tax_rates.standard_rate_not_started_title": "Der hinterlegte Normalsatz beginnt erst nach diesem Datum",
+    "tax_rates.standard_rate_not_started_body": "Der für {{jurisdiction}} hinterlegte Normalsatz beginnt nach {{date}}. Die an diesem Datum geltenden Sätze sind ermäßigte Sätze und nicht der Normalsatz. Tragen Sie den damals geltenden Normalsatz mit eigenen Datumsangaben ein.",
     "tax_rates.no_number_note": "Absichtlich wird hier keine Zahl angezeigt. Ein plausibler Satz ist schlimmer als gar keiner: Er liest sich wie ein korrekter und gelangt so in ein Angebot.",
     "tax_rates.refused_other_title": "Der Satz konnte nicht ermittelt werden",
     "tax_rates.refused_other_body": "Die für {{jurisdiction}} hinterlegten Sätze ließen sich nicht kombinieren. Prüfen Sie sie im Steuerkonfigurationsregister.",
@@ -13798,12 +13800,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} Vektoren in {{duration}} s wiederhergestellt",
     "costs.snapshot_restored_no_count": "Der Snapshot wurde wiederhergestellt. Die Vektordatenbank hat nicht gemeldet, wie viele Vektoren sie enthält.",
     "costs.snapshot_restored_title": "Snapshot für {{name}} wiederhergestellt",
+    "costs.tile_ai_vectors": "KI-Funktionsvektoren",
+    "costs.tile_matching_catalogues": "Abgleichskataloge",
     "costs.vec_generated_local_msg": "{{vectors}} Vektoren lokal indexiert in {{duration}} s",
     "costs.vec_generated_title": "Vektoren für {{name}} erzeugt",
     "costs.vec_index_failed_title": "Vektoren für {{name}} konnten nicht indexiert werden",
     "costs.vec_indexing_all": "Vektoren für alle Regionen werden erzeugt...",
     "costs.vec_indexing_region": "Vektoren für {{name}} werden erzeugt...",
     "costs.vec_items_indexed_msg": "{{items}} Positionen indexiert in {{duration}} s",
+    "costs.vec_items_indexed_scope": "Das treibt Ansatzvorschläge, Klassifizierung und Anomalieprüfungen an. Der Element-Abgleich durchsucht stattdessen die installierten Kostenkataloge.",
     "costs.vec_phase_checking": "Vorab erstellte Vektoren auf GitHub werden geprüft...",
     "costs.vec_phase_embedding": "384d-Embeddings aus Kostenpositionen werden erzeugt...",
     "costs.vec_phase_indexing": "Indexierung in LanceDB und Aktualisierung der Statistiken...",
@@ -41554,6 +41559,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "KI-Funktionsvektoren",
-    "costs.tile_matching_catalogues": "Abgleichskataloge",
-    "costs.vec_items_indexed_scope": "Das treibt Ansatzvorschläge, Klassifizierung und Anomalieprüfungen an. Der Element-Abgleich durchsucht stattdessen die installierten Kostenkataloge.",

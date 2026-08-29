@@ -9767,12 +9767,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} ویکٹرز {{duration}} سیکنڈ میں بحال ہو گئے",
     "costs.snapshot_restored_no_count": "سنیپ شاٹ بحال کر دیا گیا۔ ویکٹر ڈیٹا بیس نے یہ نہیں بتایا کہ اس میں کتنے ویکٹرز موجود ہیں۔",
     "costs.snapshot_restored_title": "{{name}} سنیپ شاٹ بحال ہو گیا",
+    "costs.tile_ai_vectors": "AI فیچر ویکٹرز",
+    "costs.tile_matching_catalogues": "میل کیٹلاگز",
     "costs.vec_generated_local_msg": "{{vectors}} vectors مقامی طور پر {{duration}} سیکنڈ میں انڈیکس ہو گئے",
     "costs.vec_generated_title": "{{name}} کے vectors بن گئے",
     "costs.vec_index_failed_title": "{{name}} کے vectors انڈیکس نہیں ہو سکے",
     "costs.vec_indexing_all": "تمام خطوں کے لیے vectors بنائے جا رہے ہیں...",
     "costs.vec_indexing_region": "{{name}} کے لیے vectors بنائے جا رہے ہیں...",
     "costs.vec_items_indexed_msg": "{{items}} آئٹمز {{duration}} سیکنڈ میں انڈیکس ہو گئے",
+    "costs.vec_items_indexed_scope": "یہ ریٹ تجویز، درجہ بندی اور بے قاعدگی چیکس کو طاقت دیتا ہے۔ ایلیمنٹ میچنگ اس کے بجائے انسٹال شدہ لاگت کیٹلاگز میں تلاش کرتی ہے۔",
     "costs.vec_phase_checking": "GitHub پر پہلے سے بنے vectors چیک ہو رہے ہیں...",
     "costs.vec_phase_embedding": "لاگت آئٹمز سے 384d embeddings بنائے جا رہے ہیں...",
     "costs.vec_phase_indexing": "LanceDB میں انڈیکس ہو رہا ہے اور اعداد و شمار تازہ ہو رہے ہیں...",
@@ -37280,6 +37283,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}} کے لیے {{date}} کو کچھ بھی درج نہیں۔ ٹیکس کنفیگریشن رجسٹر میں ایک شرح شامل کریں۔",
     "tax_rates.rates_conflict_title": "درج شرحیں ایک واحد جواب نہیں دیتیں",
     "tax_rates.rates_conflict_body": "{{jurisdiction}} کے لیے {{date}} کو ایک سے زیادہ شرح نافذ ہے اور کوئی بھی معیاری کے طور پر نشان زد نہیں۔ ٹیکس کنفیگریشن رجسٹر میں بالکل ایک کو ڈیفالٹ کے طور پر نشان زد کریں۔",
+    "tax_rates.standard_rate_not_started_title": "درج شدہ معیاری شرح اس تاریخ کے بعد شروع ہوتی ہے",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}} کے لیے درج معیاری شرح {{date}} کے بعد شروع ہوتی ہے۔ اس تاریخ کو نافذ شرحیں کم شدہ شرحیں ہیں، معیاری شرح نہیں۔ اس وقت لاگو معیاری شرح کو اس کی اپنی تاریخوں کے ساتھ شامل کریں۔",
     "tax_rates.no_number_note": "یہاں جان بوجھ کر کوئی عدد نہیں دکھایا جاتا۔ ایک قابلِ یقین شرح کسی شرح کے نہ ہونے سے بدتر ہے: یہ بالکل درست شرح کی طرح پڑھی جاتی ہے اور کسی پیشکش میں جا پہنچتی ہے۔",
     "tax_rates.refused_other_title": "شرح متعین نہیں کی جا سکی",
     "tax_rates.refused_other_body": "{{jurisdiction}} کے لیے درج شرحیں یکجا نہیں کی جا سکیں۔ انہیں ٹیکس کنفیگریشن رجسٹر میں دیکھیں۔",
@@ -39203,6 +39208,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI فیچر ویکٹرز",
-    "costs.tile_matching_catalogues": "میل کیٹلاگز",
-    "costs.vec_items_indexed_scope": "یہ ریٹ تجویز، درجہ بندی اور بے قاعدگی چیکس کو طاقت دیتا ہے۔ ایلیمنٹ میچنگ اس کے بجائے انسٹال شدہ لاگت کیٹلاگز میں تلاش کرتی ہے۔",

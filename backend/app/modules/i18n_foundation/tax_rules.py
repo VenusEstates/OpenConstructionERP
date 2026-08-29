@@ -93,6 +93,22 @@ from app.modules.i18n_foundation.subdivisions import (
 #:     complaint, and produces a document that is both wrong and confident.
 #:     Returning **no number** is the only one of the three that a caller
 #:     cannot mistake for an answer. A gap is visible; a wrong rate is not.
+#: ``default_rate_not_in_force``
+#:     The country's standard rate is on file and its window does not contain
+#:     the date being asked about. What is in force instead is a reduced tier
+#:     that runs alongside the standard rate rather than before it. **No rate
+#:     is returned.**
+#:
+#:     This is the member that had been answering with a number. A lone
+#:     unflagged row in force was promoted to the standard rate, so Germany
+#:     priced 1990 at 7 %, Britain priced 1990 at 0 % and Russia priced 2010
+#:     at 10 %, each with ``resolved`` true and nothing on the answer to say
+#:     it came from another tier. A rate that exists is not a rate that
+#:     applies, and the difference is only visible on the date axis.
+#:
+#:     It is not ``default_rate_ambiguous``: there the data cannot say which
+#:     of the rates in force is the standard one, here it says so plainly and
+#:     the answer is that the standard rate had not started yet.
 ResolutionStatus = Literal[
     "harmonised",
     "stacked",
@@ -102,11 +118,15 @@ ResolutionStatus = Literal[
     "subdivision_unknown",
     "no_configuration",
     "default_rate_ambiguous",
+    "default_rate_not_in_force",
 ]
 
-#: Statuses that carry a rate a caller may price work with. The other two
-#: report that the question could not be answered, and their
+#: Statuses that carry a rate a caller may price work with. Every status not
+#: in here reports that the question could not be answered, and its
 #: ``combined_rate_pct`` is ``None`` rather than zero or the federal rate.
+#: Stated as the complement rather than as a count of the others on purpose:
+#: this tuple has not changed while the vocabulary beside it has grown twice,
+#: and a comment that counts the others is wrong the next time it does.
 RESOLVED_STATUSES: tuple[ResolutionStatus, ...] = (
     "harmonised",
     "stacked",
@@ -317,6 +337,57 @@ def _country_wide_standard(rows: Sequence[TaxRateRow]) -> tuple[TaxRateRow | Non
     return None, f"{len(flagged)} of them are flagged as the default"
 
 
+def _dormant_default_rows(rows: Sequence[TaxRateRow], country_code: str, on_date: str) -> list[TaxRateRow]:
+    """A country's country-wide rows flagged ``is_default`` that are not in force on ``on_date``.
+
+    Dormant is defined as the complement of :func:`active_rows` rather than by
+    a second window comparison written here, so the two cannot drift into
+    disagreeing about a boundary day.
+
+    Args:
+        rows: Every rate on file, any country.
+        country_code: ISO 3166-1 alpha-2, any case.
+        on_date: The ISO date being resolved.
+
+    Returns:
+        The flagged country-wide rows whose window does not contain
+        ``on_date``. Empty for a country that has no standard rate on file at
+        all, which is the case a lone unflagged row is allowed to answer.
+    """
+    country = country_code.strip().upper()
+    live = active_rows(rows, country, on_date)
+    return [
+        row
+        for row in rows
+        if row.country_code.strip().upper() == country
+        and row.combination in ("national", "federal")
+        and row.is_default
+        and row not in live
+    ]
+
+
+def _is_earlier_period(in_force: Sequence[TaxRateRow], dormant: Sequence[TaxRateRow]) -> bool:
+    """Whether the row in force is an earlier period of the standard rate itself.
+
+    Romania is the shape this exists for: the 19 % row was closed on
+    2025-07-31 and the 21 % row opened the next day, so a question about 2020
+    meets one unflagged row that really is the standard rate of that year.
+    Germany is the other shape: its 7 % reduced tier carries no
+    ``effective_to`` at all, so it is still in force on the day the 19 %
+    standard rate starts. Two rates that overlap are alternatives; one that
+    ends where the other begins is its predecessor.
+
+    The test is the end of one window against the start of the next. It needs
+    no tax code and no naming convention, so a country that renamed its tax
+    between periods still reads as a succession.
+    """
+    if len(in_force) != 1:
+        return False
+    ends = in_force[0].effective_to
+    starts = [row.effective_from for row in dormant if row.effective_from is not None]
+    return ends is not None and bool(starts) and ends < min(starts)
+
+
 def format_rate(value: Decimal) -> str:
     """Render a rate without exponent notation and without trailing zeros.
 
@@ -413,6 +484,44 @@ def resolve(
         # in. Rate tiers are alternatives - one supply is charged at one of
         # them - and only sub-national rows ever combine.
         countrywide = national + federal
+
+        # Nothing in force claims to be the standard rate, and from here two
+        # very different tables look identical.
+        #
+        # The one being preserved: a country with no standard rate on file
+        # anywhere. Nothing is flagged because the flag postdates the row, or
+        # because the country only ever had one rate. Its single row is the
+        # answer and the picker below still gives it.
+        #
+        # The one being caught: a country whose standard rate is on file and
+        # whose window does not contain this date. What is in force is a
+        # reduced tier that runs alongside the standard rate rather than
+        # before it, and promoting it answers a question about the standard
+        # rate with a number from another tier - Germany 7 % for 1990,
+        # Britain 0 %, Russia 10 % for 2010, all reported as resolved.
+        if not any(row.is_default for row in countrywide):
+            dormant = _dormant_default_rows(rows, country, as_of)
+            if dormant and not _is_earlier_period(countrywide, dormant):
+                windows = ", ".join(
+                    f"{row.tax_code or row.tax_name} from {row.effective_from or 'any date'}"
+                    f"{' to ' + row.effective_to if row.effective_to else ''}"
+                    for row in dormant
+                )
+                return TaxResolution(
+                    country_code=country,
+                    subdivision_code=None,
+                    subdivision_name=None,
+                    status="default_rate_not_in_force",
+                    combined_rate_pct=None,
+                    federal_rate_pct=format_rate(_rate(federal[0])) if federal else None,
+                    as_of=as_of,
+                    reason=(
+                        f"Country {country} has a standard rate on file ({windows}) and it was not in "
+                        f"force on {as_of}. The {len(countrywide)} country-wide rate(s) that were in "
+                        f"force are other tiers, so no standard rate is given for this date."
+                    ),
+                )
+
         standard, ambiguity = _country_wide_standard(countrywide)
         if standard is None:
             return TaxResolution(

@@ -9766,12 +9766,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vector ang na-restore sa loob ng {{duration}}s",
     "costs.snapshot_restored_no_count": "Na-restore ang snapshot. Hindi iniulat ng vector database kung ilang vector ang hawak nito.",
     "costs.snapshot_restored_title": "Na-restore na ang snapshot ng {{name}}",
+    "costs.tile_ai_vectors": "Mga AI feature vector",
+    "costs.tile_matching_catalogues": "Mga catalogue ng pagtutugma",
     "costs.vec_generated_local_msg": "{{vectors}} vector ang na-index nang lokal sa loob ng {{duration}}s",
     "costs.vec_generated_title": "Nabuo ang mga vector para sa {{name}}",
     "costs.vec_index_failed_title": "Nabigong i-index ang mga vector para sa {{name}}",
     "costs.vec_indexing_all": "Bumubuo ng mga vector para sa lahat ng rehiyon...",
     "costs.vec_indexing_region": "Bumubuo ng mga vector para sa {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} item ang na-index sa loob ng {{duration}}s",
+    "costs.vec_items_indexed_scope": "Ito ang nagpapagana sa rate suggestion, classification, at anomaly checks. Ang element matching naman ay naghahanap sa mga naka-install na cost catalogue.",
     "costs.vec_phase_checking": "Sinusuri ang mga handang vector sa GitHub...",
     "costs.vec_phase_embedding": "Bumubuo ng 384d na embedding mula sa mga cost item...",
     "costs.vec_phase_indexing": "Ini-index papasok sa LanceDB at ini-refresh ang mga stat...",
@@ -37280,6 +37283,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Walang naitala para sa {{country}} noong {{date}}. Magdagdag ng rate sa talaan ng konpigurasyon ng buwis.",
     "tax_rates.rates_conflict_title": "Hindi nagbibigay ng iisang sagot ang mga naitalang rate",
     "tax_rates.rates_conflict_body": "May higit sa isang rate na may bisa para sa {{jurisdiction}} noong {{date}} at wala sa mga ito ang minarkahang standard. Markahan ang eksaktong isa bilang default sa talaan ng konpigurasyon ng buwis.",
+    "tax_rates.standard_rate_not_started_title": "Ang nakatalang karaniwang buwis ay nagsisimula pagkatapos ng petsang ito",
+    "tax_rates.standard_rate_not_started_body": "Ang karaniwang buwis na nakatala para sa {{jurisdiction}} ay nagsisimula pagkatapos ng {{date}}. Ang mga buwis na may bisa sa petsang iyon ay mga nabawasang buwis, hindi ang karaniwan. Idagdag ang karaniwang buwis na umiiral noon, kasama ang sarili nitong mga petsa.",
     "tax_rates.no_number_note": "Sinasadyang walang ipinapakitang numero rito. Ang isang mukhang totoong rate ay mas masahol pa sa wala: mababasa ito nang eksaktong tulad ng tamang rate at napupunta sa isang panukalang presyo.",
     "tax_rates.refused_other_title": "Hindi natukoy ang rate",
     "tax_rates.refused_other_body": "Hindi maisama ang mga rate na naitala para sa {{jurisdiction}}. Suriin ang mga ito sa talaan ng konpigurasyon ng buwis.",
@@ -39203,6 +39208,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Mga AI feature vector",
-    "costs.tile_matching_catalogues": "Mga catalogue ng pagtutugma",
-    "costs.vec_items_indexed_scope": "Ito ang nagpapagana sa rate suggestion, classification, at anomaly checks. Ang element matching naman ay naghahanap sa mga naka-install na cost catalogue.",

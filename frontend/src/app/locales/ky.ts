@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}} үчүн {{date}} күнүнө эч нерсе катталган жок. Салык конфигурациясы реестрине ставка кошуңуз.",
     "tax_rates.rates_conflict_title": "Катталган ставкалар бир так жооп бербейт",
     "tax_rates.rates_conflict_body": "{{jurisdiction}} үчүн {{date}} күнүнө бирден көп ставка колдонулат жана алардын бири да стандарт катары белгиленген эмес. Салык конфигурациясы реестринде так бирөөнү демейки катары белгилеңиз.",
+    "tax_rates.standard_rate_not_started_title": "Катталган негизги ставка ушул күндөн кийин башталат",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}} үчүн катталган негизги ставка {{date}} күнүнөн кийин башталат. Ошол күнү колдонулган ставкалар - төмөндөтүлгөн ставкалар, негизгиси эмес. Ошол учурда колдонулган негизги ставканы өз даталары менен кошуңуз.",
     "tax_rates.no_number_note": "Бул жерде атайылап эч сан көрсөтүлгөн эмес. Ишенимдүү көрүнгөн ставка эч ставканын жоктугунан да жаман: ал так туура ставкадай окулат жана акырында тендердик сунушка түшөт.",
     "tax_rates.refused_other_title": "Ставканы аныктоо мүмкүн болгон жок",
     "tax_rates.refused_other_body": "{{jurisdiction}} үчүн катталган ставкаларды бириктирүү мүмкүн болгон жок. Аларды салык конфигурациясы реестринен текшериңиз.",
@@ -5032,12 +5034,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} вектор {{duration}}с ичинде калыбына келтирилди",
     "costs.snapshot_restored_no_count": "Снапшот калыбына келтирилди. Векторлук берилиштер базасы канча вектор сактаганын билдирген жок.",
     "costs.snapshot_restored_title": "{{name}} снапшоту калыбына келтирилди",
+    "costs.tile_ai_vectors": "AI функция векторлору",
+    "costs.tile_matching_catalogues": "Дал келтирүү каталогдору",
     "costs.vec_generated_local_msg": "{{vectors}} вектор {{duration}}с ичинде жергиликтүү индекстелди",
     "costs.vec_generated_title": "{{name}} векторлору түзүлдү",
     "costs.vec_index_failed_title": "{{name}} векторлорун индекстөө ишке ашкан жок",
     "costs.vec_indexing_all": "Бардык региондор үчүн векторлор түзүлүүдө...",
     "costs.vec_indexing_region": "{{name}} үчүн векторлор түзүлүүдө...",
     "costs.vec_items_indexed_msg": "{{items}} пункт {{duration}}с ичинде индекстелди",
+    "costs.vec_items_indexed_scope": "Бул баа сунушун, классификацияны жана аномалияны текшерүүнү иштетет. Элементтерди дал келтирүү болсо орнотулган нарк каталогдорунан издейт.",
     "costs.vec_phase_checking": "GitHub'до даяр векторлор текшерилүүдө...",
     "costs.vec_phase_embedding": "Нарк пункттарынан 384өлчөмдүү эмбеддингдер түзүлүүдө...",
     "costs.vec_phase_indexing": "LanceDB'ге индекстелип, статистика жаңыртылууда...",
@@ -39337,6 +39342,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI функция векторлору",
-    "costs.tile_matching_catalogues": "Дал келтирүү каталогдору",
-    "costs.vec_items_indexed_scope": "Бул баа сунушун, классификацияны жана аномалияны текшерүүнү иштетет. Элементтерди дал келтирүү болсо орнотулган нарк каталогдорунан издейт.",

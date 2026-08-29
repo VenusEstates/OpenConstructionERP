@@ -605,6 +605,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Для {{country}} на {{date}} ничего не зарегистрировано. Добавьте ставку в реестр налоговых настроек.",
     "tax_rates.rates_conflict_title": "Зарегистрированные ставки не дают однозначного ответа",
     "tax_rates.rates_conflict_body": "Для {{jurisdiction}} на {{date}} действует больше одной ставки, и ни одна из них не отмечена как основная. Отметьте в реестре налоговых настроек ровно одну как ставку по умолчанию.",
+    "tax_rates.standard_rate_not_started_title": "Записанная основная ставка начинается позже этой даты",
+    "tax_rates.standard_rate_not_started_body": "Основная ставка, записанная для {{jurisdiction}}, начинается после {{date}}. На эту дату действуют пониженные ставки, а не основная. Добавьте основную ставку, действовавшую тогда, с собственными датами.",
     "tax_rates.no_number_note": "Здесь намеренно не показана никакая цифра. Правдоподобная ставка хуже, чем её отсутствие: она читается точно как верная и попадает в тендерное предложение.",
     "tax_rates.refused_other_title": "Ставку не удалось определить",
     "tax_rates.refused_other_body": "Зарегистрированные для {{jurisdiction}} ставки не удалось объединить. Проверьте их в реестре налоговых настроек.",
@@ -14050,12 +14052,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} векторов восстановлено за {{duration}} с",
     "costs.snapshot_restored_no_count": "Снапшот восстановлен. База векторов не сообщила, сколько векторов она содержит.",
     "costs.snapshot_restored_title": "Снапшот {{name}} восстановлен",
+    "costs.tile_ai_vectors": "Векторы функций ИИ",
+    "costs.tile_matching_catalogues": "Каталоги для сопоставления",
     "costs.vec_generated_local_msg": "{{vectors}} векторов проиндексировано локально за {{duration}} с",
     "costs.vec_generated_title": "Векторы для {{name}} созданы",
     "costs.vec_index_failed_title": "Не удалось проиндексировать векторы для {{name}}",
     "costs.vec_indexing_all": "Генерация векторов для всех регионов...",
     "costs.vec_indexing_region": "Генерация векторов для {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} позиций проиндексировано за {{duration}} с",
+    "costs.vec_items_indexed_scope": "Это питает предложение расценок, классификацию и проверки аномалий. Сопоставление элементов вместо этого выполняет поиск по установленным каталогам стоимостей.",
     "costs.vec_phase_checking": "Проверка готовых векторов на GitHub...",
     "costs.vec_phase_embedding": "Генерация 384-мерных эмбеддингов из расценок...",
     "costs.vec_phase_indexing": "Индексация в LanceDB и обновление статистики...",
@@ -40994,6 +40999,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Векторы функций ИИ",
-    "costs.tile_matching_catalogues": "Каталоги для сопоставления",
-    "costs.vec_items_indexed_scope": "Это питает предложение расценок, классификацию и проверки аномалий. Сопоставление элементов вместо этого выполняет поиск по установленным каталогам стоимостей.",

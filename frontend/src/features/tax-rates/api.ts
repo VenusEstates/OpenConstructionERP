@@ -37,7 +37,8 @@ export type TaxResolutionStatus =
   | 'national'
   | 'subdivision_unknown'
   | 'no_configuration'
-  | 'default_rate_ambiguous';
+  | 'default_rate_ambiguous'
+  | 'default_rate_not_in_force';
 
 export interface TaxRateComponent {
   tax_code: string | null;

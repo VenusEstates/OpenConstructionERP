@@ -557,6 +557,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Tidak ada yang tercatat untuk {{country}} pada {{date}}. Tambahkan tarif di daftar konfigurasi pajak.",
     "tax_rates.rates_conflict_title": "Tarif yang tercatat tidak memberikan satu jawaban",
     "tax_rates.rates_conflict_body": "Lebih dari satu tarif berlaku untuk {{jurisdiction}} pada {{date}} dan tidak ada yang ditandai sebagai tarif standar. Tandai tepat satu sebagai default di daftar konfigurasi pajak.",
+    "tax_rates.standard_rate_not_started_title": "Tarif standar yang tercatat dimulai setelah tanggal ini",
+    "tax_rates.standard_rate_not_started_body": "Tarif standar yang tercatat untuk {{jurisdiction}} dimulai setelah {{date}}. Tarif yang berlaku pada tanggal itu adalah tarif rendah, bukan tarif standar. Tambahkan tarif standar yang berlaku saat itu, dengan tanggalnya sendiri.",
     "tax_rates.no_number_note": "Di sini sengaja tidak ditampilkan angka apa pun. Tarif yang terlihat masuk akal lebih buruk daripada tidak ada tarif sama sekali: tarif itu terbaca persis seperti tarif yang benar dan akhirnya masuk ke dalam penawaran.",
     "tax_rates.refused_other_title": "Tarif tidak dapat ditentukan",
     "tax_rates.refused_other_body": "Tarif yang tercatat untuk {{jurisdiction}} tidak dapat digabungkan. Periksa di daftar konfigurasi pajak.",
@@ -13441,12 +13443,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vektor dipulihkan dalam {{duration}}d",
     "costs.snapshot_restored_no_count": "Snapshot telah dipulihkan. Database vektor tidak melaporkan berapa banyak vektor yang dimilikinya.",
     "costs.snapshot_restored_title": "Snapshot {{name}} dipulihkan",
+    "costs.tile_ai_vectors": "Vektor fitur AI",
+    "costs.tile_matching_catalogues": "Katalog pencocokan",
     "costs.vec_generated_local_msg": "{{vectors}} vektor diindeks secara lokal dalam {{duration}}d",
     "costs.vec_generated_title": "Vektor untuk {{name}} telah dibuat",
     "costs.vec_index_failed_title": "Gagal mengindeks vektor untuk {{name}}",
     "costs.vec_indexing_all": "Membuat vektor untuk semua wilayah...",
     "costs.vec_indexing_region": "Membuat vektor untuk {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} item diindeks dalam {{duration}}d",
+    "costs.vec_items_indexed_scope": "Ini mendukung saran tarif, klasifikasi, dan pemeriksaan anomali. Pencocokan elemen justru mencari di katalog biaya yang terpasang.",
     "costs.vec_phase_checking": "Memeriksa vektor pra-bangun di GitHub...",
     "costs.vec_phase_embedding": "Membuat embedding 384d dari item biaya...",
     "costs.vec_phase_indexing": "Mengindeks ke LanceDB dan memperbarui statistik...",
@@ -39173,6 +39178,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vektor fitur AI",
-    "costs.tile_matching_catalogues": "Katalog pencocokan",
-    "costs.vec_items_indexed_scope": "Ini mendukung saran tarif, klasifikasi, dan pemeriksaan anomali. Pencocokan elemen justru mencari di katalog biaya yang terpasang.",

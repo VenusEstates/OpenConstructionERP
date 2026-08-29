@@ -605,6 +605,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Pro {{country}} k datu {{date}} není nic zaznamenáno. Doplňte sazbu do registru daňové konfigurace.",
     "tax_rates.rates_conflict_title": "Zaznamenané sazby nedávají jednoznačnou odpověď",
     "tax_rates.rates_conflict_body": "Pro {{jurisdiction}} platí k {{date}} více než jedna sazba a žádná z nich není označena jako standardní. Označte v registru daňové konfigurace přesně jednu jako výchozí.",
+    "tax_rates.standard_rate_not_started_title": "Uložená základní sazba začíná až po tomto datu",
+    "tax_rates.standard_rate_not_started_body": "Základní sazba uložená pro {{jurisdiction}} začíná platit po {{date}}. Sazby platné k tomuto datu jsou snížené sazby, nikoli základní. Přidejte základní sazbu platnou tehdy, s vlastními daty platnosti.",
     "tax_rates.no_number_note": "Zde se záměrně nezobrazuje žádné číslo. Věrohodně vypadající sazba je horší než žádná: čte se přesně jako správná a skončí v nabídce.",
     "tax_rates.refused_other_title": "Sazbu se nepodařilo stanovit",
     "tax_rates.refused_other_body": "Sazby zaznamenané pro {{jurisdiction}} se nepodařilo zkombinovat. Zkontrolujte je v registru daňové konfigurace.",
@@ -13426,12 +13428,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vektorů obnoveno za {{duration}} s",
     "costs.snapshot_restored_no_count": "Snapshot byl obnoven. Vektorová databáze nenahlásila, kolik vektorů obsahuje.",
     "costs.snapshot_restored_title": "Snapshot {{name}} byl obnoven",
+    "costs.tile_ai_vectors": "AI vektory funkcí",
+    "costs.tile_matching_catalogues": "Katalogy pro párování",
     "costs.vec_generated_local_msg": "{{vectors}} vektorů indexováno lokálně za {{duration}} s",
     "costs.vec_generated_title": "Vektory pro {{name}} vygenerovány",
     "costs.vec_index_failed_title": "Indexace vektorů pro {{name}} selhala",
     "costs.vec_indexing_all": "Generating vectors pro všechny regiony...",
     "costs.vec_indexing_region": "Generování vektorů pro {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} položek indexováno za {{duration}} s",
+    "costs.vec_items_indexed_scope": "Toto pohání návrhy sazeb, klasifikaci a kontroly anomálií. Párování prvků místo toho prohledává nainstalované katalogy nákladů.",
     "costs.vec_phase_checking": "Kontrola pre-built vectors na GitHub...",
     "costs.vec_phase_embedding": "Generating 384d embeddings z náklad položky...",
     "costs.vec_phase_indexing": "Indexování do LanceDB a obnova statistik...",
@@ -40008,6 +40013,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI vektory funkcí",
-    "costs.tile_matching_catalogues": "Katalogy pro párování",
-    "costs.vec_items_indexed_scope": "Toto pohání návrhy sazeb, klasifikaci a kontroly anomálií. Párování prvků místo toho prohledává nainstalované katalogy nákladů.",

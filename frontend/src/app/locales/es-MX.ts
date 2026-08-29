@@ -13033,12 +13033,15 @@ const resource = {
     "costs.variant_use_average": "Usar precio promedio",
     "costs.variant_use_default_tooltip": "Aplica el precio promedio sin seleccionar una variante específica. Puedes ajustarlo más tarde haciendo clic en la fila.",
     "costs.variant_use_median": "Usar precio mediano",
+    "costs.tile_ai_vectors": "Vectores de funciones IA",
+    "costs.tile_matching_catalogues": "Catálogos de coincidencia",
     "costs.vec_generated_local_msg": "{{vectors}} vectores indexados localmente en {{duration}}s",
     "costs.vec_generated_title": "Vectores de {{name}} generados",
     "costs.vec_index_failed_title": "No se pudieron indexar los vectores de {{name}}",
     "costs.vec_indexing_all": "Generando vectores para todas las regiones...",
     "costs.vec_indexing_region": "Generando vectores para {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} elementos indexados en {{duration}}s",
+    "costs.vec_items_indexed_scope": "Esto impulsa la sugerencia de tarifas, la clasificación y las comprobaciones de anomalías. La coincidencia de elementos busca en cambio en los catálogos de costos instalados.",
     "costs.vec_phase_checking": "Comprobando vectores preconstruidos en GitHub...",
     "costs.vec_phase_embedding": "Generando embeddings de 384d desde partidas de costo...",
     "costs.vec_phase_indexing": "Indexando en LanceDB y actualizando estadísticas...",
@@ -38226,6 +38229,8 @@ const resource = {
     "tax_withholding.state_not_yet": "Aún no iniciado",
     "tax_withholding.state_expiring": "Por vencer",
     "tax_withholding.state_current": "Vigente",
+    "tax_rates.standard_rate_not_started_title": "La tasa general registrada comienza después de esta fecha",
+    "tax_rates.standard_rate_not_started_body": "La tasa general registrada para {{jurisdiction}} comienza después del {{date}}. Las tasas vigentes en esa fecha son tasas reducidas, no la tasa general. Agregue la tasa general que se aplicaba entonces, con sus propias fechas.",
     "dashboard.regional_pack_title": "Tu paquete regional",
     "dashboard.layout.w_regional_pack_desc": "Qué paquete de mercado está activo y qué configura para ti",
     "dashboard.regional_pack_subtitle": "Ya configurado para tu mercado, para que no tengas que hacerlo tú",
@@ -38258,6 +38263,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vectores de funciones IA",
-    "costs.tile_matching_catalogues": "Catálogos de coincidencia",
-    "costs.vec_items_indexed_scope": "Esto impulsa la sugerencia de tarifas, la clasificación y las comprobaciones de anomalías. La coincidencia de elementos busca en cambio en los catálogos de costos instalados.",

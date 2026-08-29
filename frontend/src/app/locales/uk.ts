@@ -502,6 +502,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Для {{country}} на {{date}} нічого не зареєстровано. Додайте ставку до реєстру податкових налаштувань.",
     "tax_rates.rates_conflict_title": "Зареєстровані ставки не дають однозначної відповіді",
     "tax_rates.rates_conflict_body": "Для {{jurisdiction}} на {{date}} діє більше однієї ставки, і жодну з них не позначено як основну. Позначте в реєстрі податкових налаштувань рівно одну як стандартну.",
+    "tax_rates.standard_rate_not_started_title": "Записана основна ставка починається пізніше за цю дату",
+    "tax_rates.standard_rate_not_started_body": "Основна ставка, записана для {{jurisdiction}}, починає діяти після {{date}}. На цю дату діють знижені ставки, а не основна. Додайте основну ставку, що діяла тоді, із власними датами.",
     "tax_rates.no_number_note": "Тут навмисно не показано жодної цифри. Правдоподібна ставка гірша за її відсутність: вона читається точно як правильна і потрапляє в тендерну пропозицію.",
     "tax_rates.refused_other_title": "Ставку не вдалося визначити",
     "tax_rates.refused_other_body": "Зареєстровані для {{jurisdiction}} ставки не вдалося об'єднати. Перевірте їх у реєстрі податкових налаштувань.",
@@ -13686,12 +13688,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} векторів відновлено за {{duration}} с",
     "costs.snapshot_restored_no_count": "Знімок відновлено. База векторів не повідомила, скільки векторів вона містить.",
     "costs.snapshot_restored_title": "Знімок {{name}} відновлено",
+    "costs.tile_ai_vectors": "Вектори функцій ШІ",
+    "costs.tile_matching_catalogues": "Каталоги для зіставлення",
     "costs.vec_generated_local_msg": "{{vectors}} векторів проіндексовано локально за {{duration}} с",
     "costs.vec_generated_title": "Вектори для {{name}} створено",
     "costs.vec_index_failed_title": "Не вдалося проіндексувати вектори для {{name}}",
     "costs.vec_indexing_all": "Генерація векторів для всіх регіонів...",
     "costs.vec_indexing_region": "Генерація векторів для {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} позицій проіндексовано за {{duration}} с",
+    "costs.vec_items_indexed_scope": "Це живить пропозиції розцінок, класифікацію та перевірки аномалій. Натомість зіставлення елементів шукає у встановлених каталогах вартості.",
     "costs.vec_phase_checking": "Перевірка готових векторів на GitHub...",
     "costs.vec_phase_embedding": "Генерація 384-вимірних ембеддингів з позицій вартості...",
     "costs.vec_phase_indexing": "Індексування в LanceDB і оновлення статистики...",
@@ -40837,6 +40842,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Вектори функцій ШІ",
-    "costs.tile_matching_catalogues": "Каталоги для зіставлення",
-    "costs.vec_items_indexed_scope": "Це живить пропозиції розцінок, класифікацію та перевірки аномалій. Натомість зіставлення елементів шукає у встановлених каталогах вартості.",

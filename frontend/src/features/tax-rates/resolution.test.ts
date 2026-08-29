@@ -13,7 +13,12 @@
 import { describe, it, expect } from 'vitest';
 
 import type { TaxResolution } from './api';
-import { classifyResolution, needsSubdivision, offerableSubdivisions } from './resolution';
+import {
+  classifyResolution,
+  needsSubdivision,
+  offerableSubdivisions,
+  UNANSWERED_KINDS,
+} from './resolution';
 
 function resolution(over: Partial<TaxResolution>): TaxResolution {
   return {
@@ -125,6 +130,28 @@ describe('classifyResolution', () => {
         resolution({ status: 'default_rate_ambiguous', resolved: false, combined_rate_pct: null }),
       ).kind,
     ).toBe('rates_conflict');
+  });
+
+  it('sends a standard rate that had not started to its own kind, carrying no number', () => {
+    // The server answered this with the reduced tier that happened to be in
+    // force - Germany at 7 % for 1990 - until the resolver learned to refuse.
+    // Two things are asserted rather than one: that it does not land on
+    // `answered`, which is the failure that put a wrong number in front of
+    // somebody, and that it does not land on `rates_conflict` either, whose
+    // copy tells the reader to flag one of the rows already on file. Doing
+    // that here would flag a reduced tier as the standard rate and make the
+    // wrong number permanent.
+    const classified = classifyResolution(
+      resolution({
+        status: 'default_rate_not_in_force',
+        resolved: false,
+        combined_rate_pct: null,
+      }),
+    );
+
+    expect(classified.kind).toBe('standard_rate_not_started');
+    expect(UNANSWERED_KINDS).toContain(classified.kind);
+    expect(classified).not.toHaveProperty('combinedRatePct');
   });
 
   it('refuses to answer when a resolved status arrives with no number', () => {

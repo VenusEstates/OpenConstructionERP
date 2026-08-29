@@ -274,12 +274,28 @@ def _disagreements(
     return population, disagreements
 
 
+def census() -> str:
+    """Every count this check has, in one printable line.
+
+    Runnable rather than described, because the counts are what a reader
+    needs and a paragraph telling somebody how to rebuild them is what goes
+    stale. "0 disagreements" says nothing until it is read beside how many
+    keys were compared and how many each table holds.
+    """
+    tables = _tables()
+    population, disagreements = _disagreements(tables, _seed_history())
+    sizes = ", ".join(f"{name} {len(rates)}" for name, rates in tables)
+    return f"compared {len(population)} keys, {len(disagreements)} disagreements; tables hold: {sizes}"
+
+
 def test_the_compared_population_is_not_empty() -> None:
     """Guards the vacuous pass: zero disagreements over zero pairs proves nothing."""
     population, _ = _disagreements(_tables(), _seed_history())
+    print(census())
 
     assert len(population) >= 15, (
-        f"only {len(population)} comparable (country, rate class) keys - the drift check has "
+        f"{census()}. "
+        f"Only {len(population)} comparable (country, rate class) keys - the drift check has "
         f"gone vacuous. Either a table stopped parsing, _CLASS_OF stopped matching, or the "
         f"comparison stopped comparing."
     )

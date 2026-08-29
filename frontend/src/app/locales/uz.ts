@@ -497,6 +497,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}} uchun {{date}} sanasida hech narsa qayd etilmagan. Soliq konfiguratsiyasi reyestriga stavka qoʻshing.",
     "tax_rates.rates_conflict_title": "Qayd etilgan stavkalar yagona javob bermaydi",
     "tax_rates.rates_conflict_body": "{{jurisdiction}} uchun {{date}} sanasida bir nechta stavka amal qiladi va ularning hech biri standart deb belgilanmagan. Soliq konfiguratsiyasi reyestrida aynan bittasini standart deb belgilang.",
+    "tax_rates.standard_rate_not_started_title": "Qayd etilgan asosiy stavka bu sanadan keyin boshlanadi",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}} uchun qayd etilgan asosiy stavka {{date}} dan keyin boshlanadi. Oʻsha sanada amal qiladigan stavkalar - imtiyozli stavkalar, asosiysi emas. Oʻsha paytda amal qilgan asosiy stavkani oʻz sanalari bilan qoʻshing.",
     "tax_rates.no_number_note": "Bu yerda ataylab hech qanday raqam koʻrsatilmagan. Ishonarli koʻringan stavka stavka yoʻqligidan ham yomonroq: u aynan toʻgʻri stavkadek oʻqiladi va oxir-oqibat tender taklifiga kiradi.",
     "tax_rates.refused_other_title": "Stavkani aniqlab boʻlmadi",
     "tax_rates.refused_other_body": "{{jurisdiction}} uchun qayd etilgan stavkalarni birlashtirib boʻlmadi. Ularni soliq konfiguratsiyasi reyestrida tekshiring.",
@@ -13668,12 +13670,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} ta vektor {{duration}} soniyada tiklandi",
     "costs.snapshot_restored_no_count": "Snapshot tiklandi. Vektor bazasi nechta vektor saqlanganini xabar bermadi.",
     "costs.snapshot_restored_title": "{{name}} snapshoti tiklandi",
+    "costs.tile_ai_vectors": "AI xususiyat vektorlari",
+    "costs.tile_matching_catalogues": "Moslashtirish kataloglari",
     "costs.vec_generated_local_msg": "{{vectors}} ta vektor {{duration}} soniyada lokal indekslandi",
     "costs.vec_generated_title": "{{name}} vektorlari yaratildi",
     "costs.vec_index_failed_title": "{{name}} vektorlarini indekslab boʻlmadi",
     "costs.vec_indexing_all": "Barcha hududlar uchun vektorlar yaratilmoqda...",
     "costs.vec_indexing_region": "{{name}} uchun vektorlar yaratilmoqda...",
     "costs.vec_items_indexed_msg": "{{items}} ta band {{duration}} soniyada indekslandi",
+    "costs.vec_items_indexed_scope": "Bu narx taklifi, tasniflash va anomaliya tekshiruvlarini ta'minlaydi. Element moslashtirish esa buning o'rniga o'rnatilgan xarajat kataloglaridan qidiradi.",
     "costs.vec_phase_checking": "GitHub dagi tayyor vektorlar tekshirilmoqda...",
     "costs.vec_phase_embedding": "Narx bandlaridan 384 oʻlchamli embeddinglar yaratilmoqda...",
     "costs.vec_phase_indexing": "LanceDB ga indekslanmoqda va statistika yangilanmoqda...",
@@ -40453,6 +40458,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI xususiyat vektorlari",
-    "costs.tile_matching_catalogues": "Moslashtirish kataloglari",
-    "costs.vec_items_indexed_scope": "Bu narx taklifi, tasniflash va anomaliya tekshiruvlarini ta'minlaydi. Element moslashtirish esa buning o'rniga o'rnatilgan xarajat kataloglaridan qidiradi.",

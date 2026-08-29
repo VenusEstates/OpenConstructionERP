@@ -9767,12 +9767,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} вектор {{duration}}с ішінде қалпына келтірілді",
     "costs.snapshot_restored_no_count": "Снапшот қалпына келтірілді. Векторлық дерекқор қанша вектор сақтайтынын хабарламады.",
     "costs.snapshot_restored_title": "{{name}} снапшоты қалпына келтірілді",
+    "costs.tile_ai_vectors": "ИИ функция векторлары",
+    "costs.tile_matching_catalogues": "Сәйкестендіру каталогтары",
     "costs.vec_generated_local_msg": "{{vectors}} вектор {{duration}}с ішінде жергілікті түрде индекстелді",
     "costs.vec_generated_title": "{{name}} векторлары жасалды",
     "costs.vec_index_failed_title": "{{name}} векторларын индекстеу сәтсіз аяқталды",
     "costs.vec_indexing_all": "Барлық өңір үшін векторлар жасалуда...",
     "costs.vec_indexing_region": "{{name}} үшін векторлар жасалуда...",
     "costs.vec_items_indexed_msg": "{{items}} позиция {{duration}}с ішінде индекстелді",
+    "costs.vec_items_indexed_scope": "Бұл баға ұсынысын, жіктелуді және ауытқу тексерулерін қамтамасыз етеді. Элементтерді сәйкестендіру оның орнына орнатылған шығын каталогтарынан іздейді.",
     "costs.vec_phase_checking": "GitHub-та дайын векторлар тексерілуде...",
     "costs.vec_phase_embedding": "Шығын позицияларынан 384өлшемді енгізулер жасалуда...",
     "costs.vec_phase_indexing": "LanceDB-ге индекстелуде және статистика жаңартылуда...",
@@ -37280,6 +37283,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}} үшін {{date}} күніне ешнәрсе тіркелмеген. Салық конфигурациясы тізілімінде мөлшерлеме қосыңыз.",
     "tax_rates.rates_conflict_title": "Тіркелген мөлшерлемелер бір нақты жауап бермейді",
     "tax_rates.rates_conflict_body": "{{jurisdiction}} үшін {{date}} күніне бірден көп мөлшерлеме қолданыста, олардың ешқайсысы стандартты деп белгіленбеген. Салық конфигурациясы тізілімінде дәл біреуін әдепкі деп белгілеңіз.",
+    "tax_rates.standard_rate_not_started_title": "Тіркелген негізгі мөлшерлеме осы күннен кейін басталады",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}} үшін тіркелген негізгі мөлшерлеме {{date}} күнінен кейін басталады. Осы күні қолданыстағы мөлшерлемелер - төмендетілген мөлшерлемелер, негізгісі емес. Сол кезде қолданылған негізгі мөлшерлемені өз күндерімен қосыңыз.",
     "tax_rates.no_number_note": "Мұнда әдейі ешбір сан көрсетілмеген. Сенімді көрінетін мөлшерлеме мөлшерлеменің жоқтығынан да жаман: ол дұрыс мөлшерлеме сияқты оқылады да тендерлік ұсынысқа еніп кетеді.",
     "tax_rates.refused_other_title": "Мөлшерлемені анықтау мүмкін болмады",
     "tax_rates.refused_other_body": "{{jurisdiction}} үшін тіркелген мөлшерлемелерді біріктіру мүмкін болмады. Оларды салық конфигурациясы тізілімінен тексеріңіз.",
@@ -39203,6 +39208,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "ИИ функция векторлары",
-    "costs.tile_matching_catalogues": "Сәйкестендіру каталогтары",
-    "costs.vec_items_indexed_scope": "Бұл баға ұсынысын, жіктелуді және ауытқу тексерулерін қамтамасыз етеді. Элементтерді сәйкестендіру оның орнына орнатылған шығын каталогтарынан іздейді.",

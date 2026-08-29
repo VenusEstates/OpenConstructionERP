@@ -557,6 +557,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{date}}時点で{{country}}について何も登録されていません。税設定登録簿に税率を追加してください。",
     "tax_rates.rates_conflict_title": "登録された税率が一つの答えを示していません",
     "tax_rates.rates_conflict_body": "{{jurisdiction}}には{{date}}時点で複数の税率が有効ですが、どれも標準として指定されていません。税設定登録簿で、ちょうど一つを既定として指定してください。",
+    "tax_rates.standard_rate_not_started_title": "登録されている標準税率はこの日付より後に開始します",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}} に登録されている標準税率は {{date}} より後に開始します。その日付に有効な税率は軽減税率であり、標準税率ではありません。当時適用されていた標準税率を、その適用期間とともに追加してください。",
     "tax_rates.no_number_note": "ここでは意図的に数値を表示していません。もっともらしい税率は、税率がないことより悪いものです。正しい税率とまったく同じように読め、そのまま入札書類に入り込んでしまいます。",
     "tax_rates.refused_other_title": "税率を確定できませんでした",
     "tax_rates.refused_other_body": "{{jurisdiction}}について登録された税率を組み合わせることができませんでした。税設定登録簿で確認してください。",
@@ -13500,12 +13502,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} 件のベクトルを {{duration}}秒で復元しました",
     "costs.snapshot_restored_no_count": "スナップショットは復元されました。ベクトルデータベースは保持しているベクトル数を報告しませんでした。",
     "costs.snapshot_restored_title": "{{name}} のスナップショットを復元しました",
+    "costs.tile_ai_vectors": "AI機能ベクトル",
+    "costs.tile_matching_catalogues": "マッチング用カタログ",
     "costs.vec_generated_local_msg": "{{vectors}} 件のベクトルを {{duration}}秒でローカルにインデックスしました",
     "costs.vec_generated_title": "{{name}} のベクトルを生成しました",
     "costs.vec_index_failed_title": "{{name}} のベクトルのインデックス作成に失敗しました",
     "costs.vec_indexing_all": "すべての地域のベクトルを生成中...",
     "costs.vec_indexing_region": "{{name}} のベクトルを生成中...",
     "costs.vec_items_indexed_msg": "{{items}} 件の項目を {{duration}}秒でインデックスしました",
+    "costs.vec_items_indexed_scope": "これは単価提案、分類、異常チェックを支えます。要素マッチングは代わりにインストール済みのコストカタログを検索します。",
     "costs.vec_phase_checking": "GitHubの事前ビルドベクトルを確認中...",
     "costs.vec_phase_embedding": "コスト項目から384次元エンベディングを生成中...",
     "costs.vec_phase_indexing": "LanceDBにインデックス化し統計を更新中...",
@@ -40706,6 +40711,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI機能ベクトル",
-    "costs.tile_matching_catalogues": "マッチング用カタログ",
-    "costs.vec_items_indexed_scope": "これは単価提案、分類、異常チェックを支えます。要素マッチングは代わりにインストール済みのコストカタログを検索します。",

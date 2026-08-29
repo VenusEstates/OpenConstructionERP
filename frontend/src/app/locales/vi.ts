@@ -557,6 +557,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Không có gì được ghi nhận cho {{country}} vào {{date}}. Hãy thêm một thuế suất vào sổ đăng ký cấu hình thuế.",
     "tax_rates.rates_conflict_title": "Các thuế suất được ghi nhận không cho ra một câu trả lời duy nhất",
     "tax_rates.rates_conflict_body": "Có nhiều hơn một thuế suất có hiệu lực cho {{jurisdiction}} vào {{date}} và không có thuế suất nào được đánh dấu là chuẩn. Hãy đánh dấu đúng một thuế suất là mặc định trong sổ đăng ký cấu hình thuế.",
+    "tax_rates.standard_rate_not_started_title": "Thuế suất phổ thông đã lưu bắt đầu sau ngày này",
+    "tax_rates.standard_rate_not_started_body": "Thuế suất phổ thông được lưu cho {{jurisdiction}} bắt đầu sau {{date}}. Các thuế suất có hiệu lực vào ngày đó là thuế suất ưu đãi, không phải thuế suất phổ thông. Hãy thêm thuế suất phổ thông áp dụng khi đó, kèm ngày hiệu lực riêng.",
     "tax_rates.no_number_note": "Nơi đây cố ý không hiển thị bất kỳ con số nào. Một thuế suất trông có vẻ hợp lý còn tệ hơn là không có thuế suất nào: nó đọc y hệt như một thuế suất đúng và cuối cùng đi vào hồ sơ dự thầu.",
     "tax_rates.refused_other_title": "Không thể xác định được thuế suất",
     "tax_rates.refused_other_body": "Các thuế suất được ghi nhận cho {{jurisdiction}} không thể kết hợp được. Hãy kiểm tra chúng trong sổ đăng ký cấu hình thuế.",
@@ -13442,12 +13444,15 @@ const resource = {
     "costs.snapshot_restored_msg": "Đã khôi phục {{vectors}} vector trong {{duration}}s",
     "costs.snapshot_restored_no_count": "Ảnh chụp nhanh đã được khôi phục. Cơ sở dữ liệu vector không báo cáo có bao nhiêu vector.",
     "costs.snapshot_restored_title": "Đã khôi phục ảnh chụp nhanh của {{name}}",
+    "costs.tile_ai_vectors": "Vector tính năng AI",
+    "costs.tile_matching_catalogues": "Danh mục khớp",
     "costs.vec_generated_local_msg": "Đã lập chỉ mục {{vectors}} vector cục bộ trong {{duration}}s",
     "costs.vec_generated_title": "Đã tạo vector cho {{name}}",
     "costs.vec_index_failed_title": "Không thể lập chỉ mục vector cho {{name}}",
     "costs.vec_indexing_all": "Đang tạo vector cho tất cả khu vực...",
     "costs.vec_indexing_region": "Đang tạo vector cho {{name}}...",
     "costs.vec_items_indexed_msg": "Đã lập chỉ mục {{items}} mục trong {{duration}}s",
+    "costs.vec_items_indexed_scope": "Điều này hỗ trợ gợi ý đơn giá, phân loại và kiểm tra bất thường. Khớp phần tử thì tìm kiếm trong các danh mục chi phí đã cài đặt.",
     "costs.vec_phase_checking": "Đang kiểm tra vector dựng sẵn trên GitHub...",
     "costs.vec_phase_embedding": "Đang tạo nhúng 384 chiều từ mục chi phí...",
     "costs.vec_phase_indexing": "Đang lập chỉ mục vào LanceDB và cập nhật thống kê...",
@@ -39183,6 +39188,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vector tính năng AI",
-    "costs.tile_matching_catalogues": "Danh mục khớp",
-    "costs.vec_items_indexed_scope": "Điều này hỗ trợ gợi ý đơn giá, phân loại và kiểm tra bất thường. Khớp phần tử thì tìm kiếm trong các danh mục chi phí đã cài đặt.",

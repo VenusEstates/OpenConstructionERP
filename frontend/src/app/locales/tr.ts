@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}} için {{date}} tarihinde hiçbir şey kayıtlı değil. Vergi yapılandırma sicilinde bir oran ekleyin.",
     "tax_rates.rates_conflict_title": "Kayıtlı oranlar tek bir yanıt vermiyor",
     "tax_rates.rates_conflict_body": "{{jurisdiction}} için {{date}} tarihinde birden fazla oran geçerli ve hiçbiri standart olarak işaretlenmemiş. Vergi yapılandırma sicilinde tam olarak birini varsayılan olarak işaretleyin.",
+    "tax_rates.standard_rate_not_started_title": "Kayıtlı genel oran bu tarihten sonra başlıyor",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}} için kayıtlı genel oran {{date}} tarihinden sonra başlıyor. O tarihte yürürlükte olan oranlar indirimli oranlardır, genel oran değildir. O dönemde geçerli olan genel oranı kendi tarihleriyle ekleyin.",
     "tax_rates.no_number_note": "Burada kasıtlı olarak hiçbir rakam gösterilmiyor. Akla yatkın bir oran, hiç oran olmamasından daha kötüdür: tam olarak doğru bir oran gibi okunur ve bir teklife girer.",
     "tax_rates.refused_other_title": "Oran belirlenemedi",
     "tax_rates.refused_other_body": "{{jurisdiction}} için kayıtlı oranlar birleştirilemedi. Vergi yapılandırma sicilinde kontrol edin.",
@@ -13451,12 +13453,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vektör {{duration}} saniyede geri yüklendi",
     "costs.snapshot_restored_no_count": "Anlık görüntü geri yüklendi. Vektör veritabanı kaç vektör tuttuğunu bildirmedi.",
     "costs.snapshot_restored_title": "{{name}} anlık görüntüsü geri yüklendi",
+    "costs.tile_ai_vectors": "YZ özellik vektörleri",
+    "costs.tile_matching_catalogues": "Eşleştirme katalogları",
     "costs.vec_generated_local_msg": "{{vectors}} vektör {{duration}} saniyede yerel olarak dizine eklendi",
     "costs.vec_generated_title": "{{name}} vektörleri oluşturuldu",
     "costs.vec_index_failed_title": "{{name}} vektörleri dizine eklenemedi",
     "costs.vec_indexing_all": "Tüm bölgeler için vektörler oluşturuluyor...",
     "costs.vec_indexing_region": "{{name}} için vektörler oluşturuluyor...",
     "costs.vec_items_indexed_msg": "{{items}} kalem {{duration}} saniyede dizine eklendi",
+    "costs.vec_items_indexed_scope": "Bu, birim fiyat önerisini, sınıflandırmayı ve anomali kontrollerini destekler. Eleman eşleştirme ise bunun yerine yüklü maliyet kataloglarında arama yapar.",
     "costs.vec_phase_checking": "GitHub'da önceden oluşturulmuş vektörler kontrol ediliyor...",
     "costs.vec_phase_embedding": "Maliyet kalemlerinden 384 boyutlu gömüler oluşturuluyor...",
     "costs.vec_phase_indexing": "LanceDB'ye indeksleniyor ve istatistikler yenileniyor...",
@@ -40103,6 +40108,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "YZ özellik vektörleri",
-    "costs.tile_matching_catalogues": "Eşleştirme katalogları",
-    "costs.vec_items_indexed_scope": "Bu, birim fiyat önerisini, sınıflandırmayı ve anomali kontrollerini destekler. Eleman eşleştirme ise bunun yerine yüklü maliyet kataloglarında arama yapar.",

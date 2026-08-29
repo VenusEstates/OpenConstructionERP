@@ -589,6 +589,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Rien n'est enregistré pour {{country}} au {{date}}. Ajoutez un taux dans le registre de configuration fiscale.",
     "tax_rates.rates_conflict_title": "Les taux enregistrés ne donnent pas une réponse unique",
     "tax_rates.rates_conflict_body": "Plusieurs taux sont en vigueur pour {{jurisdiction}} au {{date}} et aucun n'est marqué comme le taux standard. Marquez-en exactement un comme taux par défaut dans le registre de configuration fiscale.",
+    "tax_rates.standard_rate_not_started_title": "Le taux normal enregistré commence après cette date",
+    "tax_rates.standard_rate_not_started_body": "Le taux normal enregistré pour {{jurisdiction}} commence après le {{date}}. Les taux en vigueur à cette date sont des taux réduits, pas le taux normal. Ajoutez le taux normal applicable à cette date, avec ses propres dates.",
     "tax_rates.no_number_note": "Aucun chiffre n'est affiché ici, et c'est voulu. Un taux plausible est pire que l'absence de taux : il se lit exactement comme un taux correct et finit dans une offre.",
     "tax_rates.refused_other_title": "Le taux n'a pas pu être établi",
     "tax_rates.refused_other_body": "Les taux enregistrés pour {{jurisdiction}} n'ont pas pu être combinés. Vérifiez-les dans le registre de configuration fiscale.",
@@ -12718,12 +12720,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vecteurs restaurés en {{duration}}s",
     "costs.snapshot_restored_no_count": "L'instantané a été restauré. La base de données vectorielle n'a pas indiqué combien de vecteurs elle contient.",
     "costs.snapshot_restored_title": "Instantané de {{name}} restauré",
+    "costs.tile_ai_vectors": "Vecteurs de fonctionnalités IA",
+    "costs.tile_matching_catalogues": "Catalogues de correspondance",
     "costs.vec_generated_local_msg": "{{vectors}} vecteurs indexés localement en {{duration}}s",
     "costs.vec_generated_title": "Vecteurs générés pour {{name}}",
     "costs.vec_index_failed_title": "Échec de l'indexation des vecteurs pour {{name}}",
     "costs.vec_indexing_all": "Génération des vecteurs pour toutes les régions...",
     "costs.vec_indexing_region": "Génération des vecteurs pour {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} éléments indexés en {{duration}}s",
+    "costs.vec_items_indexed_scope": "Cela alimente la suggestion de taux, la classification et les vérifications d'anomalies. La correspondance des éléments recherche plutôt dans les catalogues de coûts installés.",
     "costs.vec_phase_checking": "Vérification des vecteurs préconstruits sur GitHub...",
     "costs.vec_phase_embedding": "Génération des embeddings 384d à partir des postes de coûts...",
     "costs.vec_phase_indexing": "Indexation dans LanceDB et actualisation des statistiques...",
@@ -41572,6 +41577,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vecteurs de fonctionnalités IA",
-    "costs.tile_matching_catalogues": "Catalogues de correspondance",
-    "costs.vec_items_indexed_scope": "Cela alimente la suggestion de taux, la classification et les vérifications d'anomalies. La correspondance des éléments recherche plutôt dans les catalogues de coûts installés.",

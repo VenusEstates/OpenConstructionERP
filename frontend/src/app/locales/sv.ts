@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Inget är registrerat för {{country}} på {{date}}. Lägg till en sats i skattekonfigurationsregistret.",
     "tax_rates.rates_conflict_title": "De registrerade satserna ger inte ett entydigt svar",
     "tax_rates.rates_conflict_body": "Fler än en sats gäller för {{jurisdiction}} på {{date}} och ingen av dem är markerad som standard. Markera exakt en som standard i skattekonfigurationsregistret.",
+    "tax_rates.standard_rate_not_started_title": "Den registrerade normalskattesatsen börjar efter detta datum",
+    "tax_rates.standard_rate_not_started_body": "Normalskattesatsen som är registrerad för {{jurisdiction}} börjar efter {{date}}. De satser som gäller det datumet är reducerade satser, inte normalskattesatsen. Lägg till den normalskattesats som gällde då, med egna datum.",
     "tax_rates.no_number_note": "Ingen siffra visas här, och det är avsiktligt. En trolig sats är värre än ingen alls: den läses precis som en korrekt sats och hamnar i ett anbud.",
     "tax_rates.refused_other_title": "Satsen kunde inte fastställas",
     "tax_rates.refused_other_body": "De satser som registrerats för {{jurisdiction}} kunde inte kombineras. Kontrollera dem i skattekonfigurationsregistret.",
@@ -9970,12 +9972,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vektorer återställda på {{duration}}s",
     "costs.snapshot_restored_no_count": "Snapshotet återställdes. Vektordatabasen rapporterade inte hur många vektorer den innehåller.",
     "costs.snapshot_restored_title": "{{name}}-snapshot återställt",
+    "costs.tile_ai_vectors": "AI-funktionsvektorer",
+    "costs.tile_matching_catalogues": "Matchningskataloger",
     "costs.vec_generated_local_msg": "{{vectors}} vektorer indexerade lokalt på {{duration}}s",
     "costs.vec_generated_title": "Vektorer för {{name}} genererade",
     "costs.vec_index_failed_title": "Det gick inte att indexera vektorer för {{name}}",
     "costs.vec_indexing_all": "Genererar vektorer för alla regioner...",
     "costs.vec_indexing_region": "Genererar vektorer för {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} poster indexerade på {{duration}}s",
+    "costs.vec_items_indexed_scope": "Detta driver prisförslag, klassificering och avvikelsekontroller. Elementmatchning söker istället i de installerade kostnadskatalogerna.",
     "costs.vec_phase_checking": "Kontrollerar förbyggda vektorer på GitHub...",
     "costs.vec_phase_embedding": "Genererar 384d-inbäddningar från kostnadsposter...",
     "costs.vec_phase_indexing": "Indexerar i LanceDB och uppdaterar statistik...",
@@ -39839,6 +39844,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI-funktionsvektorer",
-    "costs.tile_matching_catalogues": "Matchningskataloger",
-    "costs.vec_items_indexed_scope": "Detta driver prisförslag, klassificering och avvikelsekontroller. Elementmatchning söker istället i de installerade kostnadskatalogerna.",

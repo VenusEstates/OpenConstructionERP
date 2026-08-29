@@ -392,6 +392,10 @@ const UNANSWERED_TONE: Record<
     border: 'border-semantic-warning/40 bg-semantic-warning/5',
   },
   rates_conflict: { variant: 'error', border: 'border-semantic-error/40 bg-semantic-error-bg/40' },
+  standard_rate_not_started: {
+    variant: 'warning',
+    border: 'border-semantic-warning/40 bg-semantic-warning/5',
+  },
 };
 
 function Unanswered({
@@ -472,6 +476,18 @@ function Unanswered({
       body = t('tax_rates.rates_conflict_body', {
         defaultValue:
           'More than one rate is in force for {{jurisdiction}} on {{date}} and none of them is marked as the standard one. Mark exactly one as the default in the tax configuration register.',
+        jurisdiction,
+        date: asOf,
+      });
+      break;
+    case 'standard_rate_not_started':
+      icon = <FileWarning className="h-5 w-5 shrink-0 text-semantic-warning" />;
+      title = t('tax_rates.standard_rate_not_started_title', {
+        defaultValue: 'The standard rate on file starts later than this date',
+      });
+      body = t('tax_rates.standard_rate_not_started_body', {
+        defaultValue:
+          'The standard rate recorded for {{jurisdiction}} begins after {{date}}. The rates in force on that date are reduced tiers, not the standard rate. Add the standard rate that applied then, with its own dates.',
         jurisdiction,
         date: asOf,
       });

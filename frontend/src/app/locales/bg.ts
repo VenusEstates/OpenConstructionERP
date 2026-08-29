@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "За {{country}} към {{date}} не е регистрирано нищо. Добавете ставка в регистъра за данъчна конфигурация.",
     "tax_rates.rates_conflict_title": "Регистрираните ставки не дават еднозначен отговор",
     "tax_rates.rates_conflict_body": "За {{jurisdiction}} към {{date}} е в сила повече от една ставка и нито една не е отбелязана като стандартна. Отбележете точно една като ставка по подразбиране в регистъра за данъчна конфигурация.",
+    "tax_rates.standard_rate_not_started_title": "Записаната стандартна ставка започва след тази дата",
+    "tax_rates.standard_rate_not_started_body": "Стандартната ставка, записана за {{jurisdiction}}, започва след {{date}}. Ставките в сила на тази дата са намалени ставки, а не стандартната. Добавете стандартната ставка, действала тогава, със собствени дати.",
     "tax_rates.no_number_note": "Тук умишлено не се показва число. Правдоподобна ставка е по-лоша от липсваща: чете се точно като правилна и попада в оферта.",
     "tax_rates.refused_other_title": "Ставката не можа да бъде определена",
     "tax_rates.refused_other_body": "Регистрираните за {{jurisdiction}} ставки не можаха да бъдат комбинирани. Проверете ги в регистъра за данъчна конфигурация.",
@@ -13559,12 +13561,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} вектора възстановени за {{duration}}s",
     "costs.snapshot_restored_no_count": "Снапшотът беше възстановен. Векторната база данни не съобщи колко вектора съдържа.",
     "costs.snapshot_restored_title": "Снапшотът на {{name}} е възстановен",
+    "costs.tile_ai_vectors": "AI вектори за функции",
+    "costs.tile_matching_catalogues": "Каталози за съпоставяне",
     "costs.vec_generated_local_msg": "{{vectors}} вектора, индексирани локално за {{duration}}s",
     "costs.vec_generated_title": "Векторите за {{name}} са генерирани",
     "costs.vec_index_failed_title": "Неуспешно индексиране на векторите за {{name}}",
     "costs.vec_indexing_all": "Генериране на вектори за всички региони...",
     "costs.vec_indexing_region": "Генериране на вектори за {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} позиции, индексирани за {{duration}}s",
+    "costs.vec_items_indexed_scope": "Това захранва предложенията за разценки, класификацията и проверките за аномалии. Съпоставянето на елементи вместо това търси в инсталираните каталози с разходи.",
     "costs.vec_phase_checking": "Проверка за предварително изградени вектори в GitHub...",
     "costs.vec_phase_embedding": "Генериране на 384-измерни ембединги от разходни артикули...",
     "costs.vec_phase_indexing": "Индексиране в LanceDB и опресняване на статистиките...",
@@ -39228,6 +39233,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI вектори за функции",
-    "costs.tile_matching_catalogues": "Каталози за съпоставяне",
-    "costs.vec_items_indexed_scope": "Това захранва предложенията за разценки, класификацията и проверките за аномалии. Съпоставянето на елементи вместо това търси в инсталираните каталози с разходи.",

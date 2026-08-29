@@ -605,6 +605,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Dla {{country}} na dzień {{date}} nic nie zarejestrowano. Dodaj stawkę w rejestrze konfiguracji podatkowej.",
     "tax_rates.rates_conflict_title": "Zarejestrowane stawki nie dają jednoznacznej odpowiedzi",
     "tax_rates.rates_conflict_body": "Dla {{jurisdiction}} na dzień {{date}} obowiązuje więcej niż jedna stawka i żadna nie jest oznaczona jako standardowa. Oznacz dokładnie jedną jako domyślną w rejestrze konfiguracji podatkowej.",
+    "tax_rates.standard_rate_not_started_title": "Zapisana stawka podstawowa zaczyna się później niż ta data",
+    "tax_rates.standard_rate_not_started_body": "Stawka podstawowa zapisana dla {{jurisdiction}} zaczyna obowiązywać po {{date}}. Stawki obowiązujące w tym dniu to stawki obniżone, a nie stawka podstawowa. Dodaj stawkę podstawową obowiązującą wtedy, z własnymi datami.",
     "tax_rates.no_number_note": "Celowo nie pokazano tu żadnej liczby. Wiarygodnie wyglądająca stawka jest gorsza niż jej brak: czyta się ją dokładnie jak poprawną i trafia do oferty.",
     "tax_rates.refused_other_title": "Nie udało się ustalić stawki",
     "tax_rates.refused_other_body": "Stawek zarejestrowanych dla {{jurisdiction}} nie udało się połączyć. Sprawdź je w rejestrze konfiguracji podatkowej.",
@@ -13542,12 +13544,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} wektorów przywrócono w {{duration}}s",
     "costs.snapshot_restored_no_count": "Migawka została przywrócona. Baza danych wektorowych nie zgłosiła, ile wektorów zawiera.",
     "costs.snapshot_restored_title": "Migawka {{name}} przywrócona",
+    "costs.tile_ai_vectors": "Wektory funkcji AI",
+    "costs.tile_matching_catalogues": "Katalogi dopasowania",
     "costs.vec_generated_local_msg": "{{vectors}} wektorów zindeksowano lokalnie w {{duration}}s",
     "costs.vec_generated_title": "Wektory dla {{name}} wygenerowane",
     "costs.vec_index_failed_title": "Nie udało się zindeksować wektorów dla {{name}}",
     "costs.vec_indexing_all": "Generating vectors dla wszystkie regiony...",
     "costs.vec_indexing_region": "Generowanie wektorów dla {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} pozycji zindeksowano w {{duration}}s",
+    "costs.vec_items_indexed_scope": "To zasila sugestie stawek, klasyfikację i sprawdzanie anomalii. Dopasowywanie elementów przeszukuje zamiast tego zainstalowane katalogi kosztów.",
     "costs.vec_phase_checking": "Sprawdzanie pre-built vectors na GitHub...",
     "costs.vec_phase_embedding": "Generating 384d embeddings z koszt pozycje...",
     "costs.vec_phase_indexing": "Indeksowanie w LanceDB i odświeżanie statystyk...",
@@ -40272,6 +40277,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Wektory funkcji AI",
-    "costs.tile_matching_catalogues": "Katalogi dopasowania",
-    "costs.vec_items_indexed_scope": "To zasila sugestie stawek, klasyfikację i sprawdzanie anomalii. Dopasowywanie elementów przeszukuje zamiast tego zainstalowane katalogi kosztów.",

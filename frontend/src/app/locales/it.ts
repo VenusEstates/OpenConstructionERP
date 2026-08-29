@@ -589,6 +589,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Non risulta nulla registrato per {{country}} al {{date}}. Aggiungi un'aliquota nel registro di configurazione fiscale.",
     "tax_rates.rates_conflict_title": "Le aliquote registrate non danno un'unica risposta",
     "tax_rates.rates_conflict_body": "Per {{jurisdiction}} al {{date}} è in vigore più di un'aliquota e nessuna è indicata come quella standard. Indica esattamente una come predefinita nel registro di configurazione fiscale.",
+    "tax_rates.standard_rate_not_started_title": "L'aliquota ordinaria registrata inizia dopo questa data",
+    "tax_rates.standard_rate_not_started_body": "L'aliquota ordinaria registrata per {{jurisdiction}} inizia dopo il {{date}}. Le aliquote in vigore in quella data sono aliquote ridotte, non quella ordinaria. Aggiungi l'aliquota ordinaria in vigore allora, con le sue date.",
     "tax_rates.no_number_note": "Qui non viene mostrata alcuna cifra, ed è intenzionale. Un'aliquota plausibile è peggio di nessuna: si legge esattamente come una corretta e finisce in un'offerta.",
     "tax_rates.refused_other_title": "Non è stato possibile calcolare l'aliquota",
     "tax_rates.refused_other_body": "Non è stato possibile combinare le aliquote registrate per {{jurisdiction}}. Verificale nel registro di configurazione fiscale.",
@@ -12980,12 +12982,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vettori ripristinati in {{duration}}s",
     "costs.snapshot_restored_no_count": "Lo snapshot è stato ripristinato. Il database vettoriale non ha segnalato quanti vettori contiene.",
     "costs.snapshot_restored_title": "Snapshot di {{name}} ripristinato",
+    "costs.tile_ai_vectors": "Vettori delle funzionalità AI",
+    "costs.tile_matching_catalogues": "Cataloghi di corrispondenza",
     "costs.vec_generated_local_msg": "{{vectors}} vettori indicizzati localmente in {{duration}}s",
     "costs.vec_generated_title": "Vettori per {{name}} generati",
     "costs.vec_index_failed_title": "Indicizzazione dei vettori per {{name}} non riuscita",
     "costs.vec_indexing_all": "Generazione vettori per tutte le regioni...",
     "costs.vec_indexing_region": "Generazione vettori per {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} voci indicizzate in {{duration}}s",
+    "costs.vec_items_indexed_scope": "Questo alimenta il suggerimento delle tariffe, la classificazione e i controlli delle anomalie. La corrispondenza degli elementi cerca invece nei cataloghi dei costi installati.",
     "costs.vec_phase_checking": "Verifica vettori precompilati su GitHub...",
     "costs.vec_phase_embedding": "Generazione embedding 384d dalle voci di costo...",
     "costs.vec_phase_indexing": "Indicizzazione in LanceDB e aggiornamento statistiche...",
@@ -40184,6 +40189,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vettori delle funzionalità AI",
-    "costs.tile_matching_catalogues": "Cataloghi di corrispondenza",
-    "costs.vec_items_indexed_scope": "Questo alimenta il suggerimento delle tariffe, la classificazione e i controlli delle anomalie. La corrispondenza degli elementi cerca invece nei cataloghi dei costi installati.",

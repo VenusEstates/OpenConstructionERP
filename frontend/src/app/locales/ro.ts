@@ -589,6 +589,8 @@ const resource = {
     "tax_rates.no_country_data_body": "Nu este înregistrat nimic pentru {{country}} la {{date}}. Adăugați o cotă în registrul de configurare fiscală.",
     "tax_rates.rates_conflict_title": "Cotele înregistrate nu dau un singur răspuns",
     "tax_rates.rates_conflict_body": "Mai multe cote sunt în vigoare pentru {{jurisdiction}} la {{date}} și niciuna nu este marcată drept cea standard. Marcați exact una ca implicită în registrul de configurare fiscală.",
+    "tax_rates.standard_rate_not_started_title": "Cota standard înregistrată începe după această dată",
+    "tax_rates.standard_rate_not_started_body": "Cota standard înregistrată pentru {{jurisdiction}} începe după {{date}}. Cotele în vigoare la acea dată sunt cote reduse, nu cota standard. Adăugați cota standard aplicabilă atunci, cu propriile date.",
     "tax_rates.no_number_note": "Aici nu este afișată nicio cifră, intenționat. O cotă plauzibilă este mai rea decât una lipsă: se citește exact ca una corectă și ajunge într-o ofertă.",
     "tax_rates.refused_other_title": "Cota nu a putut fi stabilită",
     "tax_rates.refused_other_body": "Cotele înregistrate pentru {{jurisdiction}} nu au putut fi combinate. Verificați-le în registrul de configurare fiscală.",
@@ -13387,12 +13389,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vectori restaurați în {{duration}}s",
     "costs.snapshot_restored_no_count": "Instantaneul a fost restaurat. Baza de date vectorială nu a raportat câți vectori conține.",
     "costs.snapshot_restored_title": "Instantaneul {{name}} a fost restaurat",
+    "costs.tile_ai_vectors": "Vectori de funcționalități AI",
+    "costs.tile_matching_catalogues": "Cataloage de potrivire",
     "costs.vec_generated_local_msg": "{{vectors}} vectori indexați local în {{duration}}s",
     "costs.vec_generated_title": "Vectorii pentru {{name}} au fost generați",
     "costs.vec_index_failed_title": "Indexarea vectorilor pentru {{name}} a eșuat",
     "costs.vec_indexing_all": "Generating vectors pentru toate regiuni...",
     "costs.vec_indexing_region": "Se generează vectori pentru {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} articole indexate în {{duration}}s",
+    "costs.vec_items_indexed_scope": "Acest lucru alimentează sugestia de tarife, clasificarea și verificările de anomalii. Potrivirea elementelor caută în schimb în catalogele de costuri instalate.",
     "costs.vec_phase_checking": "Verificare pre-built vectors pe GitHub...",
     "costs.vec_phase_embedding": "Generating 384d embeddings din cost articole...",
     "costs.vec_phase_indexing": "Se indexează în LanceDB și se reîmprospătează statisticile...",
@@ -39312,6 +39317,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vectori de funcționalități AI",
-    "costs.tile_matching_catalogues": "Cataloage de potrivire",
-    "costs.vec_items_indexed_scope": "Acest lucru alimentează sugestia de tarife, clasificarea și verificările de anomalii. Potrivirea elementelor caută în schimb în catalogele de costuri instalate.",

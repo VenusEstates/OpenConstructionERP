@@ -573,6 +573,8 @@ const resource = {
     "tax_rates.no_country_data_body": "{{country}} के लिए {{date}} को कुछ भी दर्ज नहीं है। कर कॉन्फ़िगरेशन रजिस्टर में एक दर जोड़ें।",
     "tax_rates.rates_conflict_title": "दर्ज दरें एक स्पष्ट उत्तर नहीं देतीं",
     "tax_rates.rates_conflict_body": "{{jurisdiction}} के लिए {{date}} को एक से अधिक दर लागू है और उनमें से किसी को भी मानक के रूप में चिह्नित नहीं किया गया है। कर कॉन्फ़िगरेशन रजिस्टर में ठीक एक को डिफ़ॉल्ट के रूप में चिह्नित करें।",
+    "tax_rates.standard_rate_not_started_title": "दर्ज मानक दर इस तारीख के बाद शुरू होती है",
+    "tax_rates.standard_rate_not_started_body": "{{jurisdiction}} के लिए दर्ज मानक दर {{date}} के बाद शुरू होती है। उस तारीख को लागू दरें रियायती दरें हैं, मानक दर नहीं। उस समय लागू मानक दर को उसकी अपनी तारीखों के साथ जोड़ें।",
     "tax_rates.no_number_note": "यहां जानबूझकर कोई संख्या नहीं दिखाई जाती। एक विश्वसनीय लगने वाली दर, दर न होने से भी बदतर है: यह बिल्कुल सही दर जैसी पढ़ी जाती है और किसी निविदा में पहुंच जाती है।",
     "tax_rates.refused_other_title": "दर तय नहीं की जा सकी",
     "tax_rates.refused_other_body": "{{jurisdiction}} के लिए दर्ज दरों को संयोजित नहीं किया जा सका। इन्हें कर कॉन्फ़िगरेशन रजिस्टर में जांचें।",
@@ -13525,12 +13527,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} वेक्टर {{duration}}s में पुनर्स्थापित किए गए",
     "costs.snapshot_restored_no_count": "स्नैपशॉट पुनर्स्थापित कर दिया गया। वेक्टर डेटाबेस ने यह रिपोर्ट नहीं दी कि उसमें कितने वेक्टर हैं।",
     "costs.snapshot_restored_title": "{{name}} स्नैपशॉट पुनर्स्थापित किया गया",
+    "costs.tile_ai_vectors": "AI फ़ीचर वेक्टर",
+    "costs.tile_matching_catalogues": "मिलान कैटलॉग",
     "costs.vec_generated_local_msg": "{{vectors}} वेक्टर {{duration}}s में स्थानीय रूप से इंडेक्स किए गए",
     "costs.vec_generated_title": "{{name}} के वेक्टर बन गए",
     "costs.vec_index_failed_title": "{{name}} के वेक्टर इंडेक्स नहीं किए जा सके",
     "costs.vec_indexing_all": "सभी क्षेत्रों के लिए वेक्टर बनाए जा रहे हैं...",
     "costs.vec_indexing_region": "{{name}} के लिए वेक्टर बनाए जा रहे हैं...",
     "costs.vec_items_indexed_msg": "{{items}} आइटम {{duration}}s में इंडेक्स किए गए",
+    "costs.vec_items_indexed_scope": "यह दर सुझाव, वर्गीकरण और विसंगति जाँच को सक्षम करता है। एलिमेंट मिलान इसके बजाय इंस्टॉल किए गए लागत कैटलॉग में खोजता है।",
     "costs.vec_phase_checking": "GitHub पर पूर्व-निर्मित वेक्टर जांचे जा रहे हैं...",
     "costs.vec_phase_embedding": "लागत मदों से 384d एम्बेडिंग बनाई जा रही हैं...",
     "costs.vec_phase_indexing": "LanceDB में इंडेक्स और आंकड़े ताज़ा हो रहे हैं...",
@@ -39227,6 +39232,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "AI फ़ीचर वेक्टर",
-    "costs.tile_matching_catalogues": "मिलान कैटलॉग",
-    "costs.vec_items_indexed_scope": "यह दर सुझाव, वर्गीकरण और विसंगति जाँच को सक्षम करता है। एलिमेंट मिलान इसके बजाय इंस्टॉल किए गए लागत कैटलॉग में खोजता है।",

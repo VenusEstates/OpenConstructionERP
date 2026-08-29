@@ -589,6 +589,8 @@ const resource = {
     "tax_rates.no_country_data_body": "No hay nada registrado para {{country}} el {{date}}. Añada un tipo en el registro de configuración fiscal.",
     "tax_rates.rates_conflict_title": "Los tipos registrados no dan una única respuesta",
     "tax_rates.rates_conflict_body": "Hay más de un tipo vigente para {{jurisdiction}} el {{date}} y ninguno está marcado como el estándar. Marque exactamente uno como predeterminado en el registro de configuración fiscal.",
+    "tax_rates.standard_rate_not_started_title": "El tipo general registrado empieza después de esta fecha",
+    "tax_rates.standard_rate_not_started_body": "El tipo general registrado para {{jurisdiction}} empieza después del {{date}}. Los tipos vigentes en esa fecha son tipos reducidos, no el tipo general. Añada el tipo general que se aplicaba entonces, con sus propias fechas.",
     "tax_rates.no_number_note": "No se muestra ninguna cifra aquí, y es intencionado. Un tipo verosímil es peor que ninguno: se lee igual que uno correcto y acaba en una oferta.",
     "tax_rates.refused_other_title": "No se pudo calcular el tipo",
     "tax_rates.refused_other_body": "Los tipos registrados para {{jurisdiction}} no se pudieron combinar. Revíselos en el registro de configuración fiscal.",
@@ -13208,12 +13210,15 @@ const resource = {
     "costs.snapshot_restored_msg": "{{vectors}} vectores restaurados en {{duration}}s",
     "costs.snapshot_restored_no_count": "Se restauró la instantánea. La base de datos de vectores no informó cuántos vectores contiene.",
     "costs.snapshot_restored_title": "Instantánea de {{name}} restaurada",
+    "costs.tile_ai_vectors": "Vectores de funciones IA",
+    "costs.tile_matching_catalogues": "Catálogos de coincidencia",
     "costs.vec_generated_local_msg": "{{vectors}} vectores indexados localmente en {{duration}}s",
     "costs.vec_generated_title": "Vectores de {{name}} generados",
     "costs.vec_index_failed_title": "No se pudieron indexar los vectores de {{name}}",
     "costs.vec_indexing_all": "Generando vectores para todas las regiones...",
     "costs.vec_indexing_region": "Generando vectores para {{name}}...",
     "costs.vec_items_indexed_msg": "{{items}} elementos indexados en {{duration}}s",
+    "costs.vec_items_indexed_scope": "Esto impulsa la sugerencia de tarifas, la clasificación y las comprobaciones de anomalías. La coincidencia de elementos busca en cambio en los catálogos de costes instalados.",
     "costs.vec_phase_checking": "Comprobando vectores preconstruidos en GitHub...",
     "costs.vec_phase_embedding": "Generando embeddings de 384d desde partidas de coste...",
     "costs.vec_phase_indexing": "Indexando en LanceDB y actualizando estadísticas...",
@@ -41571,6 +41576,3 @@ const resource = {
 } as { translation: Record<string, string> };
 
 export default resource;
-    "costs.tile_ai_vectors": "Vectores de funciones IA",
-    "costs.tile_matching_catalogues": "Catálogos de coincidencia",
-    "costs.vec_items_indexed_scope": "Esto impulsa la sugerencia de tarifas, la clasificación y las comprobaciones de anomalías. La coincidencia de elementos busca en cambio en los catálogos de costes instalados.",
