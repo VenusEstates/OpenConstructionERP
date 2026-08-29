@@ -48,7 +48,11 @@ const localeUrl = (locale: string): string => {
 // them; every desktop project has to deselect them with the SAME expression,
 // or a spec called "fits in an iPhone SE viewport" also runs at 1280x720 and
 // measures nothing there. One constant so the two halves cannot drift.
-const MOBILE_ONLY = /@mobile|@responsive/;
+// @responsive was in this alternation and carried by no spec anywhere, so the
+// mobile project promised a tag it never selected - the same shape as the RTL
+// project selecting a test that measured no direction. Dropping it is a no-op
+// against the tree (nothing matched it) and stops the promise being made.
+const MOBILE_ONLY = /@mobile/;
 
 export default defineConfig({
   testDir: './tests/e2e',
