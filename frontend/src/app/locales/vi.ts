@@ -21656,6 +21656,7 @@ const resource = {
     "match_progress.empty_label": "Vì sao tôi thấy điều này?",
     "match_progress.empty_reason_catalogue": "Chưa có danh mục chi phí nào được cài đặt cho khu vực này, nên không có đơn giá để đối chiếu.",
     "match_progress.empty_reason_collection": "Danh mục đã chọn trống, hoặc không có mục nào trong đó đủ gần với các cấu kiện của bạn.",
+    "match_progress.empty_reason_not_vectorized": "Danh mục này đã được cài đặt nhưng chưa được lập chỉ mục để tìm kiếm, do đó không có gì để đối chiếu. Hãy chạy lập chỉ mục vector lại để kích hoạt việc khớp.",
     "match_progress.empty_adjust": "Đổi danh mục",
     "match_progress.empty_retry": "Khớp lại",
     "match.wizard.displayCurrencyNoRate": "Chưa thiết lập tỷ giá FX từ {{base}} sang {{disp}} trên dự án này, nên các tổng số vẫn giữ ở đơn vị tiền tệ gốc. Thêm tỷ giá trong phần cài đặt FX của dự án để quy đổi.",

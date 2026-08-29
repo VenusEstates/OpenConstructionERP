@@ -21670,6 +21670,7 @@ const resource = {
     "match_progress.empty_label": "Miksi näen tämän?",
     "match_progress.empty_reason_catalogue": "Tälle alueelle ei ole asennettu kustannuskatalogia, joten täsmäytettäviä hintoja ei ollut.",
     "match_progress.empty_reason_collection": "Valittu katalogi on tyhjä, tai mikään siinä ei ollut tarpeeksi lähellä elementtejäsi.",
+    "match_progress.empty_reason_not_vectorized": "Tämä katalogi on asennettu, mutta sitä ei ole vielä indeksoitu hakua varten, joten vertailtavaa ei ollut. Suorita vektorien uudelleenindeksointi ottaaksesi haun käyttöön.",
     "match_progress.empty_adjust": "Vaihda katalogi",
     "match_progress.empty_retry": "Täsmäytä uudelleen",
     "match.wizard.displayCurrencyNoRate": "Tälle projektille ei ole asetettu FX-kurssia valuutasta {{base}} valuuttaan {{disp}}, joten summat pysyvät alkuperäisvaluutassaan. Lisää kurssi projektin FX-asetuksiin muuntaaksesi.",

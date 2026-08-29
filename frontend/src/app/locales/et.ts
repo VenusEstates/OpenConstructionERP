@@ -21683,6 +21683,7 @@ const resource = {
     "match_progress.empty_label": "Miks ma seda näen?",
     "match_progress.empty_reason_catalogue": "Sellele piirkonnale pole kuluandmebaasi paigaldatud, seega polnud sobitamiseks hindu.",
     "match_progress.empty_reason_collection": "Valitud kataloog on tühi või ei olnud selles midagi teie elementidele piisavalt lähedast.",
+    "match_progress.empty_reason_not_vectorized": "See kataloog on installitud, kuid seda pole veel otsingu jaoks indekseeritud, seega polnud millegagi võrrelda. Käivitage vektorite uuesti indekseerimine, et sobitamine võimalikuks teha.",
     "match_progress.empty_adjust": "Muuda kataloogi",
     "match_progress.empty_retry": "Sobita uuesti",
     "match.wizard.displayCurrencyNoRate": "Sellel projektil pole seatud vahetuskurssi valuutast {{base}} valuutasse {{disp}}, seega jäävad summad oma algsesse valuutasse. Konverteerimiseks lisage kurss projekti valuutaseadetes.",

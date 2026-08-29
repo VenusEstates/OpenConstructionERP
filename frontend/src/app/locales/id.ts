@@ -21643,6 +21643,7 @@ const resource = {
     "match_progress.empty_label": "Mengapa saya melihat ini?",
     "match_progress.empty_reason_catalogue": "Tidak ada katalog biaya yang terpasang untuk wilayah ini, sehingga tidak ada tarif untuk dicocokkan.",
     "match_progress.empty_reason_collection": "Katalog yang dipilih kosong, atau tidak ada isinya yang cukup mendekati elemen Anda.",
+    "match_progress.empty_reason_not_vectorized": "Katalog ini sudah terpasang tetapi belum diindeks untuk pencarian, sehingga tidak ada yang bisa dicocokkan. Jalankan pengindeksan ulang vektor untuk mengaktifkan pencocokan.",
     "match_progress.empty_adjust": "Ganti katalog",
     "match_progress.empty_retry": "Cocokkan lagi",
     "match.wizard.displayCurrencyNoRate": "Tidak ada kurs FX dari {{base}} ke {{disp}} yang diatur pada proyek ini, sehingga total tetap dalam mata uang aslinya. Tambahkan kurs di pengaturan FX proyek untuk mengonversi.",

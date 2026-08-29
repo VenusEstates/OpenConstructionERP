@@ -21707,6 +21707,7 @@ const resource = {
     "match_progress.empty_label": "Porque é que estou a ver isto?",
     "match_progress.empty_reason_catalogue": "Não existe nenhum catálogo de custos instalado para esta região, pelo que não havia tarifas para fazer corresponder.",
     "match_progress.empty_reason_collection": "O catálogo selecionado está vazio, ou nada nele estava suficientemente próximo dos seus elementos.",
+    "match_progress.empty_reason_not_vectorized": "Este catálogo está instalado mas ainda não foi indexado para pesquisa, pelo que não havia nada com que comparar. Execute uma reindexação vetorial para ativar a correspondência.",
     "match_progress.empty_adjust": "Mudar de catálogo",
     "match_progress.empty_retry": "Fazer corresponder novamente",
     "match.wizard.displayCurrencyNoRate": "Não está definida nenhuma taxa de câmbio de {{base}} para {{disp}} neste projeto, pelo que os totais permanecem na sua moeda original. Adicione uma taxa nas definições FX do projeto para converter.",

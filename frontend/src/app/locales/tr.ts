@@ -21706,6 +21706,7 @@ const resource = {
     "match_progress.empty_label": "Bunu neden görüyorum?",
     "match_progress.empty_reason_catalogue": "Bu bölge için kurulu bir maliyet kataloğu yok, bu nedenle eşleştirilecek birim fiyat bulunamadı.",
     "match_progress.empty_reason_collection": "Seçilen katalog boş ya da içindeki hiçbir öğe öğelerinize yeterince yakın değildi.",
+    "match_progress.empty_reason_not_vectorized": "Bu katalog kurulu ancak henüz arama için dizinlenmedi, bu yüzden eşleştirilecek bir şey yoktu. Eşleştirmeyi etkinleştirmek için vektör yeniden dizinleme çalıştırın.",
     "match_progress.empty_adjust": "Katalogu değiştir",
     "match_progress.empty_retry": "Yeniden eşleştir",
     "match.wizard.displayCurrencyNoRate": "Bu projede {{base}} biriminden {{disp}} birimine bir döviz kuru tanımlı değil, bu yüzden toplamlar kendi para biriminde kalır. Dönüştürmek için proje döviz ayarlarına bir kur ekleyin.",

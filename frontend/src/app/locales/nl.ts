@@ -21671,6 +21671,7 @@ const resource = {
     "match_progress.empty_label": "Waarom zie ik dit?",
     "match_progress.empty_reason_catalogue": "Voor deze regio is geen kostencatalogus geïnstalleerd, dus er waren geen tarieven om mee te vergelijken.",
     "match_progress.empty_reason_collection": "De geselecteerde catalogus is leeg, of niets erin kwam dicht genoeg bij uw elementen.",
+    "match_progress.empty_reason_not_vectorized": "Deze catalogus is geïnstalleerd, maar is nog niet geïndexeerd voor zoeken, dus was er niets om mee te vergelijken. Voer een vector-herindexering uit om matchen mogelijk te maken.",
     "match_progress.empty_adjust": "Catalogus wijzigen",
     "match_progress.empty_retry": "Opnieuw matchen",
     "match.wizard.displayCurrencyNoRate": "Er is geen wisselkoers van {{base}} naar {{disp}} ingesteld voor dit project, dus totalen blijven in hun oorspronkelijke valuta. Voeg een koers toe in de FX-instellingen van het project om om te rekenen.",

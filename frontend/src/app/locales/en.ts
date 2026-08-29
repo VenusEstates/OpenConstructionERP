@@ -11848,6 +11848,7 @@ const resource = {
     "match_progress.empty_label": "Why am I seeing this?",
     "match_progress.empty_reason_catalogue": "No cost catalogue is installed for this region, so there were no rates to match against.",
     "match_progress.empty_reason_collection": "The selected catalogue is empty, or nothing in it was close enough to your elements.",
+    "match_progress.empty_reason_not_vectorized": "This catalogue is installed but has not been indexed for search yet, so there was nothing to match against. Run a vector reindex to enable matching.",
     "match_progress.empty_adjust": "Change catalogue",
     "match_progress.empty_retry": "Match again",
     "match_progress.long_hint": "Still working, first runs on large BIM models take longer because vectors are warming up. Subsequent runs on the same project are much faster.",

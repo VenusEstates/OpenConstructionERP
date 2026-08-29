@@ -21650,6 +21650,7 @@ const resource = {
     "match_progress.empty_label": "なぜこれが表示されるのですか?",
     "match_progress.empty_reason_catalogue": "この地域にはコストカタログがインストールされていないため、照合する単価がありませんでした。",
     "match_progress.empty_reason_collection": "選択したカタログが空であるか、その中に要素と十分に近いものがありませんでした。",
+    "match_progress.empty_reason_not_vectorized": "このカタログはインストールされていますが、まだ検索用にインデックス化されていないため、照合できる対象がありませんでした。マッチングを有効にするにはベクトルの再インデックスを実行してください。",
     "match_progress.empty_adjust": "カタログを変更",
     "match_progress.empty_retry": "再度照合",
     "match.wizard.displayCurrencyNoRate": "このプロジェクトには {{base}} から {{disp}} への為替レートが設定されていないため、合計は各通貨のまま表示されます。換算するにはプロジェクトのFX設定でレートを追加してください。",

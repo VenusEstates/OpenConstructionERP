@@ -20961,6 +20961,7 @@ const resource = {
     "match_progress.empty_label": "چرا این را می‌بینم؟",
     "match_progress.empty_reason_catalogue": "کاتالوگ هزینه‌ای برای این منطقه نصب نشده، بنابراین نرخی برای تطبیق وجود نداشت.",
     "match_progress.empty_reason_collection": "کاتالوگ انتخاب‌شده خالی است، یا چیزی در آن به‌اندازه کافی به اجزای شما نزدیک نبود.",
+    "match_progress.empty_reason_not_vectorized": "این کاتالوگ نصب شده اما هنوز برای جستجو ایندکس‌گذاری نشده است، بنابراین چیزی برای تطبیق وجود نداشت. برای فعال کردن تطبیق، بازایندکس‌گذاری برداری را اجرا کنید.",
     "match_progress.empty_adjust": "تغییر کاتالوگ",
     "match_progress.empty_retry": "تطبیق دوباره",
     "match.wizard.displayCurrencyNoRate": "نرخ FX از {{base}} به {{disp}} روی این پروژه تنظیم نشده، بنابراین مجموع‌ها در ارز اصلی خود باقی می‌مانند. برای تبدیل، یک نرخ در تنظیمات FX پروژه اضافه کنید.",

@@ -21743,6 +21743,7 @@ const resource = {
     "match_progress.empty_label": "Proč to vidím?",
     "match_progress.empty_reason_catalogue": "Pro tento region není nainstalován žádný katalog nákladů, takže neexistovaly žádné sazby ke spárování.",
     "match_progress.empty_reason_collection": "Vybraný katalog je prázdný nebo nic v něm nebylo dostatečně blízké vašim prvkům.",
+    "match_progress.empty_reason_not_vectorized": "Tento katalog je nainstalován, ale zatím nebyl indexován pro vyhledávání, takže nebylo s čím porovnávat. Spusťte vektorové přeindexování, aby bylo párování možné.",
     "match_progress.empty_adjust": "Změnit katalog",
     "match_progress.empty_retry": "Spárovat znovu",
     "match.wizard.displayCurrencyNoRate": "Pro tento projekt není nastaven žádný směnný kurz z {{base}} na {{disp}}, takže součty zůstávají v původní měně. Pro převod přidejte kurz v nastavení FX projektu.",

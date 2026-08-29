@@ -21877,6 +21877,7 @@ const resource = {
     "match_progress.empty_label": "لماذا أرى هذا؟",
     "match_progress.empty_reason_catalogue": "لا يوجد كتالوج تكاليف مثبّت لهذه المنطقة، لذا لم تتوفر أي أسعار للمطابقة معها.",
     "match_progress.empty_reason_collection": "الكتالوج المحدد فارغ، أو لا يوجد فيه ما هو قريب بما يكفي من عناصرك.",
+    "match_progress.empty_reason_not_vectorized": "هذا الكتالوج مثبَّت لكنه لم تتم فهرسته للبحث بعد، لذا لم يكن هناك ما يمكن المطابقة معه. شغّل إعادة فهرسة المتجهات لتفعيل المطابقة.",
     "match_progress.empty_adjust": "تغيير الكتالوج",
     "match_progress.empty_retry": "إعادة المطابقة",
     "match.wizard.displayCurrencyNoRate": "لم يُضبط أي سعر صرف من {{base}} إلى {{disp}} في هذا المشروع، لذا تبقى الإجماليات بعملتها الأصلية. أضِف سعر صرف في إعدادات الصرف للمشروع لإجراء التحويل.",

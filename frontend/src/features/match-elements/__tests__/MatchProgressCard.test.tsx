@@ -53,7 +53,7 @@ vi.mock('../api', () => ({
 }));
 
 import { matchElementsApi } from '../api';
-import { MatchProgressCard } from '../MatchProgressCard';
+import { MatchProgressCard, emptyReason } from '../MatchProgressCard';
 
 const getProgressSpy = matchElementsApi.getProgress as ReturnType<typeof vi.fn>;
 
@@ -304,5 +304,177 @@ describe('MatchProgressCard - empty (no-candidate) terminal state', () => {
     expect(onAdjust).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByTestId('match-progress-empty-retry'));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── Empty-state reason ──────────────────────────────────────────────
+//
+// run_match already resolves WHY a run came back with nothing and stamps
+// it on the progress record (``no_catalogue_rows:<id>`` /
+// ``catalog_not_vectorized:<id>``) before returning an empty result. The
+// card polled that record, held it in state and then listed every
+// possible cause anyway, so "the catalogue is not indexed" and "nothing
+// was close enough" read identically to the user.
+//
+// Both directions are pinned below, and the second is the one that
+// matters: a card that always claims degradation is worse than one that
+// never does, so a healthy run must say nothing at all.
+
+/** Progress snapshot for a finished run, with whatever error was stamped. */
+function finishedProgress(error: string | null) {
+  return {
+    stage: 'done',
+    stage_idx: 5,
+    total_stages: 5,
+    groups_done: 0,
+    groups_total: 0,
+    status: 'done',
+    started_at: null,
+    updated_at: null,
+    error,
+  };
+}
+
+/** Flush the awaited body of the card's one-shot empty-state fetch. */
+async function drainMicrotasks() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+describe('MatchProgressCard - empty-state reason', () => {
+  it('parses the reason token and ignores the catalogue id after it', () => {
+    expect(emptyReason('no_catalogue_rows:DE_BERLIN')).toBe(
+      'no_catalogue_rows',
+    );
+    expect(emptyReason('catalog_not_vectorized:RU_STPETERSBURG')).toBe(
+      'catalog_not_vectorized',
+    );
+    // A bare token with no id is still a token.
+    expect(emptyReason('no_catalogue_rows')).toBe('no_catalogue_rows');
+  });
+
+  it('returns null for anything it does not recognise', () => {
+    // Absent, empty, and a token from some future backend. None of these
+    // may reach the user as a raw string, so they all fall back to the
+    // generic explainer rather than being rendered.
+    expect(emptyReason(null)).toBeNull();
+    expect(emptyReason(undefined)).toBeNull();
+    expect(emptyReason('')).toBeNull();
+    expect(emptyReason('something_we_have_never_seen:XX')).toBeNull();
+    expect(emptyReason('Traceback (most recent call last)')).toBeNull();
+  });
+
+  it('states the single cause when the backend named it', async () => {
+    getProgressSpy.mockResolvedValue(
+      finishedProgress('catalog_not_vectorized:RU_STPETERSBURG'),
+    );
+
+    render(
+      <MatchProgressCard
+        status="empty"
+        sessionId="session-empty"
+        onDone={() => {}}
+      />,
+    );
+    await drainMicrotasks();
+
+    // The card reads the record even though the 800ms poll stops with
+    // the running state - that one-shot read is what makes this reliable.
+    expect(getProgressSpy).toHaveBeenCalledWith('session-empty');
+
+    const list = screen.getByTestId('match-progress-empty').querySelector('ul');
+    expect(list?.getAttribute('data-reason')).toBe('catalog_not_vectorized');
+
+    // Exactly one reason is offered, and it is the indexing one.
+    expect(screen.getByTestId('match-progress-empty-reason')).not.toBeNull();
+    expect(list?.querySelectorAll('li').length).toBe(1);
+    expect(list?.textContent).toMatch(/indexed for search/i);
+  });
+
+  it('names the missing catalogue when that is what happened', async () => {
+    getProgressSpy.mockResolvedValue(
+      finishedProgress('no_catalogue_rows:none'),
+    );
+
+    render(
+      <MatchProgressCard
+        status="empty"
+        sessionId="session-empty"
+        onDone={() => {}}
+      />,
+    );
+    await drainMicrotasks();
+
+    const list = screen.getByTestId('match-progress-empty').querySelector('ul');
+    expect(list?.getAttribute('data-reason')).toBe('no_catalogue_rows');
+    expect(list?.querySelectorAll('li').length).toBe(1);
+    expect(list?.textContent).toMatch(/No cost catalogue is installed/i);
+  });
+
+  it('keeps the generic explainer when the token is unknown', async () => {
+    getProgressSpy.mockResolvedValue(finishedProgress('brand_new_token:XX'));
+
+    render(
+      <MatchProgressCard
+        status="empty"
+        sessionId="session-empty"
+        onDone={() => {}}
+      />,
+    );
+    await drainMicrotasks();
+
+    const list = screen.getByTestId('match-progress-empty').querySelector('ul');
+    // No narrowed reason, both original bullets, and the raw token is
+    // nowhere on screen.
+    expect(list?.getAttribute('data-reason')).toBeNull();
+    expect(screen.queryByTestId('match-progress-empty-reason')).toBeNull();
+    expect(list?.querySelectorAll('li').length).toBe(2);
+    expect(screen.getByTestId('match-progress-card').textContent).not.toMatch(
+      /brand_new_token/,
+    );
+  });
+
+  it('reports no degradation at all on a healthy run with candidates', async () => {
+    // The half that keeps this from becoming a banner that is always on.
+    // A run that produced candidates never reaches the empty state, so
+    // there must be no explainer and no reason node anywhere.
+    getProgressSpy.mockResolvedValue(finishedProgress(null));
+
+    render(
+      <MatchProgressCard
+        status="done"
+        sessionId="session-healthy"
+        onDone={() => {}}
+      />,
+    );
+    await drainMicrotasks();
+
+    expect(screen.queryByTestId('match-progress-empty')).toBeNull();
+    expect(screen.queryByTestId('match-progress-empty-reason')).toBeNull();
+  });
+
+  it('stays silent on a healthy run even if a stale error is on the record', async () => {
+    // Belt and braces: the reason is gated on the empty state, not on the
+    // presence of an error string, so a leftover token from an earlier run
+    // cannot paint a degradation warning over a good result.
+    getProgressSpy.mockResolvedValue(
+      finishedProgress('catalog_not_vectorized:RU_STPETERSBURG'),
+    );
+
+    render(
+      <MatchProgressCard
+        status="done"
+        sessionId="session-healthy"
+        onDone={() => {}}
+      />,
+    );
+    await drainMicrotasks();
+
+    expect(screen.queryByTestId('match-progress-empty')).toBeNull();
+    expect(screen.queryByTestId('match-progress-empty-reason')).toBeNull();
   });
 });

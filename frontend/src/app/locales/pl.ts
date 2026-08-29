@@ -21744,6 +21744,7 @@ const resource = {
     "match_progress.empty_label": "Dlaczego to widzę?",
     "match_progress.empty_reason_catalogue": "Dla tego regionu nie zainstalowano żadnego katalogu kosztów, więc nie było żadnych stawek do dopasowania.",
     "match_progress.empty_reason_collection": "Wybrany katalog jest pusty lub nic w nim nie było wystarczająco zbliżone do Twoich elementów.",
+    "match_progress.empty_reason_not_vectorized": "Ten katalog jest zainstalowany, ale nie został jeszcze zindeksowany do wyszukiwania, więc nie było z czym porównywać. Uruchom ponowne indeksowanie wektorowe, aby włączyć dopasowywanie.",
     "match_progress.empty_adjust": "Zmień katalog",
     "match_progress.empty_retry": "Dopasuj ponownie",
     "match.wizard.displayCurrencyNoRate": "Dla tego projektu nie ustawiono kursu wymiany z {{base}} na {{disp}}, więc sumy pozostają w walucie macierzystej. Aby przeliczyć, dodaj kurs w ustawieniach FX projektu.",

@@ -21746,6 +21746,7 @@ const resource = {
     "match_progress.empty_label": "Pourquoi est-ce que je vois ceci ?",
     "match_progress.empty_reason_catalogue": "Aucun catalogue de coûts n'est installé pour cette région, il n'y avait donc aucun tarif à mettre en correspondance.",
     "match_progress.empty_reason_collection": "Le catalogue sélectionné est vide, ou rien dedans n'était suffisamment proche de vos éléments.",
+    "match_progress.empty_reason_not_vectorized": "Ce catalogue est installé mais n'a pas encore été indexé pour la recherche, il n'y avait donc rien à comparer. Lancez une réindexation vectorielle pour activer la mise en correspondance.",
     "match_progress.empty_adjust": "Changer de catalogue",
     "match_progress.empty_retry": "Relancer la correspondance",
     "match.wizard.displayCurrencyNoRate": "Aucun taux de change de {{base}} vers {{disp}} n'est défini sur ce projet, les totaux restent donc dans leur devise d'origine. Ajoutez un taux dans les paramètres FX du projet pour effectuer la conversion.",

@@ -21745,6 +21745,7 @@ const resource = {
     "match_progress.empty_label": "¿Por qué veo esto?",
     "match_progress.empty_reason_catalogue": "No hay ningún catálogo de costes instalado para esta región, por lo que no había tarifas con las que hacer coincidir.",
     "match_progress.empty_reason_collection": "El catálogo seleccionado está vacío, o nada en él se acercaba lo suficiente a sus elementos.",
+    "match_progress.empty_reason_not_vectorized": "Este catálogo está instalado, pero aún no se ha indexado para la búsqueda, por lo que no había nada con qué comparar. Ejecute una reindexación vectorial para habilitar la coincidencia.",
     "match_progress.empty_adjust": "Cambiar de catálogo",
     "match_progress.empty_retry": "Volver a hacer coincidir",
     "match.wizard.displayCurrencyNoRate": "No hay ningún tipo de cambio de {{base}} a {{disp}} configurado en este proyecto, por lo que los totales se mantienen en su moneda original. Añada un tipo de cambio en los ajustes FX del proyecto para realizar la conversión.",

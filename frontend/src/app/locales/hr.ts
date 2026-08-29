@@ -21707,6 +21707,7 @@ const resource = {
     "match_progress.empty_label": "Zašto ovo vidim?",
     "match_progress.empty_reason_catalogue": "Za ovu regiju nije instaliran nijedan katalog troškova, pa nije bilo cijena za podudaranje.",
     "match_progress.empty_reason_collection": "Odabrani katalog je prazan ili ništa u njemu nije bilo dovoljno blisko vašim elementima.",
+    "match_progress.empty_reason_not_vectorized": "Ovaj katalog je instaliran, ali još nije indeksiran za pretragu, pa nije bilo ničega za usporedbu. Pokrenite vektorsko ponovno indeksiranje kako biste omogućili podudaranje.",
     "match_progress.empty_adjust": "Promijeni katalog",
     "match_progress.empty_retry": "Podudari ponovno",
     "match.wizard.displayCurrencyNoRate": "Za ovaj projekt nije postavljen tečaj iz {{base}} u {{disp}}, pa zbrojevi ostaju u izvornoj valuti. Za pretvorbu dodajte tečaj u FX postavkama projekta.",

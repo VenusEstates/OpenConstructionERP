@@ -22172,6 +22172,7 @@ const resource = {
     "match_progress.empty_label": "Warum sehe ich das?",
     "match_progress.empty_reason_catalogue": "Für diese Region ist kein Kostenkatalog installiert, daher gab es keine Sätze für den Abgleich.",
     "match_progress.empty_reason_collection": "Der ausgewählte Katalog ist leer, oder nichts darin war Ihren Elementen ähnlich genug.",
+    "match_progress.empty_reason_not_vectorized": "Dieser Katalog ist installiert, wurde aber noch nicht für die Suche indexiert, sodass es nichts zum Abgleichen gab. Führen Sie eine Vektor-Reindexierung aus, um den Abgleich zu ermöglichen.",
     "match_progress.empty_adjust": "Katalog wechseln",
     "match_progress.empty_retry": "Erneut abgleichen",
     "match.wizard.displayCurrencyNoRate": "Für dieses Projekt ist kein Wechselkurs von {{base}} zu {{disp}} festgelegt, daher bleiben die Summen in ihrer ursprünglichen Währung. Fügen Sie in den FX-Einstellungen des Projekts einen Kurs hinzu, um umzurechnen.",

@@ -21343,6 +21343,7 @@ const resource = {
     "match_progress.empty_label": "Varför ser jag det här?",
     "match_progress.empty_reason_catalogue": "Ingen kostnadskatalog är installerad för den här regionen, så det fanns inga priser att matcha mot.",
     "match_progress.empty_reason_collection": "Den valda katalogen är tom, eller inget i den låg tillräckligt nära dina element.",
+    "match_progress.empty_reason_not_vectorized": "Den här katalogen är installerad men har ännu inte indexerats för sökning, så det fanns inget att matcha mot. Kör en vektor-omindexering för att aktivera matchning.",
     "match_progress.empty_adjust": "Byt katalog",
     "match_progress.empty_retry": "Matcha igen",
     "match.wizard.displayCurrencyNoRate": "Ingen växelkurs från {{base}} till {{disp}} är angiven för det här projektet, så totalsummor stannar i sin ursprungliga valuta. Lägg till en kurs i projektets FX-inställningar för att konvertera.",

@@ -622,6 +622,7 @@ const resource = {
     "match_progress.subtitle_empty": "The run finished but no catalog rows matched. There is nothing to review or apply yet.",
     "match_progress.empty_reason_catalogue": "No cost catalog is installed for this region, so there were no rates to match against.",
     "match_progress.empty_reason_collection": "The selected catalog is empty, or nothing in it was close enough to your elements.",
+    "match_progress.empty_reason_not_vectorized": "This catalog is installed but has not been indexed for search yet, so there was nothing to match against. Run a vector reindex to enable matching.",
     "match_progress.empty_adjust": "Change catalog",
     "onboarding.mod_cost_match_desc": "Auto-match Bid Schedule positions to cost database items",
     "onboarding.mod_match_desc": "Match BIM/CAD elements to Bid Schedule positions and rates",

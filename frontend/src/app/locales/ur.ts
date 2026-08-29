@@ -20961,6 +20961,7 @@ const resource = {
     "match_progress.empty_label": "میں یہ کیوں دیکھ رہا ہوں؟",
     "match_progress.empty_reason_catalogue": "اس خطے کے لیے کوئی cost کیٹلاگ انسٹال نہیں، اس لیے میل کرنے کو کوئی ریٹس نہیں تھے۔",
     "match_progress.empty_reason_collection": "منتخب کیٹلاگ خالی ہے، یا اس میں آپ کے عناصر کے کافی قریب کچھ نہیں تھا۔",
+    "match_progress.empty_reason_not_vectorized": "یہ کیٹلاگ انسٹال ہے لیکن ابھی تک تلاش کے لیے انڈیکس نہیں کیا گیا، اس لیے موازنہ کرنے کے لیے کچھ نہیں تھا۔ مماثلت فعال کرنے کے لیے ویکٹر ری انڈیکس چلائیں۔",
     "match_progress.empty_adjust": "کیٹلاگ بدلیں",
     "match_progress.empty_retry": "دوبارہ match کریں",
     "match.wizard.displayCurrencyNoRate": "{{base}} سے {{disp}} کے لیے کوئی FX ریٹ اس پروجیکٹ پر مقرر نہیں، اس لیے کل رقمیں اپنی اصل کرنسی میں رہتی ہیں۔ تبدیل کرنے کے لیے پروجیکٹ FX سیٹنگز میں ایک ریٹ شامل کریں۔",

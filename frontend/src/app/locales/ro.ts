@@ -21385,6 +21385,7 @@ const resource = {
     "match_progress.empty_label": "De ce văd acest mesaj?",
     "match_progress.empty_reason_catalogue": "Nu este instalat niciun catalog de costuri pentru această regiune, așa că nu existau tarife cu care să se facă potrivirea.",
     "match_progress.empty_reason_collection": "Catalogul selectat este gol sau nimic din el nu era suficient de apropiat de elementele dumneavoastră.",
+    "match_progress.empty_reason_not_vectorized": "Acest catalog este instalat, dar nu a fost încă indexat pentru căutare, așa că nu a existat nimic cu care să se compare. Rulați o reindexare vectorială pentru a activa potrivirea.",
     "match_progress.empty_adjust": "Schimbă catalogul",
     "match_progress.empty_retry": "Reia potrivirea",
     "match.wizard.displayCurrencyNoRate": "Nu este setat niciun curs de schimb de la {{base}} la {{disp}} pe acest proiect, așa că totalurile rămân în moneda lor originală. Adăugați un curs în setările FX ale proiectului pentru a face conversia.",

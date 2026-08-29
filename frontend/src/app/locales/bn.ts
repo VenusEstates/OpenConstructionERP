@@ -20961,6 +20961,7 @@ const resource = {
     "match_progress.empty_label": "আমি কেন এটি দেখছি?",
     "match_progress.empty_reason_catalogue": "এই অঞ্চলের জন্য কোনো কস্ট ক্যাটালগ ইনস্টল করা নেই, তাই মেলানোর জন্য কোনো রেট ছিল না।",
     "match_progress.empty_reason_collection": "নির্বাচিত ক্যাটালগটি খালি, অথবা এতে আপনার এলিমেন্টের কাছাকাছি কিছু ছিল না।",
+    "match_progress.empty_reason_not_vectorized": "এই ক্যাটালগটি ইনস্টল করা আছে কিন্তু এখনও অনুসন্ধানের জন্য ইনডেক্স করা হয়নি, তাই মেলানোর মতো কিছু ছিল না। মিলকরণ সক্রিয় করতে ভেক্টর রি-ইনডেক্স চালান।",
     "match_progress.empty_adjust": "ক্যাটালগ পরিবর্তন করুন",
     "match_progress.empty_retry": "আবার ম্যাচ করুন",
     "match.wizard.displayCurrencyNoRate": "এই প্রজেক্টে {{base}} থেকে {{disp}}-এ কোনো FX রেট সেট করা নেই, তাই মোট তাদের নিজস্ব মুদ্রায় থাকে। রূপান্তর করতে প্রজেক্ট FX সেটিংসে একটি রেট যোগ করুন।",

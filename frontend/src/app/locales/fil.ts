@@ -20961,6 +20961,7 @@ const resource = {
     "match_progress.empty_label": "Bakit ko ito nakikita?",
     "match_progress.empty_reason_catalogue": "Walang naka-install na cost catalogue para sa rehiyong ito, kaya walang rate na itutugma.",
     "match_progress.empty_reason_collection": "Walang laman ang napiling katalogo, o walang malapit na tumugma sa mga elemento mo rito.",
+    "match_progress.empty_reason_not_vectorized": "Naka-install ang katalogong ito pero hindi pa ito na-index para sa paghahanap, kaya walang maitutugma. Patakbuhin ang vector reindex para paganahin ang pagtutugma.",
     "match_progress.empty_adjust": "Palitan ang katalogo",
     "match_progress.empty_retry": "Tumugma muli",
     "match.wizard.displayCurrencyNoRate": "Walang naitakdang FX rate mula {{base}} tungo {{disp}} sa proyektong ito, kaya nananatili ang mga kabuuan sa native na currency nila. Magdagdag ng rate sa FX settings ng proyekto para i-convert.",

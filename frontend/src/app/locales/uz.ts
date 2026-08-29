@@ -21934,6 +21934,7 @@ const resource = {
     "match_progress.empty_label": "Nega buni koʻryapman?",
     "match_progress.empty_reason_catalogue": "Bu mintaqa uchun xarajat katalogi oʻrnatilmagan, shuning uchun solishtirish uchun stavkalar yoʻq edi.",
     "match_progress.empty_reason_collection": "Tanlangan katalog boʻsh, yoki undagi hech narsa elementlaringizga yetarlicha yaqin emas edi.",
+    "match_progress.empty_reason_not_vectorized": "Bu katalog o'rnatilgan, lekin hali qidiruv uchun indekslanmagan, shuning uchun solishtiradigan hech narsa yo'q edi. Moslashtirishni yoqish uchun vektorlarni qayta indekslashni ishga tushiring.",
     "match_progress.empty_adjust": "Katalogni oʻzgartirish",
     "match_progress.empty_retry": "Qayta moslashtirish",
     "match.wizard.displayCurrencyNoRate": "Bu loyihada {{base}} dan {{disp}} ga valyuta kursi belgilanmagan, shuning uchun jamlar oʻz asl valyutasida qoladi. Konvertatsiya qilish uchun loyiha valyuta sozlamalarida kurs qoʻshing.",

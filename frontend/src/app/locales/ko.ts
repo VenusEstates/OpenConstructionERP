@@ -21650,6 +21650,7 @@ const resource = {
     "match_progress.empty_label": "왜 이것이 표시되나요?",
     "match_progress.empty_reason_catalogue": "이 지역에 설치된 비용 카탈로그가 없어 대조할 단가가 없었습니다.",
     "match_progress.empty_reason_collection": "선택한 카탈로그가 비어 있거나, 그 안에 요소와 충분히 일치하는 항목이 없었습니다.",
+    "match_progress.empty_reason_not_vectorized": "이 카탈로그는 설치되어 있지만 아직 검색용으로 색인되지 않아 비교할 대상이 없었습니다. 매칭을 활성화하려면 벡터 재색인을 실행하세요.",
     "match_progress.empty_adjust": "카탈로그 변경",
     "match_progress.empty_retry": "다시 매칭",
     "match.wizard.displayCurrencyNoRate": "이 프로젝트에는 {{base}}에서 {{disp}}(으)로의 환율이 설정되어 있지 않아 합계가 원래 통화로 유지됩니다. 변환하려면 프로젝트 FX 설정에서 환율을 추가하세요.",

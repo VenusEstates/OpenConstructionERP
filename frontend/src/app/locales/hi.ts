@@ -21669,6 +21669,7 @@ const resource = {
     "match_progress.empty_label": "मुझे यह क्यों दिख रहा है?",
     "match_progress.empty_reason_catalogue": "इस क्षेत्र के लिए कोई लागत कैटलॉग स्थापित नहीं है, इसलिए मिलान करने के लिए कोई दर नहीं थी।",
     "match_progress.empty_reason_collection": "चयनित कैटलॉग खाली है, या उसमें कुछ भी आपके तत्वों के पर्याप्त निकट नहीं था।",
+    "match_progress.empty_reason_not_vectorized": "यह कैटलॉग इंस्टॉल है लेकिन अभी तक खोज के लिए इंडेक्स नहीं किया गया है, इसलिए मिलान के लिए कुछ नहीं था। मिलान सक्षम करने के लिए वेक्टर रीइंडेक्स चलाएँ।",
     "match_progress.empty_adjust": "कैटलॉग बदलें",
     "match_progress.empty_retry": "फिर से मिलान करें",
     "match.wizard.displayCurrencyNoRate": "इस परियोजना पर {{base}} से {{disp}} के लिए कोई FX दर निर्धारित नहीं है, इसलिए कुल राशि अपनी मूल मुद्रा में ही रहती है। रूपांतरण के लिए परियोजना की FX सेटिंग्स में एक दर जोड़ें।",

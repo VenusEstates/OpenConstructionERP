@@ -130,6 +130,42 @@ function rampPct(elapsedSec: number): number {
   return Math.min(95, Math.round(5 + eased * 90));
 }
 
+/** The empty-state causes the backend can actually tell us apart.
+ *
+ *  ``run_match`` already resolves why a run produced nothing and stamps it
+ *  on the progress record before returning an empty result - it writes
+ *  ``no_catalogue_rows:<id>`` when no catalogue is bound or it holds
+ *  nothing at all, and ``catalog_not_vectorized:<id>`` when the bound
+ *  catalogue has rows but no vectors to search. The answer was already on
+ *  the wire by the time this card rendered its explainer; it was simply
+ *  never read, so the card listed every possible cause instead of the one
+ *  that happened. */
+type EmptyReason = 'no_catalogue_rows' | 'catalog_not_vectorized';
+
+const KNOWN_EMPTY_REASONS: readonly string[] = [
+  'no_catalogue_rows',
+  'catalog_not_vectorized',
+];
+
+/** Read the reason token out of a progress ``error`` string.
+ *
+ *  The value arrives as ``<token>:<catalogue_id>``; the id belongs in a log
+ *  line, not in front of a user, so only the part before the colon is
+ *  matched. Anything this does not recognise - a token from a newer
+ *  backend, an unrelated error, an empty string - returns null, and the
+ *  card keeps the generic explainer it has always shown. That is the
+ *  point: an unknown token must never reach the screen as a raw string.
+ *
+ *  Exported for the unit test, which pins both directions - a known token
+ *  narrows the explanation, an unknown one must leave it alone. */
+export function emptyReason(
+  error: string | null | undefined,
+): EmptyReason | null {
+  if (!error) return null;
+  const token = error.split(':')[0]?.trim() ?? '';
+  return KNOWN_EMPTY_REASONS.includes(token) ? (token as EmptyReason) : null;
+}
+
 export function MatchProgressCard({
   status,
   errorMessage,
@@ -201,6 +237,33 @@ export function MatchProgressCard({
       window.clearInterval(handle);
     };
   }, [sessionId, status]);
+
+  // One final progress read when the run lands on the empty state.
+  //
+  // The poll above stops the instant ``status`` leaves ``running``, and the
+  // backend stamps the reason onto the progress record immediately before
+  // ``run_match`` returns - so the snapshot carrying it is usually written
+  // inside the window between the last 800ms poll and the POST resolving.
+  // Reading once here is what makes the explanation reliable instead of a
+  // matter of whether the timing happened to be kind. It reuses the same
+  // endpoint and the same state the poll already writes; nothing about how
+  // progress is fetched changes.
+  useEffect(() => {
+    if (status !== 'empty' || !sessionId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await matchElementsApi.getProgress(sessionId);
+        if (!cancelled) setProgress(snap);
+      } catch {
+        // Keep whatever the poll last saw. The generic explainer below is
+        // still a correct answer, only a less specific one.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, sessionId]);
 
   // Fire onDone exactly once, ~800ms after the parent flips to done.
   // Gives the user a satisfying "all green, bar full" frame before the
@@ -319,6 +382,11 @@ export function MatchProgressCard({
   const isDone = status === 'done';
   const isEmpty = status === 'empty';
   const isError = status === 'error';
+
+  // Which of the empty-state causes actually happened, when the backend
+  // said so. Null - no progress snapshot, no error stamped, or a token we
+  // do not know - keeps the generic explainer that lists every cause.
+  const reason = emptyReason(progress?.error);
 
   const rankingCounter = useMemo(() => {
     if (!useRealProgress || !progress) return null;
@@ -629,19 +697,44 @@ export function MatchProgressCard({
               defaultValue: 'Why am I seeing this?',
             })}
           </div>
-          <ul className="text-xs text-amber-800 dark:text-amber-200 list-disc pl-4 space-y-0.5">
-            <li>
-              {t('match_progress.empty_reason_catalogue', {
-                defaultValue:
-                  'No cost catalogue is installed for this region, so there were no rates to match against.',
-              })}
-            </li>
-            <li>
-              {t('match_progress.empty_reason_collection', {
-                defaultValue:
-                  'The selected catalogue is empty, or nothing in it was close enough to your elements.',
-              })}
-            </li>
+          {/* When the backend named the cause, say that one thing. Listing
+              both alongside it would put the answer back in a guessing game
+              the run already settled. Without a named cause we keep the
+              original pair, which is honest about not knowing. */}
+          <ul
+            className="text-xs text-amber-800 dark:text-amber-200 list-disc pl-4 space-y-0.5"
+            data-reason={reason ?? undefined}
+          >
+            {reason === 'no_catalogue_rows' ? (
+              <li data-testid="match-progress-empty-reason">
+                {t('match_progress.empty_reason_catalogue', {
+                  defaultValue:
+                    'No cost catalogue is installed for this region, so there were no rates to match against.',
+                })}
+              </li>
+            ) : reason === 'catalog_not_vectorized' ? (
+              <li data-testid="match-progress-empty-reason">
+                {t('match_progress.empty_reason_not_vectorized', {
+                  defaultValue:
+                    'This catalogue is installed but has not been indexed for search yet, so there was nothing to match against. Run a vector reindex to enable matching.',
+                })}
+              </li>
+            ) : (
+              <>
+                <li>
+                  {t('match_progress.empty_reason_catalogue', {
+                    defaultValue:
+                      'No cost catalogue is installed for this region, so there were no rates to match against.',
+                  })}
+                </li>
+                <li>
+                  {t('match_progress.empty_reason_collection', {
+                    defaultValue:
+                      'The selected catalogue is empty, or nothing in it was close enough to your elements.',
+                  })}
+                </li>
+              </>
+            )}
           </ul>
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
             {onAdjust && (

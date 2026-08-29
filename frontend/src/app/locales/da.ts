@@ -21687,6 +21687,7 @@ const resource = {
     "match_progress.empty_label": "Hvorfor ser jeg dette?",
     "match_progress.empty_reason_catalogue": "Der er ikke installeret noget omkostningskatalog for denne region, så der var ingen satser at matche mod.",
     "match_progress.empty_reason_collection": "Det valgte katalog er tomt, eller intet i det lå tæt nok på dine elementer.",
+    "match_progress.empty_reason_not_vectorized": "Dette katalog er installeret, men er endnu ikke blevet indekseret til søgning, så der var intet at matche mod. Kør en vektorreindeksering for at aktivere matchning.",
     "match_progress.empty_adjust": "Skift katalog",
     "match_progress.empty_retry": "Match igen",
     "match.wizard.displayCurrencyNoRate": "Der er ikke angivet nogen valutakurs fra {{base}} til {{disp}} på dette projekt, så totaler forbliver i deres oprindelige valuta. Tilføj en kurs i projektets FX-indstillinger for at konvertere.",

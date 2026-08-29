@@ -21792,6 +21792,7 @@ const resource = {
     "match_progress.empty_label": "Perché vedo questo?",
     "match_progress.empty_reason_catalogue": "Nessun catalogo dei costi è installato per questa regione, quindi non c'erano tariffe con cui creare corrispondenze.",
     "match_progress.empty_reason_collection": "Il catalogo selezionato è vuoto, oppure nulla al suo interno era abbastanza vicino ai tuoi elementi.",
+    "match_progress.empty_reason_not_vectorized": "Questo catalogo è installato ma non è ancora stato indicizzato per la ricerca, quindi non c'era nulla con cui confrontare. Esegui una reindicizzazione vettoriale per abilitare la corrispondenza.",
     "match_progress.empty_adjust": "Cambia catalogo",
     "match_progress.empty_retry": "Ripeti la corrispondenza",
     "match.wizard.displayCurrencyNoRate": "Nessun tasso di cambio da {{base}} a {{disp}} è impostato su questo progetto, quindi i totali restano nella loro valuta originale. Aggiungi un tasso nelle impostazioni FX del progetto per effettuare la conversione.",

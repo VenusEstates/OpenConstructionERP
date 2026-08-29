@@ -20975,6 +20975,7 @@ const resource = {
     "match_progress.empty_label": "למה אני רואה את זה?",
     "match_progress.empty_reason_catalogue": "לא מותקן קטלוג עלות עבור אזור זה, כך שלא היו שיעורים להתאים אליהם.",
     "match_progress.empty_reason_collection": "הקטלוג הנבחר ריק, או שדבר בו לא היה קרוב מספיק לאלמנטים שלכם.",
+    "match_progress.empty_reason_not_vectorized": "הקטלוג הזה מותקן אך טרם עבר אינדוקס לחיפוש, ולכן לא היה עם מה להשוות. הריצו אינדוקס וקטורי מחדש כדי לאפשר התאמה.",
     "match_progress.empty_adjust": "החלפת קטלוג",
     "match_progress.empty_retry": "התאמה מחדש",
     "match.wizard.displayCurrencyNoRate": "לא הוגדר שער חליפין מ-{{base}} ל-{{disp}} בפרויקט זה, כך שהסכומים נשארים במטבע המקורי שלהם. הוסיפו שער בהגדרות מטבע הפרויקט להמרה.",

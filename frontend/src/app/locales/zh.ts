@@ -21650,6 +21650,7 @@ const resource = {
     "match_progress.empty_label": "我为什么会看到这个?",
     "match_progress.empty_reason_catalogue": "此地区未安装成本目录,因此没有可供匹配的单价。",
     "match_progress.empty_reason_collection": "所选目录为空,或其中没有任何内容与您的构件足够接近。",
+    "match_progress.empty_reason_not_vectorized": "该目录已安装,但尚未建立搜索索引,因此没有可匹配的内容。请运行向量重新索引以启用匹配。",
     "match_progress.empty_adjust": "更换目录",
     "match_progress.empty_retry": "重新匹配",
     "match.wizard.displayCurrencyNoRate": "本项目未设置从 {{base}} 到 {{disp}} 的汇率,因此总额保持原币种显示。请在项目 FX 设置中添加汇率以进行换算。",
