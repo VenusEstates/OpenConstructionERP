@@ -18593,6 +18593,7 @@ const resource = {
     "global_search.searching": "Buscando…",
     "global_search.no_results": "Aún no hay coincidencias - prueba con otra formulación",
     "global_search.footer_hint": "Búsqueda semántica con embeddings vectoriales",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
     "info.ai-estimator.title": "Cómo funciona el estimador con IA",
     "info.ai-estimator.body": "Aporte cualquier fuente: un modelo BIM o CAD, una medición DWG o PDF, una importación de Excel o GAEB, fotos o simplemente una descripción escrita. El agente detecta el formato, lo lee en elementos, agrupa las cantidades y encuentra precios de catálogo exactos con desgloses completos de recursos. Cada precio proviene de la base de datos de costos, nunca lo inventa la IA, y usted confirma cada etapa antes de avanzar. El resultado es un presupuesto validado que escribe directamente en una mediciones y presupuesto.",
     "aiest.title": "Asistente de presupuesto (IA)",

@@ -19174,6 +19174,7 @@ const resource = {
     "global_search.searching": "جارٍ البحث…",
     "global_search.no_results": "لا توجد نتائج بعد - جرّب صياغة مختلفة",
     "global_search.footer_hint": "بحث دلالي مدعوم بتضمينات المتجهات",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

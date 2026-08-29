@@ -18833,6 +18833,7 @@ const resource = {
     "global_search.searching": "Đang tìm…",
     "global_search.no_results": "Chưa có kết quả khớp - thử diễn đạt khác",
     "global_search.footer_hint": "Tìm kiếm ngữ nghĩa bằng vector embedding",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

@@ -18302,6 +18302,7 @@ const resource = {
     "global_search.searching": "Naghahanap…",
     "global_search.no_results": "Wala pang tumugma, subukan ang ibang pagsasabi",
     "global_search.footer_hint": "Semantic search na pinapatakbo ng vector embedding",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
     "info.ai-estimator.title": "Paano gumagana ang AI Estimate Builder",
     "info.ai-estimator.body": "Magdala ng anumang pinagmulan - isang BIM o CAD model, isang DWG o PDF takeoff, isang Excel o GAEB import, mga larawan, o simpleng nakasulat na paglalarawan. Nakikilala ng agent ang format, binabasa ito papasok sa mga elemento, pinagsasama-sama ang dami, at hinahanap ang eksaktong rate sa catalogue na may buong breakdown ng resource. Ang bawat rate ay mula sa cost database, hindi kailanman inimbento ng AI, at kinukumpirma mo ang bawat yugto bago ito magpatuloy. Ang resulta ay isang balidadong estimate na direktang isinusulat mo sa bill of quantities.",
     "aiest.title": "Tagabuo ng Pagtantya (AI)",

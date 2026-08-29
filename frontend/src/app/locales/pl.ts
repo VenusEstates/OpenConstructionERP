@@ -18809,6 +18809,7 @@ const resource = {
     "global_search.searching": "Wyszukiwanie…",
     "global_search.no_results": "Brak dopasowań - spróbuj innego sformułowania",
     "global_search.footer_hint": "Wyszukiwanie semantyczne oparte na osadzeniach wektorowych",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

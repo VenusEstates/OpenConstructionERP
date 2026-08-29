@@ -18916,6 +18916,7 @@ const resource = {
     "global_search.searching": "Söker...",
     "global_search.no_results": "Inga träffar ännu - prova en annan formulering",
     "global_search.footer_hint": "Semantisk sökning driven av vektorembeddings",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

@@ -18921,6 +18921,7 @@ const resource = {
     "global_search.searching": "खोज रहे हैं…",
     "global_search.no_results": "अभी कोई मिलान नहीं - कोई अलग शब्द आज़माएँ",
     "global_search.footer_hint": "वेक्टर एम्बेडिंग द्वारा संचालित सिमेंटिक खोज",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

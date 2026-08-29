@@ -18832,6 +18832,7 @@ const resource = {
     "global_search.searching": "Mencari…",
     "global_search.no_results": "Belum ada kecocokan - coba ungkapan lain",
     "global_search.footer_hint": "Pencarian semantik didukung oleh penyematan vektor",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

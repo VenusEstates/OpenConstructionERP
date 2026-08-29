@@ -15601,6 +15601,7 @@ const resource = {
     "global_search.searching": "Изделүүдө…",
     "global_search.no_results": "Дал келгендер азырынча жок, башка сөз менен аракет кылыңыз",
     "global_search.footer_hint": "Вектордук чөмдүрүүлөр менен иштеген семантикалык издөө",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

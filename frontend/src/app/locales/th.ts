@@ -18895,6 +18895,7 @@ const resource = {
     "global_search.searching": "กำลังค้นหา…",
     "global_search.no_results": "ยังไม่พบที่ตรงกัน - ลองใช้ถ้อยคำอื่น",
     "global_search.footer_hint": "การค้นหาเชิงความหมายขับเคลื่อนด้วยเวกเตอร์เอ็มเบดดิง",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

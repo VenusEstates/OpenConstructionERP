@@ -18779,6 +18779,7 @@ const resource = {
     "global_search.searching": "Pretraživanje…",
     "global_search.no_results": "Još nema podudaranja - pokušajte s drugom formulacijom",
     "global_search.footer_hint": "Semantičko pretraživanje pokretano vektorskim ugrađivanjima",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

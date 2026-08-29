@@ -18302,6 +18302,7 @@ const resource = {
     "global_search.searching": "تلاش ہو رہی ہے…",
     "global_search.no_results": "ابھی تک کوئی میچ نہیں، مختلف الفاظ آزمائیں",
     "global_search.footer_hint": "Vector embeddings سے چلنے والی semantic تلاش",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
     "info.ai-estimator.title": "AI Estimate Builder کیسے کام کرتا ہے",
     "info.ai-estimator.body": "کوئی بھی ماخذ لائیں - ایک BIM یا CAD ماڈل، ایک DWG یا PDF takeoff، ایک Excel یا GAEB import، تصاویر، یا محض ایک تحریری تفصیل۔ ایجنٹ فارمیٹ کا پتہ لگاتا ہے، اسے عناصر میں پڑھتا ہے، مقداریں گروپ کرتا ہے، اور مکمل resource breakdowns کے ساتھ عین کیٹلاگ ریٹس ڈھونڈتا ہے۔ ہر ریٹ cost ڈیٹابیس سے آتی ہے، کبھی AI کی ایجاد کردہ نہیں، اور آپ آگے بڑھنے سے پہلے ہر مرحلے کی تصدیق کرتے ہیں۔ نتیجہ ایک validated تخمینہ ہے جسے آپ سیدھا bill of quantities میں لکھتے ہیں۔",
     "aiest.title": "تخمینہ بنانے والا (AI)",

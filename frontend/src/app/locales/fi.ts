@@ -18848,6 +18848,7 @@ const resource = {
     "global_search.searching": "Haetaan...",
     "global_search.no_results": "Ei vielä osumia - kokeile toista muotoilua",
     "global_search.footer_hint": "Semanttinen haku vektoriupotusten avulla",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

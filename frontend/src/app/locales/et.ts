@@ -19024,6 +19024,7 @@ const resource = {
     "global_search.searching": "Otsimine…",
     "global_search.no_results": "Vasteid pole veel, proovige teistsugust sõnastust",
     "global_search.footer_hint": "Semantiline otsing vektorite manustamise abil",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
     "info.ai-estimator.title": "Kuidas AI hinnangu koostaja töötab",
     "info.ai-estimator.body": "Tooge suvaline allikas - BIM- või CAD-mudel, DWG- või PDF-mõõdistus, Exceli või GAEB-import, fotod või lihtsalt kirjalik kirjeldus. Agent tuvastab vormingu, loeb selle elementideks, rühmitab kogused ja leiab täpsed andmebaasi hinnad koos täielike ressursi jaotustega. Iga hind pärineb kuluandmebaasist, AI ei mõtle seda kunagi välja, ja te kinnitate iga etapi enne edasiliikumist. Tulemus on valideeritud hinnang, mille kirjutate otse mahutabelisse.",
     "aiest.title": "Hinnangu koostaja (AI)",

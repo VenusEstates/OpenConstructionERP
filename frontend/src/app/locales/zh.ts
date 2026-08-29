@@ -18897,6 +18897,7 @@ const resource = {
     "global_search.searching": "正在搜索…",
     "global_search.no_results": "暂无匹配 - 请换一种表述",
     "global_search.footer_hint": "由向量嵌入驱动的语义搜索",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

@@ -18940,6 +18940,7 @@ const resource = {
     "global_search.searching": "Søger...",
     "global_search.no_results": "Ingen match endnu - prøv en anden formulering",
     "global_search.footer_hint": "Semantisk søgning drevet af vektorembeddings",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

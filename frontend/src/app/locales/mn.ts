@@ -18907,6 +18907,7 @@ const resource = {
     "global_search.searching": "Хайж байна…",
     "global_search.no_results": "Одоохондоо таарц алга - өөр үг хэллэг туршиж үзнэ үү",
     "global_search.footer_hint": "Вектор шигтгээгээр ажилладаг утга санааны хайлт",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

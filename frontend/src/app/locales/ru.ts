@@ -18976,6 +18976,7 @@ const resource = {
     "global_search.searching": "Поиск…",
     "global_search.no_results": "Пока нет совпадений - попробуйте другую формулировку",
     "global_search.footer_hint": "Семантический поиск на основе векторных эмбеддингов",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

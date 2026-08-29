@@ -18642,6 +18642,7 @@ const resource = {
     "global_search.searching": "Zoeken...",
     "global_search.no_results": "Nog geen resultaten - probeer een andere formulering",
     "global_search.footer_hint": "Semantisch zoeken op basis van vectorembeddings",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

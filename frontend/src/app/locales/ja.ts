@@ -18897,6 +18897,7 @@ const resource = {
     "global_search.searching": "検索中…",
     "global_search.no_results": "まだ一致なし - 別の言い回しを試してください",
     "global_search.footer_hint": "ベクトル埋め込みによるセマンティック検索",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

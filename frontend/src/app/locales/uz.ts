@@ -18995,6 +18995,7 @@ const resource = {
     "global_search.searching": "Qidirilmoqda…",
     "global_search.no_results": "Hali mos kelish yoʻq, boshqacharoq soʻz bilan urinib koʻring",
     "global_search.footer_hint": "Vektor kiritishlar yordamida semantik qidiruv",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
     "info.ai-estimator.title": "AI smeta tuzuvchisi qanday ishlaydi",
     "info.ai-estimator.body": "Istalgan manbani olib keling - BIM yoki CAD modeli, DWG yoki PDF hajmlarni hisoblash, Excel yoki GAEB importi, suratlar yoki oddiy matnli tavsif. Agent formatni aniqlaydi, uni elementlarga oʻqiydi, hajmlarni guruhlaydi va toʻliq resurs tarkibi bilan aniq katalog narxlarini topadi. Har bir narx xarajat bazasidan keladi, AI hech qachon oʻylab topmaydi, va siz har bosqichni keyingisiga oʻtishdan oldin tasdiqlaysiz. Natija - toʻgʻridan-toʻgʻri hajmlar jadvaliga yozadigan tasdiqlangan smeta.",
     "aiest.title": "Smeta tuzuvchi (AI)",

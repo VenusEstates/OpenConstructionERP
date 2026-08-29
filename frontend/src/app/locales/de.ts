@@ -19190,6 +19190,7 @@ const resource = {
     "global_search.searching": "Suche läuft…",
     "global_search.no_results": "Noch keine Treffer - versuchen Sie eine andere Formulierung",
     "global_search.footer_hint": "Semantische Suche mit Vektor-Embeddings",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

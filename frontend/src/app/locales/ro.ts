@@ -18864,6 +18864,7 @@ const resource = {
     "global_search.searching": "Se caută...",
     "global_search.no_results": "Încă nicio potrivire - încearcă o altă formulare",
     "global_search.footer_hint": "Căutare semantică bazată pe vectori de încorporare",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

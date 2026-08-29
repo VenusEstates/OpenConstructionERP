@@ -18434,6 +18434,7 @@ const resource = {
     "global_search.searching": "Recherche…",
     "global_search.no_results": "Aucun résultat pour l'instant - essayez une autre formulation",
     "global_search.footer_hint": "Recherche sémantique propulsée par des embeddings vectoriels",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

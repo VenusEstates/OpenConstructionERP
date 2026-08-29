@@ -18884,6 +18884,7 @@ const resource = {
     "global_search.searching": "Aranıyor…",
     "global_search.no_results": "Henüz eşleşme yok - farklı bir ifade deneyin",
     "global_search.footer_hint": "Vektör gömmeleriyle güçlendirilen anlamsal arama",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

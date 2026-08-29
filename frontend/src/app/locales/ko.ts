@@ -18897,6 +18897,7 @@ const resource = {
     "global_search.searching": "검색 중…",
     "global_search.no_results": "아직 일치 항목 없음 - 다른 표현을 시도하세요",
     "global_search.footer_hint": "벡터 임베딩 기반 시맨틱 검색",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info

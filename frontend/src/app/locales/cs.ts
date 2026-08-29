@@ -18807,6 +18807,7 @@ const resource = {
     "global_search.searching": "Hledání…",
     "global_search.no_results": "Zatím žádné shody - zkuste jinou formulaci",
     "global_search.footer_hint": "Sémantické vyhledávání poháněné vektorovými embeddingy",
+    "global_search.unnamed_hit": "{{kind}} {{ref}}",
 
     // --- AI Estimate Builder (oe_ai_estimator) ---
     // page info
