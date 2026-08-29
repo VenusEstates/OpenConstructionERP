@@ -20,8 +20,11 @@ import { describe, expect, it } from 'vitest';
  *
  * It is a floor, not a standard. The twenty one divergences that predate it,
  * across eighteen locales and three keys, are recorded below with the locale
- * named, and the baseline may only shrink: a new one goes red, and so does a
- * fixed one, because a fixed locale has to leave the list. Recording a locale here does not say its catalogue label is
+ * named, and the baseline may only shrink. Both directions are checked, in
+ * two separate tests per key so that the failure says which way it went: a new
+ * divergence is the gate proper, and a baselined locale that has been fixed is
+ * a list gone stale, which is red because the answer is to delete the line and
+ * not to undo the translation. Recording a locale here does not say its catalogue label is
  * the right name. In several it is the other way round - Czech výkaz výměr and
  * Dutch hoeveelhedenstaat are the settled trade terms while the catalogue
  * label reads closer to "budget" - and which of the two moves is a question
@@ -33,7 +36,9 @@ import { describe, expect, it } from 'vitest';
  * in a sentence that also names the bill something else. Those are exactly the
  * locales whose label is most likely to be the wrong half of the pair. This
  * gate locks the floor where it found it; it does not prove that the locales
- * outside the baseline name the object once.
+ * outside the baseline name the object once. Filipino is the clearest case:
+ * it passes because its catalogue label and its subtitle both read the English
+ * phrase verbatim, which is internal consistency and not a translation.
  */
 
 const LOCALES_DIR = ['src/app/locales', 'frontend/src/app/locales']
@@ -186,9 +191,19 @@ describe('every locale names the bill one way inside its own file', () => {
 
   for (const key of NAMING_KEYS) {
     it(`${key} calls the bill what the module catalogue calls it`, () => {
-      // Exact set, not subset. A locale that gets fixed has to leave the
-      // baseline, or the list stops describing the tree and starts excusing it.
-      expect(divergent(key)).toEqual(Object.keys(BASELINE[key]).sort());
+      // The gate proper: a locale naming the object a second way that nobody
+      // has written down yet.
+      expect(divergent(key).filter((code) => !(code in BASELINE[key]))).toEqual([]);
+    });
+
+    it(`${key} keeps its baseline describing the tree`, () => {
+      // The other direction, split out rather than folded into one exact-set
+      // comparison so that the failure says which way it went. A list that
+      // keeps a locale after the locale is fixed stops describing the tree and
+      // starts excusing it, and the next reader cannot tell which entries are
+      // still real. When this fails, delete the named locale from BASELINE.
+      // Never undo the translation that fixed it.
+      expect(Object.keys(BASELINE[key]).filter((code) => !divergent(key).includes(code))).toEqual([]);
     });
   }
 
