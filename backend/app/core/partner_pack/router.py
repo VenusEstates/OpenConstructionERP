@@ -310,6 +310,8 @@ def partner_logo() -> Response:
     active = get_active_pack()
     if not active:
         raise HTTPException(status_code=404, detail="No active partner pack")
+    if not active.branding.logo_path:
+        raise HTTPException(status_code=404, detail=f"Pack '{active.slug}' ships no logo")
     # Use the universal by-slug reader, not the pip-only _read_pack_resource.
     # In-app one-click installs activate *source-checkout* packs under packs/,
     # which have no importable entry-point module - _read_pack_resource would
@@ -347,6 +349,8 @@ def partner_logo_by_slug(slug: str) -> Response:
     m = get_pack_by_slug(slug)
     if not m:
         raise HTTPException(status_code=404, detail=f"Pack '{slug}' not installed")
+    if not m.branding.logo_path:
+        raise HTTPException(status_code=404, detail=f"Pack '{slug}' ships no logo")
     data = read_pack_file(slug, m.branding.logo_path)
     if data is None:
         raise HTTPException(

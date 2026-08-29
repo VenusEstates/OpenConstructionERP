@@ -512,11 +512,27 @@ artifacts = ["app/scripts/flagship_assets/site_photos/*.jpg"]
 #
 # ``src`` only, not the pack root: the runtime reads the manifest, the locale
 # JSON and the assets under ``src/openconstructionerp_*``, and never the pack
-# README or its pyproject. It also keeps the build-tool caches that collect at
-# a pack root out of the archive, which matters because force-include bypasses
-# the VCS walker and would otherwise ship gitignored bytes.
+# README or its pyproject. That also leaves the build-tool caches which collect
+# at a pack ROOT outside these lines, ``.ruff_cache`` being the one that turns
+# up, and it matters because force-include bypasses the VCS walker and does not
+# filter gitignored bytes for us.
+#
+# Read that as the narrow statement it is. It used to say this map "keeps the
+# build-tool caches out of the archive", which reads as a filter and is not
+# one: the pack root is outside the map because of WHERE the runtime reads
+# from, and excluding those caches is a side effect of that choice, not a rule
+# being applied. Nothing here filters gitignored bytes that land INSIDE
+# ``src`` - ``__pycache__`` collects right next to the manifest, and untracked
+# ``.pyc`` files were observed under these fifteen paths. No count is recorded
+# because a count is a snapshot of a cache that every Python run in the tree
+# changes. What is or is not in the built archive as a result has not been
+# measured; the wheel-inspection step in .github/workflows/pypi-publish.yml is
+# where that question gets asked of the artefact rather than of this file.
+#
 # backend/tests/unit/test_community_packs_ship.py checks this map against the
-# licence signals in the tree, in both directions.
+# licence signals in the tree, in both directions, and reads the slugs back out
+# of it to check that every file those packs' manifests name is a file they
+# actually carry and commit. Add a pack here and it comes under both.
 "../packs/aus/src" = "packs/aus/src"
 "../packs/brazil-sinapi/src" = "packs/brazil-sinapi/src"
 "../packs/china-gbt50500/src" = "packs/china-gbt50500/src"

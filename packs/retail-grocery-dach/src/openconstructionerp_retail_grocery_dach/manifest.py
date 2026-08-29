@@ -53,7 +53,9 @@ MANIFEST = PartnerPackManifest(
     branding=PartnerBranding(
         primary_color="#2E7D32",  # neutral fresh-market green
         accent_color="#9E9E9E",  # neutral grey
-        logo_path="logo.svg",
+        # This pack ships no logo.svg. The UI draws a monogram in the two
+        # colours above; naming a file that is not here only made it 404.
+        logo_path=None,
         favicon_path=None,
         powered_by_text="OpenConstructionERP retail grocery pack (DACH)",
     ),

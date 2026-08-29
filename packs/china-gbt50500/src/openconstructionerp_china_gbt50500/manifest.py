@@ -67,9 +67,13 @@ MANIFEST = PartnerPackManifest(
         "and it has to be a 9-digit or 12-digit national code."
     ),
     default_locale="zh",
-    additional_locales={
-        "zh": "locales/zh.json",
-    },
+    # No pack-shipped vocabulary overlay. A zh overlay is wanted for this pack
+    # and the file has never been written; the entry used to sit here naming
+    # ``locales/zh.json``, so every read of it was a 404. The Chinese UI does
+    # not depend on it - ``default_locale`` below resolves against the core zh
+    # locale, and this map only ever layers pack-specific wording on top of
+    # that. Put the entry back on the day the file lands, not before.
+    additional_locales={},
     cwicr_regions=[
         # Only one Chinese CWICR region is wired in for the demo today.
         # Additional metros are recorded in metadata.preferred_metros for
@@ -93,17 +97,21 @@ MANIFEST = PartnerPackManifest(
         # (VAT 9% plus statutory charges). Add a slug back on the day its
         # rules land, not before.
     ],
-    default_modules=[],   # empty = show all (Shape A - no module hiding)
+    default_modules=[],  # empty = show all (Shape A - no module hiding)
     hidden_modules=[],
     demo_template_ids=["office-shanghai"],
     branding=PartnerBranding(
-        primary_color="#DE2910",   # China red (national flag)
-        accent_color="#FFDE00",    # China yellow (national flag stars)
-        logo_path="logo.svg",
+        primary_color="#DE2910",  # China red (national flag)
+        accent_color="#FFDE00",  # China yellow (national flag stars)
+        # This pack ships no logo.svg. The UI draws a monogram in the two
+        # colours above, which is the intended look for a pack without one;
+        # naming a file that is not here only made the endpoint 404.
+        logo_path=None,
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
-    onboarding_script_path="onboarding.yaml",
+    # No onboarding.yaml either, so the default wizard steps run.
+    onboarding_script_path=None,
     metadata={
         "country": "CN",
         "country_name_en": "China",

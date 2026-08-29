@@ -78,9 +78,16 @@ class TestManifestSchema:
     def test_to_public_dict_strips_internal_paths(self, sample_manifest: PartnerPackManifest) -> None:
         pub = sample_manifest.to_public_dict()
         assert "logo_path" not in pub["branding"]
-        assert pub["branding"]["has_logo"] is True
+        assert "favicon_path" not in pub["branding"]
+        assert "onboarding_script_path" not in pub
         assert pub["additional_locales"] == ["fr-CA"]
-        assert pub["has_onboarding_script"] is True
+        # has_logo, has_favicon and has_onboarding_script are deliberately not
+        # asserted here any more. They used to read the manifest - has_logo was
+        # hardcoded True - and now answer whether the pack CARRIES the file. So
+        # they are False for this fixture, which is a bare manifest whose slug
+        # resolves to no pack anywhere on disk, and that says nothing about the
+        # serialiser this test is about. Their real behaviour needs a pack that
+        # exists, and is covered in test_partner_pack_dropin.py.
 
 
 class TestDiscovery:

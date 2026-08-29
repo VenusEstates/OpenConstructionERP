@@ -40,9 +40,16 @@ class PartnerBranding(BaseModel):
         default=None,
         description="Path inside the pack package to a favicon. Streamed via /api/v1/partner-pack/favicon.",
     )
-    logo_path: str = Field(
-        default="logo.svg",
-        description="Path inside the pack package to the partner logo. Streamed via /api/v1/partner-pack/logo.",
+    logo_path: str | None = Field(
+        default=None,
+        description=(
+            "Path inside the pack package to the partner logo. Streamed via "
+            "/api/v1/partner-pack/logo. None means the pack ships no logo and "
+            "the UI draws its monogram instead. This defaulted to 'logo.svg', "
+            "which made 'no logo' impossible to express: a pack that omitted "
+            "the field declared the same path as one that wrote it out, so a "
+            "pack without the file could not stop promising it."
+        ),
     )
     powered_by_text: str | None = Field(
         default=None,
@@ -312,6 +319,39 @@ class PartnerPackManifest(BaseModel):
             return self.branding.powered_by_text
         return f"Powered by OpenConstructionERP · In partnership with {self.partner_name}"
 
+    def _carries(self, relpath: str | None) -> bool:
+        """Whether the pack actually ships the file it names at ``relpath``.
+
+        Asks the same reader the streaming endpoints ask, rather than a second
+        resolver of its own: ``read_pack_file`` resolves pip-installed packs,
+        source-checkout packs and dropped packs in the data directory, and a
+        parallel implementation here would answer differently from the endpoint
+        the moment those three branches drift.
+
+        This looks redundant for the packs in this repository, and is not.
+        backend/tests/unit/test_community_packs_ship.py makes declared and
+        carried the same thing for the fifteen packs the wheel force-includes,
+        so for those the check can only ever say True. It exists for the packs
+        that gate structurally cannot reach: a pack dropped into the data
+        directory at runtime, and a third-party pack installed from PyPI by
+        somebody else. Those are exactly the ones whose manifests nobody here
+        reviewed, and the answer for them is a real question. Deleting this as
+        dead code re-opens the hole for every pack we do not author.
+
+        The import is deferred because ``discovery`` imports this module.
+
+        Args:
+            relpath: Declared path inside the pack package, or None.
+
+        Returns:
+            True when the pack names a file and that file can be read.
+        """
+        if not relpath:
+            return False
+        from app.core.partner_pack.discovery import read_pack_file
+
+        return read_pack_file(self.slug, relpath) is not None
+
     def to_public_dict(self) -> dict[str, Any]:
         """Serialise for the /api/v1/partner-pack/current endpoint.
 
@@ -340,10 +380,17 @@ class PartnerPackManifest(BaseModel):
             "branding": {
                 "primary_color": self.branding.primary_color,
                 "accent_color": self.branding.accent_color,
-                "has_logo": True,  # always streamed even if pack omits - fallback handled
-                "has_favicon": self.branding.favicon_path is not None,
+                # All three answer "does the pack carry this", not "does the
+                # manifest mention it". has_logo was hardcoded True and the
+                # other two read a path field for non-None, so a pack that
+                # named a file it did not ship was advertised as having it.
+                # The frontend fallbacks are good and kept the screen intact,
+                # which is why this went unnoticed; they were covering for an
+                # answer that was simply wrong.
+                "has_logo": self._carries(self.branding.logo_path),
+                "has_favicon": self._carries(self.branding.favicon_path),
                 "powered_by_text": self.effective_powered_by,
             },
-            "has_onboarding_script": self.onboarding_script_path is not None,
+            "has_onboarding_script": self._carries(self.onboarding_script_path),
             "metadata": self.metadata,
         }

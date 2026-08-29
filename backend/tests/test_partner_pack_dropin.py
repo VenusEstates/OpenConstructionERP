@@ -130,6 +130,31 @@ class TestFolderDiscovery:
         assert read_pack_file("drop-pack", "../../../../etc/passwd") is None
         assert read_pack_file("drop-pack", "/etc/passwd") is None
 
+    def test_public_dict_flags_answer_the_filesystem_not_the_manifest(self, data_dir: Path) -> None:
+        """``has_logo`` and its siblings report what the pack carries, not what it says.
+
+        This dropped pack declares a logo and an onboarding script and writes
+        only the logo, so off one manifest one flag has to come back true and
+        the other false. That is the pair the old code could not produce:
+        ``has_logo`` was hardcoded True and the other two read a path field for
+        non-None, so both were true here and one of them was a lie. The
+        frontend then advertised an onboarding script that 404s.
+
+        A dropped pack is also the population that makes the check worth having.
+        backend/tests/unit/test_community_packs_ship.py keeps declared and
+        carried identical for the fifteen packs this repository ships, so it
+        can only ever answer true for those; it cannot see this pack at all.
+        """
+        _write_folder_pack(data_dir / "packs", "drop-pack")
+        reset_cache()
+        pub = get_pack_by_slug("drop-pack").to_public_dict()
+        assert pub["branding"]["has_logo"] is True, "logo.svg was written, so the pack carries it"
+        assert pub["has_onboarding_script"] is False, (
+            "the manifest names onboarding.yaml and _write_folder_pack does not write it, so the "
+            "pack does not carry it and must not be advertised as having it"
+        )
+        assert pub["branding"]["has_favicon"] is False, "no favicon declared and none on disk"
+
     def test_no_packs_dir_returns_empty(self, data_dir: Path) -> None:
         # data_dir exists but has no packs/ sub-folder yet.
         assert discover_packs() == []
