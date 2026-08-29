@@ -20,7 +20,7 @@ import { extractErrorMessageFromBody } from '@/shared/lib/api';
 import { isTauri } from '@/shared/lib/desktop';
 import { HEX_PORTRAIT_ASPECT, HEX_PORTRAIT_CLIP } from '@/shared/lib/honeycomb';
 import { APP_VERSION } from '@/shared/lib/version';
-import { loginFailureKind } from './loginError';
+import { loginFailureKindFromResponse } from './loginError';
 import { AuthBackground } from './AuthBackground';
 import {
   shouldAttemptDesktopBootstrap,
@@ -251,8 +251,12 @@ export function LoginPage() {
         // A proxy answering 502 for a backend that is down is a response, not
         // a network error, so the catch below never sees it. Without this the
         // outage lands on the credentials wording and the person is told the
-        // one thing we know is untrue: nothing read their password.
-        if (loginFailureKind(res.status) === 'unavailable') {
+        // one thing we know is untrue: nothing read their password. A 4xx
+        // carrying no message we can read is that same outage told by whatever
+        // stands in front of us, so the body decides alongside the status.
+        const data = await res.json().catch(() => null);
+        const parsed = extractErrorMessageFromBody(data);
+        if (loginFailureKindFromResponse(res.status, parsed) === 'unavailable') {
           setError(
             t('auth.server_unavailable', {
               defaultValue:
@@ -261,8 +265,6 @@ export function LoginPage() {
           );
           return;
         }
-        const data = await res.json().catch(() => null);
-        const parsed = extractErrorMessageFromBody(data);
         setError(parsed || t('auth.invalid_credentials', 'Invalid email or password'));
         return;
       }
