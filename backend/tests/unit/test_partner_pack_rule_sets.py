@@ -25,10 +25,12 @@ whatever the pytest session happens to have loaded rather than the software.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import re
 import subprocess
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -112,6 +114,40 @@ def declared_rule_packs() -> dict[str, list[str]]:
     return out
 
 
+@lru_cache(maxsize=1)
+def _manifest_objects() -> dict[str, PartnerPackManifest]:
+    """Pack slug -> the manifest object its ``manifest.py`` actually builds.
+
+    The two readers above work on the text of the file. That is what lets them
+    run without importing pack code, and it is also what makes them blind to
+    any declaration written in a shape their regular expression does not
+    describe - a list built from a module constant, a field assigned outside
+    the constructor call, a literal carrying a nested bracket. A pack that
+    drops out that way reads exactly like a pack that declares nothing, which
+    is this file's own defect one level up: the reader returns an empty answer
+    and the assertion built on it passes by measuring nothing.
+
+    So the manifests are loaded as objects too, and the readers are held to
+    each other by :func:`test_both_readers_see_the_same_declarations`. An
+    import that fails raises here rather than yielding an empty list, because
+    a discovery step that swallows its own failures is the thing being guarded
+    against.
+
+    Returns:
+        Every pack's manifest, keyed by the directory name under ``packs/``.
+    """
+    out: dict[str, PartnerPackManifest] = {}
+    for path in sorted(PACKS_DIR.glob("*/src/*/manifest.py")):
+        module_name = f"_pack_manifest_under_test_{path.parts[-2]}"
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        assert spec and spec.loader, f"{path} could not be loaded as a module"
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        out[path.parts[-4]] = module.MANIFEST
+    return out
+
+
 def _shipped_rule_pack_stems(slug: str) -> set[str]:
     """The ``rule_packs/*.json`` file stems a pack directory actually contains.
 
@@ -146,6 +182,83 @@ def test_the_probe_measured_a_registry_that_is_actually_loaded(shipped_rule_sets
             f"the probe did not see the {expected!r} rule set, so this file cannot "
             "tell a pack that declares it from a pack that does not"
         )
+
+
+def test_the_discovery_found_packs_and_advertised_rule_sets() -> None:
+    """The other control, on the side the registry probe does not cover.
+
+    ``test_the_probe_measured_a_registry_that_is_actually_loaded`` proves the
+    engine half was read. Nothing proved the pack half was. Every assertion
+    that iterates the packs walks a list built by globbing ``packs/`` and
+    reading each manifest, and if that walk comes back empty then "no pack
+    advertises a rule set the engine does not register" is true because no
+    pack was read. Moving the directory, renaming the file or renaming the
+    field would each do it silently.
+
+    Floors, not equalities. A test that asserted the exact counts of the day
+    it was written would have to be edited by whoever adds the nineteenth
+    pack, and the edit that makes a red test green is the edit nobody reads.
+    """
+    manifests = sorted(PACKS_DIR.glob("*/src/*/manifest.py"))
+    assert len(manifests) >= 15, f"only {len(manifests)} pack manifests were discovered under {PACKS_DIR}"
+
+    declared = declared_rule_sets()
+    assert set(declared) == {path.parts[-4] for path in manifests}, (
+        "the rule-set reader did not answer for every manifest that was found"
+    )
+
+    advertised = sum(len(names) for names in declared.values())
+    assert advertised >= 10, (
+        f"the packs advertise {advertised} rule sets in total, which is too few for the "
+        "reachability assertion below to be measuring anything. Either the field was "
+        "renamed or the reader has stopped seeing the shape it is written in."
+    )
+
+    documents = sum(len(names) for names in declared_rule_packs().values())
+    assert documents >= 80, f"only {documents} rule-pack documents were discovered across {len(manifests)} packs"
+
+
+def test_both_readers_see_the_same_declarations() -> None:
+    """A declaration the text reader cannot see has to fail, not vanish.
+
+    The reader is a regular expression over the source, so it describes one
+    way of writing the field. Write it another way - from a constant, or with
+    a bracket inside the literal - and the reader returns nothing for that
+    pack, which is indistinguishable from a pack that advertises nothing.
+    That is the same blind spot that once let a rule set with full
+    translations ship without ever executing, and the repair is the same one:
+    resolve the name a second way and make the two answers agree.
+
+    The manifest object is the truth here, because it is what the installer
+    reads. A disagreement names the pack and the field rather than leaving the
+    reader's silence to be read as a clean answer.
+    """
+    text_sets = declared_rule_sets()
+    text_documents = declared_rule_packs()
+    objects = _manifest_objects()
+
+    assert set(objects) == set(text_sets), (
+        f"the two readers disagree about which packs exist: object reader {sorted(objects)}, "
+        f"text reader {sorted(text_sets)}"
+    )
+
+    disagreements: dict[str, str] = {}
+    for slug, manifest in objects.items():
+        if list(manifest.validation_rule_sets) != text_sets[slug]:
+            disagreements[f"{slug}.validation_rule_sets"] = (
+                f"manifest declares {list(manifest.validation_rule_sets)}, the reader saw {text_sets[slug]}"
+            )
+        if list(manifest.validation_rule_packs) != text_documents[slug]:
+            disagreements[f"{slug}.validation_rule_packs"] = (
+                f"manifest declares {list(manifest.validation_rule_packs)}, the reader saw {text_documents[slug]}"
+            )
+
+    assert not disagreements, (
+        f"a pack declares something the source reader in this file cannot see: {disagreements}. "
+        "Every check here that iterates the packs reads the source, so a pack it cannot parse "
+        "is a pack it silently exempts. Write the declaration as a plain list literal in the "
+        "constructor call, or teach the reader the new shape."
+    )
 
 
 def test_every_declared_rule_set_is_one_the_engine_registers(shipped_rule_sets: set[str]) -> None:
