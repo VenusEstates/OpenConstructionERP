@@ -1,6 +1,15 @@
 /**
- * Find classes that write an alpha modifier on a colour token that cannot take
- * one, e.g. `bg-oe-blue-subtle/60`.
+ * Find colour classes that are in the source and absent from the stylesheet.
+ *
+ * Two shapes, one silence. Both leave the class sitting in the file, reading to
+ * every reviewer as though it paints something, while no rule for it is ever
+ * emitted and no build, type check, test or lint has anything to say.
+ *
+ *   1. A real token carrying a modifier it cannot take, `bg-oe-blue-subtle/60`.
+ *   2. A name that resolves to nothing at all, `bg-surface-muted`. The theme
+ *      defines surface as primary, secondary, tertiary and elevated, and there
+ *      is no muted. This one needs no cleverness to write, only a plausible
+ *      word, so it is the one a newcomer adds. See `deadNames`.
  *
  * Tailwind resolves `<utility>-<token>/<alpha>` by handing the token's value to
  * `withAlphaValue`. A function-valued token is called with the alpha. A string
@@ -29,14 +38,21 @@
  * CSS, so `oe-blue` is not in the drop-set, so nothing that names it is looked
  * at. The false positive is not filtered out, it is unconstructable.
  *
- * IT REPORTS AND DOES NOT BLOCK ON FINDINGS. Measured on the tree the day it
- * was wired: 566 occurrences in 207 files across 14 tokens, of which 267 render
- * nothing at all in either theme and 198 more are borders that fall back to the
- * preflight `#e5e7eb` and show as near-white rules on the dark surfaces. Making
- * that fail today would paint every lane red over a gap that predates the
+ * IT REPORTS AND DOES NOT BLOCK ON FINDINGS. Measured at 79ea78bc7: 536
+ * alpha-modifier occurrences in 201 files across 13 tokens, and 579 classes in
+ * 124 files naming a token the theme never defined. Of the alpha half, 267
+ * render nothing in either theme and 198 more are borders falling back to the
+ * preflight `#e5e7eb`, a near-white rule on every dark surface. Making that
+ * fail today would paint every lane red over a gap that predates the
  * instrument, and a lane that is red for a week is a lane somebody switches
  * off. The count is printed first and closed second. `--strict` turns findings
  * into a non-zero exit and belongs here the day the count reaches zero.
+ *
+ * Every count in this file names the commit it was taken at, because they move
+ * under you. The dead-name half read 769 in 156 files at acd3bad9c and 579 in
+ * 124 today; the difference is 190, which is the 138 classes repaired in
+ * 8a0aa6b99 plus the 52 in 79ea78bc7. A figure with no commit against it is one
+ * a reader cannot tell from a wrong one.
  *
  * IT DOES BLOCK ON BEING BROKEN OR STALE, so do not read the paragraph above as
  * "this cannot fail". A probe that will not compile, a config that resolves to
@@ -294,8 +310,7 @@ function sweep(files, dropSet, knownTokens, usablePrefixes) {
     String.raw`(?<![\w-])(${P})-(${[...dropSet].sort(byLen).map(esc).join('|')})/(${ALPHA})`,
     'g',
   );
-  // The stricter half: a class naming a token the theme has never heard of.
-  // Same silence, different cause, and nothing else in the repo looks for it.
+  // The stricter half's alpha-carrying slice. `deadNames` below covers the rest.
   //
   // The match here is a CANDIDATE, never a finding. `text-sm/6` is a real
   // utility — a font size with a line height — and `sm` is not a colour, so a
@@ -322,6 +337,102 @@ function sweep(files, dropSet, knownTokens, usablePrefixes) {
     }
   }
   return { drops, unknown };
+}
+
+/**
+ * The other shape of the same silence: a class whose NAME resolves to nothing.
+ * `bg-surface-muted` is not a token carrying a modifier it cannot take, it is a
+ * word nobody ever defined. It needs no cleverness to write, only a plausible
+ * word, so it is the one a newcomer introduces.
+ *
+ * Dropping the alpha requirement opens a false-positive source the alpha form
+ * structurally could not have, and every case has the same cause: a string that
+ * is not a class list. `stroke-width` and `border-color` are attribute names.
+ * `to-do` and `to-ako` are English and Croatian prose in the locale bundles,
+ * caught because `to-` is the gradient utility and also a word.
+ *
+ * Two filters, neither of them a list of words to ignore:
+ *
+ *   1. Shape. A class list is lowercase and is not a sentence. Prose, UI copy
+ *      and identifiers break that; `rounded bg-surface-muted px-1.5` does not.
+ *      Measured at acd3bad9c, against the two populations that were largest
+ *      then: it kept 42 of 42 `surface-muted` and 102 of 102 `border-subtle`
+ *      while removing 80% of the noise, so it was not buying precision with
+ *      recall. Both of those are repaired now and the check is not repeatable
+ *      against them; re-derive it against whatever the largest populations are
+ *      on the day, and expect a crude grep to disagree with this script in both
+ *      directions, because the grep is the cruder instrument.
+ *   2. The compiler. Every survivor is compiled and only the ones that produce
+ *      no rule at all are reported, which is what makes a legitimate class
+ *      unreportable rather than merely unreported.
+ *
+ * A residual remains, around 1%, where a lowercase attribute name sits in a
+ * string of its own. That is why this reports rather than blocks.
+ */
+const CLASS_STRINGS = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g;
+const looksLikeProse = (s) =>
+  /[A-Z]/.test(s) || /[?!;,]/.test(s) || s.includes('{{') || /\b(a|the|to|of|is|and|or)\b \b/i.test(s);
+
+async function deadNames(files, usablePrefixes, config, themeTokens) {
+  const P = usablePrefixes.slice().sort((a, b) => b.length - a.length || a.localeCompare(b)).join('|');
+  // Not followed by `:` — an attribute name always is, a class never is, since
+  // Tailwind variants put the colon BEFORE the utility.
+  const RE = new RegExp(
+    String.raw`(?<![\w-])((?:[a-z0-9-]+:)*)(${P})-([a-z][a-z0-9]*(?:-[a-z0-9]+)*)(/(?:\[[^\]\s]*\]|\d+(?:\.\d+)?%?))?(?![\w:-])`,
+    'g',
+  );
+  const occurrences = [];
+  const vocabulary = new Set();
+  for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+    const rel = path.relative(FRONTEND, file).replace(/\\/g, '/');
+    for (const sm of text.matchAll(CLASS_STRINGS)) {
+      const body = sm[0].slice(1, -1);
+      if (!/[a-z]-[a-z]/.test(body) || looksLikeProse(body)) continue;
+      const found = [...body.matchAll(RE)];
+      if (!found.length) continue;
+      for (const w of body.split(/[\s\\]+/)) if (w) vocabulary.add(w.replace(/^(?:[a-z0-9-]+:)*/, ''));
+      for (const m of found) {
+        // The MATCH's own line, not the string literal's first line. A template
+        // literal spanning ten lines would otherwise be numbered from its start
+        // here and from the match there, and the two halves of this guard would
+        // fail to recognise the same occurrence and report it twice.
+        const line = text.slice(0, sm.index + 1 + m.index).split('\n').length;
+        occurrences.push({ file: rel, line, cls: m[0], bare: `${m[2]}-${m[3]}${m[4] ?? ''}`, token: m[3] });
+      }
+    }
+  }
+  if (occurrences.length === 0) return [];
+
+  const probe = [...new Set([...vocabulary, ...occurrences.map((o) => o.bare)])].filter(
+    (s) => s.length < 60 && /^[\w[\]/.,#%()-]+$/.test(s),
+  );
+  const emitted = await emittedFor(probe, config);
+  // A class written by hand in the stylesheet is not dead either.
+  const hand = new Set();
+  for (const m of fs.readFileSync(path.join(FRONTEND, 'src/index.css'), 'utf8').matchAll(/\.((?:[\w-]|\\.)+)/g))
+    hand.add(m[1].replace(/\\(.)/g, '$1'));
+
+  // Only names the theme has never heard of. A class on a REAL token that emits
+  // nothing is the alpha-drop defect and belongs to the other half; reporting it
+  // here would both double-count it and put it under a heading that is false
+  // about it. Deduplicating on file and line cannot do this job, because the two
+  // halves number a multi-line template literal from different points.
+  return occurrences.filter((o) => !themeTokens.has(o.token) && !emitted.has(o.bare) && !hand.has(o.bare));
+}
+
+/** One occurrence reported once, however many passes found it. */
+function mergeFindings(...lists) {
+  const seen = new Set();
+  const out = [];
+  for (const list of lists)
+    for (const r of list) {
+      const key = `${r.file}:${r.line}:${r.cls}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(r);
+    }
+  return out;
 }
 
 /** Keep only the candidates that really emit nothing. See the note on `any`. */
@@ -355,28 +466,42 @@ async function selftest() {
   const good = capable.find((t) => t.startsWith('oe-') || t.startsWith('surface-')) ?? capable[0];
   const dir = fs.mkdtempSync(path.join(FRONTEND, '.alpha-drop-selftest-'));
   try {
+    // Six classes that a name-shaped test cannot tell apart, and six different
+    // right answers. "It reported something" is not evidence for a guard whose
+    // whole job is to separate cases that look identical in source.
     const file = path.join(dir, 'probe.tsx');
     fs.writeFileSync(
       file,
-      `export const P = () => <i className="bg-${bad}/40 bg-${good}/40 bg-nonesuch-token/40 text-sm/6" />;\n`,
+      `export const A = () => <i className="bg-${bad}/40 bg-${good}/40 bg-nonesuch-token/40 text-sm/6" />;\n` +
+        `export const B = () => <i className="rounded bg-nonesuch-plain px-2" />;\n` +
+        `export const C = () => <i title="Add a to-do item to the list" />;\n`,
     );
     const usable = CANDIDATE_PREFIXES.filter((p) => !dead.includes(p));
     const swept = sweep([file], new Set(dropping), tokens, usable);
     const drops = swept.drops;
-    const unknown = await verifyUnknown(swept.unknown, config);
-    const lineHeight = unknown.filter((r) => r.cls === 'text-sm/6').length;
-    console.log(`selftest: text-sm/6            -> ${lineHeight} unknown-token finding(s)   (must be 0)`);
-    const hit = drops.filter((r) => r.token === bad).length;
-    const spared = drops.filter((r) => r.token === good).length;
-    const named = unknown.filter((r) => r.token === 'nonesuch-token').length;
-    console.log(`selftest: bg-${bad}/40      -> ${hit} finding(s)   (must be 1)`);
-    console.log(`selftest: bg-${good}/40     -> ${spared} finding(s)   (must be 0)`);
-    console.log(`selftest: bg-nonesuch-token/40 -> ${named} unknown-token finding(s)   (must be 1)`);
-    if (hit !== 1 || spared !== 0 || named !== 1 || lineHeight !== 0) {
-      console.error('\nThe guard did not separate the two kinds of class, so its silence on the tree means nothing.');
+    const withAlpha = await verifyUnknown(swept.unknown, config);
+    const names = mergeFindings(withAlpha, await deadNames([file], usable, config, tokens));
+
+    const checks = [
+      [`bg-${bad}/40`, 'a real token that cannot take an alpha', drops.filter((r) => r.token === bad).length, 1],
+      [`bg-${good}/40`, 'a real token that CAN take an alpha', drops.filter((r) => r.token === good).length, 0],
+      ['bg-nonesuch-token/40', 'a name that does not exist, with alpha', names.filter((r) => r.token === 'nonesuch-token').length, 1],
+      ['bg-nonesuch-plain', 'a name that does not exist, NO alpha', names.filter((r) => r.token === 'nonesuch-plain').length, 1],
+      ['text-sm/6', 'a real utility whose token is not a colour', names.filter((r) => r.cls === 'text-sm/6').length, 0],
+      ['to-do (in prose)', 'an English word that looks like a utility', names.filter((r) => r.token === 'do').length, 0],
+    ];
+    let bad_ = 0;
+    for (const [cls, why, got, want] of checks) {
+      if (got !== want) bad_++;
+      console.log(`  ${got === want ? 'ok  ' : 'FAIL'}  ${cls.padEnd(24)} -> ${got} finding(s), want ${want}   ${why}`);
+    }
+    if (bad_) {
+      console.error(`\n${bad_} check(s) failed. The guard does not separate these cases, so its silence means nothing.`);
       return 1;
     }
-    console.log('\nselftest passed: it fires on a dropped token, stays quiet on a supported one, and names an unknown.');
+    console.log(
+      '\nselftest passed: six classes that look alike in source, three findings and three not.',
+    );
     return 0;
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -403,7 +528,11 @@ async function main(argv) {
 
   const swept = sweep(files, new Set(dropping), tokens, usable);
   const drops = swept.drops;
-  const unknown = await verifyUnknown(swept.unknown, config);
+  const withAlpha = await verifyUnknown(swept.unknown, config);
+  // Both halves can see the same occurrence: `bg-surface-muted/40` is a dead
+  // name AND carries an alpha. Merge on file, line and class so it is one
+  // finding rather than two. The selftest fails on exactly this.
+  const unknown = mergeFindings(withAlpha, await deadNames(files, usable, config, tokens));
 
   console.log(
     `Tailwind alpha-modifier drop: ${tokens.size} colour tokens resolved, ` +
@@ -430,9 +559,16 @@ async function main(argv) {
   }
 
   if (unknown.length) {
-    console.log(`\n${unknown.length} class(es) name a colour token this theme does not define at all:`);
-    for (const r of unknown) console.log(`  ${r.file}:${r.line}  ${r.cls}`);
-    console.log('These emit nothing for a second reason, and no other guard here looks for them.');
+    const files_ = new Set(unknown.map((r) => r.file));
+    console.log(`\n${unknown.length} class(es) in ${files_.size} file(s) name a colour token this theme never defined:`);
+    for (const [token, n] of tally(unknown, 'token')) {
+      const f = new Set(unknown.filter((r) => r.token === token).map((r) => r.file)).size;
+      console.log(`  ${String(n).padStart(4)}  ${token}  (${f} files)`);
+    }
+    console.log('\nThese emit nothing for the more basic reason: the name resolves to nothing at all.');
+    console.log('It needs no cleverness to write, only a plausible word, so it is the easier one to add.');
+    if (list) for (const r of unknown) console.log(`  ${r.file}:${r.line}  ${r.cls}`);
+    else console.log('Pass --list for every occurrence.');
   }
 
   const findings = drops.length + unknown.length;

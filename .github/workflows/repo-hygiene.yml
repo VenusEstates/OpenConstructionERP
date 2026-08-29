@@ -852,22 +852,41 @@ jobs:
       # is no missing key, no type error, no failing assertion, and a review
       # reads the class and believes it.
       #
+      # It looks for two shapes of the same silence. One is a real token given a
+      # modifier it cannot take. The other is a name that resolves to nothing at
+      # all, `bg-surface-muted`, where the theme defines surface as primary,
+      # secondary, tertiary and elevated and there is no muted. The second needs
+      # no cleverness to write, only a plausible word, so it is the one somebody
+      # new adds, and it is the larger population here.
+      #
       # This is why the selftest above it is not decoration. The guard's whole
-      # job is to separate two classes that look identical in source, so
-      # "it printed some findings" is not evidence it works. The selftest writes
-      # both kinds plus a `text-sm/6`, which is a real utility whose token is not
-      # a colour, and demands three different answers.
+      # job is to separate classes that look identical in source, so "it printed
+      # some findings" is not evidence it works. The selftest writes six that
+      # look alike, including `text-sm/6`, a real utility whose token is not a
+      # colour, and `to-do`, an English word that parses as a gradient utility
+      # and appears in the locale bundles. Three must be reported and three must
+      # not. It earned its place: it caught a double-count in the second half of
+      # this guard before that half ever ran on the tree.
       #
       # THIS STEP DOES NOT BLOCK ON FINDINGS, deliberately, not as an oversight
-      # to tidy up later. Measured on the tree the day it was wired: 566
-      # occurrences in 207 files across 14 tokens, plus 80 more classes naming a
-      # colour token this theme has never defined. 267 of those render nothing
-      # at all in either theme; 198 more are borders falling back to the
-      # preflight #e5e7eb, which is a near-white rule on every dark surface.
-      # Failing on that today would paint every lane red over a gap that
-      # predates the instrument, and a lane that is red for a week gets switched
-      # off. The count is printed first and closed second. `--strict` makes
-      # findings fail and belongs here the day the count reaches zero.
+      # to tidy up later. Measured at 79ea78bc7: 536 alpha-modifier occurrences
+      # in 201 files, and 579 classes in 124 files naming a token the theme
+      # never defined. Of the alpha half, 267 render nothing at all in either
+      # theme and 198 more are borders falling back to the preflight #e5e7eb, a
+      # near-white rule on every dark surface. Failing on that today would paint
+      # every lane red over a gap that predates the instrument, and a lane that
+      # is red for a week gets switched off. The count is printed first and
+      # closed second. `--strict` makes findings fail and belongs here the day
+      # the count reaches zero.
+      #
+      # The dead-name half read 769 in 156 files at acd3bad9c. The difference of
+      # 190 is the 138 classes repaired in 8a0aa6b99 and the 52 in 79ea78bc7.
+      # Counts here name the commit they were taken at because they move.
+      #
+      # Known residual on the second half, about 1%: a lowercase attribute name
+      # like `stroke-width` sitting alone in a string of its own reads as a dead
+      # class. That is a reason this reports rather than blocks, not a reason to
+      # add a list of words to ignore.
       #
       # It DOES block on being broken or stale, so this is not a step that
       # cannot fail. Without `--strict` it still exits non-zero when the probe
