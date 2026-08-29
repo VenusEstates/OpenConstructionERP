@@ -2611,19 +2611,31 @@ class ContractTaxQuote(BaseModel):
     invite clients to branch on the copy that cannot be extended.
 
     ``vat_rate_effective_from`` is the date the rate table dates the applied
-    rate from, and ``null`` says it dates it from nothing. Most VAT classes
-    track their changes now and the undated remainder is small, so a contract
-    signed in 1900 and quoted at the SG standard GST rate gets today's 9 %
-    with nothing in the table ever having said that 9 % applied in 1900. The
-    null is
-    how a client learns that the number it holds was never promised for its own
-    date, and it is the one field here that a client should read before
-    reusing a quote for a historical contract.
+    rate from, and ``null`` says it dates it from nothing. Nearly every class
+    tracks its changes now, so the null is rare: a contract signed in 1900 and
+    quoted at the Indian commercial GST rate gets today's 12 % with nothing in
+    the table ever having said that 12 % applied in 1900. The null is how a
+    client learns that the number it holds was never promised for its own date,
+    and it is the one field here that a client should read before reusing a
+    quote for a historical contract.
 
     A jurisdiction with no VAT rate at all also serialises ``null``, so telling
     that apart from an undated class means reading ``vat_provenance.source``
     beside it. That join is deliberate and documented rather than hidden: a
     date field cannot describe a rate that does not exist.
+
+    ``stamp_duty_effective_from`` is the same statement, one axis over, for
+    ``stamp_duty``: the date the band table it was priced from has been in
+    force since, or ``null`` when that table has never been dated at all.
+    Today that is every jurisdiction served here - unlike VAT, no stamp-duty
+    table has a dated history yet - so a contract signed in 1990 and a
+    contract signed today get the same GB SDLT bands with nothing in the
+    table ever having said which of them those bands were meant for. There
+    is no ``stamp_duty_provenance`` beside it: every stamp-duty path here
+    either answers on its own terms or answers a design zero (a jurisdiction
+    that genuinely levies none), so the declared/fallback/unavailable
+    question ``vat_provenance`` exists to answer does not arise for this
+    figure the way it does for VAT.
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -2636,6 +2648,7 @@ class ContractTaxQuote(BaseModel):
     net: Decimal = Decimal("0")
     vat: Decimal = Decimal("0")
     stamp_duty: Decimal = Decimal("0")
+    stamp_duty_effective_from: date | None = None
     transfer_fee: Decimal = Decimal("0")
     registration_fee: Decimal = Decimal("0")
     absd: Decimal = Decimal("0")

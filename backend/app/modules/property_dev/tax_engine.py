@@ -24,15 +24,25 @@ Design intent
   rather than priced, because the alternative is inventing a rate. The
   refusal is scoped to a rate class, not to a jurisdiction, and each class
   begins on its own day: GB dates its standard rate from 1991, its reduced
-  rate from 1994 and its zero rate from 1973. Every VAT class in the shipped
-  table is dated now except the zero-rated classes of AE and SA, while the
-  ``gst`` blocks beside them answer for any date at all. Note the two axes
-  this module calls bands: a stamp-duty band is a slice of *price*
-  (:func:`_progressive_band_amount`), a rate band is a slice of *time*. The
-  helpers for the second say ``period`` so the two never read alike in code.
-  A quote reports the date its rate is dated from, or reports that the table
-  dates it from nothing, so an undated class is visible to a caller instead of
-  being indistinguishable from a promise.
+  rate from 1994 and its zero rate from 1973. Every VAT and GST class in the
+  shipped table is dated now except two, and those two are undated on purpose
+  with the reason written beside them in the yaml: an Indian rate that was
+  computed rather than published, and an Indian supply that is outside GST
+  rather than zero-rated. Stamp duty now takes a date the same way:
+  :func:`compute_stamp_duty` and the ``band_history`` key it reads accept
+  one, mirroring the rate-history mechanism above rather than inventing a
+  second one. What stamp duty still lacks is not the signature but the data
+  - no jurisdiction in the shipped table has written a ``band_history`` yet,
+  so every stamp-duty figure answers alike whatever date is asked, which is
+  the gap left open until each jurisdiction's dates are sourced and written
+  one at a time. Note the two axes this module calls bands: a stamp-duty
+  band is a slice of *price* (:func:`_progressive_band_amount`), a rate band
+  is a slice of *time*. The helpers for the second say ``period`` so the two
+  never read alike in code, even where a stamp-duty ``band_history`` period
+  holds a nested ``bands`` list rather than a scalar ``rate``. A quote
+  reports the date its rate (or its band table) is dated from, or reports
+  that the table dates it from nothing, so an undated class or table is
+  visible to a caller instead of being indistinguishable from a promise.
 * **No currency conversion** - the caller supplies the price in the
   contract's currency. Mixing currencies is a finance-module job, not
   a tax-engine job.
@@ -294,20 +304,17 @@ def _validate_vat_absence(raw: dict[str, Any]) -> None:
             )
 
 
-def _validate_rate_histories(raw: dict[str, Any]) -> None:
-    """Refuse a rate history that is not a dated list written oldest first.
+def _check_history_is_ordered(entry: list[Any], where: str) -> None:
+    """Refuse a period list that is not read like a dated history.
 
-    Scoped to the classes under ``vat`` and ``gst``, and that scope is
-    load-bearing rather than tidy. The rest of this table is full of lists of
-    mappings on an entirely different axis - ``stamp_duty.bands``,
-    ``first_home_relief.bands``, ``bsd.bands``, ``itbi.bands`` - whose elements
-    carry a price ceiling and no date at all. A validator keyed on "a list of
-    mappings" would refuse the shipped table on its first load.
+    The three refusals - empty, an unreadable date, out-of-order - enforced
+    once and shared by :func:`_validate_rate_histories` (the ``vat``/``gst``
+    rate histories) and :func:`_validate_band_histories` (stamp duty's
+    ``band_history`` key), so the two axes this table keeps deliberately
+    apart still run the same check rather than two copies of it that could
+    drift.
 
-    Three refusals:
-
-    * an empty history, which names a rate class and then says nothing about
-      it;
+    * an empty history, which names a slot and then says nothing about it;
     * a period with no readable ``effective_from``, which leaves "before the
       earliest period" undefined and so leaves the refusal in
       :func:`_period_in_force` with no date to name;
@@ -319,8 +326,44 @@ def _validate_rate_histories(raw: dict[str, Any]) -> None:
     oldest-first rule is for the reader who scans a list for the current rate
     and takes the last line, and without a check the convention would be a
     comment that nobody enforces. Equal dates are refused too: two periods
-    starting the same day make "the rate in force" ambiguous, and the
+    starting the same day make "which one is in force" ambiguous, and the
     tie-break would be silent.
+
+    Args:
+        entry: the raw list from the table.
+        where: dotted path to the list, for the error message.
+
+    Raises:
+        TaxEngineError: naming ``where`` and what is wrong with it.
+    """
+    if not entry:
+        raise TaxEngineError(f"rate history '{where}' is empty; a history with no period cannot be quoted")
+    previous: date | None = None
+    for period in entry:
+        effective = _period_date(period) if isinstance(period, Mapping) else None
+        if effective is None:
+            raise TaxEngineError(
+                f"rate history '{where}' has a period with no readable effective_from; every period "
+                f"in a history needs one, so that the earliest date the class can speak for is known"
+            )
+        if previous is not None and effective <= previous:
+            raise TaxEngineError(
+                f"rate history '{where}' is not in ascending date order: {effective.isoformat()} "
+                f"follows {previous.isoformat()}. Write a history oldest first, one period per change"
+            )
+        previous = effective
+
+
+def _validate_rate_histories(raw: dict[str, Any]) -> None:
+    """Refuse a rate history that is not a dated list written oldest first.
+
+    Scoped to the classes under ``vat`` and ``gst``, and that scope is
+    load-bearing rather than tidy. The rest of this table is full of lists of
+    mappings on an entirely different axis - ``stamp_duty.bands``,
+    ``first_home_relief.bands``, ``bsd.bands``, ``itbi.bands`` - whose elements
+    carry a price ceiling and no date at all. A validator keyed on "a list of
+    mappings" would refuse the shipped table on its first load. See
+    :func:`_validate_band_histories` for that axis's own history key.
 
     Args:
         raw: the parsed table, before it is cached.
@@ -338,23 +381,60 @@ def _validate_rate_histories(raw: dict[str, Any]) -> None:
             for rate_class, entry in block.items():
                 if not isinstance(entry, list):
                     continue
-                where = f"{code}.{block_key}.{rate_class}"
-                if not entry:
-                    raise TaxEngineError(f"rate history '{where}' is empty; a class with no period cannot be quoted")
-                previous: date | None = None
-                for period in entry:
-                    effective = _period_date(period) if isinstance(period, Mapping) else None
-                    if effective is None:
-                        raise TaxEngineError(
-                            f"rate history '{where}' has a period with no readable effective_from; every period "
-                            f"in a history needs one, so that the earliest date the class can speak for is known"
-                        )
-                    if previous is not None and effective <= previous:
-                        raise TaxEngineError(
-                            f"rate history '{where}' is not in ascending date order: {effective.isoformat()} "
-                            f"follows {previous.isoformat()}. Write a history oldest first, one period per change"
-                        )
-                    previous = effective
+                _check_history_is_ordered(entry, f"{code}.{block_key}.{rate_class}")
+
+
+def _validate_band_histories(raw: dict[str, Any]) -> None:
+    """Refuse a ``band_history`` that is not a dated list written oldest first.
+
+    The stamp-duty sibling of :func:`_validate_rate_histories`, kept as its
+    own pass rather than folded into that one's block-key loop. That loop is
+    scoped away from ``stamp_duty`` on purpose (see its docstring): a
+    ``stamp_duty`` block is full of plain ``bands`` lists - price data with no
+    date in it - and widening the scope to that block name would reintroduce
+    exactly the "is this a list of mappings" sniffing the scoping exists to
+    avoid. Scanning for the literal key ``band_history`` instead means the two
+    axes still never share a detector; they share only the three checks in
+    :func:`_check_history_is_ordered` once one has been found.
+
+    Every slot that can carry one is walked explicitly, because unlike
+    ``vat``/``gst`` (a flat dict of rate classes) stamp duty nests its bands at
+    a different depth per jurisdiction shape: the top-level block, its
+    ``first_home_relief``, each ``by_state`` entry, and the ``bsd``/``itbi``
+    blocks that live outside ``stamp_duty`` entirely.
+
+    Args:
+        raw: the parsed table, before it is cached.
+
+    Raises:
+        TaxEngineError: naming the jurisdiction and the slot.
+    """
+    for code, jur in (raw.get("jurisdictions") or {}).items():
+        if not isinstance(jur, dict):
+            continue
+        sd = jur.get("stamp_duty")
+        if isinstance(sd, Mapping):
+            history = sd.get("band_history")
+            if isinstance(history, list):
+                _check_history_is_ordered(history, f"{code}.stamp_duty")
+            relief = sd.get("first_home_relief")
+            if isinstance(relief, Mapping):
+                relief_history = relief.get("band_history")
+                if isinstance(relief_history, list):
+                    _check_history_is_ordered(relief_history, f"{code}.stamp_duty.first_home_relief")
+            by_state = sd.get("by_state")
+            if isinstance(by_state, Mapping):
+                for sub, entry in by_state.items():
+                    if isinstance(entry, Mapping):
+                        sub_history = entry.get("band_history")
+                        if isinstance(sub_history, list):
+                            _check_history_is_ordered(sub_history, f"{code}.stamp_duty.{sub}")
+        for key in ("bsd", "itbi"):
+            block = jur.get(key)
+            if isinstance(block, Mapping):
+                history = block.get("band_history")
+                if isinstance(history, list):
+                    _check_history_is_ordered(history, f"{code}.{key}")
 
 
 def _load_table(*, force_reload: bool = False) -> dict[str, Any]:
@@ -375,6 +455,7 @@ def _load_table(*, force_reload: bool = False) -> dict[str, Any]:
         # not be left behind for the next caller to read as if it had passed.
         _validate_vat_absence(raw)
         _validate_rate_histories(raw)
+        _validate_band_histories(raw)
         _TABLE_CACHE = raw
         return raw
 
@@ -588,8 +669,8 @@ def _rate_periods(entry: Any) -> list[dict[str, Any]]:
 
     * a single mapping, ``{ rate: 0.05 }`` - one period, in force for every
       date unless it carries ``effective_from``, and a one-period history
-      when it does. AE ``standard`` and GB ``zero`` are the dated form and
-      the ``gst`` blocks are the undated one;
+      when it does. AE ``standard``, GB ``zero`` and AU ``standard`` are the
+      dated form; IN ``commercial`` is the undated one;
     * a list of mappings written oldest first, each with its own ``rate`` and
       ``effective_from`` - a history. GB, DE, CH, RU and SA carry one;
     * a bare scalar, rare shorthand for ``{ rate: <scalar> }``.
@@ -687,10 +768,10 @@ def _vat_rate_and_start(
     Returns:
         The rate as a fraction - zero when the class defines no ``rate`` key -
         and the ``effective_from`` of the period it came from. That date is
-        ``None`` whenever the period carries none, which is now the smaller
-        part of the table: the VAT classes of AE, AT, CH, DE, GB, RU and SA
-        are dated, and what answers ``None`` is the ``gst`` blocks and the
-        zero-rated classes of AE and SA.
+        ``None`` whenever the period carries none, which is now the rare
+        case rather than the common one: every VAT and GST class in the table
+        is dated except IN ``commercial`` and IN ``ready_to_move``, both of
+        which are undated as a decision rather than as an omission.
 
     Raises:
         NoVatBlockError: the table holds no VAT or GST block here.
@@ -859,56 +940,123 @@ def _progressive_band_amount(price: Decimal, bands: Iterable[Mapping[str, Any]])
     return _money(total)
 
 
-def compute_stamp_duty(
-    price: Any,
+def _bands_and_start(
+    container: Mapping[str, Any],
     jurisdiction: str,
-    *,
-    region_subcode: str | None = None,
-    is_first_home: bool = False,
-    is_additional_property: bool = False,
-) -> Decimal:
-    """Compute stamp duty / land-transfer tax for a property purchase.
+    rate_class: str,
+    effective_on: date | None,
+) -> tuple[list[dict[str, Any]], date | None]:
+    """The progressive band table to apply, and the date it has been in force since.
+
+    Mirrors :func:`_vat_rate_and_start` one axis over: that function resolves
+    a *rate* against a dated history of periods; this resolves a *band
+    table* - itself a slice of price - against the same kind of dated
+    history of periods. ``container["band_history"]``, when present, is that
+    history: the oldest-first list of ``{effective_from, bands}`` periods
+    :func:`_rate_periods` and :func:`_period_in_force` already know how to
+    read, because neither ever looks at anything in a period but
+    ``effective_from``. Its absence means ``container["bands"]`` has never
+    been dated, and that is reported as ``None`` rather than silently
+    handing today's bands out under a caller's real date - the same thing
+    ``None`` already means for ``vat_rate_effective_from``.
+
+    ``band_history`` deliberately does not live in the same key as
+    ``bands``: that key already means a plain list of *price* bands, and
+    :func:`_validate_band_histories` scans for the literal key
+    ``band_history`` rather than "a list of mappings" for the same reason
+    :func:`_validate_rate_histories` stays off this block entirely - a
+    reader must not have to guess which axis a given list is on.
 
     Args:
-        price: full purchase price in the contract currency.
-        jurisdiction: ISO-3166 alpha-2 code.
-        region_subcode: REQUIRED for DE (Grunderwerbsteuer by state),
-            IN (state stamp duty), AU (state stamp duty), US (state
-            transfer tax), CH (Kanton transfer). IGNORED for GB / SG.
-        is_first_home: UK first-time-buyer relief flag.
-        is_additional_property: UK 3 % surcharge flag (also applies to
-            ABSD-style flows elsewhere).
+        container: the mapping holding ``bands`` and optionally
+            ``band_history`` - e.g. ``jur["stamp_duty"]``, its
+            ``first_home_relief`` block, one ``by_state`` entry, or the
+            ``bsd`` / ``itbi`` blocks.
+        jurisdiction: ISO-3166 alpha-2 code, for the error message.
+        rate_class: a label for the error message, e.g. ``"stamp_duty"`` or
+            ``"stamp_duty.NSW"``.
+        effective_on: the contract's date, or ``None`` for current rates.
 
     Returns:
-        Stamp-duty amount rounded HALF_UP to 2 dp.
+        The band list to apply to the price, and the ``effective_from`` of
+        the period it came from - ``None`` when this slot carries no
+        ``band_history`` at all.
 
     Raises:
-        UnsupportedJurisdictionError: jurisdiction not in table.
-        MissingRegionSubcodeError: jurisdiction needs subcode + none given.
+        RateNotInForceError: ``effective_on`` precedes every dated period.
     """
-    jur = _table_for(jurisdiction)
-    price_d = _D(price)
+    history = container.get("band_history")
+    if not history:
+        return list(container.get("bands") or []), None
+    period = _period_in_force(_rate_periods(history), jurisdiction, rate_class, effective_on)
+    return list(period.get("bands") or []), _period_date(period)
 
+
+def _stamp_duty_amount_and_start(
+    price_d: Decimal,
+    jur: Mapping[str, Any],
+    jurisdiction: str,
+    *,
+    region_subcode: str | None,
+    is_first_home: bool,
+    is_additional_property: bool,
+    effective_on: date | None,
+) -> tuple[Decimal, date | None]:
+    """Stamp duty / land-transfer tax, and the date its band table is dated from.
+
+    Holds every path :func:`compute_stamp_duty` documents; that function is
+    now the thin public wrapper returning this call's first element, the
+    same relationship :func:`_vat_rate_in_force` has to
+    :func:`_vat_rate_and_start`. :func:`compute_total_taxes_for_contract`
+    calls this directly so it can report both the amount and
+    ``stamp_duty_effective_from`` from one resolution, rather than resolving
+    the band table twice and risking the two disagreeing about which one the
+    money came from.
+
+    ``effective_on`` only has anywhere to matter today for the tables that
+    carry a ``band_history``: GB's main bands and first-home relief, SG's
+    BSD, BR's ITBI and AU's by-state bands. Every other path (DE, IN, RU, SA,
+    CH, US) has no dated history of its own yet and answers ``None``
+    regardless of what date is asked for - the same undated state VAT's
+    ``gst`` blocks are in, and not a defect this function introduces.
+    """
     sd = jur.get("stamp_duty") or {}
     by_state = sd.get("by_state") if isinstance(sd, Mapping) else None
 
-    # Path A - GB-style progressive bands at the top level.
-    bands = sd.get("bands") if isinstance(sd, Mapping) else None
-    if bands and not by_state:
+    # Path A - GB-style progressive bands at the top level. Gated on either
+    # ``bands`` or ``band_history`` being present, not on ``bands`` alone -
+    # a jurisdiction whose bands have been fully dated may carry only the
+    # latter, and that must still route here rather than falling through to
+    # "no applicable rule".
+    has_bands = isinstance(sd, Mapping) and bool(sd.get("bands") or sd.get("band_history"))
+    if has_bands and not by_state:
         if is_first_home and sd.get("first_home_relief"):
             relief = sd["first_home_relief"]
+            # max_price is read here, not from inside a period: it is the
+            # relief's price cap, not one of its bands, and _bands_and_start
+            # only ever resolves the "bands" key of whatever it is handed. If
+            # first_home_relief ever gains a band_history, this cap stays
+            # single-valued across every period in it - GB's real cap moved
+            # on the same days its bands did, so dating the bands without
+            # also dating the cap would price purchases in the gap on the
+            # wrong side of a boundary that no longer applied. Open question
+            # for whoever dates this table: does a period carry its own
+            # max_price, or does the cap get a separate dated slot?
             max_price = relief.get("max_price")
             if max_price is not None and price_d > _D(max_price):
                 # Above the relief cap → fall back to standard bands.
-                duty = _progressive_band_amount(price_d, bands)
+                active_bands, start = _bands_and_start(sd, jurisdiction, "stamp_duty", effective_on)
             else:
-                duty = _progressive_band_amount(price_d, relief["bands"])
+                active_bands, start = _bands_and_start(
+                    relief, jurisdiction, "stamp_duty.first_home_relief", effective_on
+                )
         else:
-            duty = _progressive_band_amount(price_d, bands)
+            active_bands, start = _bands_and_start(sd, jurisdiction, "stamp_duty", effective_on)
+        duty = _progressive_band_amount(price_d, active_bands)
         if is_additional_property:
             surcharge_pct = _D(sd.get("additional_property_surcharge", 0))
             duty = _money(duty + (price_d * surcharge_pct))
-        return duty
+        return duty, start
 
     # Path B - by-state flat / banded (DE, IN, AU, US, CH).
     if by_state:
@@ -918,15 +1066,17 @@ def compute_stamp_duty(
         if sub not in by_state:
             raise MissingRegionSubcodeError(jurisdiction, by_state.keys())
         entry = by_state[sub]
-        if isinstance(entry, Mapping) and "bands" in entry:
-            duty = _progressive_band_amount(price_d, entry["bands"])
+        start: date | None = None
+        if isinstance(entry, Mapping) and ("bands" in entry or "band_history" in entry):
+            active_bands, start = _bands_and_start(entry, jurisdiction, f"stamp_duty.{sub}", effective_on)
+            duty = _progressive_band_amount(price_d, active_bands)
         else:
             rate = _D(entry)
             duty = _money(price_d * rate)
         if is_additional_property:
             surcharge_pct = _D(sd.get("additional_property_surcharge", 0))
             duty = _money(duty + (price_d * surcharge_pct))
-        return duty
+        return duty, start
 
     # Path C - alternate top-level keys (DE Grunderwerbsteuer is its own block).
     grunder = jur.get("grunderwerbsteuer")
@@ -939,27 +1089,29 @@ def compute_stamp_duty(
             if sub not in states:
                 raise MissingRegionSubcodeError(jurisdiction, states.keys())
             rate = _D(states[sub])
-            return _money(price_d * rate)
+            return _money(price_d * rate), None
         if "flat" in grunder:
-            return _money(price_d * _D(grunder["flat"]))
+            return _money(price_d * _D(grunder["flat"])), None
 
     # Path D - SG bands under ``bsd``.
     bsd = jur.get("bsd")
-    if isinstance(bsd, Mapping) and bsd.get("bands"):
-        return _progressive_band_amount(price_d, bsd["bands"])
+    if isinstance(bsd, Mapping) and (bsd.get("bands") or bsd.get("band_history")):
+        active_bands, start = _bands_and_start(bsd, jurisdiction, "bsd", effective_on)
+        return _progressive_band_amount(price_d, active_bands), start
 
     # Path E - IN ``stamp_duty.by_state`` already handled above; ITBI (BR).
     itbi = jur.get("itbi")
-    if isinstance(itbi, Mapping) and itbi.get("bands"):
-        return _progressive_band_amount(price_d, itbi["bands"])
+    if isinstance(itbi, Mapping) and (itbi.get("bands") or itbi.get("band_history")):
+        active_bands, start = _bands_and_start(itbi, jurisdiction, "itbi", effective_on)
+        return _progressive_band_amount(price_d, active_bands), start
 
     # Path F - RU has no stamp duty (uses state_duty flat fee instead).
     if "state_duty" in jur:
-        return _money(_D(jur["state_duty"]))
+        return _money(_D(jur["state_duty"])), None
 
     # Path G - SA RETT.
     if "rett" in jur:
-        return _money(price_d * _D(jur["rett"]))
+        return _money(price_d * _D(jur["rett"])), None
 
     # Path H - CH transfer_tax by Kanton.
     transfer = jur.get("transfer_tax")
@@ -970,7 +1122,7 @@ def compute_stamp_duty(
         sub = region_subcode.upper()
         if sub not in states:
             raise MissingRegionSubcodeError(jurisdiction, states.keys())
-        return _money(price_d * _D(states[sub]))
+        return _money(price_d * _D(states[sub])), None
 
     # Path I - US ``state_transfer_tax`` already handled above.
     stt = jur.get("state_transfer_tax")
@@ -981,11 +1133,60 @@ def compute_stamp_duty(
         sub = region_subcode.upper()
         if sub not in states:
             raise MissingRegionSubcodeError(jurisdiction, states.keys())
-        return _money(price_d * _D(states[sub]))
+        return _money(price_d * _D(states[sub])), None
 
     # No applicable rule - return zero (a few jurisdictions have no
     # stamp duty by design; this is not an error).
-    return _money(_ZERO)
+    return _money(_ZERO), None
+
+
+def compute_stamp_duty(
+    price: Any,
+    jurisdiction: str,
+    *,
+    region_subcode: str | None = None,
+    is_first_home: bool = False,
+    is_additional_property: bool = False,
+    effective_on: date | None = None,
+) -> Decimal:
+    """Compute stamp duty / land-transfer tax for a property purchase.
+
+    Args:
+        price: full purchase price in the contract currency.
+        jurisdiction: ISO-3166 alpha-2 code.
+        region_subcode: REQUIRED for DE (Grunderwerbsteuer by state),
+            IN (state stamp duty), AU (state stamp duty), US (state
+            transfer tax), CH (Kanton transfer). IGNORED for GB / SG.
+        is_first_home: UK first-time-buyer relief flag.
+        is_additional_property: UK 3 % surcharge flag (also applies to
+            ABSD-style flows elsewhere).
+        effective_on: optional signing date. Only the slots that carry a
+            ``band_history`` (GB's bands and first-home relief, SG's BSD,
+            BR's ITBI, AU's by-state bands) can answer a date at all today;
+            every other path answers alike whatever is asked, because it has
+            never been dated. When None, current rates apply.
+
+    Returns:
+        Stamp-duty amount rounded HALF_UP to 2 dp.
+
+    Raises:
+        UnsupportedJurisdictionError: jurisdiction not in table.
+        MissingRegionSubcodeError: jurisdiction needs subcode + none given.
+        RateNotInForceError: ``effective_on`` precedes the earliest band a
+            dated slot carries.
+    """
+    jur = _table_for(jurisdiction)
+    price_d = _D(price)
+    duty, _start = _stamp_duty_amount_and_start(
+        price_d,
+        jur,
+        jurisdiction,
+        region_subcode=region_subcode,
+        is_first_home=is_first_home,
+        is_additional_property=is_additional_property,
+        effective_on=effective_on,
+    )
+    return duty
 
 
 def compute_absd(
@@ -1166,6 +1367,7 @@ def compute_total_taxes_for_contract(
           "net": Decimal(...),
           "vat": Decimal(...),
           "stamp_duty": Decimal(...),
+          "stamp_duty_effective_from": date(2025, 4, 1) | None,
           "transfer_fee": Decimal(...),
           "registration_fee": Decimal(...),
           "absd": Decimal(...),         # only when relevant
@@ -1194,10 +1396,10 @@ def compute_total_taxes_for_contract(
 
     The ``None`` is what this field exists for. Which classes carry dated
     histories is written in ``data/tax_rates.yaml`` and every other one answers
-    any date at all with its one undated rate - SG ``standard``, a GST block,
-    prices a 1900 contract at today's 9 % without the table ever having said
-    that 9 % applied in 1900. That is a number nobody promised, and before
-    this field a caller could not tell it from one that was promised.
+    any date at all with its one undated rate - IN ``commercial`` prices a 1900
+    contract at 12 % without the table ever having said that 12 % applied in
+    1900. That is a number nobody promised, and before this field a caller
+    could not tell it from one that was.
 
     Two situations share the ``None`` and are told apart by ``vat_provenance``
     rather than here: a class the table never dated (``source`` DECLARED, as
@@ -1210,14 +1412,30 @@ def compute_total_taxes_for_contract(
     unchanged from before this field existed, and the field is what makes it
     visible rather than what causes it.
 
+    ``stamp_duty_effective_from`` is the same statement, one axis over, for
+    the ``stamp_duty`` figure: the date the band table it was priced from has
+    been in force since, or ``None`` when that table has never been dated at
+    all. Today that is every jurisdiction's - GB, SG, BR and AU's five states
+    included - because none carries a ``band_history`` yet; adding one to a
+    table's ``band_history`` key is the only thing that ever turns this from
+    ``None`` into a date, the same way ``vat_rate_effective_from`` only turns
+    into one for a VAT/GST class that carries a rate history. There is no
+    ``stamp_duty_provenance`` alongside it: unlike VAT, every stamp-duty path
+    that answers at all answers on its own terms or as a design zero (a few
+    jurisdictions genuinely levy none), so the declared/fallback/unavailable
+    question ``vat_provenance`` exists to answer does not arise here yet.
+
     Raises:
         UnsupportedJurisdictionError, MissingRegionSubcodeError,
         UnknownRateClassError.
         RateNotInForceError: the contract's date precedes the earliest band
-            the table holds for its rate class. Nothing here catches it: the one
-            ``try`` below covers :class:`NoVatBlockError` alone, so this
-            propagates from both the :func:`net_from_gross` call in step 1 and
-            the rate resolution in step 2 to whatever maps it for the caller.
+            the table holds for its rate class, or - the stamp-duty sibling of
+            the same refusal - the earliest band a dated ``band_history``
+            holds. Nothing here catches it: the one ``try`` below covers
+            :class:`NoVatBlockError` alone, so this propagates from the
+            :func:`net_from_gross` call in step 1, the rate resolution in
+            step 2, and the stamp-duty resolution in step 3, to whatever maps
+            it for the caller.
     """
     jur = _table_for(jurisdiction)
     # Normalised once, and used both for the provenance below and for the
@@ -1285,12 +1503,21 @@ def compute_total_taxes_for_contract(
     # Conventionally applied to the consideration (net headline
     # price), not to net+VAT. UK SDLT, DE Grunderwerbsteuer, AU
     # stamp duty, SG BSD - all assess on the purchase price.
-    stamp_duty = compute_stamp_duty(
+    #
+    # Resolved through _stamp_duty_amount_and_start rather than
+    # compute_stamp_duty, for the same reason step 2 resolves through
+    # _vat_rate_and_start rather than compute_vat: this quote also needs to
+    # say which band table the money came from, and a second resolution to
+    # fetch that date could name a different table from the one that
+    # actually priced it.
+    stamp_duty, stamp_duty_effective_from = _stamp_duty_amount_and_start(
         net,
+        jur,
         jurisdiction,
         region_subcode=region_subcode,
         is_first_home=is_first_home,
         is_additional_property=is_additional_property,
+        effective_on=effective_on,
     )
 
     # ── 4. Transfer fee (UAE DLD style) ─────────────────────────
@@ -1361,6 +1588,7 @@ def compute_total_taxes_for_contract(
         "net": _money(net),
         "vat": vat,
         "stamp_duty": stamp_duty,
+        "stamp_duty_effective_from": stamp_duty_effective_from,
         "transfer_fee": transfer_fee,
         "registration_fee": registration_fee,
         "absd": absd,
