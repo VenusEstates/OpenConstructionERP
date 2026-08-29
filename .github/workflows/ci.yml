@@ -164,6 +164,12 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Lint with ruff
+        # Same guard as every step below it. ruff arrives through the dev extra,
+        # so a failed install does not make this step lint badly - it makes it
+        # report that ruff is not on PATH, which is the wrong cause named
+        # loudly. This was the one step above that was missing the guard the
+        # install comment describes.
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: ruff check .
 
       - name: Check formatting with ruff
