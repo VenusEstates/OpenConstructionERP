@@ -319,7 +319,7 @@ async def delete_development(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_development(session, dev_id, user_payload)
     await service.delete_development(dev_id)
@@ -425,7 +425,7 @@ async def delete_plot(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_plot(session, plot_id, user_payload)
     await service.delete_plot(plot_id)
@@ -571,7 +571,7 @@ async def delete_house_type(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_house_type(session, ht_id, user_payload)
     await service.delete_house_type(ht_id)
@@ -728,7 +728,7 @@ async def delete_variant(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_variant(session, v_id, user_payload)
     await service.delete_variant(v_id)
@@ -797,7 +797,7 @@ async def delete_option_group(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_option_group(session, g_id, user_payload)
     await service.delete_option_group(g_id)
@@ -863,7 +863,7 @@ async def delete_option(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_option(session, o_id, user_payload)
     await service.delete_option(o_id)
@@ -955,7 +955,7 @@ async def delete_buyer(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_buyer(session, b_id, user_payload)
     await service.delete_buyer(b_id)
@@ -1043,7 +1043,7 @@ async def delete_selection(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_selection(session, s_id, user_payload)
     await service.delete_selection(s_id)
@@ -1192,7 +1192,7 @@ async def delete_handover(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_handover(session, h_id, user_payload)
     await service.delete_handover(h_id)
@@ -1271,7 +1271,7 @@ async def delete_snag(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_snag(session, s_id, user_payload)
     await service.delete_snag(s_id)
@@ -1484,7 +1484,7 @@ async def delete_warranty_claim(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_warranty(session, w_id, user_payload)
     await service.delete_warranty(w_id)
@@ -1810,7 +1810,7 @@ async def delete_handover_doc(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_handover_doc(session, doc_id, user_payload)
     await service.delete_handover_doc(doc_id)
@@ -3453,7 +3453,7 @@ async def delete_phase(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_phase(session, phase_id, user_payload)
     await service.get_phase(phase_id)
@@ -3519,7 +3519,7 @@ async def delete_block(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_block(session, block_id, user_payload)
     await service.get_block(block_id)
@@ -3897,7 +3897,7 @@ async def delete_escrow_account(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_escrow_account(session, account_id, user_payload)
     await service.get_escrow_account(account_id)
@@ -4038,7 +4038,7 @@ async def delete_escrow_transaction(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_escrow_transaction(session, tx_id, user_payload)
     obj = await service.escrow_transactions.get_by_id(tx_id)
@@ -4142,7 +4142,7 @@ async def delete_price_matrix(
     session: SessionDep,
     user_payload: CurrentUserPayload,
     service: PropertyDevService = Depends(_svc),
-    _perm: None = Depends(RequirePermission("property_dev.delete")),
+    _perm: None = Depends(RequirePermission("property_dev.owner_scoped_delete")),
 ) -> None:
     await _verify_owner_via_price_matrix(session, matrix_id, user_payload)
     await service.get_price_matrix(matrix_id)
@@ -6424,6 +6424,16 @@ async def inventory_map_bulk_hold(
     RBAC: MANAGER+ (uses ``property_dev.delete`` which maps to MANAGER -
     matches sales-floor convention that only sales managers can pull
     inventory off the market).
+
+    Left on ``property_dev.delete`` on purpose when the 17 plain DELETE
+    routes moved to ``property_dev.owner_scoped_delete``, because the
+    MANAGER level here is a stated intention rather than an accident. The
+    cost of keeping it is real and is recorded here rather than left
+    silent: on a development whose project is owned by an editor, this
+    endpoint is unreachable by everybody, since the owner does not hold the
+    permission and everyone who holds it fails the owner check below.
+    Changing that is a sales-floor policy decision for whoever owns the
+    convention, not something to fix in passing.
 
     R8: cross-tenant IDOR closed via ``_verify_owner_via_development``.
     """

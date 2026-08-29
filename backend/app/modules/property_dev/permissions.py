@@ -16,6 +16,26 @@ PROPERTY_DEV_PERMISSIONS: dict[str, Role] = {
     "property_dev.create": Role.EDITOR,
     "property_dev.update": Role.EDITOR,
     "property_dev.delete": Role.MANAGER,
+    # Deleting is guarded by two different arrangements, so it needs two
+    # permissions. Measured over router.py: 24 routes were gated by
+    # ``property_dev.delete``. On 19 of them the handler also calls a
+    # ``_verify_owner_via_*`` helper, and that ownership check is strict -
+    # only ``project.owner_id`` passes, the global admin role included. On
+    # the remaining 5 the permission is the only wall there is.
+    #
+    # No single level is correct for both halves. At MANAGER the 19 are
+    # unusable by anyone whenever the owning project belongs to an editor:
+    # the owner holds no permission and everyone holding the permission
+    # fails the owner check, so the row can never be removed. At EDITOR the
+    # 5 would lose their only protection.
+    #
+    # Hence the split below. ``owner_scoped_delete`` is deliberately NOT
+    # named as a variant of ``delete``: it is not a weaker delete, it is a
+    # delete whose real wall is ownership rather than role. It is only safe
+    # while every route carrying it also calls an owner helper, which is an
+    # invariant a test enforces - see
+    # tests/modules/property_dev/test_owner_scoped_delete_invariant.py.
+    "property_dev.owner_scoped_delete": Role.EDITOR,
     "property_dev.reserve_plot": Role.EDITOR,
     "property_dev.contract_buyer": Role.MANAGER,
     "property_dev.lock_selection": Role.MANAGER,
