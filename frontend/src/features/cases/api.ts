@@ -132,6 +132,12 @@ export interface CaseFinding {
   message: string;
   suggestion: string;
   details: Record<string, unknown>;
+  /** True when the row says a check could not run, rather than saying anything
+   *  about the case. Both kinds arrive in the same list and an ordinary remark
+   *  is the only thing they read as without this, so the editor separates them
+   *  on it: "we did not check this part" and "we checked it and here is what we
+   *  think" are different messages to the person writing the case. */
+  is_engine_error: boolean;
 }
 
 /** A saved case plus what validation made of it. */

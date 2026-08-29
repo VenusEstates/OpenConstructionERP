@@ -38,6 +38,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  CircleSlash,
   Clock,
   Copy,
   FilePlus2,
@@ -180,6 +181,16 @@ export function CaseEditorPage() {
   // same way it drives a card on the Cases hub.
   const draftMeta = CATEGORY_BY_ID[draft.category];
   const draftTint = tintFor(draft.category);
+
+  // Validation sends back two kinds of row in one list, and they are not the
+  // same message. A remark is the product having read the case and having an
+  // opinion about it. An engine error is a rule that crashed: nothing was read
+  // and nobody has an opinion, so the author is told a part of their case went
+  // unchecked. Shown together they read as one pile of remarks, which is how an
+  // outage came to look like advice, so the reader splits them here and gives
+  // each its own card.
+  const remarks = findings.filter((finding) => !finding.is_engine_error);
+  const unchecked = findings.filter((finding) => finding.is_engine_error);
 
   const startPoints = useMemo(() => {
     const needle = startSearch.trim().toLowerCase();
@@ -680,15 +691,56 @@ export function CaseEditorPage() {
 
       </Card>
 
+      {/* What could not be checked at all.
+          Above the remarks on purpose: how much of the review actually happened
+          decides how much the rest of it is worth, so it cannot be a footnote
+          under it. Dashed border, grey badge, muted text - the register of a
+          gap rather than of a verdict. It is deliberately not red: none of this
+          blocks sharing the case, and dressing a row that blocks nothing as a
+          blocker is its own kind of lying to the author. */}
+      {unchecked.length > 0 && (
+        <Card className={clsx(SECTION, 'border-dashed')}>
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-content-primary">
+            <CircleSlash className="h-4 w-4 text-content-tertiary" />
+            {t('cases.editor.section_unchecked', {
+              defaultValue: 'Parts we could not check',
+            })}
+          </h2>
+          <p className="mb-3 text-xs text-content-tertiary">
+            {t('cases.editor.unchecked_hint', {
+              defaultValue:
+                'None of this is a remark about your case. A check broke while it was running, so that part of the case was never looked at. You can still save it and share it.',
+            })}
+          </p>
+          <ul className="space-y-2">
+            {unchecked.map((finding) => (
+              <li key={finding.rule_id} className="flex items-start gap-2 text-sm">
+                <Badge variant="neutral" dot>
+                  {t('cases.editor.unchecked_badge', { defaultValue: 'did not run' })}
+                </Badge>
+                <div>
+                  <p className="text-content-secondary">
+                    {t(finding.key, { defaultValue: finding.message })}
+                  </p>
+                  {finding.suggestion && (
+                    <p className="text-xs text-content-tertiary">{finding.suggestion}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {/* What validation made of it */}
-      {findings.length > 0 && (
+      {remarks.length > 0 && (
         <Card className={SECTION}>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-content-primary">
             <Info className="h-4 w-4 text-content-tertiary" />
             {t('cases.editor.section_review', { defaultValue: 'Worth a look' })}
           </h2>
           <ul className="space-y-2">
-            {findings.map((finding) => (
+            {remarks.map((finding) => (
               <li key={finding.rule_id} className="flex items-start gap-2 text-sm">
                 <Badge variant={finding.severity === 'error' ? 'error' : 'warning'}>
                   {finding.severity}
