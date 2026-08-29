@@ -526,14 +526,14 @@ async def test_tax_quote_uses_the_rate_in_force_on_the_signing_date(http_client,
 
 @pytest.mark.asyncio
 async def test_tax_quote_says_whether_the_rate_it_used_was_one_the_table_dated(http_client, tenant_a):
-    """One contract, two rate classes, and only one of them a promise.
+    """One contract, three rate classes, three different answers about the date.
 
-    The same 1997 contract is quoted at the GB standard rate, which the table
-    dates, and at the GB reduced rate, which it does not. Both come back as
-    ordinary amounts a client can bill. ``vat_rate_effective_from`` is the only
-    thing on the wire that separates 17.5 per cent, which the table stands
-    behind for 1997, from 5 per cent, which is today's rate applied to a
-    contract signed before the table says anything about it.
+    The same 1997 contract is quoted at the GB standard rate, dated from 1991,
+    at the GB reduced rate, dated from 1994 because there was no reduced rate
+    to charge before domestic fuel stopped being zero-rated, and at the zero
+    rate, which is a single undated mapping. Two dates that differ from each
+    other are what proves ``vat_rate_effective_from`` follows the period that
+    priced the quote rather than the jurisdiction it was quoted in.
 
     The null is asserted as a key that is present and empty rather than as a
     missing key: the response model has to declare the field for either state
@@ -550,7 +550,7 @@ async def test_tax_quote_says_whether_the_rate_it_used_was_one_the_table_dated(h
     )
 
     quotes = {}
-    for rate_class in ("standard", "reduced"):
+    for rate_class in ("standard", "reduced", "zero"):
         res = await http_client.post(
             f"/api/v1/property-dev/sales-contracts/{ids['spa_id']}/tax-quote",
             json={"jurisdiction": "GB", "vat_rate_class": rate_class},
@@ -560,9 +560,17 @@ async def test_tax_quote_says_whether_the_rate_it_used_was_one_the_table_dated(h
         quotes[rate_class] = res.json()
 
     assert quotes["standard"]["vat_rate_effective_from"] == "1991-04-01"
-    assert "vat_rate_effective_from" in quotes["reduced"]
-    assert quotes["reduced"]["vat_rate_effective_from"] is None
-    # Both were priced. A field that only ever reports a date on a quote that
-    # also refused would be describing the refusal instead of the rate.
-    assert Decimal(quotes["standard"]["vat"]) > 0
-    assert Decimal(quotes["reduced"]["vat"]) > 0
+    assert quotes["reduced"]["vat_rate_effective_from"] == "1994-04-01"
+    assert "vat_rate_effective_from" in quotes["zero"]
+    assert quotes["zero"]["vat_rate_effective_from"] is None
+
+    # The dated pair was priced at the rates in force in 1997 rather than at
+    # today's, which is what makes the dates beside them true. A quote that
+    # reported a period it had not priced from would satisfy the assertions
+    # above and fail these.
+    def _rate(quote: dict) -> Decimal:
+        return (Decimal(quote["vat"]) / Decimal(quote["net"])).quantize(Decimal("0.0001"))
+
+    assert _rate(quotes["standard"]) == Decimal("0.1750")
+    assert _rate(quotes["reduced"]) == Decimal("0.0800")
+    assert Decimal(quotes["zero"]["vat"]) == Decimal("0.00")

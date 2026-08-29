@@ -22,9 +22,10 @@ Design intent
   history, and a quote takes the band in force on the contract's own date.
   A contract signed before the earliest band the class holds is refused
   rather than priced, because the alternative is inventing a rate. The
-  refusal is scoped to a rate class, not to a jurisdiction: GB and DE
-  standard VAT carry histories, while GB ``reduced`` and DE ``reduced`` are
-  single undated bands and answer for any date at all. Note the two axes
+  refusal is scoped to a rate class, not to a jurisdiction: GB and DE date
+  both their standard and their reduced rate, each from its own earliest
+  day, while GB ``zero`` beside them is a single undated band and answers
+  for any date at all. Note the two axes
   this module calls bands: a stamp-duty band is a slice of *price*
   (:func:`_progressive_band_amount`), a rate band is a slice of *time*. The
   helpers for the second say ``period`` so the two never read alike in code.
@@ -1187,12 +1188,12 @@ def compute_total_taxes_for_contract(
     same way whether or not ``effective_on`` was given, because a rate that has
     run since 2011-01-04 has run since 2011-01-04 no matter what was asked.
 
-    The ``None`` is what this field exists for. Only GB and DE standard VAT
-    carry dated histories, so every other class answers any date at all with
-    its one undated rate - GB ``reduced`` prices a 1997 contract at today's 5 %
-    without the table ever having said that 5 % applied in 1997. That is a
-    number nobody promised, and before this field a caller could not tell it
-    from one that was promised.
+    The ``None`` is what this field exists for. Which classes carry dated
+    histories is written in ``data/tax_rates.yaml`` and every other one answers
+    any date at all with its one undated rate - AT ``reduced`` prices a 1900
+    contract at today's 10 % without the table ever having said that 10 %
+    applied in 1900. That is a number nobody promised, and before this field a
+    caller could not tell it from one that was promised.
 
     Two situations share the ``None`` and are told apart by ``vat_provenance``
     rather than here: a class the table never dated (``source`` DECLARED, as

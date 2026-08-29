@@ -2612,9 +2612,10 @@ class ContractTaxQuote(BaseModel):
 
     ``vat_rate_effective_from`` is the date the rate table dates the applied
     rate from, and ``null`` says it dates it from nothing. Most classes are
-    undated: only GB and DE standard VAT track their rate changes today, so a
-    contract signed in 1997 and quoted at the GB reduced rate gets today's 5 %
-    with nothing in the table ever having said 5 % applied in 1997. The null is
+    undated: the GB and DE standard and reduced rates track their changes and
+    the rest do not, so a contract signed in 1900 and quoted at the AT reduced
+    rate gets today's 10 % with nothing in the table ever having said that
+    10 % applied in 1900. The null is
     how a client learns that the number it holds was never promised for its own
     date, and it is the one field here that a client should read before
     reusing a quote for a historical contract.

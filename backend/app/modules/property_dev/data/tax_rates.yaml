@@ -19,7 +19,8 @@
 #     ``effective_from`` that is not after the contract's date; a date before
 #     the earliest period is refused rather than priced at zero. The two
 #     shapes mix freely inside one jurisdiction - GB ``standard`` carries a
-#     history while GB ``reduced`` beside it is a single undated mapping.
+#     history while GB ``zero`` beside it is a single undated mapping, and
+#     two histories in one jurisdiction need not begin on the same day.
 #     Out-of-order or undated periods are refused when the table loads.
 #     Dating a class changes what a quote says about it: the quote reports the
 #     ``effective_from`` of the period that priced it, and reports nothing for
@@ -50,9 +51,28 @@ jurisdictions:
         - { rate: 0.15, effective_from: "2008-12-01" }
         - { rate: 0.175, effective_from: "2010-01-01" }
         - { rate: 0.20, effective_from: "2011-01-04" }
-      # Undated on purpose: only the standard rate's history is modelled, so
-      # these two answer for any date, including one before 1991.
-      reduced: { rate: 0.05 }
+      # Reduced-rate history, oldest first. Domestic fuel and power was
+      # zero-rated until the Finance Act 1993 removed that from 1 April 1994
+      # and taxed it at 8 %; the Finance Act 1997 cut the rate to 5 % for
+      # supplies made on or after 1 September 1997, and 5 % it has stayed.
+      # What changed after 1997 is which supplies the reduced rate covers,
+      # which this table does not model, and not the rate itself. A contract
+      # signed before 1994-04-01 is refused: there was no reduced rate to
+      # charge, and the supplies it would have applied to were zero-rated.
+      #
+      # The 2020-2022 hospitality rates (5 % from 15 July 2020, 12.5 % from
+      # 1 October 2021) are deliberately absent. They ran alongside the 5 %
+      # on fuel and power rather than replacing it, so two reduced rates
+      # were in force at once, and a class carrying one number and no
+      # ``applies_to`` cannot say which supply it means.
+      reduced:
+        - { rate: 0.08, effective_from: "1994-04-01" }
+        - { rate: 0.05, effective_from: "1997-09-01" }
+      # Undated for now, and not on purpose: it answers for any date,
+      # including one before 1991, while the seed tax table beside it
+      # dates the same rate from 1973-04-01. That makes this a candidate
+      # for the treatment the two classes above have just had, not a
+      # settled shape.
       zero: { rate: 0.00, applies_to: ["residential.new_build"] }
     stamp_duty:
       # SDLT — England + NI, bands as of 2025-04-01.
@@ -90,9 +110,23 @@ jurisdictions:
         - { rate: 0.19, effective_from: "2007-01-01" }
         - { rate: 0.16, effective_from: "2020-07-01" }
         - { rate: 0.19, effective_from: "2021-01-01" }
-      # Undated: the reduced rate's own history (7 %, and 5 % across the same
-      # 2020 window) is not modelled, so this answers for any date.
-      reduced: { rate: 0.07 }
+      # Reduced-rate history, oldest first. Source: UStG § 12 Abs. 2. The
+      # reduced rate tracked exactly half the standard rate until it was set
+      # at 7 % on 1 July 1983, and it has not moved since; the Zweites
+      # Corona-Steuerhilfegesetz cut it to 5 % across the same second half
+      # of 2020 that took the standard rate to 16 %. A contract signed
+      # before 1983-07-01 is refused. The rates before that are documented
+      # as a rule - the reduced rate was half the standard one - rather
+      # than as dated bands, so writing them here would mean halving each
+      # standard rate ourselves and dating it from the standard rate's own
+      # day. That is a number this table would be computing rather than
+      # reading, which is the thing the refusal exists to prevent. It
+      # leaves the reduced rate able to speak for 1990 while the standard
+      # rate above cannot: per-class honesty, not an oversight.
+      reduced:
+        - { rate: 0.07, effective_from: "1983-07-01" }
+        - { rate: 0.05, effective_from: "2020-07-01" }
+        - { rate: 0.07, effective_from: "2021-01-01" }
     grunderwerbsteuer:
       # State-specific Grunderwerbsteuer (real-estate transfer tax).
       # Verified rates as of 2025-Q1 — every Länder may revise.

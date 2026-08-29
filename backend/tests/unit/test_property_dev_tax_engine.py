@@ -572,16 +572,86 @@ def test_net_from_gross_reads_the_same_history_as_compute_vat() -> None:
 
 
 @pytest.mark.parametrize(
+    ("jurisdiction", "opens_on", "on_the_day", "the_day_before"),
+    [
+        ("GB", date(1997, 9, 1), "5000.00", "8000.00"),
+        ("DE", date(2020, 7, 1), "5000.00", "7000.00"),
+        ("DE", date(2021, 1, 1), "7000.00", "5000.00"),
+    ],
+    ids=["gb-fuel-cut-to-five", "de-corona-cut-opening", "de-corona-cut-expiring"],
+)
+def test_the_reduced_rate_has_boundaries_of_its_own(
+    jurisdiction: str, opens_on: date, on_the_day: str, the_day_before: str
+) -> None:
+    """The second class in a jurisdiction moves on its own days, not the standard rate's.
+
+    The German rows fall on the two days the standard rate also moved, which
+    is what the Corona cut did to both rates at once. The British row is the
+    one that cannot be passed by accident: nothing happened to the GB standard
+    rate on 1 September 1997, so a resolver that read the standard history
+    whatever class it was handed would price both sides of that day at 5 per
+    cent and still satisfy every German row here.
+    """
+    for signed_on, expected in ((opens_on, on_the_day), (opens_on - timedelta(days=1), the_day_before)):
+        assert compute_vat(Decimal("100000"), jurisdiction, rate_class="reduced", effective_on=signed_on) == Decimal(
+            expected
+        )
+
+
+def test_each_rate_class_refuses_from_its_own_earliest_date() -> None:
+    """Four classes, four earliest dates, and not one of them a jurisdiction's.
+
+    GB reaches further back at the standard rate than at the reduced one,
+    because there was no reduced rate to charge until domestic fuel stopped
+    being zero-rated in 1994. DE runs the other way: its reduced rate has been
+    7 per cent since 1983 while the standard rate's history begins in 1998.
+    A refusal keyed on the jurisdiction would have to pick one of each pair.
+    """
+    earliest = {
+        ("GB", "standard"): date(1991, 4, 1),
+        ("GB", "reduced"): date(1994, 4, 1),
+        ("DE", "standard"): date(1998, 4, 1),
+        ("DE", "reduced"): date(1983, 7, 1),
+    }
+    for (jurisdiction, rate_class), opens_on in earliest.items():
+        with pytest.raises(RateNotInForceError) as exc:
+            compute_vat(
+                Decimal("100000"), jurisdiction, rate_class=rate_class, effective_on=opens_on - timedelta(days=1)
+            )
+        assert exc.value.rate_class == rate_class, f"{jurisdiction} named the wrong class"
+        assert exc.value.effective_from == opens_on, f"{jurisdiction} {rate_class} names the wrong earliest date"
+
+
+def test_one_contract_answered_at_one_class_and_refused_at_the_other() -> None:
+    """The asymmetry a caller meets, and the thing that tells them why.
+
+    A German contract signed in 1990 is priced at the reduced rate and refused
+    at the standard one, which is a strange pair to receive unless something
+    says why. The error carries the class it refused for and the earliest date
+    that class can speak for, so the two answers are readable side by side
+    without opening this table: one rate is dated from 1983 and the other from
+    1998, and 1990 falls between them.
+    """
+    signed_on = date(1990, 1, 1)
+    assert compute_vat(Decimal("100000"), "DE", rate_class="reduced", effective_on=signed_on) == Decimal("7000.00")
+
+    with pytest.raises(RateNotInForceError) as exc:
+        compute_vat(Decimal("100000"), "DE", effective_on=signed_on)
+    assert exc.value.rate_class == "standard"
+    assert exc.value.effective_from == date(1998, 4, 1)
+    assert "'standard'" in str(exc.value), "a caller comparing two quotes has to see which class refused"
+
+
+@pytest.mark.parametrize(
     ("jurisdiction", "rate_class", "expected"),
     [
-        ("GB", "reduced", "5000.00"),
         ("GB", "zero", "0.00"),
-        ("DE", "reduced", "7000.00"),
+        ("AT", "reduced", "10000.00"),
         ("RU", "standard", "20000.00"),
         ("SG", "standard", "9000.00"),
         ("AE", "exempt", "0.00"),
     ],
-    ids=["gb-reduced", "gb-zero", "de-reduced", "ru-standard", "sg-gst", "ae-exempt-no-rate-key"],
+    ids=["gb-zero", "at-reduced", "ru-standard", "sg-gst", "ae-exempt-no-rate-key"],
 )
 def test_a_single_mapping_rate_class_answers_exactly_as_it_did_before(
     jurisdiction: str, rate_class: str, expected: str
@@ -590,11 +660,17 @@ def test_a_single_mapping_rate_class_answers_exactly_as_it_did_before(
 
     Two properties at once, on a date far outside any history. The rate is
     unchanged, and the class still answers rather than refusing: an undated
-    mapping is in force for every date, so GB ``reduced`` prices a 1900
-    contract at 5 per cent. That is not an oversight to fix here. Only the
-    standard rate of each of the two jurisdictions carries a history, so the
-    refusal is scoped to a rate class and never to a jurisdiction, and this
-    test is where that scope is written down.
+    mapping is in force for every date, so AT ``reduced`` prices a 1900
+    contract at 10 per cent. The refusal is scoped to a rate class and never
+    to a jurisdiction, and this test is where that scope is written down: GB
+    dates two of its classes and leaves ``zero`` beside them answering for
+    any date at all.
+
+    GB ``reduced`` and DE ``reduced`` were rows here until their histories
+    were written, and their leaving is the point rather than a tidy-up. An
+    undated class is honest only while nothing is known about the rate's
+    past. Both of those had a documented past, so they moved to the histories
+    above and a 1900 contract is refused at them now.
 
     ``AE.exempt`` is in the list because it carries ``applies_to`` and no
     ``rate`` key at all, so it measures the "no rate means zero" default that
@@ -1050,28 +1126,32 @@ def test_the_quote_names_the_day_the_rate_it_used_began(jurisdiction: str, signe
     assert _quote(jurisdiction, effective_on=signed_on)["vat_rate_effective_from"] == began_on
 
 
-def test_a_class_the_table_never_dated_reports_no_date_beside_one_that_is() -> None:
+def test_a_class_the_table_never_dated_reports_no_date_beside_ones_that_are() -> None:
     """The defect this field exists to close, stated as a test.
 
-    Same jurisdiction, same contract date, two rate classes. GB standard is
-    dated and the table stands behind 17.5 % for a 1997 contract. GB reduced is
-    a single undated mapping, so the same contract is priced at today's 5 %
-    with nothing in the table ever having said 5 % applied in 1997.
+    One jurisdiction, one contract date, three rate classes, three different
+    answers. GB standard has stood behind 17.5 % for a 1997 contract since
+    1991. GB reduced stands behind 8 % for the same contract but from a
+    different day, because the reduced rate did not exist until 1994. GB zero
+    is a single undated mapping and reports nothing at all.
 
-    The two amounts are quoted the same way and look equally authoritative.
-    The date beside them is the only thing that separates a promise from an
-    assumption, so both halves are asserted: the number that was never promised
-    is pinned as well, because a field saying "undated" beside a refusal would
-    be describing something else entirely.
+    Two dates that differ from each other are what pins the field to the
+    period that priced the quote: anything derived from the jurisdiction, or
+    from the class's newest period, would report one date for both. The
+    amounts are asserted beside them because a date is only worth reading
+    next to the number it describes.
     """
     signed_on = date(1997, 5, 1)
-    dated = _quote("GB", effective_on=signed_on)
-    undated = _quote("GB", rate_class="reduced", effective_on=signed_on)
+    standard = _quote("GB", effective_on=signed_on)
+    reduced = _quote("GB", rate_class="reduced", effective_on=signed_on)
+    undated = _quote("GB", rate_class="zero", effective_on=signed_on)
 
-    assert dated["vat_rate_effective_from"] == date(1991, 4, 1)
+    assert standard["vat_rate_effective_from"] == date(1991, 4, 1)
+    assert reduced["vat_rate_effective_from"] == date(1994, 4, 1)
     assert undated["vat_rate_effective_from"] is None
-    assert dated["vat"] == Decimal("17500.00")
-    assert undated["vat"] == Decimal("5000.00")
+    assert standard["vat"] == Decimal("17500.00")
+    assert reduced["vat"] == Decimal("8000.00")
+    assert undated["vat"] == Decimal("0.00")
 
 
 def test_the_date_describes_the_rate_and_not_the_question_that_was_asked() -> None:
@@ -1089,20 +1169,23 @@ def test_the_date_describes_the_rate_and_not_the_question_that_was_asked() -> No
 def test_three_quotes_reporting_no_date_are_three_different_situations() -> None:
     """The join this field deliberately does not do on its own.
 
-    An undated class, a jurisdiction that levies no VAT, and a jurisdiction
-    this table does not model all report no date, because none of them has a
-    dated period. Only the first has a rate at all, and ``vat_provenance`` is
-    what says so; a date cannot describe a rate that does not exist.
+    An undated class (AT, whose rates this table has never dated), a
+    jurisdiction that levies no VAT, and a jurisdiction this table does not
+    model all report no date, because none of them has a dated period. Only
+    the first has a rate at all, and it is a rate of 20 per cent rather than
+    of zero: ``vat_provenance`` is what says so, and a date cannot describe a
+    rate that does not exist.
 
     Pinned rather than left to the docstring, so that a later attempt to make
     this field self-sufficient has to change a test that says why it is not.
     """
-    undated = _quote("GB", rate_class="reduced", effective_on=date(1997, 5, 1))
+    undated = _quote("AT")
     no_vat_in_law = _quote("US")
     not_modelled = _quote("BR")
 
     quotes = (undated, no_vat_in_law, not_modelled)
     assert [q["vat_rate_effective_from"] for q in quotes] == [None, None, None]
+    assert undated["vat"] == Decimal("20000.00"), "the undated quote is priced; only its date is missing"
     assert [q["vat_provenance"].source for q in quotes] == [
         Source.DECLARED,
         Source.FALLBACK,
@@ -1132,7 +1215,7 @@ def test_the_date_crosses_the_wire_as_an_iso_string_or_as_null() -> None:
     states, through the model the endpoint actually returns.
     """
     dated = ContractTaxQuote.model_validate(_quote("GB", effective_on=date(2015, 6, 1)))
-    undated = ContractTaxQuote.model_validate(_quote("GB", rate_class="reduced"))
+    undated = ContractTaxQuote.model_validate(_quote("AT"))
 
     assert dated.model_dump(mode="json")["vat_rate_effective_from"] == "2011-01-04"
     assert undated.model_dump(mode="json")["vat_rate_effective_from"] is None
