@@ -19,7 +19,7 @@ token, which resource types feed it::
 ``bases`` dict ``compute_cascade`` expects.
 
 Design constraints (intentional, mirror ``cascade.py`` - see
-docs/strategy/ESTIMATE_METHODOLOGIES_PLAN.md sections 5-6):
+internal design note ESTIMATE_METHODOLOGIES_PLAN sections 5-6):
 
 * Standard library only - ``decimal`` and ``typing``. No imports from ``app.*``
   and no third-party packages, so this single file can be loaded and unit-tested

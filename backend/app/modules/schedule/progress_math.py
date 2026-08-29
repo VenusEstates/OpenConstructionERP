@@ -9,7 +9,7 @@ can be unit-tested in isolation (and on Python 3.11 locally, where importing
 live PostgreSQL cluster).
 
 It implements the algorithm described in
-``docs/strategy/ADVANCED_SCHEDULING_PROJECT_CONTROLS_ROADMAP.md`` (the "Progress
+``internal design note ADVANCED_SCHEDULING_PROJECT_CONTROLS_ROADMAP`` (the "Progress
 rigor" / T3.2 design): three percent-complete *types*, weighted step roll-up,
 suspend/resume remaining-duration freeze, deterministic EVM-distortion warnings,
 and time-phased planned value. The real ORM->calendar adapter and the service

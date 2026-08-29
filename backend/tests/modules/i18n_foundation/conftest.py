@@ -164,7 +164,7 @@ async def make_tax(
     country of its rate entirely passed its own tests, and it is the same
     blindness as the one-rate-per-country fixtures that let the resolver sum
     tiers for five markets undetected. Both are written up in
-    ``docs/strategy/VAT_RESOLVER_SUMMED_TIERS_2026-08-26.md``.
+    ``internal design note VAT_RESOLVER_SUMMED_TIERS_2026-08-26``.
 
     If your case is about *selection* - which rate wins, or whether one wins at
     all - pass ``is_default`` explicitly on every row you create, and give the

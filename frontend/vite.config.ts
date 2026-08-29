@@ -315,7 +315,7 @@ export default defineConfig({
     // Vite default — matches the README quickstart, default Playwright
     // config, and every "localhost:5173" link in locales/marketing. Was
     // hard-coded to 5180 historically; reverted to 5173 in the install
-    // paper-cuts sweep (docs/qa/FRESH_INSTALL_RESULTS.md Issue 4) so the
+    // paper-cuts sweep (internal QA note FRESH_INSTALL_RESULTS Issue 4) so the
     // README's documented URL actually reaches the dev server.
     port: 5173,
     strictPort: true,
@@ -358,7 +358,7 @@ export default defineConfig({
     // keys (cesium-only + everything-else) and esbuild's JS evaluator
     // silently dropped the first one, plus warned on every Vite boot with
     // ``Duplicate key "include" in object literal``. Merged into one list
-    // in the install paper-cuts sweep (docs/qa/FRESH_INSTALL_RESULTS.md
+    // in the install paper-cuts sweep (internal QA note FRESH_INSTALL_RESULTS
     // Issue 6).
     //
     // ``cesium`` ships a mix of ESM + CJS deps (mersenne-twister, urijs,

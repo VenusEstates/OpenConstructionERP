@@ -13,7 +13,7 @@ that median (above or below) as a low-confidence outlier for human review. The
 band is therefore self-calibrating against whatever catalogue and currency are
 bound: it is a sanity flag, not a price book.
 
-The founder-locked default (see ``docs/strategy/AI_ESTIMATOR_V3_DESIGN.md`` section
+The founder-locked default (see ``internal design note AI_ESTIMATOR_V3_DESIGN`` section
 10, decision 2) is a single global band factor of ``8x``, surfaced on the module
 ``/meta`` endpoint so the frontend never hardcodes the magic number. A small
 per-(trade, unit) override table is provided for trades whose real-world rate

@@ -175,4 +175,4 @@ boots authenticated without a login round-trip.
 ## See also
 
 - `frontend/playwright.config.ts` — root config (3 browsers + mobile + RTL)
-- `docs/qa/INSTALL_PLAYWRIGHT.md` — setup runbook
+- `internal QA note INSTALL_PLAYWRIGHT` — setup runbook

@@ -34,7 +34,7 @@ const VALID_COMPANIES = new Set(COMPANY_TYPE_META.map((c) => c.id as string));
  *
  *  This overlap is deliberate, not a leftover. The two lists were split into
  *  firms and people by an explicit decision recorded in
- *  docs/strategy/CASE_COMPANY_TYPE_AXIS_2026-08-20.md, which ruled that nothing moves
+ *  internal design note CASE_COMPANY_TYPE_AXIS_2026-08-20, which ruled that nothing moves
  *  between them: `project-manager` names a management firm on one axis and the
  *  person doing the job on the other, and both readings are wanted. So a
  *  failure here is not "the overlap came back" - it means a dictionary changed

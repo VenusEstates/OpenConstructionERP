@@ -160,7 +160,7 @@ export interface NavGroup {
    *  `getModuleNavItems(group.dynamicGroupKey ?? group.id)`. Used by
    *  `grp_reality`, whose stable internal id is `grp_reality` but whose
    *  module-injection contract is the shorter `reality` key from the
-   *  point-cloud plan (`docs/strategy/POINTCLOUD_AND_SPATIAL_PLAN.md`,
+   *  point-cloud plan (`internal design note POINTCLOUD_AND_SPATIAL_PLAN`,
    *  section 4). The contract is reserved, not in use: this used to add
    *  "so `oe_pointcloud`'s manifest can add its own row", and no such
    *  frontend manifest exists — `oe_pointcloud` is backend-only. */
@@ -323,7 +323,7 @@ export const navGroups: NavGroup[] = [
   // the CAD-BIM data explorer. The BIM 3D model viewer moved up to Takeoff
   // (it is a quantity-extraction surface). This is the founder-requested
   // dedicated home for spatial surfaces (point-cloud plan
-  // `docs/strategy/POINTCLOUD_AND_SPATIAL_PLAN.md`, section 4); it
+  // `internal design note POINTCLOUD_AND_SPATIAL_PLAN`, section 4); it
   // supersedes the earlier "no separate sidebar section" note for this
   // spatial context only. The group's `dynamicGroupKey: 'reality'` keeps a
   // short registry key across the `grp_` rename, so a manifest can publish

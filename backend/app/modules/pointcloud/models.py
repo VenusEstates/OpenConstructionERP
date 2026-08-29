@@ -8,7 +8,7 @@ Tables (all prefixed ``oe_pointcloud_``):
     scan_registration    - alignment / deviation result tying a scan to a
                            design target or a prior scan
 
-Design constraints (see ``docs/strategy/POINTCLOUD_AND_SPATIAL_PLAN.md``)
+Design constraints (see ``internal design note POINTCLOUD_AND_SPATIAL_PLAN``)
 ------------------------------------------------------------------------
 
 * NO PostGIS. The embedded pixeltable-pgserver is vanilla PostgreSQL, so

@@ -28,7 +28,7 @@ from typing import Any
 
 # Coordinates from get_drawings() are in PDF points - the same space the
 # frontend stores measurement points in, so they drop straight in with no
-# transform (see docs/strategy/PDF_TAKEOFF_194_PLAN.md).
+# transform (see internal design note PDF_TAKEOFF_194_PLAN).
 
 # A segment must be at least this many PDF points long to be considered a
 # real stroke (filters hatching, leader ticks and rendering noise).

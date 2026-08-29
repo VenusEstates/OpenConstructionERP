@@ -4,7 +4,7 @@
  * Offline mutation queue — captures field-report / daily-diary writes made while
  * offline and replays them in order when connectivity returns.
  *
- * Design goals (see docs/strategy/impl/08-field-pwa.md sections 4.4 and 8):
+ * Design goals (see internal design note impl/08-field-pwa sections 4.4 and 8):
  *
  *  - FIFO ordering: a punch item created offline must replay before the photo
  *    that references it, so the queue drains strictly in enqueue order.

@@ -7,7 +7,7 @@ on. It computes an ordered markup cascade where each step applies to an
 EXPLICIT set of prior amounts (a leaf base, a named composite, or an earlier
 step), unlike the existing binary direct_cost/cumulative markup model.
 
-Design constraints (intentional, see docs/strategy/ESTIMATE_METHODOLOGIES_PLAN.md
+Design constraints (intentional, see internal design note ESTIMATE_METHODOLOGIES_PLAN
 section 5):
 
 * Standard library only - ``decimal``, ``dataclasses``, ``typing``. No imports

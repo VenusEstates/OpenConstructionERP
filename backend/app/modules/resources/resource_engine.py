@@ -12,7 +12,7 @@ Python 3.11 locally, where importing ``resources/service.py`` would pull in
 ``app.database`` and require a live PostgreSQL cluster).
 
 It implements the four capabilities described in
-``docs/strategy/ADVANCED_SCHEDULING_PROJECT_CONTROLS_ROADMAP.md`` (the "T3.1 --
+``internal design note ADVANCED_SCHEDULING_PROJECT_CONTROLS_ROADMAP`` (the "T3.1 --
 Resource depth" design):
 
 1. **Time-phased resource histogram** -- :func:`resource_histogram` aggregates
