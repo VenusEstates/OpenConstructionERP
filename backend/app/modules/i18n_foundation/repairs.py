@@ -5,10 +5,24 @@
 Imported by :func:`app.core.data_repairs.discover_data_repairs`, which is what
 makes the registrations below take effect.
 
-All five repairs here touch ``oe_i18n_tax_config``, and between them they use
-every nature the registry has. That is the useful thing about having them side
-by side: the two tax rate ones may not rewrite a value, the two that describe a
-rate's scope must, and the reconciler may not write to an existing row at all.
+Five of the seven repairs here touch ``oe_i18n_tax_config``, and between them
+they use every nature the registry has. That is the useful thing about having
+them side by side: the two tax rate ones may not rewrite a value, the two that
+describe a rate's scope must, and the reconciler may not write to an existing
+row at all.
+
+The other two are on ``oe_i18n_work_calendar`` and are worth reading as a pair,
+because they are the two halves of one table's trouble and they are allowed
+opposite things. ``work_calendar_iso_zero`` corrects a row that is here and
+says something impossible; ``work_calendar_seed_reconcile`` delivers a row that
+is not here at all and may not touch an existing one. The first is the same
+defect as the tax scope repairs - a value that was never right - and the second
+is the same defect as the tax reconciler,
+which is why it sits with them rather than in a file of its own. The seeder
+fills ``oe_i18n_work_calendar`` only while it is empty too, and the shipped file
+has grown six countries since - so an install seeded before them answers a
+confident Monday-to-Friday week for Qatar, Kuwait, Bahrain and Oman, which is a
+wrong date on every schedule drawn there rather than a missing one.
 
 The last two are also the same defect seen from its two ends.
 ``v3302_tax_combination`` backfilled ``combination`` on thirteen Canadian and
@@ -53,8 +67,11 @@ from app.core.data_repairs import (
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-#: The table both repairs below rewrite.
+#: The table the five tax repairs below rewrite.
 TAX_CONFIG_TABLE = "oe_i18n_tax_config"
+
+#: The table the work calendar reconciler adds to. It never rewrites it.
+WORK_CALENDAR_TABLE = "oe_i18n_work_calendar"
 
 
 async def _run_romania_vat(session: AsyncSession) -> int:
@@ -83,6 +100,20 @@ async def _run_tax_seed_reconcile(session: AsyncSession) -> int:
     from app.modules.i18n_foundation.tax_seed_reconcile import reconcile_shipped_tax_rows
 
     return await reconcile_shipped_tax_rows(session)
+
+
+async def _run_work_calendar_seed_reconcile(session: AsyncSession) -> int:
+    """Deliver the shipped work calendars added to the seed file after this install was seeded."""
+    from app.modules.i18n_foundation.work_calendar_seed_reconcile import reconcile_shipped_work_calendars
+
+    return await reconcile_shipped_work_calendars(session)
+
+
+async def _run_work_calendar_iso_zero(session: AsyncSession) -> int:
+    """Correct a work calendar whose week was written on the Monday-zero axis."""
+    from app.modules.i18n_foundation.work_calendar_iso_zero import repair_iso_zero_weeks
+
+    return await repair_iso_zero_weeks(session)
 
 
 async def _run_tax_window_supersede(session: AsyncSession) -> int:
@@ -233,6 +264,68 @@ TAX_WINDOW_SUPERSEDE = register_data_repair(
             effective_from="2025-04-01",
             table=TAX_CONFIG_TABLE,
             closes_column="effective_to",
+        ),
+    )
+)
+
+
+#: Nature ``always_wrong``, and the strongest claim of that nature in this file.
+#: The other two rest on an argument about what a column meant when it was
+#: written; this one rests on the value being impossible. ``work_days`` is read
+#: with ``isoweekday()``, which returns 1..7, so a 0 in it names no day at all -
+#: it cannot be a preference, an unusual week, or a deliberate configuration,
+#: which is what entitles a boot repair to overwrite it without asking when the
+#: database was seeded.
+#:
+#: It names ``v3303``, which repaired the seed file and has an ``upgrade()`` body
+#: that would have repaired the shipped row and never runs. That revision used
+#: to declare itself a ``gap``; it declares this registration instead now, which
+#: is the whole point of the declaration existing.
+#:
+#: Targeted at the value rather than at Saudi Arabia on purpose, so a second
+#: country that ever acquires the same error needs no third repair. The count it
+#: returns is worth watching: one is expected on an install carrying the shipped
+#: row, and more than one means something is writing 0 into that column today.
+WORK_CALENDAR_ISO_ZERO = register_data_repair(
+    DataRepair(
+        repair_id="work_calendar_iso_zero",
+        revision="v3303_work_calendar_iso_weekdays",
+        summary="Correct a work calendar week written on the Monday-zero axis, where 0 names no day",
+        run=_run_work_calendar_iso_zero,
+        nature="always_wrong",
+    )
+)
+
+#: Nature ``never_delivered``, the second one here and the only entry that
+#: touches a table other than the tax one. The argument is the tax reconciler's
+#: word for word - the seeder fills ``oe_i18n_work_calendar`` only while it is
+#: empty, so six countries added to ``work_calendars.json`` since release one
+#: have never reached an upgraded install - and the consequence is worse. A
+#: missing tax rate makes a country stop pricing, which somebody notices. A
+#: missing work calendar makes ``get_working_days`` fall back to Monday-to-
+#: Friday and answer, so a Doha schedule is not refused, it is wrong twice a
+#: week and looks right.
+#:
+#: ``identified_by`` is country plus year because that is
+#: ``uq_work_calendar_country_year``, the table's own idea of one row. The
+#: repair's delivery guard is stricter still - it declines a country that holds
+#: any calendar at all - and the two are not the same check: this one is the
+#: shape ``verify_additive_shape`` holds it to, that one is the promise not to
+#: take over a week somebody has edited.
+#:
+#: The revision is empty for the reason the tax reconciler's is. No schema
+#: change caused this and no ``upgrade()`` body would have fixed it, because
+#: nothing on the boot path runs one; the module docstring has the long version.
+WORK_CALENDAR_SEED_RECONCILE = register_data_repair(
+    DataRepair(
+        repair_id="work_calendar_seed_reconcile",
+        revision="",
+        summary="Deliver the shipped work calendars added to the seed file after this database was seeded",
+        run=_run_work_calendar_seed_reconcile,
+        nature="never_delivered",
+        never_delivered=NeverDelivered(
+            table=WORK_CALENDAR_TABLE,
+            identified_by=("country_code", "year"),
         ),
     )
 )

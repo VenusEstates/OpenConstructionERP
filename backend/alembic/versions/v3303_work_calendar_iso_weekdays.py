@@ -122,7 +122,7 @@ def _classify(country_code: str, work_days: object) -> tuple[list[int] | None, s
 
 
 # data-rewrite-ack: table=oe_i18n_work_calendar growth=bounded rows=30 as shipped, one per
-# boot-repair: gap - repairs a shipped work-calendar row; the boot seeder skips the table entirely once it holds any row, so an upgraded install keeps the miscounted week
+# boot-repair: registry=work_calendar_iso_zero
 # country and year we carry a calendar for; a deployment gains a row only when somebody
 # adds a country or a year by hand, so the count tracks the catalogue rather than how long
 # the install has run. At most one row is rewritten, and only where the value still matches

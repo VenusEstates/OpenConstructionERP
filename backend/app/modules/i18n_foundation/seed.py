@@ -77,24 +77,49 @@ async def _seed_work_calendars(session: AsyncSession) -> int:
         logger.info("oe_i18n_work_calendar already has %d rows, skipping seed.", count)
         return 0
 
-    data = _load_json("work_calendars.json")
-    objects = [
-        WorkCalendar(
-            country_code=row["country_code"],
-            name=row["name"],
-            name_translations=row.get("name_translations"),
-            year=row["year"],
-            work_hours_per_day=row.get("work_hours_per_day", "8"),
-            work_days=row["work_days"],
-            exceptions=row.get("exceptions", []),
-            metadata_={},
-        )
-        for row in data
-    ]
+    data = load_work_calendar_seed_rows()
+    objects = [work_calendar_from_seed_row(row) for row in data]
     session.add_all(objects)
     await session.flush()
     logger.info("Seeded %d work calendars.", len(objects))
     return len(objects)
+
+
+def load_work_calendar_seed_rows() -> list[dict]:
+    """Every work calendar this release ships, straight out of the seed file.
+
+    Public for the reason :func:`load_tax_seed_rows` is public. The boot-path
+    reconciler in
+    :mod:`app.modules.i18n_foundation.work_calendar_seed_reconcile` hands these
+    rows to an install that was seeded before they were added, and it reads
+    them from here rather than carrying a copy.
+
+    A copy would be worse here than it is for a tax rate. A stale working week
+    is five plausible numbers, and this table has already shipped one week
+    written under the wrong weekday convention, which no reader can see by
+    looking at it. Two copies of that are two chances to fix only one.
+    """
+    return _load_json("work_calendars.json")
+
+
+def work_calendar_from_seed_row(row: dict) -> WorkCalendar:
+    """Build one ORM row from one work-calendar seed line.
+
+    The seeder and the reconciler both come through here, so a calendar
+    delivered to an old install is field for field the calendar a new install
+    would have been seeded with, including the defaults filled in for keys the
+    file leaves out.
+    """
+    return WorkCalendar(
+        country_code=row["country_code"],
+        name=row["name"],
+        name_translations=row.get("name_translations"),
+        year=row["year"],
+        work_hours_per_day=row.get("work_hours_per_day", "8"),
+        work_days=row["work_days"],
+        exceptions=row.get("exceptions", []),
+        metadata_={},
+    )
 
 
 def load_tax_seed_rows() -> list[dict]:
