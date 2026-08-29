@@ -158,18 +158,42 @@ def dwg_top_view_to_png(
     return buf.getvalue(), width_px, height_px
 
 
+class ImagePixelBudgetExceeded(Exception):
+    """The header declares more pixels than the decoder is willing to accept.
+
+    Deliberately not a :class:`ValueError`. A caller distinguishing "these
+    bytes are not an image we can read" from "these bytes are an image we
+    refuse to read" answers the first with 422 and the second with 413, and
+    subclassing would silently fold the second into the first.
+    """
+
+
 def image_dimensions(png_or_jpeg: bytes) -> tuple[int, int]:
     """Read ``(width_px, height_px)`` from a PNG/JPEG byte string.
 
     We rely on Pillow rather than parsing the headers by hand so any
-    new formats (WebP, HEIC) inherit support for free. Failure raises
-    :class:`ValueError` which the caller maps to HTTP 415.
+    new formats (WebP, HEIC) inherit support for free.
+
+    Raises:
+        ValueError: The bytes are not a raster image we recognise. The caller
+            maps this to HTTP 422.
+        ImagePixelBudgetExceeded: The declared surface is far above
+            ``Image.MAX_IMAGE_PIXELS``. The caller maps this to HTTP 413.
+
+    ``Image.open`` is lazy - it parses the header and allocates no pixel
+    buffer - so a few dozen bytes declaring an implausible surface are enough
+    to reach Pillow's own bomb guard here, before anything expensive runs.
     """
     from PIL import Image, UnidentifiedImageError
 
     try:
         with Image.open(io.BytesIO(png_or_jpeg)) as img:
             return img.size  # (w, h)
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+        # Pillow raises this rather than a ValueError, so it used to travel
+        # straight past the caller's handler and surface as an unexplained 500
+        # on a request the server had understood and deliberately refused.
+        raise ImagePixelBudgetExceeded(str(exc)) from exc
     except UnidentifiedImageError as exc:
         raise ValueError("image bytes not recognised") from exc
 

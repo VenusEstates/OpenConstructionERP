@@ -1558,7 +1558,7 @@ class GeoHubService:
             FileSignatureMismatch,
         )
         from app.core.file_signature import require as require_signature
-        from app.modules.geo_hub.raster_pipeline import image_dimensions
+        from app.modules.geo_hub.raster_pipeline import ImagePixelBudgetExceeded, image_dimensions
 
         try:
             require_signature(
@@ -1574,6 +1574,17 @@ class GeoHubService:
 
         try:
             w, h = image_dimensions(content)
+        except ImagePixelBudgetExceeded as exc:
+            # Understood and refused, which is not the same as broken. The
+            # surface is read off the header, so this costs a few dozen bytes
+            # and never reaches a decode.
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=(
+                    "The image declares more pixels than the overlay rasteriser will decode. "
+                    "Downscale it before uploading."
+                ),
+            ) from exc
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
