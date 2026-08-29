@@ -153,6 +153,39 @@ def _portal_rate_check(token: str) -> None:
         )
 
 
+async def _verify_portal_buyer_owner(
+    session: SessionDep,
+    buyer: Buyer,
+    user_payload: dict,
+    *,
+    detail: str,
+) -> None:
+    """Tenant gate for the manager-side portal-token endpoints.
+
+    Resolves buyer → development → project.owner_id and collapses "exists
+    but not yours" into 404, so these endpoints cannot be turned into an
+    existence oracle for another tenant's buyers.
+
+    Ownership is strict: the global ``admin`` role does not grant
+    cross-tenant reach, matching the rule already applied by
+    ``_verify_owner_via_development`` in the sibling router. Same-tenant
+    access is unaffected because the project owner's id matches the caller.
+
+    ``detail`` differs per endpoint so the 404 body stays indistinguishable
+    from that endpoint's own "not found" response.
+    """
+    from app.modules.projects.repository import ProjectRepository
+    from app.modules.property_dev.repository import DevelopmentRepository
+
+    dev = await DevelopmentRepository(session).get_by_id(buyer.development_id)
+    if dev is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+    proj = await ProjectRepository(session).get_by_id(dev.project_id)
+    caller_id = user_payload.get("sub") or ""
+    if proj is None or str(proj.owner_id) != str(caller_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+
+
 async def _resolve_portal_context(
     session: SessionDep,
     settings: SettingsDep,
@@ -224,26 +257,7 @@ async def issue_portal_token(
 
     # Cross-tenant guard (collapse to 404, not 403, to avoid leaking
     # the buyer's existence).
-    is_admin = user_payload.get("role") == "admin"
-    if not is_admin:
-        from app.modules.projects.repository import ProjectRepository
-        from app.modules.property_dev.repository import DevelopmentRepository
-
-        dev = await DevelopmentRepository(session).get_by_id(
-            buyer.development_id,
-        )
-        if dev is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Buyer not found",
-            )
-        proj = await ProjectRepository(session).get_by_id(dev.project_id)
-        caller_id = user_payload.get("sub") or ""
-        if proj is None or str(proj.owner_id) != str(caller_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Buyer not found",
-            )
+    await _verify_portal_buyer_owner(session, buyer, user_payload, detail="Buyer not found")
 
     svc = PortalLinkService(session, settings)
     try:
@@ -284,26 +298,7 @@ async def list_buyer_portal_tokens(
             detail="Buyer not found",
         )
     # Cross-tenant guard (same shape as issue/).
-    is_admin = user_payload.get("role") == "admin"
-    if not is_admin:
-        from app.modules.projects.repository import ProjectRepository
-        from app.modules.property_dev.repository import DevelopmentRepository
-
-        dev = await DevelopmentRepository(session).get_by_id(
-            buyer.development_id,
-        )
-        if dev is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Buyer not found",
-            )
-        proj = await ProjectRepository(session).get_by_id(dev.project_id)
-        caller_id = user_payload.get("sub") or ""
-        if proj is None or str(proj.owner_id) != str(caller_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Buyer not found",
-            )
+    await _verify_portal_buyer_owner(session, buyer, user_payload, detail="Buyer not found")
 
     svc = PortalLinkService(session, settings)
     rows = await svc.list_active_for_buyer(buyer_id)
@@ -337,26 +332,7 @@ async def revoke_portal_token(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Token not found",
         )
-    is_admin = user_payload.get("role") == "admin"
-    if not is_admin:
-        from app.modules.projects.repository import ProjectRepository
-        from app.modules.property_dev.repository import DevelopmentRepository
-
-        dev = await DevelopmentRepository(session).get_by_id(
-            buyer.development_id,
-        )
-        if dev is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Token not found",
-            )
-        proj = await ProjectRepository(session).get_by_id(dev.project_id)
-        caller_id = user_payload.get("sub") or ""
-        if proj is None or str(proj.owner_id) != str(caller_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Token not found",
-            )
+    await _verify_portal_buyer_owner(session, buyer, user_payload, detail="Token not found")
 
     svc = PortalLinkService(session, settings)
     await svc.revoke(token_id)

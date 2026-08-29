@@ -1460,12 +1460,12 @@ class PropertyDevService:
         """Confirm the caller owns the project - collapse "not yours" to 404.
 
         Mirrors the cross-tenant IDOR guard used elsewhere in property_dev
-        (see :func:`router._verify_buyer_owner`). Admins bypass.
+        (see :func:`router._verify_buyer_owner`). Ownership is strict: the
+        global ``admin`` role does not grant cross-tenant reach, matching
+        the rule already applied by ``router._verify_owner_via_development``.
         """
         if user_payload is None:
             # Service-layer caller without payload (tests / migrations).
-            return
-        if user_payload.get("role") == "admin":
             return
         user_id = user_payload.get("sub") or user_payload.get("user_id")
         if user_id is None:
@@ -1495,7 +1495,8 @@ class PropertyDevService:
           to every caller. Filtering by ``country_code`` keeps the result
           tight when the caller knows the project's country.
         - ``project_id``-scoped entries are returned only when the caller
-          owns the project (admins see everything).
+          owns the project. The global ``admin`` role is not a way across
+          that boundary.
         - Tenant-created entries with the same ``code`` as a preset
           override the preset in the response (this lets the user replace
           "REIHENHAUS" with their own labelled / sized version without

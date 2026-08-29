@@ -205,13 +205,17 @@ async def _verify_buyer_owner(
 
     Closes a cross-tenant write IDOR on ``PATCH /buyers/{b_id}``: without
     this guard, any user with ``property_dev.update`` could mutate any
-    other tenant's buyer just by guessing UUIDs. Admins bypass.
+    other tenant's buyer just by guessing UUIDs.
+
+    Ownership is strict: only the project owner passes. The global ``admin``
+    role does not grant cross-tenant reach here, matching the rule already
+    applied by ``_verify_owner_via_development``. Same-tenant access is
+    unaffected because the project owner's id matches ``user_id``.
 
     Resolves the chain buyer → development → project.owner_id and either
     raises 404 (when the buyer does not exist OR is owned by a different
     user, so we never leak existence) or returns silently.
     """
-    is_admin = payload.get("role") == "admin"
     user_id = payload.get("sub") or payload.get("user_id")
     if user_id is None:
         # Should not happen - RequirePermission already ensures auth -
@@ -227,8 +231,6 @@ async def _verify_buyer_owner(
     buyer = await BuyerRepository(session).get_by_id(buyer_id)
     if buyer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Buyer not found")
-    if is_admin:
-        return
 
     development = await DevelopmentRepository(session).get_by_id(
         buyer.development_id,
@@ -593,7 +595,7 @@ async def list_house_type_catalogue(
 
     Presets (project_id IS NULL, is_preset=True) are always visible.
     Tenant-created entries are only included when the caller owns the
-    project - admins see everything.
+    project. The global admin role is not a way across that boundary.
     """
     rows = await service.list_house_type_catalogue(
         country_code=country_code,
@@ -986,9 +988,9 @@ async def list_selections(
     # Cross-tenant IDOR gate: ``list_for_buyer`` filters by buyer_id only,
     # so without this check any caller with ``property_dev.read`` could
     # read another tenant's buyer selections by guessing the buyer UUID.
-    # Verify the buyer's development belongs to a project the caller owns
-    # (admins bypass); 404 on cross-tenant access so we never leak the
-    # existence of other tenants' buyer UUIDs.
+    # Verify the buyer's development belongs to a project the caller owns;
+    # 404 on cross-tenant access so we never leak the existence of other
+    # tenants' buyer UUIDs.
     await _verify_owner_via_buyer(session, buyer_id, user_payload)
     rows = await service.selections.list_for_buyer(buyer_id)
     return [BuyerSelectionResponse.model_validate(r) for r in rows]
@@ -1925,9 +1927,14 @@ async def _verify_owner_via_plot(
     """Generic IDOR closure walking plot → development → project owner.
 
     Collapses "exists but not yours" to 404 to avoid leaking UUID
-    existence. Admins bypass.
+    existence.
+
+    Ownership is strict: only the project owner passes. The global ``admin``
+    role does not grant cross-tenant reach here, matching the rule already
+    applied by ``_verify_owner_via_development``. This helper is the root of
+    the reservation, contract, party, handover, snag, warranty, schedule and
+    instalment chains, so it decides the answer for all of them.
     """
-    is_admin = payload.get("role") == "admin"
     user_id = payload.get("sub") or payload.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail=translate("errors.resource_not_found", locale=get_locale()))
@@ -1941,8 +1948,6 @@ async def _verify_owner_via_plot(
     plot = await PlotRepository(session).get_by_id(plot_id)
     if plot is None:
         raise HTTPException(status_code=404, detail=translate("errors.resource_not_found", locale=get_locale()))
-    if is_admin:
-        return
     dev = await DevelopmentRepository(session).get_by_id(plot.development_id)
     if dev is None:
         raise HTTPException(status_code=404, detail=translate("errors.resource_not_found", locale=get_locale()))
@@ -2015,9 +2020,13 @@ async def _verify_owner_via_lead(
     Leads without a development_id are owner-less by design (top-of-funnel
     inbound webhooks); they are accessible by any authenticated user with
     the right permission level but never escape into another tenant since
-    they carry no project-scoped data.
+    they carry no project-scoped data. That pass-through is deliberate and
+    is the only one left here.
+
+    Once a lead does carry a development, ownership is strict: the global
+    ``admin`` role does not grant cross-tenant reach, matching the rule
+    already applied by ``_verify_owner_via_development``.
     """
-    is_admin = payload.get("role") == "admin"
     user_id = payload.get("sub") or payload.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail=translate("errors.resource_not_found", locale=get_locale()))
@@ -2027,7 +2036,7 @@ async def _verify_owner_via_lead(
     lead = await LeadRepository(session).get_by_id(lead_id)
     if lead is None:
         raise HTTPException(status_code=404, detail=translate("errors.resource_not_found", locale=get_locale()))
-    if is_admin or lead.development_id is None:
+    if lead.development_id is None:
         return
     await _verify_owner_via_development(session, lead.development_id, payload)
 
@@ -2104,7 +2113,8 @@ async def _verify_owner_via_handover(
 ) -> None:
     """IDOR closure for Handover (handover → plot → development → project).
 
-    Collapses "exists but not yours" to 404. Admins bypass.
+    Collapses "exists but not yours" to 404. Ownership is decided by
+    ``_verify_owner_via_plot``, which is strict about the tenant boundary.
     """
     from app.modules.property_dev.repository import HandoverRepository
 
@@ -2163,7 +2173,8 @@ async def _verify_owner_via_buyer(
 # option, selection, handover-doc, phase, block, broker, commission,
 # escrow, price-matrix). Each collapses "exists but not yours" to 404
 # (never 403) to avoid turning the endpoint into an existence oracle.
-# Admins always bypass. Pattern mirrors _verify_owner_via_plot.
+# None of them admit a global admin across a tenant boundary: they resolve
+# to _verify_owner_via_plot or _verify_owner_via_development, both strict.
 
 
 async def _verify_owner_via_house_type(
@@ -2286,9 +2297,14 @@ async def _verify_owner_via_broker(
     """IDOR closure for Broker via tenant_id (broker.tenant_id == caller).
 
     Brokers carry a tenant_id (no project FK); they belong to the user
-    who created them. Admins bypass.
+    who created them. Ownership is strict: the global ``admin`` role does
+    not grant cross-tenant reach, matching the rest of the module.
+
+    Note that no route reaches this helper today. The broker endpoints are
+    guarded by ``_ensure_broker_owner``, which resolves the same tenant
+    check against an already-loaded broker. Both are kept in step so the
+    module answers one way whichever one a future route picks up.
     """
-    is_admin = payload.get("role") == "admin"
     user_id = payload.get("sub") or payload.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="Resource not found")
@@ -2298,8 +2314,6 @@ async def _verify_owner_via_broker(
     broker = await BrokerRepository(session).get_by_id(broker_id)
     if broker is None:
         raise HTTPException(status_code=404, detail="Resource not found")
-    if is_admin:
-        return
     if broker.tenant_id is None or str(broker.tenant_id) != str(user_id):
         raise HTTPException(status_code=404, detail="Resource not found")
 
@@ -3605,11 +3619,14 @@ async def verify_broker_kyc(
 def _ensure_broker_owner(broker: Any, payload: dict[str, Any]) -> None:
     """Tenant-isolation gate for brokers.
 
-    Admins bypass. For non-admins, a broker that belongs to a different
-    tenant collapses to 404 - never leak existence via 403.
+    A broker that belongs to a different tenant collapses to 404 - never
+    leak existence via 403. Ownership is strict: the global ``admin`` role
+    does not grant cross-tenant reach, matching the rule already applied by
+    ``_verify_owner_via_development``.
+
+    This is the gate the broker, commission-agreement and commission-accrual
+    routes actually call.
     """
-    if payload.get("role") == "admin":
-        return
     caller_tenant = _payload_tenant_id(payload)
     broker_tenant = getattr(broker, "tenant_id", None)
     if caller_tenant is None and broker_tenant is None:
@@ -3638,8 +3655,8 @@ async def list_commission_agreements(
     # ran no ownership check, so any user with ``property_dev.read`` could
     # enumerate another tenant's commission agreements by broker or
     # development UUID. Verify ownership of whatever scope the caller
-    # passed (admins bypass inside the helpers); a request with no scope
-    # at all returns nothing rather than every tenant's agreements. 404 on
+    # passed; a request with no scope at all returns nothing rather than
+    # every tenant's agreements. 404 on
     # cross-tenant access keeps the endpoint from being an existence oracle.
     if broker_id is not None:
         broker = await service.get_broker(broker_id)
@@ -4282,10 +4299,12 @@ async def _enforce_propdev_doc_owner(
     Resolves the calling user's project ownership against the entity
     referenced in the request. Collapses "doesn't exist" and "exists but
     not yours" into 404 so the endpoint can't be turned into a
-    UUID-existence oracle. Admins bypass.
+    UUID-existence oracle.
+
+    Ownership is strict: the global ``admin`` role does not grant
+    cross-tenant reach, matching the rule already applied by
+    ``_verify_owner_via_development``.
     """
-    if payload.get("role") == "admin":
-        return
     user_id = payload.get("sub") or payload.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -5281,7 +5300,6 @@ async def upload_custom_document_template(
 
     _validate_custom_template_magic(ext, content, raw_filename)
 
-    is_admin = user_payload.get("role") == "admin"
     user_id_raw = user_payload.get("sub") or user_payload.get("user_id")
     if user_id_raw is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -5295,7 +5313,7 @@ async def upload_custom_document_template(
         proj = await session.get(Project, project_id)
         if proj is None:
             raise HTTPException(status_code=404, detail=translate("errors.project_not_found", locale=get_locale()))
-        if not is_admin and str(proj.owner_id) != str(user_id):
+        if str(proj.owner_id) != str(user_id):
             raise HTTPException(status_code=404, detail=translate("errors.project_not_found", locale=get_locale()))
         resolved_project_id = project_id
     else:
@@ -5304,7 +5322,12 @@ async def upload_custom_document_template(
                 select(Project.id).where(Project.owner_id == user_id).limit(1),
             )
         ).scalar_one_or_none()
-        if first_proj is None and not is_admin:
+        # Every template row must name an owning project. A row with a NULL
+        # project_id is waved through by the ownership gates on the read,
+        # download and delete endpoints, so letting one be created here
+        # would manufacture an object outside the tenant boundary. The rule
+        # is the same for every role, admin included.
+        if first_proj is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=("No project found for current user. Create a project before uploading templates."),
@@ -5369,9 +5392,8 @@ async def delete_custom_document_template(
     if row is None:
         raise HTTPException(status_code=404, detail=translate("errors.template_not_found", locale=get_locale()))
 
-    is_admin = user_payload.get("role") == "admin"
     user_id = user_payload.get("sub") or user_payload.get("user_id")
-    if not is_admin and row.project_id is not None:
+    if row.project_id is not None:
         proj = await ProjectRepository(session).get_by_id(row.project_id)
         if proj is None or str(proj.owner_id) != str(user_id):
             raise HTTPException(status_code=404, detail=translate("errors.template_not_found", locale=get_locale()))
@@ -5411,9 +5433,8 @@ async def download_custom_document_template(
     if row is None:
         raise HTTPException(status_code=404, detail=translate("errors.template_not_found", locale=get_locale()))
 
-    is_admin = user_payload.get("role") == "admin"
     user_id = user_payload.get("sub") or user_payload.get("user_id")
-    if not is_admin and row.project_id is not None:
+    if row.project_id is not None:
         proj = await ProjectRepository(session).get_by_id(row.project_id)
         if proj is None or str(proj.owner_id) != str(user_id):
             raise HTTPException(status_code=404, detail=translate("errors.template_not_found", locale=get_locale()))
@@ -5573,7 +5594,6 @@ async def save_text_custom_document_template(
     if content_type == "text/html":
         content_text = strip_dangerous_html(content_text)
 
-    is_admin = user_payload.get("role") == "admin"
     user_id_raw = user_payload.get("sub") or user_payload.get("user_id")
     if user_id_raw is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -5599,8 +5619,8 @@ async def save_text_custom_document_template(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=translate("errors.template_not_found", locale=get_locale()),
             )
-        # IDOR closure - only the owner (or admin) may overwrite the row.
-        if not is_admin and existing_row.project_id is not None:
+        # IDOR closure - only the project owner may overwrite the row.
+        if existing_row.project_id is not None:
             from app.modules.projects.repository import ProjectRepository
 
             proj = await ProjectRepository(session).get_by_id(
@@ -5630,7 +5650,7 @@ async def save_text_custom_document_template(
                 status_code=404,
                 detail=translate("errors.project_not_found", locale=get_locale()),
             )
-        if not is_admin and str(proj.owner_id) != str(user_id):
+        if str(proj.owner_id) != str(user_id):
             raise HTTPException(
                 status_code=404,
                 detail=translate("errors.project_not_found", locale=get_locale()),
@@ -5642,7 +5662,9 @@ async def save_text_custom_document_template(
                 select(Project.id).where(Project.owner_id == user_id).limit(1),
             )
         ).scalar_one_or_none()
-        if first_proj is None and not is_admin:
+        # Same rule as the upload endpoint: no NULL-project template rows,
+        # because the ownership gates wave those through for every caller.
+        if first_proj is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=("No project found for current user. Create a project before saving templates."),
@@ -5759,9 +5781,8 @@ async def get_custom_document_template_content(
             detail=translate("errors.template_not_found", locale=get_locale()),
         )
 
-    is_admin = user_payload.get("role") == "admin"
     user_id = user_payload.get("sub") or user_payload.get("user_id")
-    if not is_admin and row.project_id is not None:
+    if row.project_id is not None:
         proj = await ProjectRepository(session).get_by_id(row.project_id)
         if proj is None or str(proj.owner_id) != str(user_id):
             raise HTTPException(
