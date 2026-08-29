@@ -3453,4 +3453,181 @@ Content-Length: {}\r\nConnection: close\r\n\r\n{}",
             "giving up early would force-kill a backend still shutting down"
         );
     }
+
+    /// The grant on the application window has to cover every address the
+    /// launcher can serve the application from, measured with Tauri's matcher.
+    ///
+    /// `capabilities/app-window.json` is the whole of what stands between the
+    /// application page and an access control list that refuses every command
+    /// it invokes, and the user-visible shape of that refusal is that every
+    /// outbound link in the product does nothing at all when clicked. The grant
+    /// hangs on one string, `http://127.0.0.1:*`, and whether that string
+    /// covers `http://127.0.0.1:8732/boq` is a question about Tauri's URL
+    /// pattern parser and not about anything written here: `RemoteUrlPattern`
+    /// substitutes a wildcard for a pathname that is absent or bare `/`, which
+    /// is why a pattern carrying no path still covers every route. A
+    /// reimplementation of that rule can agree with it today and part company
+    /// with it on the next upgrade, so this asks the real type, the one the
+    /// running application consults, rather than a model of it.
+    ///
+    /// Both the default port and an arbitrary one are asserted because the
+    /// launcher picks between them at runtime: 8732 when it is free and any
+    /// free port otherwise. A pattern narrowed to the default port would leave
+    /// the second copy of the app started on a machine with dead links, and a
+    /// gate that only ever tried 8732 would call that fixed.
+    ///
+    /// The non-loopback cases are the other half and are not decoration. This
+    /// capability grants the OS opener to whatever origin it names, so a
+    /// pattern that widened to a host on the network, or to the internet, would
+    /// hand that opener to a page nobody on this machine wrote.
+    #[test]
+    fn the_app_window_grant_covers_every_address_the_launcher_can_serve() {
+        use tauri::utils::acl::RemoteUrlPattern;
+        use tauri::Url;
+
+        const CAPABILITY: &str = include_str!("../capabilities/app-window.json");
+        let capability: serde_json::Value =
+            serde_json::from_str(CAPABILITY).expect("app-window.json has to be valid JSON");
+
+        let patterns: Vec<RemoteUrlPattern> = capability["remote"]["urls"]
+            .as_array()
+            .expect(
+                "the application window is a remote origin as far as the ACL is concerned, so \
+                 the capability that grants it anything needs a remote.urls list",
+            )
+            .iter()
+            .map(|entry| {
+                entry
+                    .as_str()
+                    .expect("a URL pattern is written as a string")
+                    .parse::<RemoteUrlPattern>()
+                    .expect("Tauri has to be able to parse the pattern this build ships")
+            })
+            .collect();
+        assert!(
+            !patterns.is_empty(),
+            "an empty remote.urls grants the application window nothing, which is the state \
+             where every outbound link is silently dead"
+        );
+
+        let covered = |url: &str| {
+            let parsed = Url::parse(url).expect("the addresses below are valid URLs");
+            patterns.iter().any(|pattern| pattern.test(&parsed))
+        };
+
+        for served in [
+            // The bare origin, which is where the launcher navigates.
+            "http://127.0.0.1:8732/",
+            // A route, which is where the user is by the time they click a link.
+            "http://127.0.0.1:8732/boq",
+            // The arbitrary free port, taken whenever 8732 is already in use.
+            "http://127.0.0.1:49512/",
+            // A deep route carrying a query and a fragment, which is what the
+            // single-page router leaves in the address bar.
+            "http://127.0.0.1:49512/projects/1/boq?tab=items#row-3",
+        ] {
+            assert!(
+                covered(served),
+                "the launcher serves the application at {served}, so a window there has to be \
+                 covered by the grant or every command it invokes is refused"
+            );
+        }
+
+        for elsewhere in [
+            "http://erp.example.invalid/",
+            "https://erp.example.invalid/",
+            "http://192.168.1.10:8732/",
+        ] {
+            assert!(
+                !covered(elsewhere),
+                "{elsewhere} is not a server this launcher started, and this capability hands \
+                 the OS opener to whatever it covers"
+            );
+        }
+    }
+
+    /// The grant has to resolve, through the permission file, to the command
+    /// that opens a link.
+    ///
+    /// A capability names permission identifiers, a permission names commands,
+    /// and only the second half decides what the page may call. Renaming a
+    /// permission, or dropping one from the list, severs the grant while
+    /// leaving both files reading plausibly, and the failure is silent: the
+    /// access control list refuses `open_external_url`, the frontend catches a
+    /// rejected promise, and the link does nothing. So this resolves the chain
+    /// rather than checking that a file contains a name.
+    #[test]
+    fn the_app_window_grant_reaches_the_commands_that_open_a_link() {
+        use std::collections::{HashMap, HashSet};
+
+        const CAPABILITY: &str = include_str!("../capabilities/app-window.json");
+        const PERMISSIONS: &str = include_str!("../permissions/app-commands.json");
+
+        let capability: serde_json::Value =
+            serde_json::from_str(CAPABILITY).expect("app-window.json has to be valid JSON");
+        let declared: serde_json::Value =
+            serde_json::from_str(PERMISSIONS).expect("app-commands.json has to be valid JSON");
+
+        let mut commands_of: HashMap<&str, Vec<&str>> = HashMap::new();
+        for permission in declared["permission"]
+            .as_array()
+            .expect("the application declares its permissions as a list")
+        {
+            let identifier = permission["identifier"]
+                .as_str()
+                .expect("every permission is named by an identifier");
+            let allowed = permission["commands"]["allow"]
+                .as_array()
+                .map(|list| list.iter().filter_map(|c| c.as_str()).collect())
+                .unwrap_or_default();
+            commands_of.insert(identifier, allowed);
+        }
+
+        let mut members_of: HashMap<&str, Vec<&str>> = HashMap::new();
+        for set in declared
+            .get("set")
+            .and_then(|s| s.as_array())
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+        {
+            let identifier = set["identifier"]
+                .as_str()
+                .expect("every permission set is named by an identifier");
+            let members = set["permissions"]
+                .as_array()
+                .map(|list| list.iter().filter_map(|p| p.as_str()).collect())
+                .unwrap_or_default();
+            members_of.insert(identifier, members);
+        }
+
+        // Expand the capability's identifiers into commands, following sets one
+        // level at a time and never twice, so a set that names itself cannot
+        // spin here.
+        let mut granted: HashSet<&str> = HashSet::new();
+        let mut seen: HashSet<&str> = HashSet::new();
+        let mut pending: Vec<&str> = capability["permissions"]
+            .as_array()
+            .expect("a capability grants a list of permissions")
+            .iter()
+            .filter_map(|p| p.as_str())
+            .collect();
+        while let Some(identifier) = pending.pop() {
+            if !seen.insert(identifier) {
+                continue;
+            }
+            if let Some(commands) = commands_of.get(identifier) {
+                granted.extend(commands);
+            } else if let Some(members) = members_of.get(identifier) {
+                pending.extend(members);
+            }
+        }
+
+        for command in ["open_external_url", "open_app_in_browser"] {
+            assert!(
+                granted.contains(command),
+                "the application page calls {command} to put a link in front of the user, and \
+                 an ungranted command is refused before it runs"
+            );
+        }
+    }
 }
