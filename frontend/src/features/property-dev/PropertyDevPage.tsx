@@ -44,6 +44,7 @@ import {
   DollarSign,
   House,
   LayoutGrid,
+  ShieldCheck,
   MapPin,
   CalendarClock,
   UserCircle2,
@@ -830,6 +831,27 @@ export function PropertyDevPage() {
               <LayoutGrid size={13} />
               {t('propdev.inventory_map.cta', {
                 defaultValue: 'Inventory Map',
+              })}
+            </Link>
+          )}
+          {selectedDevId && (
+            // The compliance dashboard is dev-scoped like the two above: its
+            // endpoints all take dev_id, so this strip is where it is reached
+            // from. It carries no sidebar row for the same reason they do not.
+            <Link
+              to={`/property-dev/developments/${selectedDevId}/compliance`}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border-light bg-surface-primary px-2.5 py-1.5 text-xs font-medium text-content-secondary hover:bg-surface-secondary hover:text-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/40"
+              title={t('propdev.compliance.title', {
+                defaultValue: 'Compliance dashboard',
+              })}
+              aria-label={t('propdev.compliance.title', {
+                defaultValue: 'Compliance dashboard',
+              })}
+              data-testid="propdev-compliance-link"
+            >
+              <ShieldCheck size={13} />
+              {t('propdev.compliance.title', {
+                defaultValue: 'Compliance dashboard',
               })}
             </Link>
           )}

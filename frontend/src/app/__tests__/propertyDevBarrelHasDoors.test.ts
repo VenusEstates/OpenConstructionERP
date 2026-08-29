@@ -62,18 +62,22 @@ function stripComments(source: string): string {
 /**
  * Components rendered by another screen instead of by a route, and where.
  *
- * The host is a claim the test verifies: the named file has to render the
- * component as JSX. An entry naming a file that stopped rendering it fails
- * here rather than quietly excusing the export.
+ * Every entry is a hole in this instrument, so the bar is: something genuinely
+ * renders the component and you can name the file. The host is a claim the
+ * test verifies rather than takes on trust, and an entry naming a file that
+ * stopped rendering it fails here instead of quietly excusing the export.
+ *
+ * `ValidationRulesSettingsPage` belongs here and not in the routed branch.
+ * App.tsx:1367 does carry `/property-dev/settings/validation-rules`, but that
+ * route mounts `<Navigate to="/governance?tab=validation" replace />` and never
+ * names the component; the thing that renders it is GovernancePage.tsx:194. A
+ * redirect route is not a mount, and counting one as a mount would let a page
+ * be certified by a route that cannot show it.
  */
 const EMBEDDED: Record<string, { host: string; why: string }> = {
   ValidationRulesSettingsPage: {
     host: 'features/governance/GovernancePage.tsx',
-    why: 'a tab of the governance screen; its old route is now a redirect there',
-  },
-  CompliancePage: {
-    host: 'features/property-dev/CompliancePage.tsx',
-    why: 'a reusable panel taking devId as a prop; CompliancePageRoute routes it',
+    why: 'rendered as the validation tab; the old route redirects to that screen',
   },
 };
 
@@ -146,7 +150,7 @@ const barrelExports = readBarrelExports('features/property-dev/index.ts');
 describe('the property-dev barrel and the doors into it', () => {
   // Every verdict below reports an empty list as success, so a parser that
   // stopped matching would certify the whole barrel while measuring nothing.
-  // State the populations first. Measured 2026-08-29: 10 exports, 7 lazy
+  // State the populations first. Measured 2026-08-29: 9 exports, 7 lazy
   // bindings and 293 routed elements. The floors sit well under those.
   it('read a real barrel, a real lazy-import list and a real route list', () => {
     expect(barrelExports.length, 'no exports parsed out of the property-dev barrel').toBeGreaterThan(5);

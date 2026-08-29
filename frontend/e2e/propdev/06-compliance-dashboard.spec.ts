@@ -1,9 +1,7 @@
 /**
  * Scenario #6 — Compliance dashboard + Regulator reports.
  *
- * The compliance UI page (``/property-dev/compliance``) is part of #139
- * which is NOT in this branch. We assert the underlying API contract is
- * solid so the UI scenario will land cleanly when #139 ships:
+ * The API half asserts the regulator-report contract:
  *
  *   - GET /regulator-reports/RERA      (MANAGER+ gated)
  *   - GET /regulator-reports/MAHARERA
@@ -14,17 +12,18 @@
  *   * Carry the correct ``regulator`` + ``quarter`` echoes
  *   * Have pdf_size_bytes > 0 (a real PDF, not an empty stub)
  *
- * TODO(#139): When the dashboard ships, the UI half of this spec is
- *   re-enabled — navigate to /property-dev/compliance, click "Run
- *   Checks", drill into each rule, then assert the generated PDF
- *   download. The fixtures here are sufficient to exercise that page.
+ * The UI half opens the dashboard itself. Its route is
+ * ``/property-dev/developments/:devId/compliance``, NOT the top level
+ * ``/property-dev/compliance`` this file used to name: all three compliance
+ * endpoints require ``dev_id``, so the screen is scoped to a development the
+ * same way pricing and the inventory map are.
  */
 import { expect, test } from '@playwright/test';
 import {
   bootstrapDevelopmentGraph,
   teardownDevelopment,
 } from './helpers/api-bootstrap';
-import { demoLogin } from './helpers/auth';
+import { demoLogin, hydrateAuth } from './helpers/auth';
 import { Shooter } from './helpers/screenshots';
 
 test.describe.configure({ mode: 'serial' });
@@ -91,26 +90,37 @@ test('regulator-report endpoints generate non-empty PDFs (MANAGER)', async () =>
   await teardownDevelopment(admin.api, graph.development_id);
 });
 
-test('TODO #139 — UI dashboard placeholder (skipped)', async ({ page }) => {
-  // Still skipped, but not for the reason this used to give. The page IS
-  // in this branch: features/property-dev/CompliancePage.tsx is complete,
-  // exported from the feature barrel, and its three backend endpoints
-  // answer (401 unauthenticated, not 404). What is missing is a route to
-  // it — App.tsx carries no /property-dev/compliance and no lazy import,
-  // although every other page in that barrel has both. There is therefore
-  // no URL for this spec to open. Which path, which menu entry and which
-  // permission gate it should get is a product decision, not something a
-  // test can settle, so this stays skipped rather than failing.
-  //
-  // When the route lands, swap this stub for:
-  //   await page.goto('/property-dev/compliance');
-  //   await page.getByRole('button', { name: 'Run Checks' }).click();
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
+test('compliance dashboard opens under a development and runs its checks', async ({
+  page,
+}) => {
+  // This test was skipped, and the reason it carried said no route reached the
+  // page, which was true when it was written. The route landed, so the reason
+  // stopped describing the world: a skip explaining itself with something that
+  // is no longer true reads as a case somebody already thought about, which is
+  // worse than no test at all. Both are replaced here.
   const shooter = new Shooter('compliance');
-  await shooter.shoot(page, 'spa_root_loaded_no_compliance_route_yet');
-  test.skip(
-    true,
-    'CompliancePage (#139) ships but nothing routes to it — no URL to open',
-  );
+  const admin = await demoLogin('admin');
+  await hydrateAuth(page.context(), admin);
+  const graph = await bootstrapDevelopmentGraph(admin.api, {
+    name: 'R6 Compliance Dashboard Dev',
+  });
+
+  await page.goto(`/property-dev/developments/${graph.development_id}/compliance`);
+  await page.waitForLoadState('domcontentloaded');
+
+  // The heading and the run button are the two things the route has to deliver:
+  // the first says the component mounted rather than the not-found page, the
+  // second that it mounted with a devId and is offering its one action.
+  await expect(
+    page.getByRole('heading', { name: 'Compliance dashboard' }),
+  ).toBeVisible();
+  const runChecks = page.getByRole('button', { name: 'Run checks' });
+  await expect(runChecks).toBeVisible();
+  await shooter.shoot(page, 'compliance_dashboard_loaded');
+
+  await runChecks.click();
+  await expect(runChecks).toBeEnabled({ timeout: 30_000 });
+  await shooter.shoot(page, 'compliance_dashboard_after_run_checks');
+
+  await teardownDevelopment(admin.api, graph.development_id);
 });
