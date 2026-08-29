@@ -2140,8 +2140,23 @@ async def load_vector_from_github(
 # market under CIS-Russia-GESN-FER-TER/, which left all thirteen of its paths
 # naming files that no longer existed, while the parquet map, already derived,
 # went on working. Deriving it also reaches the nineteen markets the hand table
-# never listed. CA_TORONTO and ZH_CHINA are canonical internal ids that share
-# another market's snapshot, exactly as they do in _GITHUB_CWICR_FILES.
+# never listed.
+#
+# The two aliases below are not the same kind of thing, whatever the line they
+# used to share said. CA_TORONTO is one market under two names, and both maps
+# put it in the same folder as ENG_TORONTO. ZH_CHINA is the China Dinge
+# national base, whose own work items are Asia-China-Dinge/ZH_CHINA…parquet at
+# 10486 positions, and this hands it the global base's Shanghai snapshot, built
+# from a different catalogue of 55719. It arrived with the first national bases
+# and the six that followed got nothing, so TR_NATIONAL and the other six
+# answer 404 here.
+#
+# Do not make that symmetric by adding them. No national base has a published
+# vector snapshot, which is exactly what github_snapshot_files() leaves out and
+# what test_every_downloadable_base_has_a_snapshot_and_no_other_one_does
+# guards; a second alias would walk another one past it. Whether ZH_CHINA
+# should keep this line or join the other seven is open, because what a
+# ZH_CHINA search reads afterwards has not been measured.
 _GITHUB_SNAPSHOT_FILES: dict[str, str] = base_registry.github_snapshot_files()
 _GITHUB_SNAPSHOT_FILES.setdefault("CA_TORONTO", _GITHUB_SNAPSHOT_FILES["ENG_TORONTO"])
 _GITHUB_SNAPSHOT_FILES.setdefault("ZH_CHINA", _GITHUB_SNAPSHOT_FILES["ZH_SHANGHAI"])

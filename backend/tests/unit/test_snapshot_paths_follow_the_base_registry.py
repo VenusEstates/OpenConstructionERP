@@ -73,3 +73,31 @@ def test_the_internal_aliases_resolve_to_a_real_markets_snapshot() -> None:
     assert _GITHUB_SNAPSHOT_FILES["CA_TORONTO"] == derived["ENG_TORONTO"]
     assert _GITHUB_SNAPSHOT_FILES["ZH_CHINA"] == derived["ZH_SHANGHAI"]
     assert set(derived) <= set(_GITHUB_SNAPSHOT_FILES)
+
+
+def test_only_the_one_documented_national_base_reaches_the_snapshot_map() -> None:
+    """Nobody may copy the ZH_CHINA line for the other seven national bases.
+
+    Read the test above and this one together, because they disagree about the
+    same line on purpose. That one says ZH_CHINA resolves to a real market's
+    snapshot, which is true and is the problem: ZH_CHINA is the China Dinge
+    base, so the market it resolves to is a different catalogue. None of the
+    eight national bases has a published vector snapshot, which is why
+    ``github_snapshot_files`` omits them, so an alias is the only way one gets
+    into the map at all.
+
+    Counting them rather than pinning what ZH_CHINA points at. Pinning the
+    mismatch would have to be edited by whoever fixes it and would read as
+    sanctioning it, while a count goes red on the copy-paste that would spread
+    it and stays silent about how the one we have should end.
+    """
+
+    from app.modules.costs.router import _GITHUB_SNAPSHOT_FILES
+
+    national = {v.region for family in base_registry._NATIONAL_FAMILIES for v in family.variants}
+    present = sorted(national & set(_GITHUB_SNAPSHOT_FILES))
+    assert present == ["ZH_CHINA"], (
+        f"{present} are national base ids reachable in the snapshot map. Only ZH_CHINA is, "
+        "for historical reasons recorded next to the alias in router.py. A national base has "
+        "no snapshot of its own, so a new entry here would hand it another catalogue's vectors."
+    )
