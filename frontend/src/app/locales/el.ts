@@ -119,7 +119,7 @@ const resource = {
     "modules.catalog.norm_expansion": "Ανάπτυξη Νόρμας Παραγωγής",
     "modules.catalog.notifications": "Ειδοποιήσεις",
     "modules.catalog.onboarding": "Ένταξη",
-    "modules.catalog.opencde_api": "OpenCDE API",
+    "modules.catalog.opencde_api": "API OpenCDE",
     "modules.catalog.payment_clock": "Χρονόμετρο πληρωμής",
     "modules.catalog.payroll": "Μισθοδοσία",
     "modules.catalog.phonelog": "Καταγραφή Κλήσεων",

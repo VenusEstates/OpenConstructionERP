@@ -40,7 +40,7 @@ const resource = {
     "modules.catalog.closeout": "Consegna e chiusura",
     "modules.catalog.collaboration": "Commenti e punti di vista",
     "modules.catalog.collaboration_locks": "Blocchi di collaborazione in tempo reale",
-    "modules.catalog.commissioning": "Commissioning (Cx)",
+    "modules.catalog.commissioning": "Messa in servizio (Cx)",
     "modules.catalog.compliance": "DSL Conformità",
     "modules.catalog.compliance_ai": "IA Conformità",
     "modules.catalog.compliance_docs": "Documenti di conformità",

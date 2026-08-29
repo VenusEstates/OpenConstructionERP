@@ -119,7 +119,7 @@ const resource = {
     "modules.catalog.norm_expansion": "การขยายบรรทัดฐานการผลิต",
     "modules.catalog.notifications": "การแจ้งเตือน",
     "modules.catalog.onboarding": "การปฐมนิเทศ",
-    "modules.catalog.opencde_api": "OpenCDE API",
+    "modules.catalog.opencde_api": "API OpenCDE",
     "modules.catalog.payment_clock": "นาฬิกาการชำระเงิน",
     "modules.catalog.payroll": "บัญชีเงินเดือน",
     "modules.catalog.phonelog": "บันทึกการโทร",
