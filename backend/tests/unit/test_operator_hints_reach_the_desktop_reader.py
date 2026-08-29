@@ -31,6 +31,10 @@ by being absent from a hand-maintained roster:
 * ``apt``/``brew``/``npm`` instructions are followable on a frozen desktop's
   host, because they do not run through ``sys.executable``. That boundary is
   the one ``repair_hint``'s own docstring draws.
+* Prose that DESCRIBES an install instead of prescribing one. "a model can be
+  resident even on an install where the shared path is never used" is the noun,
+  and a register entry that happens to name a package is not a remedy handed to
+  anybody. A determiner in front of the word is what tells the two apart.
 
 Measured on 2026-08-23 against the tree: 34 sites in the population, all routed.
 A count on its own would let this pass by going blind, so the population size
@@ -78,9 +82,21 @@ _PIP_INSTALL = re.compile(
 )
 
 #: "install" the errand, not "installed" the diagnosis and not the "install" of
-#: "a broken install". The word boundary drops the participle; requiring a
-#: package name to follow drops the noun.
+#: "a broken install". The word boundary drops the participle. The noun is
+#: dropped by ``_NOUN_PHRASE`` below, at the one place that judges an errand.
 _IMPERATIVE = re.compile(r"\b(?:re)?install\b", re.IGNORECASE)
+
+#: The same word as a noun: the install somebody HAS, not the one they are being
+#: sent on. A determiner to its left is what marks it, optionally across one
+#: adjective, as in "a broken install" or "a desktop install". This has to read
+#: the left of the word and never the right: half the real remedies in the tree
+#: read "Install the [semantic] extra", and a determiner AFTER the verb is the
+#: ordinary shape of an errand rather than a sign that it is not one.
+_NOUN_PHRASE = re.compile(
+    r"\b(?:an?|the|this|that|these|those|each|every|one|its|our|your|their|my)"
+    r"(?:\s+[\w-]+)?\s+(?:re)?install$",
+    re.IGNORECASE,
+)
 
 _EXTRA = re.compile(
     r"openconstructionerp\s*\[\s*([\w,-]+)\s*\]|\[(\w[\w-]*)\]\s+extra|\bthe\s+'?(\w[\w-]*)'?\s+extra\b",
@@ -229,10 +245,20 @@ class _Vocabulary:
 
 
 def _is_instruction(text: str, vocab: _Vocabulary) -> bool:
-    """True when the string tells the reader to install a thing it names."""
+    """True when the string tells the reader to install a thing it names.
+
+    A name is allowed to sit anywhere after the word, because it genuinely
+    does: ``cli.py`` says "Install a paddlepaddle build for this platform" and
+    only names the ``[cv]`` extra in the next sentence. That latitude is what
+    makes the reading of the word itself carry the whole decision, so the noun
+    has to be excluded here or a paragraph that mentions a package a hundred
+    words later is read as an errand.
+    """
     if _PIP_INSTALL.search(text):
         return True
     for match in _IMPERATIVE.finditer(text):
+        if _NOUN_PHRASE.search(text[: match.end()]):
+            continue
         rest = text[match.end() :]
         dists, extras = vocab.names_in(rest)
         if dists or extras or "openconstructionerp" in rest.lower():
@@ -411,6 +437,48 @@ def test_a_diagnosis_is_not_mistaken_for_an_errand(tmp_path: Path) -> None:
         tmp_path,
     )
     assert rows == [], f"a diagnosis with no remedy was counted as an instruction: {rows}"
+
+
+def test_prose_about_an_install_is_not_an_errand_and_a_late_extra_still_is(tmp_path: Path) -> None:
+    """Both halves of the reading, because narrowing one breaks the other.
+
+    The first source is the shape of ``costs/manifest.py``: a register entry
+    saying that the matcher loads sentence-transformers itself "even on an
+    install where the shared path is never used", which mentions the semantic
+    extra a couple of clauses later. Nobody is told to run anything and there
+    is no pip command in it to hand a frozen reader, yet it was reported,
+    because the noun matched and the name the checker wanted after it was
+    allowed to be anywhere at all in the paragraph.
+
+    The second is ``cli.py``'s refusal, which is a real errand and names its
+    extra only in the NEXT sentence. It sits here so that the obvious
+    narrowing, keeping the name in the same sentence as the word, cannot be
+    mistaken for a fix: that rule reads this one as prose and goes quiet on an
+    instruction an operator is genuinely being given.
+    """
+    vocab = _Vocabulary()
+
+    prose = _census_of_source(
+        "REGISTER_BASIS = (\n"
+        '    "matcher.py prefers the shared embedder in app.core.vector and loads sentence-transformers "\n'
+        '    "itself when that is unavailable, so a model can be resident in this module even on an "\n'
+        '    "install where the shared path is never used. When the semantic extra is not installed the "\n'
+        '    "matcher logs once at WARNING and answers from the lexical path instead."\n'
+        ")\n",
+        vocab,
+        tmp_path,
+    )
+    assert prose == [], f"prose describing an install was read as an instruction to perform one: {prose}"
+
+    remedy = _census_of_source(
+        "def refuse():\n"
+        '    return ("Install a paddlepaddle build for this platform. The [cv] extra deliberately does "\n'
+        '            "not choose one, because the right build depends on CPU vs GPU and OS.")\n',
+        vocab,
+        tmp_path,
+    )
+    assert len(remedy) == 1, f"the checker lost a remedy that names its extra one sentence later: {remedy}"
+    assert remedy[0]["extras"] == ["cv"], f"the checker could not name the extra: {remedy[0]}"
 
 
 # ── The other half: what the reader is actually handed ───────────────────────
