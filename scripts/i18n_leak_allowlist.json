@@ -594,6 +594,11 @@
     "note": "brand/service name, functional interop reference",
     "reason_category": "product_name"
   },
+  "global_search.unnamed_hit": {
+    "en_value": "{{kind}} {{ref}}",
+    "note": "placeholder-only template with nothing between the two slots but a space; kind is a collection label that api.ts collectionLabel returns in English whatever the locale and ref is the first eight characters of an id, so there is no natural-language content to translate in any of the 41 locales",
+    "reason_category": "template_only"
+  },
   "governance.mod_rfi": {
     "en_value": "RFI",
     "note": "bare short acronym/initialism",
