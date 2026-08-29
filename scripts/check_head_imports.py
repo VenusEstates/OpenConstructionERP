@@ -29,7 +29,9 @@ something that module does not carry, and still be told its imports were fine.
 That is the same failure one indirection later: it does not stop the boot, it
 stops the first request that reaches the line. So every local name that holds
 an app module is followed, and every attribute loaded through one of those
-names is asked of that module's own text.
+names is asked of that module's own text. An `import app.x` is also asked
+whether the ref carries `app/x.py` at all, which the from-import half asked
+from the start and this half, reading no `import` statements, could not.
 
 Deliberately quiet about three shapes that cannot break a boot:
 
@@ -78,6 +80,7 @@ class Findings(NamedTuple):
 
     broken: list[str]
     names: int  # `from app... import x` names asked of the module that should bind them
+    modules: int  # `import app.x` modules asked of the ref that should carry them
     attributes: int  # attributes asked of a module reached through a local name
     skipped: set[str]
     unparsable: list[str]
@@ -109,6 +112,29 @@ def bound_by(target: ast.expr, names: set[str]) -> None:
             bound_by(el, names)
     elif isinstance(target, ast.Starred):
         bound_by(target.value, names)
+
+
+def bind_block(stmts: list[ast.stmt], names: set[str]) -> None:
+    """Names one nested block binds, when the block itself sits at module level.
+
+    A TYPE_CHECKING guard, a version guard and an optional import all bind for
+    real, and the module that imports from here cannot tell the difference.
+    """
+    for sub in stmts:
+        if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(sub.name)
+        elif isinstance(sub, ast.Import):
+            for a in sub.names:
+                names.add(a.asname or a.name.split(".")[0])
+        elif isinstance(sub, ast.ImportFrom):
+            for a in sub.names:
+                if a.name != "*":
+                    names.add(a.asname or a.name)
+        elif isinstance(sub, ast.Assign):
+            for t in sub.targets:
+                bound_by(t, names)
+        elif isinstance(sub, ast.AnnAssign) and isinstance(sub.target, ast.Name):
+            names.add(sub.target.id)
 
 
 def optional_line_ranges(tree: ast.Module) -> list[tuple[int, int]]:
@@ -151,16 +177,15 @@ def toplevel_names(tree: ast.Module) -> tuple[set[str], bool]:
                     names.add(a.asname or a.name)
         elif isinstance(node, ast.If):
             # A TYPE_CHECKING block or a version guard still binds names.
-            for sub in list(node.body) + list(node.orelse):
-                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                    names.add(sub.name)
-                elif isinstance(sub, ast.ImportFrom):
-                    for a in sub.names:
-                        if a.name != "*":
-                            names.add(a.asname or a.name)
-                elif isinstance(sub, ast.Assign):
-                    for t in sub.targets:
-                        bound_by(t, names)
+            bind_block(list(node.body) + list(node.orelse), names)
+        elif isinstance(node, ast.Try):
+            # `try: from shapely import Polygon / except ImportError: Polygon = None`
+            # binds the name whichever branch runs, and ten modules here bind 40
+            # names that way, `collect_rule_issues` and `ClashGeometryProvider`
+            # among them. Reading only the unguarded body would call an import of
+            # any of those unresolved, which is a false red on a healthy commit.
+            for block in (node.body, node.orelse, node.finalbody, *(h.body for h in node.handlers)):
+                bind_block(block, names)
     return names, star
 
 
@@ -246,6 +271,7 @@ def scan(blobs: dict[str, str]) -> Findings:
 
     broken: list[str] = []
     checked = 0
+    modules = 0
     attributes = 0
     skipped: set[str] = set()
 
@@ -284,6 +310,29 @@ def scan(blobs: dict[str, str]) -> Findings:
                     continue  # importing a submodule, not a name
                 broken.append(f"UNRESOLVED {mod}.{a.name}, imported by {path}, not defined in {target}")
 
+        # `import app.core.events` names a module rather than a name in it, so the
+        # walk above never asks whether the ref carries the module at all. That is
+        # the headline failure of this whole check, a clean clone that cannot
+        # import the file, and it was reported for one import shape and not the
+        # other until this was added.
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Import):
+                continue
+            if any(lo <= node.lineno <= hi for lo, hi in optional):
+                continue
+            for a in node.names:
+                mod = a.name
+                if not (mod == PKG or mod.startswith(PKG + ".")):
+                    continue
+                modules += 1
+                if any(c in defined for c in module_path(mod)):
+                    continue
+                present = next((c for c in module_path(mod) if c in blobs), None)
+                if present is not None:
+                    skipped.add(present)
+                    continue
+                broken.append(f"MISSING MODULE {mod}, imported by {path}")
+
         bindings = module_bindings(tree, defined, optional)
         for node in ast.walk(tree):
             if not isinstance(node, ast.Attribute) or not isinstance(node.ctx, ast.Load):
@@ -310,7 +359,7 @@ def scan(blobs: dict[str, str]) -> Findings:
                 f"UNRESOLVED {mod}.{node.attr}, reached through `{node.value.id}` in {path}, not defined in {target}"
             )
 
-    return Findings(broken, checked, attributes, skipped, unparsable)
+    return Findings(broken, checked, modules, attributes, skipped, unparsable)
 
 
 def _fail(message: str) -> None:
@@ -362,8 +411,19 @@ def self_test() -> None:
         _fail("an aliased module import was counted as an imported name")
     resolving = "import app.core.events as ev" + use.format(expr="ev.publish('rfi')")
     found = scan(dict(base, **dict([_module(router, resolving)])))
-    if found.broken or found.attributes != 1:
-        _fail(f"an attribute that does resolve read as {found.broken}, {found.attributes} examined")
+    if found.broken or found.attributes != 1 or found.modules != 1:
+        _fail(f"an attribute that does resolve read as {found.broken}, {found.attributes} attribute(s) examined")
+
+    # A module the ref does not carry at all. The from-import shape said so from
+    # the start; the two `import` shapes said nothing, which is the same clean
+    # clone that cannot start, reported for one spelling and not the others.
+    for source in ("import app.core.evnets\n", "import app.core.evnets as ev\n"):
+        found = scan(dict(base, **dict([_module(router, source)])))
+        if len(found.broken) != 1 or "MISSING MODULE app.core.evnets" not in found.broken[0]:
+            _fail(f"an import of a module the ref does not carry read as {found.broken}, from: {source!r}")
+    guarded = "try:\n    import app.core.evnets\nexcept ImportError:\n    pass\n"
+    if scan(dict(base, **dict([_module(router, guarded)]))).broken:
+        _fail("an import of an absent module inside a try was reported")
 
     # Everything below must stay quiet, because from the text alone the answer
     # is not knowable. A gate that rejects these rejects the tree it guards.
@@ -388,6 +448,14 @@ def self_test() -> None:
         found = scan(dict(base, **other, **dict([_module(router, source)])))
         if found.broken:
             _fail(f"{description} was reported: {found.broken}")
+
+    # The module answering for its own names has to read its guarded blocks too.
+    # Ten modules here bind names nowhere but a module-level try, so a reader of
+    # the unguarded body alone reds a healthy import of any of the 40.
+    guard = "try:\n    from elsewhere import publish\nexcept ImportError:\n    publish = None\n"
+    fallback = dict(base, **dict([_module("app.core.events", guard)]))
+    if scan(dict(fallback, **dict([_module(router, "from app.core.events import publish\n")]))).broken:
+        _fail("a name bound only inside a module-level try was reported as missing")
 
     # A star import puts names in the namespace that the module's own text does
     # not carry, so the module stops being able to answer for its attributes.
@@ -447,8 +515,8 @@ def main() -> int:
 
     note = f", {len(found.skipped)} unparsable module(s) skipped" if found.skipped else ""
     print(
-        f"head imports OK: {found.names} imported name(s) and {found.attributes} attribute(s) reached through a "
-        f"bound module in {ref} all resolve within {ref}{note}."
+        f"head imports OK: {found.names} imported name(s), {found.modules} imported module(s) and "
+        f"{found.attributes} attribute(s) reached through a bound module in {ref} all resolve within {ref}{note}."
     )
     return 0
 
