@@ -1388,11 +1388,26 @@ async def vector_v3_status(
         ),
     ),
 ) -> dict[str, Any]:
-    """Per-language CWICR v3 collection readiness for /match-elements.
+    """Per-language CWICR v3 collection readiness.
 
-    Used by the match-elements page to surface a "vector DB ready / missing"
-    banner in the same style as the BIM converter status panel. Single
-    Qdrant probe - does NOT trigger reindexing; that lives on /costs.
+    Single probe of the CWICR store - does NOT trigger reindexing; that
+    lives on /costs.
+
+    This used to say it was used by the match-elements page to surface a
+    "vector DB ready / missing" banner. No such reader exists: the page's
+    readiness UI is QdrantHealthCard, which consults Qdrant directly, and
+    CataloguesPanelCard, which reads /catalogues-v3/. The frontend's
+    fetchVectorReadiness is exported and never called, and the
+    ``match-vector-readiness`` query key that two components invalidate is
+    registered by no query. The stale sentence is worth naming rather than
+    just deleting, because it was read as evidence of a user-visible
+    symptom during the fix that repointed this handler.
+
+    ``status_band`` values: ``ready``, ``empty``, ``missing``,
+    ``unreadable``, ``disconnected``, ``no_country``. The two that mean "we
+    could not look", ``unreadable`` and ``disconnected``, carry ``error``.
+    ``unreadable`` means the collection is present but could not be read,
+    which is deliberately distinct from ``missing``.
 
     When ``project_id`` is supplied, also returns ``language_mismatch``
     diagnostics so the UI can warn about a cross-language catalogue
@@ -1401,13 +1416,31 @@ async def vector_v3_status(
     region and the bound catalogue id through ``language_for``.
     """
     from app.core.match_service.region_language import language_for
-    from app.core.vector import vector_status as vs
-    from app.modules.costs.qdrant_adapter import country_to_collection
+    from app.modules.costs.qdrant_adapter import (
+        _get_client,
+        country_to_collection,
+        resolve_cwicr_target,
+    )
 
-    base = vs()
+    # Everything below describes the CWICR v3 store, which is the one the
+    # ranker opens. It used to describe the GENERAL vector store instead:
+    # engine and connected came from app.core.vector.vector_status() and the
+    # collection probe used that store's client, while the collection NAME
+    # came from country_to_collection, which is CWICR naming. So the answer
+    # was assembled from two different servers. On a default install the
+    # ranker reads the embedded store and this endpoint reported on
+    # localhost:6333, which means a catalogue that was installed and
+    # matching fine could be reported absent, and vice versa.
+    #
+    # There is no non_qdrant band any more. It existed because the general
+    # store can be LanceDB, and it gated the probe so that a LanceDB
+    # install never looked at the v3 collections at all. The CWICR store is
+    # a Qdrant by construction, server or embedded, so VECTOR_BACKEND says
+    # nothing about it and the gate only ever suppressed a real answer.
+    target = resolve_cwicr_target()
     payload: dict[str, Any] = {
-        "engine": base.get("engine", "unknown"),
-        "connected": bool(base.get("connected")),
+        "engine": "qdrant" if target.is_server else "qdrant-embedded",
+        "connected": False,
         "country": country or "",
         "language": language_for(country) if country else "",
         "collection": "",
@@ -1443,53 +1476,61 @@ async def vector_v3_status(
             else:
                 payload["language_mismatch"] = await _detect_language_mismatch(db, project_id)
 
-    if not payload["connected"]:
-        payload["error"] = base.get("error", "")
+    # Reaching the store at all is its own outcome, separate from what the
+    # store then says about the collection. Kept ahead of the no_country
+    # branch so that band keeps meaning "store is reachable, caller did not
+    # name a collection" rather than becoming silent about reachability.
+    try:
+        client = _get_client()
+        names = {c.name for c in client.get_collections().collections}
+    except Exception as exc:
+        # The reason names the failure class, not the resolved location.
+        # This endpoint answers anonymous callers, so the URL or on-disk
+        # path of the store is not ours to hand out; the detail goes to the
+        # log, where an operator can already see the address anyway.
+        logger.warning("CWICR v3 status: store unreachable", exc_info=True)
+        payload["status_band"] = "disconnected"
+        payload["error"] = f"CWICR vector store unreachable ({type(exc).__name__})"
         return payload
 
+    payload["connected"] = True
+
     if not country:
-        # Engine reachable but the caller didn't ask about a specific collection.
+        # Store reachable but the caller didn't ask about a specific collection.
         payload["status_band"] = "no_country"
         return payload
 
     payload["collection"] = country_to_collection(country)
 
-    if base.get("engine") != "qdrant":
-        # LanceDB or other backend - v3 collection naming doesn't apply.
-        payload["status_band"] = "non_qdrant"
+    if payload["collection"] not in names:
+        payload["status_band"] = "missing"
         return payload
 
+    payload["exists"] = True
+
     try:
-        from app.core.vector import _get_qdrant
+        col = client.get_collection(payload["collection"])
+        # Version-tolerant: ``points_count`` → ``vectors_count``
+        # (older qdrant-client) → live count().
+        pc_raw = getattr(col, "points_count", None)
+        if pc_raw is None:
+            pc_raw = getattr(col, "vectors_count", None)
+        if pc_raw is None:
+            pc_raw = client.count(payload["collection"]).count
+        pc = int(pc_raw or 0)
+    except Exception as exc:
+        # This used to report "ready". A collection we could not read was
+        # being described with the one band that means "go ahead", which is
+        # a confident answer produced without looking. The caller now gets a
+        # third outcome it can tell apart from both present and absent, and
+        # a reason, because "we could not look" is not a kind of "no".
+        logger.warning("CWICR v3 status: collection found but unreadable", exc_info=True)
+        payload["status_band"] = "unreadable"
+        payload["error"] = f"collection exists but could not be read ({type(exc).__name__})"
+        return payload
 
-        client = _get_qdrant()
-        if client is None:
-            payload["status_band"] = "disconnected"
-            return payload
-        names = {c.name for c in client.get_collections().collections}
-        if payload["collection"] in names:
-            payload["exists"] = True
-            try:
-                col = client.get_collection(payload["collection"])
-                # Version-tolerant: ``points_count`` → ``vectors_count``
-                # (older qdrant-client) → live count().
-                pc_raw = getattr(col, "points_count", None)
-                if pc_raw is None:
-                    pc_raw = getattr(col, "vectors_count", None)
-                if pc_raw is None:
-                    pc_raw = client.count(payload["collection"]).count
-                pc = int(pc_raw or 0)
-                payload["points_count"] = pc
-                payload["status_band"] = "ready" if pc > 0 else "empty"
-            except Exception:
-                payload["status_band"] = "ready"
-        else:
-            payload["status_band"] = "missing"
-    except Exception:
-        logger.warning("Qdrant v3 status probe failed", exc_info=True)
-        payload["error"] = "Qdrant status probe failed"
-        payload["status_band"] = "disconnected"
-
+    payload["points_count"] = pc
+    payload["status_band"] = "ready" if pc > 0 else "empty"
     return payload
 
 

@@ -1353,10 +1353,15 @@ async def qdrant_health(_current_user_id: CurrentUserId) -> dict[str, object]:
 
     When the supervisor flips Qdrant from down→up (because the binary
     was already on disk and just needed to be spawned), we also drop
-    the cached ``_qdrant_instance`` in ``app.core.vector`` so the rest
-    of the backend's vector code paths (``/costs/vector/v3-status``,
-    catalogue install, semantic search) recover without a process
+    the cached ``_qdrant_instance`` in ``app.core.vector`` so the
+    backend's GENERAL vector code paths recover without a process
     restart.
+
+    ``/costs/vector/v3-status`` used to be in that list and no longer
+    is. It reads the CWICR store through ``qdrant_adapter._get_client``,
+    which keeps its own cache that this reset does not clear - and does
+    not need to, because that cache holds a client object rather than a
+    recorded failure, so it reconnects on the next request by itself.
     """
     from app.config import get_settings
     from app.core.vector import reset_qdrant_client
