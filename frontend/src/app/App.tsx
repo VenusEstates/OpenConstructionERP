@@ -754,24 +754,42 @@ const PageTitleContext = createContext<(title: string) => void>(() => {});
 // ProductTour out of AppLayout (see AppLayout's BUG-UI02 note) and that made
 // each module feel slow to open.  AppShell hoists AppLayout above the router
 // <Outlet/> so the sidebar + header mount exactly once and only the page area
-// swaps.  The ErrorBoundary is keyed by pathname so a crashed page recovers on
-// the next navigation, matching the old per-route boundary; the Suspense
-// boundary stays mounted so the v7 startTransition smooth-nav keeps the
-// previous page on screen while the next chunk loads.
+// swaps.  The inner ErrorBoundary is keyed by pathname so a crashed page
+// recovers on the next navigation, matching the old per-route boundary; the
+// Suspense boundary stays mounted so the v7 startTransition smooth-nav keeps
+// the previous page on screen while the next chunk loads.
+//
+// Hoisting AppLayout also hoisted it ABOVE the only boundary, which meant every
+// crash originating in the chrome itself was uncatchable by construction: the
+// Header's project picker calling `.filter` on a 200 that answered with an
+// object took the entire document blank, sidebar and header included, because
+// nothing between it and the root caught the throw.  So the chrome stays
+// hoisted — the per-navigation teardown it fixed was real — and gets its own
+// boundary wrapped around it.  The two nest rather than compete: React hands a
+// throw to the nearest boundary below it, so a page crash still stops at the
+// keyed inner one with the chrome intact, and the outer one only ever sees an
+// error the chrome itself raised.  That outer boundary has no key and no
+// surviving navigation to escape through, hence `scope="app"`, whose recovery
+// action reloads the document instead of re-rendering the shell that just
+// failed.  It sits under RequireAuth on purpose: above it, a crashing shell
+// would show a signed-out visitor a recovery card where the /login redirect
+// belongs.
 function AppShell() {
   const [title, setTitle] = useState('');
   const location = useLocation();
   return (
     <RequireAuth>
-      <AppLayout title={title}>
-        <Suspense fallback={<PageLoadingInline />}>
-          <ErrorBoundary key={location.pathname}>
-            <PageTitleContext.Provider value={setTitle}>
-              <Outlet />
-            </PageTitleContext.Provider>
-          </ErrorBoundary>
-        </Suspense>
-      </AppLayout>
+      <ErrorBoundary scope="app">
+        <AppLayout title={title}>
+          <Suspense fallback={<PageLoadingInline />}>
+            <ErrorBoundary key={location.pathname}>
+              <PageTitleContext.Provider value={setTitle}>
+                <Outlet />
+              </PageTitleContext.Provider>
+            </ErrorBoundary>
+          </Suspense>
+        </AppLayout>
+      </ErrorBoundary>
     </RequireAuth>
   );
 }

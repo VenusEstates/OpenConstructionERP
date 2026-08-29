@@ -8,6 +8,22 @@ import { logError } from '@/shared/lib/errorLogger';
 interface Props {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  /**
+   * What this boundary stands in front of, which decides what "try again" can
+   * honestly do.
+   *
+   * `'page'` (the default) wraps a route's content while the sidebar and header
+   * stay mounted and usable. The caller keys it by pathname, so the user has a
+   * second escape route — navigate somewhere else and the subtree remounts —
+   * and clearing the error state is enough for the button.
+   *
+   * `'app'` wraps the application chrome itself. Nothing outside it survives to
+   * navigate with, and no key remounts it, so clearing the state would re-render
+   * the same shell against the same cached data and trip again on the spot.
+   * There the button reloads the document, which drops the caches that fed the
+   * crash and is the only recovery a user can actually reach.
+   */
+  scope?: 'page' | 'app';
 }
 
 interface State {
@@ -18,6 +34,18 @@ interface State {
 /**
  * Catches React render errors and displays a recovery UI instead of a white screen.
  * Wraps page-level routes so a crash in one page doesn't break the whole app.
+ *
+ * Mounted twice in AppShell, nested. The inner one is keyed by pathname and
+ * covers the page; the outer one is `scope="app"` and covers the chrome, which
+ * used to render above every boundary and could therefore take the document
+ * blank on its own. React hands a throw to the nearest boundary below, so a
+ * page crash never reaches the outer one and the sidebar stays usable.
+ *
+ * A fallback must not be able to throw. The default one below can't: `i18n.t`
+ * returns a string or the key even before init, `state.error` is null-checked,
+ * and the rest is inert markup. The `fallback` prop is the caller's risk — a
+ * node that throws re-raises to the parent boundary, and past the outermost one
+ * that is the blank screen again, so keep custom fallbacks trivial.
  */
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
@@ -55,19 +83,39 @@ export class ErrorBoundary extends React.Component<Props, State> {
       msg.includes('Importing a module script failed') ||
       /Loading chunk \d+ failed/i.test(msg);
     if (isChunkError) {
-      const KEY = 'oe_chunk_reload_at';
-      const last = Number(sessionStorage.getItem(KEY) ?? '0');
-      if (Date.now() - last > 10_000) {
-        sessionStorage.setItem(KEY, String(Date.now()));
-        window.location.reload();
-        return;
+      // Reading sessionStorage is not a safe operation: browsers configured to
+      // block site data, and sandboxed frames, throw SecurityError on the
+      // property access itself. A throw from componentDidCatch is re-raised to
+      // the PARENT boundary, and the outermost boundary has no parent — React
+      // unmounts the whole tree and the user gets the blank document this class
+      // exists to prevent. So the storage that only tunes the reload heuristic
+      // must never be able to take the recovery UI down with it: on failure we
+      // skip the auto-reload and render the fallback, which is the safe branch.
+      try {
+        const KEY = 'oe_chunk_reload_at';
+        const last = Number(sessionStorage.getItem(KEY) ?? '0');
+        if (Date.now() - last > 10_000) {
+          sessionStorage.setItem(KEY, String(Date.now()));
+          window.location.reload();
+          return;
+        }
+        // Reloaded moments ago for the same reason → the new build is broken;
+        // fall through and render the recovery UI instead of looping.
+      } catch {
+        // Storage unavailable — fall through to the recovery UI.
       }
-      // Reloaded moments ago for the same reason → the new build is broken;
-      // fall through and render the recovery UI instead of looping.
     }
   }
 
   handleReset = () => {
+    // At app scope the same render is all there is: clearing the flag would
+    // rebuild the chrome from the caches that just crashed it, so the button
+    // would blink and change nothing. Reload instead — same promise to the
+    // user, kept.
+    if (this.props.scope === 'app') {
+      window.location.reload();
+      return;
+    }
     this.setState({ hasError: false, error: null });
   };
 
@@ -80,8 +128,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
 
+      // At app scope this card IS the document — the chrome that would have
+      // supplied a page area is the thing that crashed — so it takes the full
+      // viewport. No background class: `body` already paints
+      // `--oe-bg-secondary`, and AppLayout deliberately leaves it to do that.
       return (
-        <div className="flex min-h-[60vh] items-center justify-center p-8">
+        <div
+          className={`flex ${this.props.scope === 'app' ? 'min-h-screen' : 'min-h-[60vh]'} items-center justify-center p-8`}
+          data-testid="error-boundary-fallback"
+        >
           <div className="max-w-md text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-semantic-error-bg">
               <AlertTriangle size={28} className="text-semantic-error" />

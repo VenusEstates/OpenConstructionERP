@@ -1355,10 +1355,17 @@ function UserMenu() {
       >
         {userInitial}
         {/* Online status dot — bottom-right of the avatar. Matches the
-            UserBadge in the sidebar so the two surfaces feel coherent. */}
+            UserBadge in the sidebar so the two surfaces feel coherent.
+            `overflow-hidden` clips the `animate-ping` ring to this badge's
+            own box: the avatar is the last element in the header, which at
+            desktop widths sits flush against the viewport's right edge, so
+            the ring's `scale(2)` keyframe (unclipped) painted past the
+            window edge and made `document.documentElement.scrollWidth`
+            exceed `innerWidth` by up to 7px — a real, continuously
+            repeating horizontal-scroll bug, not just a test artifact. */}
         <span
           aria-hidden
-          className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center"
+          className="absolute -bottom-0.5 right-0 flex h-2.5 w-2.5 items-center justify-center overflow-hidden"
         >
           <span className="absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400/70 animate-ping" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-surface-primary" />
@@ -1482,8 +1489,17 @@ function ProjectSwitcher() {
   });
 
   const MAX_VISIBLE = 20;
-  const filteredProjects = (projects ?? []).filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  // The type argument on apiGet is a compile-time claim, not a runtime check —
+  // the response body arrives exactly as the server sent it. A 200 carrying an
+  // object where this expects a list (a proxy envelope, a paginated wrapper)
+  // used to reach `.filter` as-is, because `?? []` answers for null and
+  // undefined and says nothing about the wrong type, and threw "is not a
+  // function" out of the header. Degrade to an empty picker: an unreadable list
+  // is a list we can't show, not a reason to stop rendering. Same reasoning for
+  // the name — `.toLowerCase()` on a missing field is the identical throw.
+  const projectList = Array.isArray(projects) ? projects : [];
+  const filteredProjects = projectList.filter((p) =>
+    String(p?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
   );
   // When the user is actively searching, show every hit — typing is an
   // implicit "show all that match". The collapse/expand affordance only
@@ -1543,6 +1559,12 @@ function ProjectSwitcher() {
     // deciding on it could clear a perfectly valid selection. Bail until a
     // successful fetch lands.
     if (isError) return;
+    // Second reader of the same untrusted body, and `.some` throws on a
+    // non-array exactly like `.filter` above did — fixing only the render path
+    // would have moved the crash one line down. A shape we don't recognise
+    // tells us nothing about whether the stored selection still exists, so
+    // decline to purge rather than guess.
+    if (!Array.isArray(projects)) return;
     const stillExists = projects.some((p) => p.id === activeProjectId);
     if (!stillExists) {
       clearProject();
