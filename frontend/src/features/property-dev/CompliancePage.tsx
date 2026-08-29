@@ -13,6 +13,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import {
@@ -419,6 +420,25 @@ export function CompliancePage({
       </section>
     </div>
   );
+}
+
+/**
+ * Route wrapper for `/property-dev/developments/:devId/compliance`.
+ *
+ * The panel above keeps its prop API because it is meant to be embeddable and
+ * a router cannot pass props. The dev-scoped screens next door
+ * (`PricingEnginePage`, `InventoryMapPage`) read `useParams` inside the
+ * exported component itself; this wrapper gives the route the same shape
+ * without collapsing the panel into it.
+ *
+ * `developmentLabel` is deliberately not passed. It only draws a subtitle, and
+ * fetching a development just to name one would put a second request in front
+ * of the dashboard. A missing `devId` leaves the panel's queries disabled
+ * rather than firing a request for nothing.
+ */
+export function CompliancePageRoute(): JSX.Element {
+  const { devId = '' } = useParams<{ devId: string }>();
+  return <CompliancePage devId={devId} />;
 }
 
 export default CompliancePage;

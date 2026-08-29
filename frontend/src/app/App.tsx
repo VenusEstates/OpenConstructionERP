@@ -470,6 +470,11 @@ const PropertyDevBulkOperationsPage = lazy(() =>
     default: m.BulkOperationsPage,
   })),
 );
+const PropertyDevCompliancePage = lazy(() =>
+  import('@/features/property-dev').then((m) => ({
+    default: m.CompliancePageRoute,
+  })),
+);
 // ── Geo Hub — Cesium 3D Tiles + cross-module geo. Lazy-loaded because
 // CesiumJS is ~3 MB; this keeps the main bundle untouched.
 const GeoHubAdminPage = lazy(() =>
@@ -1481,6 +1486,7 @@ export default function App() {
         <Route path="/property-dev/developments/:devId/geo" element={<P title="Development map"><DevelopmentGeoPage /></P>} />
         <Route path="/property-dev/developments/:devId/pricing" element={<P title="Pricing Engine"><PropertyDevPricingEnginePage /></P>} />
         <Route path="/property-dev/developments/:devId/inventory-map" element={<P title="Inventory Map"><PropertyDevInventoryMapPage /></P>} />
+        <Route path="/property-dev/developments/:devId/compliance" element={<P title="Compliance dashboard"><PropertyDevCompliancePage /></P>} />
         <Route path="/property-dev/admin/bulk-operations" element={<P title="Bulk Operations"><PropertyDevBulkOperationsPage /></P>} />
         <Route path="/property-dev/dashboards" element={<P title="Property Development Dashboards"><PropertyDevDashboardsHub /></P>} />
         <Route

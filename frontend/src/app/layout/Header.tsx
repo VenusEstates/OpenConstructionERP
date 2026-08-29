@@ -123,6 +123,7 @@ export const TITLE_I18N_MAP: Record<string, string> = {
   'Bulk Operations': 'nav.property_dev_bulk_operations',
   'Pricing Engine': 'nav.property_dev_pricing_engine',
   'Inventory Map': 'nav.property_dev_inventory_map',
+  'Compliance dashboard': 'propdev.compliance.title',
   'Compliance Rule Builder': 'nav.compliance_rule_builder',
   'Accommodation': 'nav.accommodation',
   'Accommodation Calendar': 'nav.accommodation',
