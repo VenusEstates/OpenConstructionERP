@@ -91,6 +91,24 @@ def _is_usable_password_hash(hashed: str | None) -> bool:
 # ── Token utilities ────────────────────────────────────────────────────────
 
 
+def _new_jti() -> str:
+    """A unique identifier for one issued token (RFC 7519 section 4.1.7).
+
+    Every token we mint gets one. Nothing reads it yet, and no decode path
+    requires it, so this is additive: tokens issued before it existed carry no
+    ``jti`` and still validate exactly as they did.
+
+    It is here because without it an issued token has no identity at all, so
+    there is nothing a revocation list could name. Revoking a single session is
+    not merely unimplemented today, it is inexpressible; the only lever is
+    rotating the signing secret, which ends every session at once. Handing each
+    token a name is the part of that fix which costs nothing and breaks
+    nothing. One helper rather than three call-site expressions, so the three
+    creators cannot drift apart later.
+    """
+    return uuid.uuid4().hex
+
+
 def create_access_token(
     user: User,
     settings: Settings,
@@ -116,6 +134,7 @@ def create_access_token(
         "iat": now,
         "exp": now + timedelta(minutes=settings.jwt_expire_minutes),
         "type": "access",
+        "jti": _new_jti(),
     }
     if extra_claims:
         payload.update(extra_claims)
@@ -131,6 +150,7 @@ def create_refresh_token(user: User, settings: Settings) -> str:
         "iat": now,
         "exp": now + timedelta(days=settings.jwt_refresh_expire_days),
         "type": "refresh",
+        "jti": _new_jti(),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
@@ -152,6 +172,7 @@ def create_reset_token(user: User, settings: Settings) -> str:
         "iat": now,
         "exp": now + timedelta(minutes=RESET_TOKEN_LIFETIME_MINUTES),
         "type": "reset",
+        "jti": _new_jti(),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 

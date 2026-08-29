@@ -57,7 +57,14 @@ import structlog
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import Settings, build_provenance_tag, desktop_mode, get_settings
+from app.config import (
+    Settings,
+    build_provenance_tag,
+    desktop_mode,
+    get_settings,
+    jwt_secret_is_known_weak,
+    jwt_secret_is_too_short,
+)
 from app.core.demo_read_only import (
     DemoReadOnlyError,
     demo_read_only_guard,
@@ -3082,9 +3089,14 @@ def create_app() -> FastAPI:
 
         # Validate secrets and configuration outside local development.
         # HS256 requires at least 32 bytes of entropy (RFC 7518 §3.2).
-        _insecure_secrets = {"change-me-in-production", "openestimate-local-dev-key", ""}
-        _jwt_too_short = len(settings.jwt_secret.encode("utf-8")) < 32
-        _jwt_is_default = settings.jwt_secret in _insecure_secrets
+        # The denylist and the length rule live in app.config and are imported,
+        # never restated. This block used to carry its own copy of both, and the
+        # two had already drifted apart unnoticed: the local set was missing
+        # three of the strings config.py rejects, and its length test counted
+        # UTF-8 bytes where config.py counted characters, so the two disagreed
+        # on any non-ASCII secret.
+        _jwt_too_short = jwt_secret_is_too_short(settings.jwt_secret)
+        _jwt_is_default = jwt_secret_is_known_weak(settings.jwt_secret)
         # Any non-development environment must have a real secret. We treat
         # ``staging`` exactly like ``production`` here - not blocking it
         # would defeat the point of staging being a real deployment.

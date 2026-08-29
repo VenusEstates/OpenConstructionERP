@@ -1,6 +1,6 @@
 # Repo hygiene gate.
 #
-# Guards: 55. They run on every push and pull request, grouped into three
+# Guards: 56. They run on every push and pull request, grouped into three
 # jobs. A guard is a named step that is not a tooling install, and that rule is
 # not a matter of taste: it is the one that reproduces both counts this header
 # carried when it was written on 2026-08-24 - twenty-one guards, over jobs of
@@ -173,6 +173,17 @@ jobs:
       - name: Check permission keys against the registry
         if: ${{ !cancelled() }}
         run: python scripts/check_permission_registration.py
+
+      # A security constant kept in two hand-maintained copies is invisible
+      # while the copies agree and silent when they stop. These two had already
+      # stopped: the denylist of weak JWT secrets in app/main.py was missing
+      # three of the strings app/config.py rejected, and it measured length in
+      # UTF-8 bytes where config.py measured characters, so they disagreed on
+      # any non-ASCII secret. Nothing compared them, so nothing reported it.
+      # The copies are collapsed; this keeps them collapsed.
+      - name: Check the weak-secret denylist has one source of truth
+        if: ${{ !cancelled() }}
+        run: python scripts/check_secret_denylist_single_source.py
 
       # The loader finds modules by their manifest, and skips a directory
       # without one on a bare continue: no log line, no warning, no error. Every

@@ -154,6 +154,19 @@ repos:
       # spellings that were broken in this repo, per file, because no rule about
       # German or Portuguese orthography can tell "Wasser" from "Strasse" or
       # Spanish "agua" from Portuguese "água" without false positives.
+      # The denylist of known-weak JWT secrets and its 32-unit minimum length
+      # lived in app/config.py and app/main.py at once, each maintained by hand.
+      # They had already drifted apart unnoticed - the second copy was missing
+      # three of the denied strings and counted UTF-8 bytes where the first
+      # counted characters - because nothing was comparing them. They are now
+      # one source; this refuses a second copy at the moment it appears rather
+      # than at the moment it starts to matter.
+      - id: secret-denylist-single-source
+        name: Keep one source of truth for the weak-secret rules
+        entry: python scripts/check_secret_denylist_single_source.py
+        language: system
+        pass_filenames: false
+
       - id: seed-diacritics-check
         name: Keep accents in the demo seed text
         entry: python scripts/check_seed_diacritics.py

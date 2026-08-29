@@ -49,6 +49,33 @@ _JWT_KNOWN_WEAK_SECRETS = frozenset(
     }
 )
 
+
+def jwt_secret_is_known_weak(secret: str) -> bool:
+    """Whether ``secret`` is a published or boilerplate value.
+
+    The single source of truth for the denylist. Callers outside this module
+    MUST use this rather than re-listing the strings: a second copy of a
+    security constant is invisible while it agrees and silent when it stops.
+    ``scripts/check_secret_denylist_single_source.py`` enforces that.
+    """
+    return (secret or "") in _JWT_KNOWN_WEAK_SECRETS
+
+
+def jwt_secret_is_too_short(secret: str) -> bool:
+    """Whether ``secret`` carries too little key material for HS256.
+
+    Measured in characters AND in UTF-8 bytes, and short by either measure is
+    short. The two rules disagree only on non-ASCII secrets, where the byte
+    count is the larger and therefore the weaker test: 20 Cyrillic characters
+    are 40 bytes, so a byte-only rule would admit a 20-character secret. RFC
+    7518 section 3.2 is about key material, which argues for bytes, but a
+    short string is low-entropy whatever it encodes to, so we keep both and
+    take the stricter answer.
+    """
+    text = secret or ""
+    return len(text) < _JWT_SECRET_MIN_LENGTH or len(text.encode("utf-8")) < _JWT_SECRET_MIN_LENGTH
+
+
 # Track whether we've already logged the dev-default warning so a unit
 # test that instantiates Settings() repeatedly (or an app that hot-reloads
 # the config) doesn't spam the log. Reset by the test suite via the
@@ -748,8 +775,8 @@ class Settings(BaseSettings):
         or ``openssl rand -hex 32``.
         """
         secret = self.jwt_secret or ""
-        is_weak_default = secret in _JWT_KNOWN_WEAK_SECRETS
-        is_too_short = len(secret) < _JWT_SECRET_MIN_LENGTH
+        is_weak_default = jwt_secret_is_known_weak(secret)
+        is_too_short = jwt_secret_is_too_short(secret)
 
         if self.app_env != "development":
             if is_weak_default:

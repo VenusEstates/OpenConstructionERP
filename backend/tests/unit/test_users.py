@@ -9,6 +9,7 @@ isolation.
 import hashlib
 import sys
 import uuid
+from datetime import UTC, datetime, timedelta
 from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -58,6 +59,7 @@ from app.modules.users.schemas import (  # noqa: E402
 from app.modules.users.service import (  # noqa: E402
     create_access_token,
     create_refresh_token,
+    create_reset_token,
     generate_api_key,
     hash_password,
     verify_password,
@@ -357,6 +359,84 @@ class TestRefreshToken:
         token = create_refresh_token(user, settings)
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         assert "role" not in payload
+
+
+# ── Token identity (jti) tests ───────────────────────────────────────────────
+
+
+class TestTokenIdentity:
+    """Every issued token carries a unique ``jti``, and older ones need not.
+
+    Nothing consumes ``jti`` yet. It is issued now because a token without an
+    identifier cannot be named by a revocation list, which makes revoking a
+    single session inexpressible rather than merely unbuilt.
+    """
+
+    def test_access_token_carries_a_jti(self):
+        settings = _make_settings()
+        token = create_access_token(_make_user(), settings)
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        assert payload["jti"]
+
+    def test_refresh_token_carries_a_jti(self):
+        settings = _make_settings()
+        token = create_refresh_token(_make_user(), settings)
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        assert payload["jti"]
+
+    def test_reset_token_carries_a_jti(self):
+        # Included so the three creators cannot drift: giving two of them an
+        # identifier and forgetting the third is the same class of defect as
+        # keeping two copies of a denylist.
+        settings = _make_settings()
+        token = create_reset_token(_make_user(), settings)
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        assert payload["jti"]
+
+    def test_two_tokens_for_one_user_get_different_jtis(self):
+        """The identifier is per token, not per user, or it names nothing."""
+        settings = _make_settings()
+        user = _make_user()
+        first = jwt.decode(
+            create_access_token(user, settings),
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+        second = jwt.decode(
+            create_access_token(user, settings),
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+        assert first["jti"] != second["jti"]
+
+    def test_a_token_minted_without_a_jti_still_decodes(self):
+        """The don't-log-everyone-out proof.
+
+        Tokens issued before ``jti`` existed are in the wild for up to the
+        refresh lifetime. If any decode path required the claim, shipping this
+        change would end every live session - which is the outcome a revocation
+        story is supposed to let us avoid, not cause. So a payload with no
+        ``jti`` must verify exactly as it did before.
+        """
+        settings = _make_settings()
+        user = _make_user()
+        now = datetime.now(UTC)
+        legacy_payload = {
+            "iss": "openconstructionerp",
+            "sub": str(user.id),
+            "email": user.email,
+            "role": user.role,
+            "iat": now,
+            "exp": now + timedelta(minutes=60),
+            "type": "access",
+        }
+        legacy_token = jwt.encode(legacy_payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+        decoded = jwt.decode(legacy_token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+
+        assert "jti" not in decoded
+        assert decoded["sub"] == str(user.id)
+        assert decoded["type"] == "access"
 
 
 # ── Schema validation tests ──────────────────────────────────────────────────
