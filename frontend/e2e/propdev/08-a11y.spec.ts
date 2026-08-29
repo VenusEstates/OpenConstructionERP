@@ -11,9 +11,14 @@
  *     ``insertBefore`` regression the SideDrawer comment-header calls
  *     out specifically).
  *
- * The page-shape selectors are fail-soft (the property-dev SPA is in
- * flux); if a selector doesn't bind on the current SPA we degrade
- * gracefully and write a notice file instead of failing the suite.
+ * The buyer rows this drives live on the ``buyers`` tab of a selected
+ * development, not on the landing tab, so the spec deep-links to that
+ * tab and pins the development it seeded. A row that does not appear
+ * there is a failure rather than a notice: the three buyers below are
+ * created through the API and the fixture throws on anything but a
+ * 201, so the page is the only thing left that can have gone wrong,
+ * and a skip would report the drawer stress as covered when it never
+ * ran.
  */
 import { expect, test } from '@playwright/test';
 import {
@@ -43,27 +48,28 @@ test('drawer focus-trap + Escape + 20× open/close stress', async ({ page }) => 
     });
   }
 
-  await page.goto('/property-dev');
+  // ?tab=buyers is read once on mount. Without it the page lands on
+  // Overview, which lists developments and never renders a buyer row.
+  await page.goto('/property-dev?tab=buyers');
   await page.waitForLoadState('networkidle');
+  // The tab auto-selects whichever development sorts first. Pin it to the
+  // one we seeded, by id, so the rows below are ours.
+  await page
+    .locator('select')
+    .filter({ has: page.locator(`option[value="${graph.development_id}"]`) })
+    .first()
+    .selectOption(graph.development_id);
   await shooter.shoot(page, 'page_loaded');
 
   // Stress: open + close the drawer 20 times via the first row clickable.
   const trigger = page
     .getByRole('row')
     .filter({ hasText: /R6 a11y Buyer/i })
-    .or(page.locator('[data-testid*="buyer"]'))
     .first();
 
-  if (!(await trigger.isVisible({ timeout: 5_000 }).catch(() => false))) {
-    shooter.saveJson('a11y_skip', {
-      reason: 'No buyer rows visible to drive the drawer stress.',
-    });
-    test.skip(
-      true,
-      'PropertyDevPage did not surface buyer rows — drawer stress impossible',
-    );
-    return;
-  }
+  // Hard assertion, not a soft skip: the buyers exist server-side by the
+  // time we get here, so an absent row is a real defect in the page.
+  await expect(trigger).toBeVisible({ timeout: 20_000 });
 
   for (let i = 0; i < 20; i += 1) {
     await trigger.click();

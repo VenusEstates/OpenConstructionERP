@@ -9,8 +9,11 @@
  *   - Property-dev page renders without untranslated raw keys
  *   - At least one ContractParty-related label resolves to Arabic text
  *
- * Hebrew (``he``) is documented as not yet shipping — the spec skips
- * the second pass and writes a TODO note for whoever adds the locale.
+ * Hebrew (``he``) gets a second pass over the same hard assertions.
+ * It used to be a stub that skipped itself as "no he.ts in this
+ * branch", which stopped being true: he.ts ships in
+ * frontend/src/app/locales and ``he`` is registered in the language
+ * list with dir: 'rtl'.
  */
 import { expect, test } from '@playwright/test';
 import {
@@ -121,10 +124,61 @@ test('Arabic locale renders /property-dev RTL', async ({ page }) => {
   await teardownDevelopment(admin.api, graph.development_id);
 });
 
-test('Hebrew (he) locale skip — not in this branch', () => {
-  test.skip(
-    true,
-    'No he.ts locale file exists in frontend/src/app/locales. ' +
-      'TODO: re-enable when Hebrew translations ship.',
+test('Hebrew locale renders /property-dev RTL', async ({ page }) => {
+  const shooter = new Shooter('i18n_he');
+  const guard = new ConsoleGuard(page);
+  guard.attach();
+
+  const admin = await demoLogin('admin');
+  await hydrateAuth(page.context(), admin);
+
+  await page.context().addInitScript(() => {
+    try {
+      localStorage.setItem('i18nextLng', 'he');
+      localStorage.setItem('oe_locale', 'he');
+    } catch {
+      /* ignore */
+    }
+  });
+
+  const graph = await bootstrapDevelopmentGraph(admin.api, {
+    name: 'R6 RTL Dev — Hebrew',
+  });
+  await page.goto('/property-dev');
+  await page.waitForLoadState('networkidle');
+  await shooter.shoot(page, 'property_dev_hebrew_loaded');
+
+  await page.waitForFunction(
+    () => {
+      const html = document.documentElement;
+      return html.getAttribute('lang') === 'he' || html.getAttribute('dir') === 'rtl';
+    },
+    null,
+    { timeout: 15_000 },
   );
+
+  const htmlDir = await page.evaluate(() => document.documentElement.getAttribute('dir'));
+  const htmlLang = await page.evaluate(() => document.documentElement.getAttribute('lang'));
+  expect(htmlDir).toBe('rtl');
+  expect(htmlLang).toBe('he');
+  await shooter.shoot(page, 'html_dir_rtl_confirmed');
+
+  // The drawer-position probe from the Arabic pass is deliberately not
+  // repeated here. It accepts either viewport edge, so it cannot fail,
+  // and a second copy would only make the file look better covered.
+
+  // At least one Hebrew glyph (U+0590–U+05FF) must be present. A body of
+  // pure Latin means the locale fell through to English, which is the
+  // regression this pass exists to catch.
+  const visibleText = await page.evaluate(() => document.body.textContent ?? '');
+  const hebrewRangeRe = /[֐-׿]/u;
+  expect(hebrewRangeRe.test(visibleText)).toBeTruthy();
+  shooter.saveJson('hebrew_glyphs_present', {
+    sample: visibleText.slice(0, 200),
+    hasHebrew: hebrewRangeRe.test(visibleText),
+  });
+
+  guard.assertNoHardFailures();
+  guard.release();
+  await teardownDevelopment(admin.api, graph.development_id);
 });

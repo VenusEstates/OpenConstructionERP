@@ -37,27 +37,32 @@ test('mid-save network abort → inline error → retry succeeds', async ({ page
   const graph = await bootstrapDevelopmentGraph(admin.api, {
     name: 'R6 Network Resilience Dev',
   });
-  const buyer = await createBuyer(admin.api, graph.development_id, {
+  await createBuyer(admin.api, graph.development_id, {
     full_name: 'R6 Resilience Buyer',
   });
 
-  await page.goto('/property-dev');
+  // ?tab=buyers is read once on mount. Without it the page lands on
+  // Overview, which lists developments and never renders a buyer row.
+  await page.goto('/property-dev?tab=buyers');
   await page.waitForLoadState('networkidle');
+  // The tab auto-selects whichever development sorts first. Pin it to the
+  // one we seeded, by id, so the row below is ours.
+  await page
+    .locator('select')
+    .filter({ has: page.locator(`option[value="${graph.development_id}"]`) })
+    .first()
+    .selectOption(graph.development_id);
   await shooter.shoot(page, 'page_loaded');
 
-  // Open the drawer for our buyer.
+  // Open the drawer for our buyer. The buyer exists server-side by the
+  // time we get here - the fixture throws on anything but a 201 - so an
+  // absent row is a real defect, not a reason to skip the whole abort /
+  // inline-error / retry chain below and report it as covered.
   const row = page
     .getByRole('row')
     .filter({ hasText: /R6 Resilience Buyer/i })
-    .or(page.locator(`[data-buyer-id="${buyer.id}"]`))
     .first();
-  if (!(await row.isVisible({ timeout: 5_000 }).catch(() => false))) {
-    shooter.saveJson('skip_reason', {
-      note: 'Buyer row not visible — current SPA shape lacks selectable handle',
-    });
-    test.skip(true, 'Buyer row selector failed — see skip_reason.json');
-    return;
-  }
+  await expect(row).toBeVisible({ timeout: 20_000 });
   await row.click();
   const drawer = page.getByRole('dialog');
   await drawer.waitFor({ state: 'visible' });

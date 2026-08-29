@@ -59,8 +59,8 @@ test('multi-buyer ContractParty enforces ownership sum ≤ 100', async () => {
   });
 
   const partyA = await addContractParty(admin.api, spa.id, buyerA.id, 40, 'primary');
-  const partyB = await addContractParty(admin.api, spa.id, buyerB.id, 30, 'co_buyer');
-  const partyC = await addContractParty(admin.api, spa.id, buyerC.id, 30, 'co_buyer');
+  const partyB = await addContractParty(admin.api, spa.id, buyerB.id, 30, 'co_owner');
+  const partyC = await addContractParty(admin.api, spa.id, buyerC.id, 30, 'co_owner');
   shooter.saveJson('three_parties_40_30_30', { partyA, partyB, partyC });
 
   // 4th party @ 5% → would push sum to 105 → must 422.
@@ -69,7 +69,7 @@ test('multi-buyer ContractParty enforces ownership sum ≤ 100', async () => {
       sales_contract_id: spa.id,
       buyer_id: buyerD.id,
       ownership_pct: 5,
-      party_role: 'co_buyer',
+      party_role: 'co_owner',
     },
   });
   expect(overflowRes.status()).toBe(422);
@@ -92,7 +92,7 @@ test('multi-buyer ContractParty enforces ownership sum ≤ 100', async () => {
       sales_contract_id: spa.id,
       buyer_id: buyerD.id,
       ownership_pct: 20,
-      party_role: 'co_buyer',
+      party_role: 'co_owner',
     },
   });
   expect(acceptRes.ok()).toBeTruthy();
@@ -118,7 +118,7 @@ test('multi-buyer ContractParty enforces ownership sum ≤ 100', async () => {
       sales_contract_id: spa.id,
       buyer_id: buyerA.id,
       ownership_pct: 5,
-      party_role: 'co_buyer',
+      party_role: 'co_owner',
     },
   });
   expect(dupRes.status()).toBe(409);

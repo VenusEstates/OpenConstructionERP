@@ -139,9 +139,9 @@ test('full property_dev buyer journey — Lead → Warranty', async ({ page }) =
   expect(spa.status).toBe('draft');
   await shooter.shoot(page, 'spa_draft_created');
 
-  // The convert helper does NOT auto-create instalments — we do it
-  // explicitly so the assertion captures the 5-milestone shape exactly.
-  // (Backend supports both flows; we test the explicit path here.)
+  // Conversion DOES auto-create a schedule and one full-balance instalment.
+  // This used to claim the opposite. The helper adopts that schedule and adds
+  // the 5 milestones to it, so the ids asserted below are only the 5 it made.
   const ps = await createPaymentScheduleWithInstalments(admin.api, spa.id, 540000, 'EUR');
   shooter.saveJson('payment_schedule', ps);
   expect(ps.instalment_ids).toHaveLength(5);
@@ -168,7 +168,7 @@ test('full property_dev buyer journey — Lead → Warranty', async ({ page }) =
     // No party present — add primary.
     await addContractParty(admin.api, spa.id, primaryBuyer.id, 50, 'primary');
   }
-  await addContractParty(admin.api, spa.id, coBuyer.id, 50, 'co_buyer');
+  await addContractParty(admin.api, spa.id, coBuyer.id, 50, 'co_owner');
   await shooter.shoot(page, 'contract_parties_50_50');
 
   // ── Step 8: Send for signature → counter-sign ────────────────────────

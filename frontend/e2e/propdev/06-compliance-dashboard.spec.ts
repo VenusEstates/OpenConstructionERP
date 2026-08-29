@@ -92,14 +92,25 @@ test('regulator-report endpoints generate non-empty PDFs (MANAGER)', async () =>
 });
 
 test('TODO #139 — UI dashboard placeholder (skipped)', async ({ page }) => {
-  // When /property-dev/compliance lands from #139, swap this stub for:
+  // Still skipped, but not for the reason this used to give. The page IS
+  // in this branch: features/property-dev/CompliancePage.tsx is complete,
+  // exported from the feature barrel, and its three backend endpoints
+  // answer (401 unauthenticated, not 404). What is missing is a route to
+  // it — App.tsx carries no /property-dev/compliance and no lazy import,
+  // although every other page in that barrel has both. There is therefore
+  // no URL for this spec to open. Which path, which menu entry and which
+  // permission gate it should get is a product decision, not something a
+  // test can settle, so this stays skipped rather than failing.
+  //
+  // When the route lands, swap this stub for:
   //   await page.goto('/property-dev/compliance');
   //   await page.getByRole('button', { name: 'Run Checks' }).click();
-  //   ...etc
-  // For now we just check the SPA doesn't crash when the path is hit.
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   const shooter = new Shooter('compliance');
   await shooter.shoot(page, 'spa_root_loaded_no_compliance_route_yet');
-  test.skip(true, 'UI compliance dashboard is task #139 — not in this branch');
+  test.skip(
+    true,
+    'CompliancePage (#139) ships but nothing routes to it — no URL to open',
+  );
 });

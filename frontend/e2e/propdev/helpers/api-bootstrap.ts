@@ -58,10 +58,38 @@ async function jsonOk<T>(
   return (await res.json()) as T;
 }
 
-/** GET ``/projects/`` and return the first id, creating one if empty. */
+/** Find a project this account OWNS, and only make one if it has none.
+ *
+ *  This used to return ``projects[0]`` outright. That is not the same
+ *  question, and the difference took the whole suite down: ``GET
+ *  /projects/`` lists what the caller can SEE, ownership decides what it
+ *  can write under, and ``POST /developments/`` verifies ownership
+ *  strictly - only the project owner passes, and holding the global
+ *  ``admin`` role does not substitute for owning the row
+ *  (``property_dev/router.py::_verify_owner_via_development``).
+ *
+ *  The suite then poisoned its own precondition. The manager and editor
+ *  demo accounts own nothing on a fresh install, so each created a
+ *  project here; the listing comes back newest first, so from that moment
+ *  ``projects[0]`` was a project the ADMIN did not own, and every later
+ *  admin bootstrap failed with 404 - during the same run, and every run
+ *  afterwards. Measured on a fresh database: admin's first project was
+ *  its own before the suite ran and belonged to another demo account
+ *  after it.
+ *
+ *  Asking for what we own is both the correct question and a cheaper one:
+ *  finding an owned project leaves no debris, and only an account with
+ *  none pays for a create.
+ */
 export async function ensureProject(api: APIRequestContext): Promise<UUID> {
-  const projects = await jsonOk<Array<{ id: UUID }>>(api, 'GET', '/api/v1/projects/');
-  if (projects.length > 0) return projects[0]!.id;
+  const me = await jsonOk<{ id: UUID }>(api, 'GET', '/api/v1/users/me/');
+  const projects = await jsonOk<Array<{ id: UUID; owner_id?: UUID }>>(
+    api,
+    'GET',
+    '/api/v1/projects/',
+  );
+  const owned = projects.find((p) => p.owner_id === me.id);
+  if (owned) return owned.id;
   const created = await jsonOk<{ id: UUID }>(api, 'POST', '/api/v1/projects/', {
     name: `R6 PropDev E2E ${uniqueSuffix()}`,
     description: 'Auto-created for R6 property_dev E2E suite',
@@ -211,6 +239,34 @@ export async function convertLeadToReservation(
   });
 }
 
+/** Create a Reservation directly, without going through a Lead.
+ *
+ * The lead-convert path is MANAGER-gated (property_dev.lead.convert), in
+ * line with every other lifecycle verb in the matrix. This one is
+ * property_dev.reservation.create = EDITOR, so it is the path an
+ * editor-role fixture has to take to end up with the same row.
+ */
+export async function createReservation(
+  api: APIRequestContext,
+  plot_id: UUID,
+  opts: {
+    lead_id?: UUID;
+    buyer_id?: UUID;
+    deposit?: number;
+    currency?: string;
+    cooling_off_days?: number;
+  } = {},
+): Promise<{ id: UUID; status: string }> {
+  return jsonOk(api, 'POST', '/api/v1/property-dev/reservations/', {
+    plot_id,
+    lead_id: opts.lead_id,
+    buyer_id: opts.buyer_id,
+    deposit_amount: opts.deposit ?? 25000,
+    currency: opts.currency ?? 'EUR',
+    cooling_off_days: opts.cooling_off_days ?? 7,
+  });
+}
+
 /** Convert a Reservation → SPA (draft). */
 export async function convertReservationToSpa(
   api: APIRequestContext,
@@ -233,7 +289,9 @@ export async function addContractParty(
   sales_contract_id: UUID,
   buyer_id: UUID,
   ownership_pct: number,
-  party_role: 'primary' | 'co_buyer' | 'guarantor' = 'co_buyer',
+  // Mirrors the shipped API enum. Note that features/contracts/ has
+  // identically named helpers over a DIFFERENT module; do not merge them.
+  party_role: 'primary' | 'co_owner' | 'guarantor' | 'power_of_attorney' = 'co_owner',
 ): Promise<{ id: UUID; ownership_pct: string }> {
   return jsonOk(api, 'POST', '/api/v1/property-dev/contract-parties/', {
     sales_contract_id,
@@ -277,25 +335,48 @@ export async function activateSpa(
   });
 }
 
-/** Create a 5-milestone payment schedule + instalments and activate it. */
+/** Attach a 5-milestone instalment plan to the SPA's payment schedule.
+ *
+ * Converting a reservation to an SPA already creates a schedule, with one
+ * full-balance instalment on it (service.py _create_default_payment_schedule).
+ * PaymentSchedule.sales_contract_id is unique, so POSTing a second schedule
+ * for the same SPA is a 409 by construction rather than a flaky race. Adopt
+ * the existing one where there is one, and number the new instalments after
+ * the ones already on it, because (schedule_id, sequence) is unique too.
+ *
+ * An SPA created directly as a draft has no schedule and no instalments, so
+ * the empty case is the one that still has to create it.
+ */
 export async function createPaymentScheduleWithInstalments(
   api: APIRequestContext,
   spa_id: UUID,
   total: number,
   currency = 'EUR',
 ): Promise<{ schedule_id: UUID; instalment_ids: UUID[] }> {
-  const schedule = await jsonOk<{ id: UUID }>(
+  const existing = await jsonOk<Array<{ schedule_id: UUID; sequence: number }>>(
     api,
-    'POST',
-    '/api/v1/property-dev/payment-schedules/',
-    {
-      sales_contract_id: spa_id,
-      currency,
-      total_amount: total,
-      late_fee_pct: 1.5,
-      grace_period_days: 5,
-    },
+    'GET',
+    `/api/v1/property-dev/instalments/?sales_contract_id=${spa_id}`,
   );
+  let schedule: { id: UUID };
+  let firstSequence = 1;
+  if (existing.length > 0) {
+    schedule = { id: existing[0]!.schedule_id };
+    firstSequence = Math.max(...existing.map((i) => i.sequence)) + 1;
+  } else {
+    schedule = await jsonOk<{ id: UUID }>(
+      api,
+      'POST',
+      '/api/v1/property-dev/payment-schedules/',
+      {
+        sales_contract_id: spa_id,
+        currency,
+        total_amount: total,
+        late_fee_pct: 1.5,
+        grace_period_days: 5,
+      },
+    );
+  }
   const milestones = [
     { event: 'spa_signed', label: '10% on signing', pct: 10 },
     { event: 'foundation_complete', label: '20% on foundation', pct: 20 },
@@ -308,7 +389,7 @@ export async function createPaymentScheduleWithInstalments(
     const m = milestones[i]!;
     const ins = await jsonOk<{ id: UUID }>(api, 'POST', '/api/v1/property-dev/instalments/', {
       schedule_id: schedule.id,
-      sequence: i + 1,
+      sequence: firstSequence + i,
       milestone_label: m.label,
       milestone_event: m.event,
       due_date: `2026-${String(7 + i).padStart(2, '0')}-15`,

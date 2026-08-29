@@ -6,8 +6,15 @@
  *     entity → development → project.owner_id
  *
  * and ALWAYS raises 404 (not 403) on cross-owner access so attackers
- * can't use the endpoint as a UUID-existence oracle. Admins bypass the
- * check by design.
+ * can't use the endpoint as a UUID-existence oracle.
+ *
+ * The admin story is NOT uniform across the helper family, it is being
+ * changed under a separate fix, and this header has already been wrong
+ * about it in both directions. So it deliberately does not put a number
+ * on the split: whatever it said would be stale by the time you read it.
+ *
+ * None of that reaches these probes. Both tenants below are non-admin,
+ * so they exercise the owner check on its own.
  *
  * Two non-admin tenants:
  *   - Tenant A := estimator@openconstructionerp.com (role=editor)
@@ -22,7 +29,7 @@ import { expect, test } from '@playwright/test';
 import {
   addContractParty,
   bootstrapDevelopmentGraph,
-  convertLeadToReservation,
+  createReservation,
   convertReservationToSpa,
   createBuyer,
   createLead,
@@ -47,14 +54,16 @@ test('IDOR — Tenant B cannot read/mutate Tenant A entities', async () => {
     name: 'R6 IDOR Tenant A',
   });
   const lead = await createLead(tenantA.api, graph.development_id);
-  const reservation = await convertLeadToReservation(
-    tenantA.api,
-    lead.id,
-    graph.plot_id,
-  );
+  // Tenant A is an editor and editors cannot convert a lead: the matrix
+  // puts property_dev.lead.convert at MANAGER, next to every other
+  // lifecycle verb. The direct create is the editor-level path and yields
+  // the same reservation row for the probes below.
+  const reservation = await createReservation(tenantA.api, graph.plot_id, {
+    lead_id: lead.id,
+  });
   const spa = await convertReservationToSpa(tenantA.api, reservation.id);
   const buyer = await createBuyer(tenantA.api, graph.development_id);
-  const party = await addContractParty(tenantA.api, spa.id, buyer.id, 25, 'co_buyer');
+  const party = await addContractParty(tenantA.api, spa.id, buyer.id, 25, 'co_owner');
   const handover = await createHandover(tenantA.api, graph.plot_id);
   const snag = await createSnag(tenantA.api, handover.id, 'IDOR test snag');
   const warranty = await raiseWarrantyClaim(tenantA.api, graph.plot_id, buyer.id);
