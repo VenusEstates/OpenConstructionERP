@@ -93,9 +93,14 @@ class CwicrV3Catalogue:
 # Order: alphabetical by ``region`` - the UI sorts by ``country_iso`` /
 # language anyway, but a stable backend order keeps diffs readable.
 #
-# ``size_mb`` for ``available=True`` rows is the actual file size
-# observed on GitHub; for ``available=False`` it's the legacy 3072-dim
-# size as a rough estimate so the UI can still say "~XXX MB expected".
+# ``size_mb`` is an estimate and reads as one in the UI, "~XXX MB
+# expected". Forty-four rows carry 420 and three carry 415, against
+# actuals between 380 and 416, and writing the real thirty-one figures in
+# here by hand would rebuild the mirror this module has just stopped
+# keeping. MN is the exception because it is the only row that departs
+# from the ~400 MB norm, which is the whole reason it carries a figure of
+# its own, and a number whose job is to warn about a near-gigabyte
+# download had better be right: 874 is what HF serves.
 
 
 CWICR_V3_CATALOGUES: tuple[CwicrV3Catalogue, ...] = (
@@ -543,7 +548,7 @@ CWICR_V3_CATALOGUES: tuple[CwicrV3Catalogue, ...] = (
         language="mn",
         currency="MNT",
         ddc_path="MN___DDC_CWICR/MN_ULAANBAATAR_workitems_costs_resources_EMBEDDINGS_BGEM3_V3_DDC_CWICR.snapshot",
-        size_mb=916,
+        size_mb=874,
         available=False,
     ),
     CwicrV3Catalogue(
@@ -688,17 +693,11 @@ def _apply_hf_overrides(
             out.append(cat)
             continue
         folder, stem = hf
-        # MN ships a far larger snapshot (~916 MB) than the average
-        # 415 MB row; honour the per-region size declared in the
-        # registry when it's been set above the default, otherwise
-        # fall back to the HF-typical 415 MB.
-        size_mb = cat.size_mb if cat.size_mb > 415 else 415
         out.append(
             dataclasses.replace(
                 cat,
                 ddc_path=(f"{folder}/{stem}_workitems_costs_resources_EMBEDDINGS_BGEM3_V3_DDC_CWICR.snapshot"),
                 available=True,
-                size_mb=size_mb,
             )
         )
     return tuple(out)
