@@ -111,7 +111,7 @@ export function StageRail({
                     ? 'bg-oe-blue text-white'
                     : isDone
                       ? 'bg-emerald-500 text-white'
-                      : 'bg-surface-muted text-content-secondary',
+                      : 'bg-surface-secondary text-content-secondary',
                 )}
               >
                 {isDone ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}

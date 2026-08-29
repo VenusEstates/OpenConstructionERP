@@ -280,7 +280,7 @@ export function RenumberDialog({
                   className={`relative text-left rounded-xl border-2 px-3 py-3 transition-all disabled:opacity-50 ${
                     isSelected
                       ? 'border-sky-500 bg-sky-50/60 dark:bg-sky-950/40 shadow-sm shadow-sky-500/20'
-                      : 'border-border bg-surface-base hover:border-sky-300 dark:hover:border-sky-700 hover:bg-surface-secondary/40'
+                      : 'border-border bg-surface-primary hover:border-sky-300 dark:hover:border-sky-700 hover:bg-surface-secondary/40'
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
@@ -338,7 +338,7 @@ export function RenumberDialog({
           {/* Custom start + step (only for the Custom scheme) */}
           {scheme === 'custom' && (
             <div className="grid grid-cols-2 gap-2.5">
-              <label className="rounded-xl border border-border bg-surface-base px-3 py-2.5 block">
+              <label className="rounded-xl border border-border bg-surface-primary px-3 py-2.5 block">
                 <div className="text-[11px] font-medium text-content-secondary mb-1">
                   {t('boq.renumber_custom_start', { defaultValue: 'Start number' })}
                 </div>
@@ -351,7 +351,7 @@ export function RenumberDialog({
                   className="w-full bg-transparent text-sm font-mono tabular-nums text-content-primary outline-none disabled:opacity-50"
                 />
               </label>
-              <label className="rounded-xl border border-border bg-surface-base px-3 py-2.5 block">
+              <label className="rounded-xl border border-border bg-surface-primary px-3 py-2.5 block">
                 <div className="text-[11px] font-medium text-content-secondary mb-1">
                   {t('boq.renumber_custom_step', { defaultValue: 'Step' })}
                 </div>
@@ -368,7 +368,7 @@ export function RenumberDialog({
           )}
 
           {/* Pad toggle */}
-          <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-base px-3 py-2.5 cursor-pointer hover:bg-surface-secondary/40 transition-colors">
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-primary px-3 py-2.5 cursor-pointer hover:bg-surface-secondary/40 transition-colors">
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-content-primary">
                 {t('boq.renumber_pad', { defaultValue: 'Zero-pad section numbers' })}
@@ -398,7 +398,7 @@ export function RenumberDialog({
           </label>
 
           {/* Live preview */}
-          <div className="rounded-xl border border-border bg-surface-base overflow-hidden">
+          <div className="rounded-xl border border-border bg-surface-primary overflow-hidden">
             <div className="px-3 py-2 border-b border-border bg-surface-secondary/40">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-content-tertiary">
                 {t('boq.renumber_preview', { defaultValue: 'Preview (first 5 positions)' })}

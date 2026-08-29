@@ -63,7 +63,7 @@ export function Stage2Groups({
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="h-14 animate-pulse rounded-lg border border-border-light bg-surface-muted"
+            className="h-14 animate-pulse rounded-lg border border-border-light bg-surface-secondary"
           />
         ))}
       </div>
@@ -139,7 +139,7 @@ export function Stage2Groups({
 
       {/* Summary strip */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-border-light bg-surface-muted px-4 py-3">
+        <div className="rounded-lg border border-border-light bg-surface-secondary px-4 py-3">
           <div className="text-2xl font-semibold tabular-nums text-content-primary">
             {included.length}
           </div>
@@ -147,7 +147,7 @@ export function Stage2Groups({
             {t('aiest.groups.included', { defaultValue: 'Groups included' })}
           </div>
         </div>
-        <div className="rounded-lg border border-border-light bg-surface-muted px-4 py-3">
+        <div className="rounded-lg border border-border-light bg-surface-secondary px-4 py-3">
           <div className="text-2xl font-semibold tabular-nums text-content-primary">
             {totalElements}
           </div>
@@ -203,7 +203,7 @@ export function Stage2Groups({
       {/* Group rows */}
       <div className="overflow-hidden rounded-lg border border-border-light">
         <table className="w-full text-sm">
-          <thead className="bg-surface-muted text-content-secondary">
+          <thead className="bg-surface-secondary text-content-secondary">
             <tr>
               <th className="w-10 px-3 py-2" />
               <th className="w-10 px-3 py-2" />

@@ -114,7 +114,7 @@ export function AgentTimelineDrawer({
                         {t(meta.labelKey, { defaultValue: meta.labelFallback })}
                       </span>
                       {stageDef && (
-                        <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] text-content-tertiary">
+                        <span className="rounded bg-surface-secondary px-1.5 py-0.5 text-[10px] text-content-tertiary">
                           {t(stageDef.titleKey, { defaultValue: stageDef.titleFallback })}
                         </span>
                       )}

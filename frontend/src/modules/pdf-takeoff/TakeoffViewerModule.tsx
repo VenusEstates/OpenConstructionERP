@@ -8569,7 +8569,7 @@ export default function TakeoffViewerModule({
                       <select
                         value={linkPickerProjectId}
                         onChange={(e) => handlePickerProjectChange(e.target.value)}
-                        className="text-[10px] rounded border border-border-subtle bg-surface-primary px-1 py-0.5 text-content-primary"
+                        className="text-[10px] rounded border border-border-light bg-surface-primary px-1 py-0.5 text-content-primary"
                         aria-label={t('takeoff.bulk_add_target_project', {
                           defaultValue: 'Target project',
                         })}
@@ -8583,7 +8583,7 @@ export default function TakeoffViewerModule({
                         value={linkPickerBoqId}
                         onChange={(e) => handlePickerBoqChange(e.target.value)}
                         disabled={!linkPickerProjectId || linkBoqsLoading}
-                        className="text-[10px] rounded border border-border-subtle bg-surface-primary px-1 py-0.5 text-content-primary disabled:opacity-60"
+                        className="text-[10px] rounded border border-border-light bg-surface-primary px-1 py-0.5 text-content-primary disabled:opacity-60"
                         aria-label={t('takeoff.bulk_add_target_boq', {
                           defaultValue: 'Target BOQ',
                         })}
@@ -10005,7 +10005,7 @@ export default function TakeoffViewerModule({
                                     <select
                                       value={linkPickerProjectId}
                                       onChange={(e) => handlePickerProjectChange(e.target.value)}
-                                      className="text-[10px] rounded border border-border-subtle bg-surface-primary px-1 py-0.5 text-content-primary"
+                                      className="text-[10px] rounded border border-border-light bg-surface-primary px-1 py-0.5 text-content-primary"
                                     >
                                       <option value="">{t('takeoff.pick_project', { defaultValue: '- project -' })}</option>
                                       {linkPickerProjects.map((p) => (
@@ -10016,7 +10016,7 @@ export default function TakeoffViewerModule({
                                       value={linkPickerBoqId}
                                       onChange={(e) => handlePickerBoqChange(e.target.value)}
                                       disabled={!linkPickerProjectId || linkBoqsLoading}
-                                      className="text-[10px] rounded border border-border-subtle bg-surface-primary px-1 py-0.5 text-content-primary disabled:opacity-60"
+                                      className="text-[10px] rounded border border-border-light bg-surface-primary px-1 py-0.5 text-content-primary disabled:opacity-60"
                                     >
                                       <option value="">
                                         {linkBoqsLoading
@@ -10081,7 +10081,7 @@ export default function TakeoffViewerModule({
                                           value={linkPickerSearch}
                                           onChange={(e) => setLinkPickerSearch(e.target.value)}
                                           placeholder={t('takeoff.link_search_placeholder', { defaultValue: 'Search ordinal or description...' })}
-                                          className="w-full mb-1 text-[10px] rounded border border-border-subtle bg-surface-primary px-1.5 py-0.5 text-content-primary"
+                                          className="w-full mb-1 text-[10px] rounded border border-border-light bg-surface-primary px-1.5 py-0.5 text-content-primary"
                                         />
                                         <div className="max-h-32 overflow-y-auto space-y-0.5">
                                           {linkBoqPositions

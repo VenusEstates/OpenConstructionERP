@@ -757,7 +757,7 @@ export default function PayrollPage() {
       {/* Batch list */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="p-0">
-          <div className="border-b border-border-subtle px-4 py-3">
+          <div className="border-b border-border-light px-4 py-3">
             <h2 className="text-sm font-semibold text-content-primary">
               {t('payroll.batches', { defaultValue: 'Pay batches' })}
             </h2>
@@ -794,15 +794,15 @@ export default function PayrollPage() {
               />
             </div>
           ) : (
-            <ul className="divide-y divide-border-subtle">
+            <ul className="divide-y divide-border-light">
               {batches.map((b: PayrollBatch) => (
                 <li key={b.id}>
                   <button
                     type="button"
                     onClick={() => handleSelect(b.id)}
                     className={clsx(
-                      'flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-hover',
-                      selectedBatchId === b.id && 'bg-surface-hover',
+                      'flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-secondary',
+                      selectedBatchId === b.id && 'bg-surface-secondary',
                     )}
                     aria-pressed={selectedBatchId === b.id}
                   >
@@ -845,7 +845,7 @@ export default function PayrollPage() {
 
         {/* Entries for the selected batch */}
         <Card className="p-0">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light px-4 py-3">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-content-primary">
               <Users size={16} />
               {t('payroll.entries', { defaultValue: 'Entries' })}
@@ -920,7 +920,7 @@ export default function PayrollPage() {
             )}
           </div>
           {selectedBatch && (
-            <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-2 text-xs text-content-tertiary">
+            <div className="flex items-center gap-3 border-b border-border-light px-4 py-2 text-xs text-content-tertiary">
               <Link to="/field-reports" className="inline-flex items-center gap-1 hover:text-content-primary">
                 <ExternalLink size={12} />
                 {t('payroll.audit_field_reports', { defaultValue: 'View field reports' })}
@@ -931,7 +931,7 @@ export default function PayrollPage() {
             </div>
           )}
           {netSummary && (
-            <div className="grid grid-cols-3 gap-2 border-b border-border-subtle px-4 py-3">
+            <div className="grid grid-cols-3 gap-2 border-b border-border-light px-4 py-3">
               <div>
                 <p className="text-2xs uppercase tracking-wide text-content-tertiary">
                   {t('payroll.summary_gross', { defaultValue: 'Gross' })}
@@ -961,7 +961,7 @@ export default function PayrollPage() {
             </div>
           )}
           {reconciliation && reconciliation.batch_id === selectedBatchId && (
-            <div className="border-b border-border-subtle px-4 py-3">
+            <div className="border-b border-border-light px-4 py-3">
               <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                 <Scale size={14} />
                 {t('payroll.reconcile_title', { defaultValue: 'Reconciliation' })}
@@ -1014,7 +1014,7 @@ export default function PayrollPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wide text-content-tertiary">
+                  <tr className="border-b border-border-light text-left text-xs uppercase tracking-wide text-content-tertiary">
                     <th className="px-4 py-2">{t('payroll.col.worker', { defaultValue: 'Worker' })}</th>
                     <th className="px-4 py-2">{t('payroll.col.date', { defaultValue: 'Date' })}</th>
                     <th className="px-4 py-2 text-right">{t('payroll.col.hours', { defaultValue: 'Hours' })}</th>
@@ -1036,7 +1036,7 @@ export default function PayrollPage() {
                     const isOpen = Boolean(expandedEntries[e.id]);
                     return (
                       <Fragment key={e.id}>
-                        <tr className="border-b border-border-subtle/60">
+                        <tr className="border-b border-border-light">
                           <td className="px-4 py-2 text-content-primary">
                             {e.resource_id ? (
                               <Link
@@ -1081,7 +1081,7 @@ export default function PayrollPage() {
                           </td>
                         </tr>
                         {isOpen && (
-                          <tr className="border-b border-border-subtle/60 bg-surface-secondary/30">
+                          <tr className="border-b border-border-light bg-surface-secondary/30">
                             <td colSpan={8} className="px-4 py-3">
                               <DeductionEditor
                                 entry={e}

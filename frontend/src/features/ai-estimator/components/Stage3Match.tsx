@@ -240,7 +240,7 @@ function MatchCard({
                   </span>
                 )}
                 {group.match_method && (
-                  <span className="rounded bg-surface-muted px-1 py-0.5 text-[10px] uppercase">
+                  <span className="rounded bg-surface-secondary px-1 py-0.5 text-[10px] uppercase">
                     {t(`aiest.method.${group.match_method}`, { defaultValue: group.match_method })}
                   </span>
                 )}
@@ -501,7 +501,7 @@ export function Stage3Match(props: Stage3MatchProps) {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="h-20 animate-pulse rounded-lg border border-border-light bg-surface-muted"
+            className="h-20 animate-pulse rounded-lg border border-border-light bg-surface-secondary"
           />
         ))}
       </div>
@@ -548,7 +548,7 @@ export function Stage3Match(props: Stage3MatchProps) {
               </span>
             )}
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-secondary">
             <div
               className="h-full rounded-full bg-oe-blue transition-all duration-500"
               style={{ width: `${Math.max(6, matchProgress.pct)}%` }}
@@ -561,7 +561,7 @@ export function Stage3Match(props: Stage3MatchProps) {
           vector search never blocks the UI. Match-all iterates until every
           group has been processed. */}
       {groups.length > matchGroupCap && (
-        <div className="flex items-start gap-2 rounded-lg border border-border-light bg-surface-muted px-3 py-2 text-xs text-content-secondary">
+        <div className="flex items-start gap-2 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-xs text-content-secondary">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {t('aiest.match_batch_notice', {
             defaultValue:
@@ -687,7 +687,7 @@ export function Stage3Match(props: Stage3MatchProps) {
                       }))
                     }
                     aria-expanded={!collapsed}
-                    className="flex w-full items-center gap-2 bg-surface-muted px-3 py-2 text-left"
+                    className="flex w-full items-center gap-2 bg-surface-secondary px-3 py-2 text-left"
                   >
                     {collapsed ? (
                       <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" />

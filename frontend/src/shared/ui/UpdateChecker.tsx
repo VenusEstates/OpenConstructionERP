@@ -1055,7 +1055,7 @@ function UpdateFullModal({
               <h3 className="text-xs font-semibold uppercase tracking-wider text-content-tertiary mb-3">
                 {t('update.how_to_update', { defaultValue: 'How to update' })}
               </h3>
-              <div className="rounded-xl border border-border bg-surface-base px-3 py-3">
+              <div className="rounded-xl border border-border bg-surface-primary px-3 py-3">
                 <div className="text-sm font-semibold text-content-primary">
                   {t('update.method_installer')}
                 </div>
@@ -1122,7 +1122,7 @@ function UpdateFullModal({
               {methods.map((m) => (
                 <div
                   key={m.key}
-                  className="rounded-xl border border-border bg-surface-base overflow-hidden"
+                  className="rounded-xl border border-border bg-surface-primary overflow-hidden"
                 >
                   <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
                     <div>

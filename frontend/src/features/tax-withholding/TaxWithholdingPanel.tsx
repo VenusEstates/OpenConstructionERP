@@ -243,7 +243,7 @@ function PreviewSection({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <form
-          className="grid gap-3 rounded-lg border border-border-subtle p-4 sm:grid-cols-2"
+          className="grid gap-3 rounded-lg border border-border-light p-4 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
             if (ready) preview.mutate();
@@ -254,7 +254,7 @@ function PreviewSection({
             <select
               value={regimeId}
               onChange={(e) => onRegimeChange(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
               required
             >
               <option value="">{t('tax_withholding.field_scheme_pick', { defaultValue: 'Pick a scheme' })}</option>
@@ -273,7 +273,7 @@ function PreviewSection({
                 inputMode="decimal"
                 value={grossAmount}
                 onChange={(e) => setGrossAmount(e.target.value)}
-                className="rounded border border-border-subtle bg-surface-primary p-2"
+                className="rounded border border-border-light bg-surface-primary p-2"
                 required
               />
             </label>
@@ -283,7 +283,7 @@ function PreviewSection({
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value.toUpperCase().slice(0, 3))}
                 maxLength={3}
-                className="rounded border border-border-subtle bg-surface-primary p-2 uppercase"
+                className="rounded border border-border-light bg-surface-primary p-2 uppercase"
                 required
               />
             </label>
@@ -295,7 +295,7 @@ function PreviewSection({
               inputMode="decimal"
               value={materials}
               onChange={(e) => setMaterials(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
             />
           </label>
 
@@ -305,7 +305,7 @@ function PreviewSection({
               inputMode="decimal"
               value={vat}
               onChange={(e) => setVat(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
             />
           </label>
 
@@ -332,7 +332,7 @@ function PreviewSection({
             <select
               value={bandCode}
               onChange={(e) => setBandCode(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
               disabled={!regime}
             >
               <option value="">
@@ -366,7 +366,7 @@ function PreviewSection({
             <select
               value={partyStatusId}
               onChange={(e) => setPartyStatusId(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
               disabled={!regime}
             >
               <option value="">
@@ -386,7 +386,7 @@ function PreviewSection({
               type="date"
               value={asOf}
               onChange={(e) => setAsOf(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
             />
             <span className="text-xs text-content-tertiary">
               {t('tax_withholding.field_as_of_note', {
@@ -428,7 +428,7 @@ function PreviewResult({ result, regime }: { result: DeductionPreview; regime: R
   const bandLabel = findBand(regime, result.band_code)?.label || result.band_code;
 
   return (
-    <div className="space-y-4 rounded-lg border border-border-subtle p-4">
+    <div className="space-y-4 rounded-lg border border-border-light p-4">
       {/* The answer the module exists to give, so it leads. */}
       <div>
         <p className="text-xs uppercase tracking-wide text-content-tertiary">
@@ -641,7 +641,7 @@ function StandingList({ standings, today }: { standings: PartyStatus[]; today: s
   const { t } = useTranslation();
 
   return (
-    <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+    <ul className="divide-y divide-border-light rounded-lg border border-border-light">
       {standings.map((standing) => {
         const state = standingState(standing, today, EXPIRY_WINDOW_DAYS);
         return (
@@ -768,7 +768,7 @@ function SchemeCard({ regime }: { regime: Regime }) {
   const { t } = useTranslation();
 
   return (
-    <li className="rounded-lg border border-border-subtle p-3">
+    <li className="rounded-lg border border-border-light p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{regime.scheme_name}</span>
         <Badge variant="neutral" size="sm">

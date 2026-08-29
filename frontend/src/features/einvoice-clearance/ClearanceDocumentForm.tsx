@@ -75,7 +75,7 @@ export function ClearanceDocumentForm({
 
   if (profiles.length === 0) {
     return (
-      <div className="rounded-lg border border-border-subtle p-3 text-sm text-content-secondary">
+      <div className="rounded-lg border border-border-light p-3 text-sm text-content-secondary">
         {t('einvoice_clearance.document_needs_profile', {
           defaultValue:
             'A document is filed under a registration, and there is no active one with an adapter yet. Register a country below first.',
@@ -86,7 +86,7 @@ export function ClearanceDocumentForm({
 
   return (
     <form
-      className="space-y-3 rounded-lg border border-border-subtle p-3"
+      className="space-y-3 rounded-lg border border-border-light p-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (!ready || pending) return;
@@ -117,7 +117,7 @@ export function ClearanceDocumentForm({
             setCountryFields({});
           }}
           required
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
         >
           <option value="">
             {t('einvoice_clearance.field_profile_none', {
@@ -152,7 +152,7 @@ export function ClearanceDocumentForm({
             onChange={(e) => setInvoiceNumber(e.target.value)}
             maxLength={64}
             required
-            className="rounded border border-border-subtle bg-surface-primary p-2 font-mono"
+            className="rounded border border-border-light bg-surface-primary p-2 font-mono"
           />
         </label>
 
@@ -163,7 +163,7 @@ export function ClearanceDocumentForm({
             value={invoiceDate}
             onChange={(e) => setInvoiceDate(e.target.value)}
             required
-            className="rounded border border-border-subtle bg-surface-primary p-2"
+            className="rounded border border-border-light bg-surface-primary p-2"
           />
         </label>
 
@@ -175,7 +175,7 @@ export function ClearanceDocumentForm({
             maxLength={3}
             required
             placeholder="EUR"
-            className="rounded border border-border-subtle bg-surface-primary p-2 font-mono uppercase"
+            className="rounded border border-border-light bg-surface-primary p-2 font-mono uppercase"
           />
         </label>
 
@@ -187,7 +187,7 @@ export function ClearanceDocumentForm({
             inputMode="decimal"
             required
             placeholder="0.00"
-            className="rounded border border-border-subtle bg-surface-primary p-2 text-right font-mono"
+            className="rounded border border-border-light bg-surface-primary p-2 text-right font-mono"
           />
         </label>
       </div>
@@ -216,7 +216,7 @@ export function ClearanceDocumentForm({
                     setCountryFields((prev) => ({ ...prev, [field]: e.target.value }))
                   }
                   maxLength={255}
-                  className="rounded border border-border-subtle bg-surface-primary p-2 font-mono"
+                  className="rounded border border-border-light bg-surface-primary p-2 font-mono"
                 />
               </label>
             ))}

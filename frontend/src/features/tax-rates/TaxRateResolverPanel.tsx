@@ -109,14 +109,14 @@ export function TaxRateResolverPanel() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-border-subtle bg-surface-primary p-4">
+      <section className="rounded-lg border border-border-light bg-surface-primary p-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-sm">
             {t('tax_rates.field_country', { defaultValue: 'Country' })}
             <select
               value={country}
               onChange={(e) => onCountryChange(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
               aria-label={t('tax_rates.field_country', { defaultValue: 'Country' })}
             >
               <option value="">
@@ -137,7 +137,7 @@ export function TaxRateResolverPanel() {
                 ref={regionRef}
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
-                className="rounded border border-border-subtle bg-surface-primary p-2"
+                className="rounded border border-border-light bg-surface-primary p-2"
                 aria-label={t('tax_rates.field_region', { defaultValue: 'Region' })}
               >
                 {/* Never preselected. A picker that defaults to the first
@@ -167,7 +167,7 @@ export function TaxRateResolverPanel() {
               type="date"
               value={onDate}
               onChange={(e) => setOnDate(e.target.value)}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
               aria-label={t('tax_rates.field_date', { defaultValue: 'Priced at' })}
             />
             <span className="text-2xs text-content-tertiary">
@@ -284,7 +284,7 @@ function Answered({
   const compounded = answer.components.some((c) => c.base === 'consideration_plus_federal');
 
   return (
-    <section className="rounded-lg border border-border-subtle bg-surface-primary p-4">
+    <section className="rounded-lg border border-border-light bg-surface-primary p-4">
       <div
         data-testid="tax-rates-answer-slot"
         className="flex flex-wrap items-baseline gap-x-3 gap-y-1"

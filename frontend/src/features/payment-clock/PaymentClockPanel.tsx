@@ -174,7 +174,7 @@ export function PaymentClockPanel() {
               })}
             />
           ) : (
-            <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+            <ul className="divide-y divide-border-light rounded-lg border border-border-light">
               {applications.map((app) => (
                 <li key={app.id}>
                   <button
@@ -292,7 +292,7 @@ function ClockDetail({
   const sum = clock.notified_sum;
 
   return (
-    <div className="space-y-4 rounded-lg border border-border-subtle p-4">
+    <div className="space-y-4 rounded-lg border border-border-light p-4">
       {/* The answer the module exists to give, so it leads. */}
       <div>
         <p className="text-xs uppercase tracking-wide text-content-tertiary">
@@ -490,7 +490,7 @@ function NewClockForm({
 
   return (
     <form
-      className="grid gap-3 rounded-lg border border-border-subtle p-4 sm:grid-cols-2"
+      className="grid gap-3 rounded-lg border border-border-light p-4 sm:grid-cols-2"
       onSubmit={(e) => {
         e.preventDefault();
         if (ready) create.mutate();
@@ -501,7 +501,7 @@ function NewClockForm({
         <select
           value={regimeCode}
           onChange={(e) => onRegimeChange(e.target.value)}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
           required
         >
           <option value="">
@@ -521,7 +521,7 @@ function NewClockForm({
           value={reference}
           onChange={(e) => setReference(e.target.value)}
           maxLength={64}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
         />
       </label>
 
@@ -531,7 +531,7 @@ function NewClockForm({
           type="date"
           value={applicationDate}
           onChange={(e) => setApplicationDate(e.target.value)}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
           required
         />
       </label>
@@ -543,7 +543,7 @@ function NewClockForm({
             inputMode="decimal"
             value={appliedAmount}
             onChange={(e) => setAppliedAmount(e.target.value)}
-            className="rounded border border-border-subtle bg-surface-primary p-2"
+            className="rounded border border-border-light bg-surface-primary p-2"
             required
           />
         </label>
@@ -553,7 +553,7 @@ function NewClockForm({
             value={currency}
             onChange={(e) => setCurrency(e.target.value.toUpperCase().slice(0, 3))}
             maxLength={3}
-            className="rounded border border-border-subtle bg-surface-primary p-2 uppercase"
+            className="rounded border border-border-light bg-surface-primary p-2 uppercase"
             required
           />
         </label>

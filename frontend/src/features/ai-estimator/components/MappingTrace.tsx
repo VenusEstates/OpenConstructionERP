@@ -160,7 +160,7 @@ export function MappingTrace({ trace, defaultOpen = false }: MappingTraceProps) 
   if (passes.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-border-light bg-surface-muted/40" data-testid="aiest-mapping-trace">
+    <div className="rounded-lg border border-border-light bg-surface-secondary/40" data-testid="aiest-mapping-trace">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

@@ -41,7 +41,7 @@ export function RunsList({ runs, loading, error, onRetry, locale, onNew, onOpen 
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-16 animate-pulse rounded-lg border border-border-light bg-surface-muted"
+              className="h-16 animate-pulse rounded-lg border border-border-light bg-surface-secondary"
             />
           ))}
         </div>

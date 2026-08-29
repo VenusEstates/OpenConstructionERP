@@ -200,7 +200,7 @@ export function EInvoiceClearancePanel() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded border border-border-subtle bg-surface-primary p-1.5 text-sm"
+            className="rounded border border-border-light bg-surface-primary p-1.5 text-sm"
           >
             <option value="">
               {t('einvoice_clearance.filter_status_any', { defaultValue: 'Any status' })}
@@ -303,7 +303,7 @@ export function EInvoiceClearancePanel() {
               }
             />
           ) : (
-            <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+            <ul className="divide-y divide-border-light rounded-lg border border-border-light">
               {documents.map((doc) => (
                 <li key={doc.id}>
                   <button
@@ -547,7 +547,7 @@ function DocumentDetail({
   const events = eventsQuery.data ?? [];
 
   return (
-    <div className="space-y-4 rounded-lg border border-border-subtle p-4">
+    <div className="space-y-4 rounded-lg border border-border-light p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-lg font-semibold">
@@ -787,7 +787,7 @@ function AuthorityAnswer({
       )}
 
       {doc.cancellation_reason && (
-        <div className="rounded border border-border-subtle p-3">
+        <div className="rounded border border-border-light p-3">
           <p className="text-xs uppercase tracking-wide text-content-tertiary">
             {t('einvoice_clearance.cancellation_reason_title', {
               defaultValue: 'Reason filed with the withdrawal',
@@ -958,7 +958,7 @@ function PayloadView({
           ) : payloadQuery.isError ? (
             <p className="text-sm text-semantic-error">{getErrorMessage(payloadQuery.error)}</p>
           ) : (
-            <pre className="max-h-80 overflow-auto rounded border border-border-subtle bg-surface-secondary p-2 text-xs">
+            <pre className="max-h-80 overflow-auto rounded border border-border-light bg-surface-secondary p-2 text-xs">
               {payloadQuery.data?.text}
             </pre>
           )}
@@ -1015,7 +1015,7 @@ function TrailList({ events, loading }: { events: ClearanceEvent[]; loading: boo
                     defaultValue: "The platform's answer as it came",
                   })}
                 </summary>
-                <pre className="mt-1 max-h-40 overflow-auto rounded border border-border-subtle bg-surface-secondary p-2 text-xs">
+                <pre className="mt-1 max-h-40 overflow-auto rounded border border-border-light bg-surface-secondary p-2 text-xs">
                   {JSON.stringify(ev.raw_response, null, 2)}
                 </pre>
               </details>
@@ -1068,7 +1068,7 @@ function CancelForm({
           onChange={(e) => setReason(e.target.value)}
           maxLength={1000}
           rows={3}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
           required
         />
       </label>
@@ -1124,7 +1124,7 @@ function ResolveForm({
 
   return (
     <form
-      className="space-y-2 rounded-lg border border-border-subtle p-3"
+      className="space-y-2 rounded-lg border border-border-light p-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (!ready) return;
@@ -1142,7 +1142,7 @@ function ResolveForm({
         <select
           value={outcome}
           onChange={(e) => setOutcome(e.target.value as 'cleared' | 'rejected')}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
         >
           <option value="cleared">
             {t('einvoice_clearance.outcome_cleared', { defaultValue: 'It accepted the document' })}
@@ -1163,7 +1163,7 @@ function ResolveForm({
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             maxLength={255}
-            className="rounded border border-border-subtle bg-surface-primary p-2 font-mono"
+            className="rounded border border-border-light bg-surface-primary p-2 font-mono"
             required={needsIdentifier}
           />
           {needsIdentifier && (
@@ -1184,7 +1184,7 @@ function ResolveForm({
               value={code}
               onChange={(e) => setCode(e.target.value)}
               maxLength={64}
-              className="rounded border border-border-subtle bg-surface-primary p-2 font-mono"
+              className="rounded border border-border-light bg-surface-primary p-2 font-mono"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -1196,7 +1196,7 @@ function ResolveForm({
               onChange={(e) => setRejectionMessage(e.target.value)}
               maxLength={2000}
               rows={2}
-              className="rounded border border-border-subtle bg-surface-primary p-2"
+              className="rounded border border-border-light bg-surface-primary p-2"
             />
           </label>
         </>
@@ -1209,7 +1209,7 @@ function ResolveForm({
           onChange={(e) => setNote(e.target.value)}
           maxLength={1000}
           rows={2}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
           required
         />
       </label>
@@ -1366,7 +1366,7 @@ function ProfilesSection({
           }
         />
       ) : (
-        <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+        <ul className="divide-y divide-border-light rounded-lg border border-border-light">
           {profiles.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-2 p-3 text-sm">
               <span className="font-medium">{p.company_key}</span>

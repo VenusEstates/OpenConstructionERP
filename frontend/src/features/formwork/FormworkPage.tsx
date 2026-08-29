@@ -538,7 +538,7 @@ function CyclePanel({ assignment, projectId, onClose }: CyclePanelProps) {
             </thead>
             <tbody>
               {lines.map((line) => (
-                <tr key={line.id} className="border-b border-border-subtle last:border-0">
+                <tr key={line.id} className="border-b border-border-light last:border-0">
                   <td className="py-1.5 pr-3 tabular-nums">{line.pour_no}</td>
                   <td className="py-1.5 pr-3">{line.level_label}</td>
                   <td className="py-1.5 pr-3 text-right tabular-nums">
@@ -600,7 +600,7 @@ function CyclePanel({ assignment, projectId, onClose }: CyclePanelProps) {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-subtle">
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-light">
         <Button
           variant="primary"
           icon={<Wand2 size={15} />}
@@ -1131,7 +1131,7 @@ export function FormworkPage() {
                     {assignments.map((assignment) => (
                       <tr
                         key={assignment.id}
-                        className="border-b border-border-subtle last:border-0"
+                        className="border-b border-border-light last:border-0"
                       >
                         <td className="py-2 pr-3">
                           <div className="font-medium text-content-primary">
@@ -1383,7 +1383,7 @@ export function FormworkPage() {
                   </thead>
                   <tbody>
                     {summary.by_system_type.map((row) => (
-                      <tr key={row.system_type} className="border-b border-border-subtle last:border-0">
+                      <tr key={row.system_type} className="border-b border-border-light last:border-0">
                         <td className="py-1.5 pr-3">{row.system_type}</td>
                         <td className="py-1.5 pr-3 text-right tabular-nums">
                           {fmtNumber(row.area_m2, locale)}
@@ -1648,7 +1648,7 @@ export function FormworkPage() {
                 </thead>
                 <tbody>
                   {systems.map((system) => (
-                    <tr key={system.id} className="border-b border-border-subtle last:border-0">
+                    <tr key={system.id} className="border-b border-border-light last:border-0">
                       <td className="py-2 pr-3">
                         <div className="font-medium text-content-primary">{system.name}</div>
                         {system.supplier && (

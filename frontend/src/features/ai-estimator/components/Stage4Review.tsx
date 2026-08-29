@@ -176,7 +176,7 @@ export function Stage4Review(props: Stage4ReviewProps) {
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="h-12 animate-pulse rounded-lg border border-border-light bg-surface-muted"
+            className="h-12 animate-pulse rounded-lg border border-border-light bg-surface-secondary"
           />
         ))}
       </div>
@@ -251,7 +251,7 @@ export function Stage4Review(props: Stage4ReviewProps) {
 
       {/* Never-blend notice for multi-currency estimates */}
       {multiCurrency && (
-        <div className="flex items-start gap-2 rounded-lg border border-border-light bg-surface-muted px-3 py-2 text-xs text-content-secondary">
+        <div className="flex items-start gap-2 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-xs text-content-secondary">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {t('aiest.review.never_blend', {
             defaultValue:
@@ -277,7 +277,7 @@ export function Stage4Review(props: Stage4ReviewProps) {
       {/* Position table with expandable resources */}
       <div className="overflow-hidden rounded-lg border border-border-light">
         <table className="w-full text-sm">
-          <thead className="bg-surface-muted text-content-secondary">
+          <thead className="bg-surface-secondary text-content-secondary">
             <tr>
               <th className="w-8 px-3 py-2" />
               <th className="px-3 py-2 text-left font-medium">
@@ -401,7 +401,7 @@ export function Stage4Review(props: Stage4ReviewProps) {
           </Button>
         </div>
       ) : (
-        <div className="space-y-3 rounded-lg border border-border-light bg-surface-muted p-4">
+        <div className="space-y-3 rounded-lg border border-border-light bg-surface-secondary p-4">
           <label className="flex cursor-pointer items-start gap-2.5 text-sm">
             <input
               type="checkbox"

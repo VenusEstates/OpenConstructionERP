@@ -130,7 +130,7 @@ export function ClearanceRegistrationForm({
 
   return (
     <form
-      className="space-y-3 rounded-lg border border-border-subtle p-3"
+      className="space-y-3 rounded-lg border border-border-light p-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (!ready || pending) return;
@@ -154,7 +154,7 @@ export function ClearanceRegistrationForm({
           onChange={(e) => setCompanyKey(e.target.value)}
           maxLength={120}
           required
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
           placeholder={t('einvoice_clearance.field_company_key_hint', {
             defaultValue: 'The entity that issues the invoices, as your finance records name it',
           })}
@@ -170,7 +170,7 @@ export function ClearanceRegistrationForm({
             setAdapterKey('');
           }}
           required
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
         >
           <option value="">
             {t('einvoice_clearance.field_country_none', { defaultValue: 'Choose a country' })}
@@ -242,7 +242,7 @@ export function ClearanceRegistrationForm({
             onChange={(e) => setters[field](e.target.value)}
             maxLength={255}
             required
-            className="rounded border border-border-subtle bg-surface-primary p-2 font-mono"
+            className="rounded border border-border-light bg-surface-primary p-2 font-mono"
           />
         </label>
       ))}
@@ -252,7 +252,7 @@ export function ClearanceRegistrationForm({
         <select
           value={adapterKey}
           onChange={(e) => setAdapterKey(e.target.value)}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
         >
           <option value="">
             {t('einvoice_clearance.field_adapter_none', { defaultValue: 'None' })}
@@ -319,7 +319,7 @@ export function ClearanceRegistrationForm({
           onChange={(e) => setNotes(e.target.value)}
           maxLength={1000}
           rows={2}
-          className="rounded border border-border-subtle bg-surface-primary p-2"
+          className="rounded border border-border-light bg-surface-primary p-2"
         />
       </label>
 

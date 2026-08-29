@@ -237,7 +237,7 @@ export function Stage1Intake(props: Stage1IntakeProps) {
                 {files.map((f, i) => (
                   <li
                     key={`${f.name}-${i}`}
-                    className="flex items-center justify-between rounded-lg border border-border-light bg-surface-muted px-3 py-1.5 text-xs"
+                    className="flex items-center justify-between rounded-lg border border-border-light bg-surface-secondary px-3 py-1.5 text-xs"
                   >
                     <span className="truncate text-content-primary">{f.name}</span>
                     <button

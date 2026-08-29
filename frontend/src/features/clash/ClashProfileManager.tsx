@@ -574,7 +574,7 @@ function ProfileDetail({
 
       <dl className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         {rows.map(([label, value]) => (
-          <div key={label} className="flex items-center justify-between gap-3 border-b border-border-subtle pb-1.5">
+          <div key={label} className="flex items-center justify-between gap-3 border-b border-border-light pb-1.5">
             <dt className="text-sm text-content-tertiary">{label}</dt>
             <dd className="text-sm font-medium text-content-primary text-right">
               {value}
@@ -850,7 +850,7 @@ function ApplyModal({
         className="w-full max-w-lg rounded-2xl bg-surface-0 shadow-xl border border-border-subtle"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-light">
           <h2 className="text-base font-semibold text-content-primary flex items-center gap-2">
             <Play className="w-4 h-4 text-oe-blue" />
             {t('clash.profiles.applyTitle', {
@@ -904,7 +904,7 @@ function ApplyModal({
                 })}
               </p>
             ) : (
-              <div className="max-h-56 overflow-y-auto space-y-1 rounded-lg border border-border-subtle p-1.5">
+              <div className="max-h-56 overflow-y-auto space-y-1 rounded-lg border border-border-light p-1.5">
                 {models.map((m) => (
                   <label
                     key={m.id}
@@ -932,7 +932,7 @@ function ApplyModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border-subtle">
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border-light">
           <Button variant="secondary" size="sm" onClick={onClose}>
             {t('common.cancel', { defaultValue: 'Cancel' })}
           </Button>

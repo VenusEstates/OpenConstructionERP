@@ -67,7 +67,7 @@ export function ResourceBreakdown({
   return (
     <div className={clsx('overflow-hidden rounded-lg border border-border-light', className)}>
       <table className="w-full text-xs">
-        <thead className="bg-surface-muted text-content-tertiary">
+        <thead className="bg-surface-secondary text-content-tertiary">
           <tr>
             <th className="px-2.5 py-1.5 text-left font-medium">
               {t('aiest.resources.resource', { defaultValue: 'Resource' })}

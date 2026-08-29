@@ -110,7 +110,7 @@ export function InboundEmailPanel() {
         onDrop={onDrop}
         className={clsx(
           'rounded-lg border border-dashed p-6 text-center transition-colors',
-          isDragging ? 'border-oe-blue bg-oe-blue-subtle' : 'border-border-subtle',
+          isDragging ? 'border-oe-blue bg-oe-blue-subtle' : 'border-border-light',
         )}
       >
         <Upload className="mx-auto h-6 w-6 text-content-tertiary" />
@@ -195,7 +195,7 @@ function MessageRecord({ analysis }: { analysis: InboundEmailAnalysis }) {
   ];
 
   return (
-    <section className="space-y-3 rounded-lg border border-border-subtle p-4">
+    <section className="space-y-3 rounded-lg border border-border-light p-4">
       <div>
         <p className="text-xs uppercase tracking-wide text-content-tertiary">
           {t('inbound_email.record_label', { defaultValue: 'Message' })}
@@ -227,7 +227,7 @@ function MessageRecord({ analysis }: { analysis: InboundEmailAnalysis }) {
             {t('inbound_email.no_attachments', { defaultValue: 'The message carries none.' })}
           </p>
         ) : (
-          <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+          <ul className="divide-y divide-border-light rounded-lg border border-border-light">
             {email.attachments.map((att) => (
               <li
                 key={`${att.filename}-${att.size_bytes}`}
@@ -252,7 +252,7 @@ function MessageRecord({ analysis }: { analysis: InboundEmailAnalysis }) {
         <h4 className="mb-1 text-sm font-semibold">
           {t('inbound_email.body', { defaultValue: 'Body' })}
         </h4>
-        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-subtle bg-surface-secondary p-3 text-xs text-content-secondary">
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-light bg-surface-secondary p-3 text-xs text-content-secondary">
           {email.body_text ||
             t('inbound_email.no_body', { defaultValue: 'The message has no text body.' })}
         </pre>
@@ -267,7 +267,7 @@ function DelaySignals({ signals }: { signals: DelaySignal[] }) {
   const { t } = useTranslation();
 
   return (
-    <section className="space-y-3 rounded-lg border border-border-subtle p-4">
+    <section className="space-y-3 rounded-lg border border-border-light p-4">
       <div>
         <p className="text-xs uppercase tracking-wide text-content-tertiary">
           {t('inbound_email.signals_label', { defaultValue: 'Delay signals' })}
@@ -291,7 +291,7 @@ function DelaySignals({ signals }: { signals: DelaySignal[] }) {
       ) : (
         <ul className="space-y-3">
           {signals.map((signal) => (
-            <li key={signal.category} className="rounded-lg border border-border-subtle p-3">
+            <li key={signal.category} className="rounded-lg border border-border-light p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-semantic-warning" />
                 <span className="font-medium">

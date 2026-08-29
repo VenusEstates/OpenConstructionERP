@@ -402,7 +402,7 @@ export function GroupingPanel({ sessionId, groupsQ, updateSessionM }: GroupingPa
                   'rounded-full border px-3 py-1.5 text-sm transition-colors',
                   active
                     ? 'border-oe-blue bg-oe-blue/10 text-oe-blue'
-                    : 'border-border-light bg-surface-muted text-content-primary hover:bg-surface-base',
+                    : 'border-border-light bg-surface-secondary text-content-primary hover:bg-surface-primary',
                   isWriting && 'opacity-60',
                 )}
               >
@@ -415,7 +415,7 @@ export function GroupingPanel({ sessionId, groupsQ, updateSessionM }: GroupingPa
               'rounded-full border px-3 py-1.5 text-sm',
               activePreset === 'custom'
                 ? 'border-oe-blue bg-oe-blue/10 text-oe-blue'
-                : 'border-border-light bg-surface-muted text-content-tertiary',
+                : 'border-border-light bg-surface-secondary text-content-tertiary',
             )}
           >
             {t('match.wizard.grouping.preset.custom', { defaultValue: 'Custom' })}
@@ -454,7 +454,7 @@ export function GroupingPanel({ sessionId, groupsQ, updateSessionM }: GroupingPa
                 disabled={disabled}
                 data-testid={`grouping-slot-${idx + 1}`}
                 className={clsx(
-                  'rounded-lg border border-border-light bg-surface-base px-3 py-1.5 text-sm',
+                  'rounded-lg border border-border-light bg-surface-primary px-3 py-1.5 text-sm',
                   'focus:border-oe-blue focus:outline-none focus:ring-1 focus:ring-oe-blue',
                   disabled && 'opacity-50',
                 )}
@@ -514,7 +514,7 @@ export function GroupingPanel({ sessionId, groupsQ, updateSessionM }: GroupingPa
           </div>
         ) : categories.length === 0 ? (
           <div
-            className="rounded-lg border border-border-light bg-surface-muted px-3 py-2 text-xs text-content-tertiary"
+            className="rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-xs text-content-tertiary"
             data-testid="grouping-filters-empty"
           >
             {t('match.wizard.grouping.filtersEmpty', {
@@ -538,7 +538,7 @@ export function GroupingPanel({ sessionId, groupsQ, updateSessionM }: GroupingPa
                     'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
                     active
                       ? 'border-oe-blue bg-oe-blue/10 text-oe-blue'
-                      : 'border-border-light bg-surface-muted text-content-primary hover:bg-surface-base',
+                      : 'border-border-light bg-surface-secondary text-content-primary hover:bg-surface-primary',
                     isWriting && 'opacity-60',
                   )}
                   title={cat.category}
@@ -549,7 +549,7 @@ export function GroupingPanel({ sessionId, groupsQ, updateSessionM }: GroupingPa
                       'rounded-full px-1.5 text-xs tabular-nums',
                       active
                         ? 'bg-oe-blue/20 text-oe-blue'
-                        : 'bg-surface-base text-content-tertiary',
+                        : 'bg-surface-primary text-content-tertiary',
                     )}
                   >
                     {cat.count}
@@ -635,7 +635,7 @@ export function GroupingPanel({ sessionId, groupsQ, updateSessionM }: GroupingPa
 
             <div className="max-h-80 overflow-auto rounded-lg border border-border-light">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-surface-muted text-content-secondary">
+                <thead className="sticky top-0 bg-surface-secondary text-content-secondary">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">
                       {t('match.wizard.group', { defaultValue: 'Group' })}
@@ -731,7 +731,7 @@ function SummaryTile({
         'rounded-lg border px-4 py-3',
         tone === 'warn'
           ? 'border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20'
-          : 'border-border-light bg-surface-muted',
+          : 'border-border-light bg-surface-secondary',
       )}
     >
       <div className="text-2xl font-semibold text-content-primary tabular-nums">{value}</div>
