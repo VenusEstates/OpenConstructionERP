@@ -1,0 +1,163 @@
+# OpenConstructionERP Desktop, compile check.
+#
+# Compiles desktop/src-tauri on Windows, macOS and Linux on every push to main
+# that touches it. It packages nothing, signs nothing and publishes nothing.
+#
+# Why this exists. Until this lane, desktop-release.yml was the only workflow in
+# the repository that ran cargo at all, and it runs on a version tag. So the
+# first compiler ever to see a change on macOS or Linux was the one building a
+# public release, and a compile error there arrives at the worst point on the
+# timeline: late enough that the docker image has already been pushed, early
+# enough that the GitHub Release is never created. The crate is exactly the kind
+# that hides this. server_config.rs picks a different administrator config path
+# per operating system, main.rs branches on Windows in more than a dozen places,
+# and a developer on Windows running cargo check locally compiles none of the
+# other arms, because code behind a cfg that does not match is parsed and then
+# discarded without being type checked.
+#
+# Why cargo check and not a build. check runs build.rs, expands the
+# generate_context! macro and type checks every arm the target selects, which is
+# the whole class of error a tag build exposes us to. It skips code generation
+# and linking, which is where the time goes. The release matrix is capped at two
+# hours; this finishes in a few minutes, and a lane people wait for is a lane
+# people read.
+#
+# What it deliberately does not catch: anything that only appears when the code
+# is linked or bundled, and anything about the installers. Those belong to
+# desktop-release.yml and stay there.
+
+name: Desktop Compile Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - ".github/workflows/desktop-check.yml"
+  # So the lane can be pointed at a branch. That is how it gets tested: put a
+  # deliberate error behind a platform gate on a throwaway branch, dispatch this
+  # against it, and read which jobs go red. A lane that has only ever been green
+  # has not been shown to be able to fail.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Same reasoning as ci.yml. Commits land on main in bursts, and a run against a
+# commit several behind the tip is worth less than the runner minutes it costs.
+concurrency:
+  group: desktop-check-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  compile:
+    name: Compile (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # Generous next to the few minutes a cached run takes, and short enough that
+    # a wedged job does not sit there for an hour. A cold cache on Linux, which
+    # compiles the whole GTK stack, is the slow case this has to fit.
+    timeout-minutes: 30
+    strategy:
+      # One platform failing must not cancel the others. Which platforms stay
+      # green is the most useful thing this lane tells you, because it says
+      # whether the break is in shared code or behind a cfg.
+      fail-fast: false
+      matrix:
+        # The three runners desktop-release.yml builds on, named identically, so
+        # that green here means something about the release. macos-latest is
+        # aarch64 and ubuntu-22.04 is the image the apt list below was written
+        # for; changing either changes what this lane predicts.
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install the Linux webview build dependencies
+        if: runner.os == 'Linux'
+        # The same three packages desktop-release.yml installs, for the same
+        # reason: on Linux the webview stack is a set of C libraries found
+        # through pkg-config at build-script time, and without the headers the
+        # job fails in glib-sys with a message about our own code being nowhere
+        # in it. libssl-dev is named too, because reqwest resolves to native-tls
+        # here and openssl-sys builds against the system OpenSSL. The runner
+        # image has shipped it for years, but a lane that quietly depends on
+        # that is one image update away from a failure that teaches nothing.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libssl-dev
+
+      - name: Cache the cargo registry and the build directory
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+          # Keyed per platform so the three jobs never read each other's
+          # artifacts. The action only writes the cache when the job succeeds,
+          # so a red run leaves nothing behind to poison the next one.
+          key: desktop-check
+
+      - name: Put stand-ins where the build expects the bundle and the sidecar
+        shell: bash
+        # Two paths the crate's build reads have to exist before the compiler
+        # gets anywhere, and neither is in the repository.
+        #
+        # frontendDist points at frontend/dist. generate_context! does not
+        # degrade when it is missing, it panics with "this path doesn't exist",
+        # and there is no devUrl in tauri.conf.json for it to fall back to.
+        # Building the real frontend would add an npm install and several
+        # minutes to a lane whose value is being quick, and the bytes it embeds
+        # cannot change whether our Rust type checks.
+        #
+        # externalBin points at binaries/openconstructionerp-server. tauri-build
+        # appends the target triple, and a missing file is ResourcePathNotFound
+        # and a failed build script. The real sidecar is a PyInstaller binary
+        # built by an earlier job of the release workflow and is not committed,
+        # so on a fresh checkout it is absent on every platform, Windows
+        # included.
+        #
+        # Both stand in for something this lane never runs or ships. The triple
+        # comes out of rustc rather than a literal, so the file is named for
+        # whatever the runner actually is rather than for what it was when this
+        # was written, and neither path is touched if something real is already
+        # there.
+        run: |
+          set -euo pipefail
+          if [ ! -e frontend/dist/index.html ]; then
+            mkdir -p frontend/dist
+            printf '<!doctype html><title>compile check</title>\n' > frontend/dist/index.html
+          fi
+          triple="$(rustc -vV | sed -n 's/^host: //p')"
+          case "$triple" in
+            *windows*) ext=".exe" ;;
+            *) ext="" ;;
+          esac
+          sidecar="desktop/src-tauri/binaries/openconstructionerp-server-${triple}${ext}"
+          if [ ! -e "$sidecar" ]; then
+            mkdir -p desktop/src-tauri/binaries
+            : > "$sidecar"
+          fi
+          echo "Target triple: ${triple}"
+          echo "Sidecar stand-in: ${sidecar}"
+
+      - name: Compile
+        shell: bash
+        working-directory: desktop/src-tauri
+        # --locked because a Cargo.lock that no longer answers for Cargo.toml is
+        # a real defect and this is the only place that would notice it. The
+        # version bump touches both files and the release notes say to commit
+        # them together.
+        #
+        # --all-targets so the test modules are type checked as well. They are
+        # not run here, and they carry platform gated code of their own that
+        # nothing else compiles: the Windows only blocks near the end of main.rs
+        # live inside #[cfg(test)] and are invisible to a plain cargo check.
+        #
+        # Warnings are left as warnings on purpose. Denying them would hand a
+        # floating stable toolchain the power to turn this lane red on a day
+        # nobody changed anything, and a lane that cries wolf stops being read.
+        run: cargo check --locked --all-targets
