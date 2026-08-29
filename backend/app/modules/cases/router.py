@@ -27,6 +27,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
+from app.core.validation.engine import RuleResult
 from app.dependencies import (
     CurrentUserId,
     RequirePermission,
@@ -79,21 +80,35 @@ def _to_response(case: UserCase, viewer_id: uuid.UUID) -> CaseResponse:
     return payload
 
 
-def _to_findings(results: list) -> list[CaseFinding]:
+def _finding_key(result: RuleResult) -> str:
+    """The i18n key a finding is rendered under.
+
+    A rule that crashed may not be shown under its own rule's key. That key
+    holds the sentence describing what the rule looks for, so printing it would
+    tell the author the check ran and their case failed it, when in fact the
+    check never ran at all. Engine failures share one key of their own.
+    """
+    if result.is_engine_error:
+        return "cases.validation.engine_error"
+    return f"cases.validation.{result.rule_id}"
+
+
+def _to_findings(results: list[RuleResult]) -> list[CaseFinding]:
     return [
         CaseFinding(
-            key=f"cases.validation.{result.rule_id}",
+            key=_finding_key(result),
             rule_id=result.rule_id,
             severity=str(result.severity),
             message=result.message,
             suggestion=result.suggestion or "",
             details=dict(result.details or {}),
+            is_engine_error=result.is_engine_error,
         )
         for result in results
     ]
 
 
-async def _validated(body: CaseCreateRequest | CaseUpdateRequest, case_id: str = "") -> list:
+async def _validated(body: CaseCreateRequest | CaseUpdateRequest, case_id: str = "") -> list[RuleResult]:
     """Run the case rules and refuse to *publish* anything with an error.
 
     A draft may be as rough as its author likes, so a private save never

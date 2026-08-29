@@ -23,11 +23,12 @@ import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.validation.engine import RuleCategory
+from app.core.validation.engine import RuleCategory, Severity, rule_registry
 from app.modules.cases import schemas, service
 from app.modules.cases.models import CASE_CATEGORIES, CasePin, UserCase
 from app.modules.cases.permissions import register_cases_permissions
 from app.modules.cases.validators import (
+    CASES_RULE_SET,
     VALIDATION_UNAVAILABLE,
     blocking_findings,
     evaluate_case,
@@ -531,3 +532,85 @@ async def test_sharing_is_refused_while_validation_is_down_but_a_draft_still_sav
         await cases_router._validated(shared)
     assert exc.value.status_code == 422
     assert exc.value.detail["findings"][0]["rule_id"] == VALIDATION_UNAVAILABLE
+
+
+def _break_one_rule(monkeypatch, rule_id: str) -> None:
+    """Make one registered cases rule raise, leaving the others running.
+
+    This is the half of the failure the whole-engine tests above do not cover:
+    the engine survives, catches the exception itself, and writes an
+    ``is_engine_error`` row for that one rule.
+    """
+
+    async def _boom(_context):
+        raise RuntimeError("this rule cannot read the case")
+
+    crashed = next(rule for rule in rule_registry.get_rules_for_sets([CASES_RULE_SET]) if rule.rule_id == rule_id)
+    monkeypatch.setattr(crashed, "validate", _boom)
+
+
+@pytest.mark.asyncio
+async def test_a_rule_that_crashed_reaches_the_reader_instead_of_vanishing(monkeypatch):
+    """A check that could not run is the row most worth showing, not the least.
+
+    ``evaluate_case`` used to end ``and not result.is_engine_error``. That is
+    the right filter for a list that feeds a gate, and the wrong one here,
+    because this one list is also everything the author is ever shown. A case
+    where a rule crashed came back indistinguishable from a case where every
+    rule ran and found nothing, and the check that failed was the one worth
+    reading about.
+
+    Nothing is stored on this path - findings are computed per save and travel
+    in the response - so there is no row to read back from a column.
+    """
+    from app.modules.cases import router as cases_router
+
+    register_cases_rules()
+    _break_one_rule(monkeypatch, "cases.step_purpose")
+
+    findings = await evaluate_case(_case_body(), case_id="c3")
+
+    engine_errors = [f for f in findings if f.is_engine_error]
+    assert [f.rule_id for f in engine_errors] == ["cases.step_purpose"]
+    # Reported as infrastructure rather than as a verdict on the case: the
+    # author is told a check did not run, and publishing is not held on it.
+    assert engine_errors[0].category is RuleCategory.DIAGNOSTIC
+    assert engine_errors[0].severity is Severity.INFO
+    assert "could not run" in engine_errors[0].message
+    assert blocking_findings(findings) == []
+    # Passing rules are still dropped: widening the filter must not turn this
+    # into "return everything the engine produced".
+    assert all(not f.passed for f in findings)
+
+    # The same silence has a second home one layer up, so assert on the
+    # serialised payload. A field the response object holds but never emits
+    # hides the row just as completely as dropping it here would.
+    payload = [f.model_dump() for f in cases_router._to_findings(findings)]
+    emitted = [row for row in payload if row.get("is_engine_error")]
+    assert len(emitted) == 1
+    assert emitted[0]["rule_id"] == "cases.step_purpose"
+    # Not under the crashed rule's own key. Every locale translates that key
+    # into the sentence for a check that ran and found something, so rendering
+    # the crash there would read as a finding about the case.
+    assert emitted[0]["key"] == "cases.validation.engine_error"
+
+
+@pytest.mark.asyncio
+async def test_a_crashed_rule_is_reported_without_making_every_case_unpublishable(monkeypatch):
+    """The negative control for the fix above.
+
+    Surfacing the row must not become a second way to block sharing. One rule
+    crashing means almost everything was checked, which is not the same as the
+    engine dying and nothing being checked at all - that case still blocks, two
+    tests up. What the author gets here is the case shared and the row shown.
+    """
+    from app.modules.cases import router as cases_router
+
+    register_cases_rules()
+    _break_one_rule(monkeypatch, "cases.step_purpose")
+
+    shared = schemas.CaseCreateRequest(**_case_body(is_shared=True))
+    findings = await cases_router._validated(shared)
+
+    assert [f.rule_id for f in findings if f.is_engine_error] == ["cases.step_purpose"]
+    assert VALIDATION_UNAVAILABLE not in {f.rule_id for f in findings}

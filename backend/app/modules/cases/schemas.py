@@ -183,6 +183,13 @@ class CaseFinding(BaseModel):
     message: str
     suggestion: str = ""
     details: dict = Field(default_factory=dict)
+    # True when the row says a check could not run, rather than saying anything
+    # about the case. The evaluator already distinguishes the two, and a field
+    # it fills that the response never carries is the same silence one layer
+    # up: without this the reader can only tell them apart by reading English
+    # prose, and an infrastructure failure is exactly the row that must not be
+    # mistaken for an ordinary remark about the author's work.
+    is_engine_error: bool = False
 
 
 class CaseSaveResponse(BaseModel):

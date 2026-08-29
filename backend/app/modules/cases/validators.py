@@ -28,6 +28,7 @@ Rules, all registered under the ``cases`` rule set:
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from typing import Any
 
 from app.core.validation.engine import (
@@ -282,8 +283,28 @@ def register_cases_rules() -> None:
     logger.debug("Registered %d cases validation rules", len(_CASES_RULES))
 
 
+def _readable_engine_error(result: RuleResult) -> RuleResult:
+    """Restate a crashed rule in words the author of the case can act on.
+
+    The engine writes ``Rule execution failed: <rule_id>`` for its own log, and
+    that is what the editor would print: no locale carries a string for an
+    engine failure, so the reader falls back to the message. It tells the person
+    editing a case nothing. Everything else on the row is kept as the engine set
+    it - same rule id, same INFO severity, same DIAGNOSTIC category,
+    ``is_engine_error`` still true - so a caller can still tell an infrastructure
+    failure from a finding about the case.
+    """
+    return replace(
+        result,
+        message=(f"One check ({result.rule_name}) could not run, so this case has not been checked in full."),
+        suggestion=(
+            "Nothing here is wrong with your case. Tell an administrator, and the check will run on the next save."
+        ),
+    )
+
+
 async def evaluate_case(case: dict[str, Any], *, case_id: str = "", locale: str = "") -> list[RuleResult]:
-    """Run the case rules and return every finding, passing ones dropped.
+    """Run the case rules and return every failing finding, passing ones dropped.
 
     Guarded: a validation failure must not stop somebody saving their work, so
     the engine dying degrades to a finding and a log line rather than a 500.
@@ -300,6 +321,16 @@ async def evaluate_case(case: dict[str, Any], *, case_id: str = "", locale: str 
     being shared. It deliberately does not set ``is_engine_error``: that flag
     marks rows which are reported alongside a verdict without changing it, and
     this row is the verdict.
+
+    The other half of that sentence is the rows which *do* carry the flag: one
+    rule crashing while the rest ran. They are returned too. This used to end
+    ``and not result.is_engine_error``, which is the right idiom for a list
+    feeding a gate and the wrong one here, because this single list is also
+    everything the author is ever shown. A case where a check crashed came back
+    looking exactly like a case where every check ran and found nothing, and
+    the rule that failed was the one worth reading about. They keep the INFO
+    severity the engine gave them, so they inform the author without changing
+    the publish verdict - which is what the flag has always meant.
     """
     try:
         report = await validation_engine.validate(
@@ -326,7 +357,11 @@ async def evaluate_case(case: dict[str, Any], *, case_id: str = "", locale: str 
                 suggestion="Save the case as a private draft and share it once validation is working again.",
             )
         ]
-    return [result for result in report.results if not result.passed and not result.is_engine_error]
+    return [
+        _readable_engine_error(result) if result.is_engine_error else result
+        for result in report.results
+        if not result.passed
+    ]
 
 
 def blocking_findings(results: list[RuleResult]) -> list[RuleResult]:
