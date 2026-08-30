@@ -69,21 +69,44 @@ export const SUPPORTED_LANGUAGES = [
   // typographic preference.
   //
   // Uzbek is deliberately not offered yet, and the bar is the band the shipped
-  // languages already sit in rather than a round number. Measured on
-  // 2026-08-25, 1570 of the 35218 keys uz.ts shares with en.ts are still byte
-  // identical to the English. That is 4.5 percent, against 4.4 for French,
-  // which is the weakest language currently offered, so Uzbek is close to the
-  // band but still last. Offer it when it is inside, not merely near. The
-  // figure on 2026-08-18 was 16249 of 34369, so the batch work has closed
-  // about fifteen thousand strings since; what is left is the tail.
+  // languages already sit in. What stood here compared the share of values
+  // byte-identical to English, 4.5 percent for Uzbek against 4.4 for French,
+  // and read the two as a tenth of a point apart. Those percentages do not
+  // measure the same thing. Most of what French has in common with English is
+  // French - Date, Description, Total and Condition are the correct French
+  // words - and on top of that every language keeps formats, units, acronyms
+  // and product names in English on purpose. Almost nothing Uzbek has in
+  // common with English is Uzbek.
   //
-  // Because the script is Latin, a glance cannot tell a translation from an
-  // untranslated string here, so that figure is a literal comparison rather
-  // than an inspection, and it counts a distance and not a defect: a format
-  // name or a unit is identical in every language on purpose. Compare it only
-  // against itself. The locale file stays on disk and the batch work
-  // continues; uncomment this line when it is done, and keep the U+02BB
-  // modifier letters when you do.
+  // Measured on 2026-08-30 on a quantity that means the same in every language:
+  // English the reader still sees. A value identical to the English one, plus a
+  // key the locale does not carry at all and answers out of en.ts, minus the
+  // strings that are identical on purpose. A string counts as identical on
+  // purpose when every word in it appears in some value this locale's own
+  // translators wrote, which is a per-language vocabulary test rather than a
+  // word list, and it is applied to every locale the same way. The 278 newest
+  // keys of en.ts are missing from every offered locale, the best of them
+  // included, so that rolling front is excluded everywhere instead of being
+  // charged to each.
+  //
+  // Uzbek 942, against 35 (Ukrainian) to 394 (Korean) for the offered
+  // languages. Not a tenth of a point behind the weakest offered language, two
+  // and a half times worse than it. Both errors in that number run the same
+  // way: 942 is a floor, because a half-translated Uzbek value counts as
+  // translated and lends its English half to the vocabulary, and the offered
+  // figures are ceilings, because a real French or Dutch word this corpus
+  // never wrote elsewhere survives the filter.
+  //
+  // 529 of the 942 are *.insights.* keys and 149 are cases.* keys; every other
+  // locale has 0 or 1 in those two families. The English copy for both landed
+  // in feature commits, and the waves that translate afterwards iterate the
+  // offered languages - 29d22f3ae wrote 29 locale files and not uz.ts. Uzbek
+  // is unoffered because it is incomplete and incomplete because the sweeps
+  // that finish every other language read this list, so nothing closes it
+  // without a uz-specific pass: 942 keys, 734 distinct English values, about
+  // 2000 words. The locale file stays on disk and the batch work continues;
+  // uncomment this line when it is done, and keep the U+02BB modifier letters
+  // when you do.
   // { code: 'uz', name: 'Oʻzbekcha', english: 'Uzbek', flag: '🇺🇿', country: 'uz' },
 ];
 
