@@ -17,9 +17,11 @@ Pipeline (no LLM by default, BGE-M3 multilingual covers cross-lang):
        lex and rare_token are dropped: sparse RRF in Qdrant subsumes them).
     8. Sort, slice to ``top_k``, set confidence band, derive auto-link.
 
-The legacy :mod:`app.core.match_service.ranker` keeps working unchanged
-during Phase 2-4 so we can A/B compare under live load. Phase 5 deletes
-``ranker.py`` and renames this module into its place.
+Phase 5 has landed: the legacy LanceDB ``ranker.py`` is deleted and this
+module is the only ranker. Its second half, renaming this module into the
+freed name, was never done, so the ``_qdrant`` suffix now distinguishes
+this module from nothing. There is no A/B path and no fallback ranker to
+import.
 
 Translation cascade is intentionally OFF by default - BGE-M3 multilingual
 covers most cross-lang recall and the cascade adds 50-200 ms p50. Flip
@@ -1058,8 +1060,8 @@ async def rank(
 ) -> MatchResponse:
     """Run the full Qdrant-backed match pipeline. Never raises for normal input.
 
-    Drop-in alternative to :func:`app.core.match_service.ranker.rank` -
-    same request and response shapes, different vector backend.
+    Keeps the request and response shapes of the LanceDB ranker it
+    replaced, so callers written against that one need no changes.
     """
 
     started = time.perf_counter()

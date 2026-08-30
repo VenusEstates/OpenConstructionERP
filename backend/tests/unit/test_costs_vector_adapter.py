@@ -297,7 +297,7 @@ def test_module_imports_without_lancedb() -> None:
     pre_fastembed = sys.modules.get("fastembed")
 
     # Reload IN PLACE — preserves module object identity so that other
-    # modules (e.g. app.core.match_service.ranker) which captured a
+    # modules (e.g. app.modules.costs.events) which captured a
     # reference via ``from app.modules.costs import vector_adapter as cost_vector``
     # still see the same object. Replacing via ``del sys.modules[...]; import``
     # would orphan those references and break later monkeypatches.
