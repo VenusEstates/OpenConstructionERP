@@ -766,6 +766,19 @@ class UserService:
                 detail="User not found or inactive",
             )
 
+        # A refresh token older than the password change must not mint anything.
+        # Without this the kill switch was not weakened, it was cancelled: this
+        # endpoint stamps the new access token with the present moment, so the
+        # watermark on the HTTP surface waves it through, and a refresh token
+        # outlives the access token it replaces by thirty days against one hour.
+        # Whoever held one kept the account for a month after the victim changed
+        # their password. Imported locally to match this module's style; there is
+        # no cycle, ``app.dependencies`` reaches this package only inside
+        # function bodies.
+        from app.dependencies import reject_token_issued_before_password_change
+
+        reject_token_issued_before_password_change(payload.get("iat"), user.password_changed_at)
+
         new_access = create_access_token(user, self.settings)
         new_refresh = create_refresh_token(user, self.settings)
 

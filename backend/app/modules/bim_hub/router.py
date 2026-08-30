@@ -3033,7 +3033,7 @@ async def get_model_geometry(
     # BUG-323: forged tokens with a fake UUID must not authenticate here
     # either. Re-hydrate against the DB and replace self-asserted role /
     # permissions with canonical state before any authorization check.
-    db_user = await verify_user_exists_and_active(payload["sub"])
+    db_user = await verify_user_exists_and_active(payload["sub"], issued_at=payload.get("iat"))
     from app.core.permissions import permission_registry
 
     payload["role"] = db_user.role

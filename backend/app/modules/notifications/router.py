@@ -299,7 +299,7 @@ async def _authenticate_ws(token: str | None) -> dict[str, Any] | None:
     try:
         from app.dependencies import verify_user_exists_and_active
 
-        user = await verify_user_exists_and_active(payload["sub"])
+        user = await verify_user_exists_and_active(payload["sub"], issued_at=payload.get("iat"))
         payload["role"] = user.role
         return payload
     except HTTPException:

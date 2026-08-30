@@ -18,7 +18,7 @@ import logging
 import uuid as _uuid
 from collections.abc import AsyncGenerator, Sequence
 from dataclasses import dataclass
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Any
 
 if TYPE_CHECKING:
@@ -144,6 +144,57 @@ def decode_access_token(
 # ── Current user ───────────────────────────────────────────────────────────
 
 
+def reject_token_issued_before_password_change(
+    issued_at: float | int | None,
+    password_changed_at: datetime | None,
+) -> None:
+    """Refuse a credential minted before the user's last password change.
+
+    ``password_changed_at`` is the only session kill switch this product has.
+    The rule for reading it lives here once, because it used to live inline in
+    :func:`get_current_user_payload` and nowhere else: every other place a
+    token is accepted - the three websockets, the optional-auth resolver and
+    the refresh endpoint - went on honouring tokens the HTTP surface had
+    already refused. A rule written twice drifts; a rule written once and
+    called from each door cannot.
+
+    Both operands are whole seconds by construction, and that sets the limit
+    of the mechanism rather than revealing an oversight in it. ``iat`` is
+    seconds since the epoch by RFC 7519, so the watermark is truncated to
+    match, and a credential minted inside the same second as the change
+    compares equal to it and survives. Comparing the truncated ``iat`` against
+    a fractional timestamp does not close that: it breaks the ordinary case,
+    because the fresh token pair that change-password itself hands back
+    carries an ``iat`` inside that very second and would be refused, logging
+    the user out of the session they just created. The per-session ``sid``
+    revocation being built on top of this asks whether a session is still
+    alive rather than when its token was minted, so second resolution does not
+    reach it at all.
+
+    Args:
+        issued_at: the credential's ``iat`` claim. ``None`` (a token minted
+            before we set the claim) skips the comparison, because a token
+            that never said when it was issued cannot be placed either side
+            of the watermark.
+        password_changed_at: the user's watermark, ``None`` until they first
+            change a password.
+
+    Raises:
+        HTTPException 401 if the credential predates the watermark.
+    """
+    if issued_at is None or password_changed_at is None:
+        return
+    # SQLite hands back naive datetimes; assume UTC when the tzinfo is absent.
+    if password_changed_at.tzinfo is None:
+        password_changed_at = password_changed_at.replace(tzinfo=UTC)
+    # ``iat`` arrives as int or float depending on the jose version.
+    if int(float(issued_at)) < int(password_changed_at.timestamp()):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been invalidated by a password change. Please log in again.",
+        )
+
+
 async def get_current_user_payload(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     settings: SettingsDep,
@@ -193,19 +244,7 @@ async def get_current_user_payload(
                 payload["role"] = user.role
                 payload["permissions"] = permission_registry.get_role_permissions(user.role)
 
-                if iat is not None and user.password_changed_at is not None:
-                    pwd_changed = user.password_changed_at
-                    # SQLite may return naive datetimes - assume UTC if no tz info
-                    if pwd_changed.tzinfo is None:
-                        pwd_changed = pwd_changed.replace(tzinfo=UTC)
-                    pwd_changed_ts = int(pwd_changed.timestamp())
-                    # iat may be int or float depending on jose version
-                    iat_ts = int(float(iat))
-                    if iat_ts < pwd_changed_ts:
-                        raise HTTPException(
-                            status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Token has been invalidated by a password change. Please log in again.",
-                        )
+                reject_token_issued_before_password_change(iat, user.password_changed_at)
         except HTTPException:
             raise
         except Exception:
@@ -231,8 +270,8 @@ async def get_current_user_id(
 # ── Optional auth (for public + authenticated endpoints) ───────────────────
 
 
-async def verify_user_exists_and_active(user_sub: str) -> "User":
-    """Load a User row by subject UUID, raising 401 if absent/inactive.
+async def verify_user_exists_and_active(user_sub: str, *, issued_at: float | int | None) -> "User":
+    """Load a User row by subject UUID, raising 401 if absent/inactive/stale.
 
     Shared across all JWT entry points (HTTP bearer, WS token, optional
     payloads) so that forged tokens with a real-looking UUID that nobody
@@ -240,8 +279,17 @@ async def verify_user_exists_and_active(user_sub: str) -> "User":
     :func:`decode_access_token` only proves the signature is valid - it
     says nothing about whether the ``sub`` references a real user.
 
+    ``issued_at`` is keyword-only and has NO default on purpose. It is the
+    token's ``iat``, and passing it is what enforces the password-change
+    watermark at this door. A default would let a new entry point skip the
+    check by saying nothing, which is exactly how the sockets came to outlive
+    a password change: the watermark went into one caller's inline copy and
+    never into this shared helper. Without a default, a caller that has not
+    decided fails to start rather than failing to protect somebody.
+
     Raises:
-        HTTPException 401 if the user does not exist or is inactive.
+        HTTPException 401 if the user does not exist, is inactive, or the
+        credential predates the user's last password change.
     """
     from uuid import UUID
 
@@ -262,6 +310,7 @@ async def verify_user_exists_and_active(user_sub: str) -> "User":
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found or inactive",
             )
+        reject_token_issued_before_password_change(issued_at, user.password_changed_at)
         return user
 
 
@@ -302,7 +351,7 @@ async def get_optional_user_payload(
         return None
     try:
         payload = decode_access_token(token, settings)
-        await verify_user_exists_and_active(payload["sub"])
+        await verify_user_exists_and_active(payload["sub"], issued_at=payload.get("iat"))
         return payload
     except HTTPException:
         return None
