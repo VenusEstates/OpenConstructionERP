@@ -44,6 +44,40 @@ async def client() -> AsyncClient:
             yield ac
 
 
+@pytest_asyncio.fixture
+async def auth_headers(client: AsyncClient) -> dict[str, str]:
+    unique = uuid.uuid4().hex[:8]
+    email = f"pipelines-{unique}@smoke.io"
+    password = f"PipelinesTest{unique}9!"
+    reg = await client.post(
+        "/api/v1/users/auth/register",
+        json={"email": email, "password": password, "full_name": "Pipelines Tester"},
+    )
+    assert reg.status_code == 201, reg.text
+    resp = await client.post("/api/v1/users/auth/login", json={"email": email, "password": password})
+    token = resp.json().get("access_token", "")
+    assert token, resp.text
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+async def test_an_authenticated_caller_reaches_the_pipeline_reads(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """The positive half: the two tests below pass on a router that refuses everyone.
+
+    Both of them assert only that an anonymous request is turned away, and a
+    dead route, an unmounted module or a blanket deny satisfies that as readily
+    as a working gate does. So one caller has to get through, or "the gate
+    works" is indistinguishable from "the feature is gone". These two paths take
+    no id and no project, so a fresh user with no data still reaches 200.
+    """
+    for path in ("/api/v1/pipelines/", "/api/v1/pipelines/node-types/"):
+        resp = await client.get(path, headers=auth_headers)
+        assert resp.status_code == 200, f"GET {path} must serve an authenticated caller, got {resp.status_code}"
+
+
 @pytest.mark.asyncio
 async def test_pipeline_reads_require_auth(client: AsyncClient) -> None:
     pid = str(uuid.uuid4())

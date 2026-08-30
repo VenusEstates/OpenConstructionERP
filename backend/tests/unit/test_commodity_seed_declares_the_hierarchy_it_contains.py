@@ -94,6 +94,24 @@ def _ancestors(scheme: str, code: str) -> list[str]:
     return out
 
 
+def test_the_seed_still_carries_the_rows_the_rules_below_are_about():
+    """The positive half: every other test here passes on an empty file.
+
+    The four rules below are all of the form "no row offends", and an empty
+    ``_rows()`` offends nothing. Deleting the CSV, or shipping a wheel without
+    it, would leave this whole file green while the lookup table customers get
+    is blank. This is the one assertion that separates a working seed from a
+    missing one, so it is pinned by count and by scheme rather than by "not
+    empty": a seed that silently loses one vocabulary is the realistic failure,
+    and ``> 0`` would not notice it.
+    """
+    rows = _rows()
+    assert len(rows) >= 62, f"the seed shipped {len(rows)} rows, fewer than the 62 it carried"
+    per_scheme = Counter(r["scheme"] for r in rows)
+    assert per_scheme["unspsc"] >= 48, f"unspsc rows fell to {per_scheme['unspsc']}"
+    assert per_scheme["cpv"] >= 14, f"cpv rows fell to {per_scheme['cpv']}"
+
+
 def test_every_seeded_code_is_eight_digits_in_a_known_scheme():
     offenders = [
         f"{r['scheme']}:{r['code']} ({r['name']})"

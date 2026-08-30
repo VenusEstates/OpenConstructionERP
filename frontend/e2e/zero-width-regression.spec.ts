@@ -174,8 +174,18 @@ test.describe('R6: zero-width Unicode regression', () => {
         /* networkidle can hang for SSE-using pages — best-effort only */
       });
 
-      // ── 1. Static check: no zero-width chars in rendered text ────────────
+      // ── 0. The page has to have rendered something ───────────────────────
+      // Both assertions in this test are about absence: an empty string carries
+      // no zero-width characters and a page that never ran logs no reconciler
+      // errors. A blank route therefore passes the whole test. This is the one
+      // check that separates "renders cleanly" from "renders nothing".
       const visibleText = await page.evaluate(() => document.body.innerText);
+      expect(
+        visibleText.trim().length,
+        `Page ${route} rendered no visible text at all`,
+      ).toBeGreaterThan(0);
+
+      // ── 1. Static check: no zero-width chars in rendered text ────────────
       expect(
         ZERO_WIDTH_RE.test(visibleText),
         `Page ${route} still renders zero-width Unicode in its visible text`,

@@ -130,6 +130,11 @@ describe('MatchSuggestionsPanel - a11y', () => {
       // No fetch should have been called.
       expect(matchElement).not.toHaveBeenCalled();
     });
+    // Unlike the three blocks above, this one waits for no element, and both of
+    // its assertions are about absence: axe reports zero violations for an
+    // empty container, and a panel that rendered nothing has called nothing.
+    // So the panel has to have put something on the page first.
+    expect(container.firstChild).not.toBeNull();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

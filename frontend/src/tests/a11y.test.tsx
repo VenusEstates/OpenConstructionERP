@@ -17,6 +17,15 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { SkeletonText, SkeletonCard, SkeletonTable } from '@/shared/ui/SkeletonLoader';
 import { NotFoundPage } from '@/shared/ui/NotFoundPage';
 
+/*
+ * Every block below asserts only `toHaveNoViolations`, and axe returns zero
+ * violations for an empty container: measured directly, a container with no
+ * children reports 0 while a knowingly inaccessible fragment reports 2. So a
+ * component that renders nothing — an import that resolves to undefined, a
+ * guard that returns null — leaves this whole file green. The
+ * `container.firstChild` check in each block is the positive half: something
+ * has to be on the page before asking whether it is accessible.
+ */
 describe('Accessibility (axe-core)', () => {
   it('EmptyState should have no a11y violations', async () => {
     const { container } = render(
@@ -26,6 +35,7 @@ describe('Accessibility (axe-core)', () => {
         description="Create your first item to get started."
       />,
     );
+    expect(container.firstChild).not.toBeNull();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
@@ -39,24 +49,28 @@ describe('Accessibility (axe-core)', () => {
         action={{ label: 'Create Project', onClick: () => {} }}
       />,
     );
+    expect(container.firstChild).not.toBeNull();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 
   it('SkeletonText should have no a11y violations', async () => {
     const { container } = render(<SkeletonText lines={3} />);
+    expect(container.firstChild).not.toBeNull();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 
   it('SkeletonCard should have no a11y violations', async () => {
     const { container } = render(<SkeletonCard count={2} />);
+    expect(container.firstChild).not.toBeNull();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 
   it('SkeletonTable should have no a11y violations', async () => {
     const { container } = render(<SkeletonTable rows={3} columns={4} />);
+    expect(container.firstChild).not.toBeNull();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
@@ -67,6 +81,7 @@ describe('Accessibility (axe-core)', () => {
         <NotFoundPage />
       </RouterWrapper>,
     );
+    expect(container.firstChild).not.toBeNull();
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
