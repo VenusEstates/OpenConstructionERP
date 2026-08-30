@@ -120,8 +120,54 @@ function parseOffsets(prelude) {
  * itself, plus any media query. Two utilities can only fight when it matches,
  * which is what keeps `hover:` and base apart without special-casing variants.
  */
+/**
+ * Remove CSS comments, keeping a space so two tokens cannot fuse.
+ *
+ * This has to happen before anything reads the text. The parser builds a
+ * selector prelude by accumulating characters up to `{`, so a comment sitting
+ * in front of a rule is glued onto it: a section banner in index.css turns
+ * `@keyframes oeMsgIn` into `/* ... *\/@keyframes oeMsgIn`, which no longer
+ * starts with `@`, is filed as an ordinary selector, and never registers its
+ * keyframes. Every `animate-*` that used them was then reported unresolved.
+ *
+ * A minified sheet has no comments left, so only the generated path was
+ * affected, and the gate's two sheet sources disagreed by four sites while
+ * both sheets in fact contained the same rules. Seventy rules in index.css sit
+ * directly after a comment, so the same fault was quietly dropping utilities
+ * too, not only keyframes.
+ *
+ * Slices rather than character accumulation: `out += ch` over a multi-megabyte
+ * sheet is quadratic and already cost this file one rewrite.
+ */
+function stripComments(css) {
+  const parts = [];
+  let i = 0;
+  let last = 0;
+  let quote = null;
+  while (i < css.length) {
+    const ch = css[i];
+    if (quote) {
+      if (ch === '\\') { i += 2; continue; }
+      if (ch === quote) quote = null;
+      i++;
+      continue;
+    }
+    if (ch === '"' || ch === "'") { quote = ch; i++; continue; }
+    if (ch === '/' && css[i + 1] === '*') {
+      const end = css.indexOf('*/', i + 2);
+      parts.push(css.slice(last, i), ' ');
+      i = end < 0 ? css.length : end + 2;
+      last = i;
+      continue;
+    }
+    i++;
+  }
+  parts.push(css.slice(last));
+  return parts.join('');
+}
+
 function parseSheet(cssPath) {
-  const css = fs.readFileSync(cssPath, 'utf8');
+  const css = stripComments(fs.readFileSync(cssPath, 'utf8'));
   const utilities = new Map();
   const keyframes = new Map();
   let order = 0;
