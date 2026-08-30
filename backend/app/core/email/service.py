@@ -56,6 +56,30 @@ def email_delivery_enabled(settings: Settings) -> bool:
     return settings.email_backend == "smtp" and bool(settings.smtp_host)
 
 
+def console_delivery_expected(settings: Settings) -> bool:
+    """True when console is about to stand in for a transport that was wanted.
+
+    Answers the one question that separates a supported setup from a silent
+    defect, because the *value* of ``email_backend`` cannot: an air-gapped
+    install that wrote ``EMAIL_BACKEND=console`` and a server whose operator
+    wrote nothing about email at all both read ``console``.
+    ``model_fields_set`` is what distinguishes them - pydantic records which
+    fields any source actually supplied, so writing the value in ``.env``, in
+    the environment or in the constructor all count as choosing it, and only a
+    completely untouched field is absent.
+
+    Development is exempt outright. A fresh checkout has to run without any
+    configuration, and that is the whole reason the field carries this default.
+    """
+    if settings.app_env == "development":
+        return False
+    if settings.email_backend == "smtp":
+        # Delivery was asked for in the loudest way the settings allow; the
+        # resolver below still hands back console when the host is empty.
+        return True
+    return "email_backend" not in settings.model_fields_set
+
+
 def diagnose_email_config(settings: Settings) -> str | None:
     """Return a human-readable problem with the outbound email settings.
 
@@ -80,6 +104,22 @@ def diagnose_email_config(settings: Settings) -> str | None:
             f"SMTP settings are present but EMAIL_BACKEND is {backend!r}, so no mail is sent - "
             f"the {backend!r} transport only records messages. Set EMAIL_BACKEND=smtp to deliver "
             f"them. See {EMAIL_SETUP_DOC}."
+        )
+
+    if backend == "console" and console_delivery_expected(settings):
+        # The check above cannot reach this shape: it needs an SMTP_* variable
+        # to be present, and here none of them are. That is the whole reason a
+        # measured production install ran log-only for ten days with every
+        # instrument reporting health - there was no contradiction to find,
+        # only an absence, and an absence is invisible to a check that reads
+        # values instead of asking which of them a human supplied.
+        return (
+            f"EMAIL_BACKEND was never set, so this APP_ENV={settings.app_env!r} deployment runs "
+            f"on the 'console' transport: password resets, tender invitations and document "
+            f"emails are written to this log and never leave the building, and nobody waiting "
+            f"for one is told. Set EMAIL_BACKEND=smtp together with SMTP_HOST to deliver them, "
+            f"or set EMAIL_BACKEND=console explicitly to record that a log-only transport is "
+            f"intended - this message stops either way. See {EMAIL_SETUP_DOC}."
         )
 
     if backend == "smtp" and not settings.smtp_host:
@@ -111,6 +151,31 @@ def diagnose_email_config(settings: Settings) -> str | None:
     return None
 
 
+def report_email_config_at_startup(settings: Settings) -> None:
+    """Say at boot what the transport would otherwise only say on first send.
+
+    ``_resolve_backend`` already logs the same diagnosis, but lazily: the
+    backend is built on the first send, so the warning arrives after somebody
+    has already waited for a password reset that never came. This runs while
+    the operator is still reading the boot log.
+
+    Severity follows the environment rather than the finding. Outside
+    development an unconfigured transport is a defect an operator has to act
+    on, so it goes out at ERROR. In development the only diagnoses that can
+    fire are real contradictions the developer typed themselves, and those
+    stay at WARNING - a zero-config checkout must reach the end of its boot
+    log without a single ERROR line, or the ERROR lines that matter stop being
+    read.
+    """
+    problem = diagnose_email_config(settings)
+    if problem is None:
+        return
+    if settings.app_env == "development":
+        logger.warning("[email] %s", problem)
+    else:
+        logger.error("[email] %s", problem)
+
+
 def _resolve_backend(settings: Settings) -> EmailBackend:
     """Instantiate the backend named in settings.
 
@@ -125,13 +190,14 @@ def _resolve_backend(settings: Settings) -> EmailBackend:
     if problem:
         logger.warning("[email] %s", problem)
 
+    expected = console_delivery_expected(settings)
     name: BackendName = settings.email_backend
     if name == "smtp":
         if not settings.smtp_host:
-            return ConsoleEmailBackend()
+            return ConsoleEmailBackend(delivery_expected=expected)
         return SmtpEmailBackend(settings)
     if name == "console":
-        return ConsoleEmailBackend()
+        return ConsoleEmailBackend(delivery_expected=expected)
     if name == "noop":
         return NoopEmailBackend()
     if name == "memory":

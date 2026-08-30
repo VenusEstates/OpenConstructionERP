@@ -3210,6 +3210,16 @@ def create_app() -> FastAPI:
             if "localhost" in settings.database_url:
                 logger.warning("DATABASE_URL points to localhost in production")
 
+        # Deliberately outside the ``is_production`` block above, and not a
+        # missing ``if``: this covers staging too, matching the JWT guard in
+        # ``app.config``. A staging box that cannot send mail is precisely the
+        # one nobody notices, because nobody is waiting on its password
+        # resets. The function is silent in development and silent when an
+        # operator chose the transport on purpose.
+        from app.core.email import report_email_config_at_startup
+
+        report_email_config_at_startup(settings)
+
         # Load translations (28 languages)
         _section("i18n")
         from app.core.i18n import load_translations

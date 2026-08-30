@@ -47,9 +47,11 @@ from .noop import NoopEmailBackend
 from .service import (
     EMAIL_SETUP_DOC,
     EmailService,
+    console_delivery_expected,
     diagnose_email_config,
     email_delivery_enabled,
     get_email_service,
+    report_email_config_at_startup,
     reset_email_service_cache,
 )
 from .smtp import SmtpEmailBackend
@@ -73,9 +75,11 @@ __all__ = [
     "MemoryEmailBackend",
     "NoopEmailBackend",
     "SmtpEmailBackend",
+    "console_delivery_expected",
     "diagnose_email_config",
     "email_delivery_enabled",
     "get_email_service",
+    "report_email_config_at_startup",
     "reset_email_service_cache",
     "template_invoice_approved",
     "template_meeting_invitation",
