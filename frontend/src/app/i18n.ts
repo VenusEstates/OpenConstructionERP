@@ -107,9 +107,10 @@ export const SUPPORTED_LANGUAGES = [
   // arrived after. The batch run that produced the file translated en.ts either
   // side of two bands and left the bands themselves in English, and the batches
   // have closed about nineteen thousand strings since without reaching back into
-  // them. What is left is 942 keys, 734 distinct English values, about 2000
-  // words. The locale file stays on disk and the batch work continues; uncomment
-  // this line when it is done, and keep the U+02BB modifier letters when you do.
+  // them. What is left is 942 keys carrying 734 distinct English values, about
+  // 2000 words in all and 1700 once the repeats are merged. The locale file
+  // stays on disk and the batch work continues; uncomment this line when it is
+  // done, and keep the U+02BB modifier letters when you do.
   // { code: 'uz', name: 'Oʻzbekcha', english: 'Uzbek', flag: '🇺🇿', country: 'uz' },
 ];
 
