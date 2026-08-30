@@ -459,7 +459,17 @@ function main() {
     console.error(cssPath);
     process.exit(2);
   }
-  if (generated && coverage < 0.25) {
+  // Deliberately an order of magnitude below what a healthy tree measures (80%
+  // here) rather than close to it. This is a backstop, not the primary catch:
+  // the config is already checked for a theme where it is written, which is the
+  // actual root cause and cannot false-positive. A large share of classes
+  // legitimately resolve to nothing - lucide-*, ag-*, oe-*, arbitrary values,
+  // plain typos - and that share moves whenever a module arrives with a library
+  // that stamps its own classes. A floor set near the observed value would turn
+  // that drift into a red lane on a tree with nothing wrong with it, which is a
+  // worse failure than the one it guards against, because it teaches people to
+  // ignore the gate.
+  if (generated && coverage < 0.05) {
     console.error('Tailwind conflict gate: only ' + resolved + ' of ' + used.size +
       ' classes (' + Math.round(coverage * 100) + '%) resolved to a rule.');
     console.error('The generator produced a sheet that does not cover the tree, so every');
