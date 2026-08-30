@@ -79,37 +79,37 @@ export const SUPPORTED_LANGUAGES = [
   // common with English is Uzbek.
   //
   // Measured on 2026-08-30 on a quantity that means the same in every language:
-  // English the reader still sees. A value identical to the English one, plus a
-  // key the locale does not carry at all and answers out of en.ts, minus the
-  // strings that are identical on purpose. A string counts as identical on
+  // a value the locale carries that is byte-identical to the English one, minus
+  // the ones that are identical on purpose. A string counts as identical on
   // purpose when every word in it appears in some value this locale's own
   // translators wrote, which is a per-language vocabulary test rather than a
-  // word list, and it is applied to every locale the same way. The 278 newest
-  // keys of en.ts are missing from every offered locale, the best of them
-  // included, so that rolling front is excluded everywhere instead of being
-  // charged to each.
+  // word list, and it is applied to every locale the same way.
   //
-  // Uzbek 942, against 35 (Ukrainian) to 394 (Korean) for the offered
-  // languages. Not a tenth of a point behind the weakest offered language, two
-  // and a half times worse than it. Both errors in that number run the same
-  // way: 942 is a floor, because a half-translated Uzbek value counts as
-  // translated and lends its English half to the vocabulary, and the offered
-  // figures are ceilings, because a real French or Dutch word this corpus
-  // never wrote elsewhere survives the filter.
+  // Uzbek 942. The offered languages run from 24 (Hebrew) to 110 (Norwegian).
+  // Not a tenth of a point behind the weakest offered language, eight times
+  // worse than it. Both errors in that number run the same way: 942 is a floor,
+  // because a half-translated Uzbek value counts as translated and lends its
+  // English half to the vocabulary, and the offered figures are ceilings,
+  // because a real French or Dutch word this corpus never wrote elsewhere
+  // survives the filter.
   //
-  // 529 of the 942 are *.insights.* keys, and no other locale has more than one
-  // there. Another 149 are cases.* keys, where Uzbek is not alone: several
-  // offered locales are missing 150 to 270 of that family outright and answer it
-  // from en.ts, so cases.* is a sweep that has not finished rather than an Uzbek
-  // defect. The Uzbek part was born with the file rather than passed over by a
-  // later wave: 927 of the 942 were already English on 2026-08-17, when
-  // 9ac55ac74 took uz.ts into the repository, and only 15 arrived after. The
-  // batch run that produced the file translated en.ts either side of two bands
-  // and left the bands themselves in English, and the batches have closed about
-  // nineteen thousand strings since without reaching back into them. What is
-  // left is 942 keys, 734 distinct English values, about 2000 words. The locale
-  // file stays on disk and the batch work continues; uncomment this line when it
-  // is done, and keep the U+02BB modifier letters when you do.
+  // One asymmetry those figures do not carry: a key a locale does not hold at
+  // all also renders English, through the en.ts fallback, and every offered
+  // locale is missing between 278 and 619 of them as a sweep front the next wave
+  // closes. Uzbek is missing none, because uz.ts was seeded complete from en.ts,
+  // so 942 is the whole of what a reader would see there while the offered
+  // figures are not.
+  //
+  // 529 of the 942 are *.insights.* keys and 149 are cases.* keys, and no other
+  // locale has more than one in either family. That was born with the file
+  // rather than passed over by a later wave: 927 of the 942 were already English
+  // on 2026-08-17, when 9ac55ac74 took uz.ts into the repository, and only 15
+  // arrived after. The batch run that produced the file translated en.ts either
+  // side of two bands and left the bands themselves in English, and the batches
+  // have closed about nineteen thousand strings since without reaching back into
+  // them. What is left is 942 keys, 734 distinct English values, about 2000
+  // words. The locale file stays on disk and the batch work continues; uncomment
+  // this line when it is done, and keep the U+02BB modifier letters when you do.
   // { code: 'uz', name: 'Oʻzbekcha', english: 'Uzbek', flag: '🇺🇿', country: 'uz' },
 ];
 
