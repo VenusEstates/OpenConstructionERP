@@ -1431,10 +1431,18 @@ jobs:
         # failed here in a second with "Could not resolve", and the job went
         # red. Worth repeating after any change to this step, because a build
         # step that cannot refuse anything is indistinguishable from no build
-        # step at all. That run answers the other half too. The test step below
-        # does not depend on this one, so it still ran rather than being swept
-        # into skipped, and the two tests/pwa files failed 11 assertions with
-        # "No build output to inspect" instead of going quietly green.
+        # step at all. That run answers the other half too. "Run the named
+        # frontend tests" gates on the install rather than on this step, so it
+        # still ran rather than being swept into skipped, and the two tests/pwa
+        # files failed 11 assertions with "No build output to inspect" instead
+        # of going quietly green.
+        #
+        # Read that run knowing it predates the Tailwind step now sitting
+        # between the two: the job there had seven steps, this one sixth and
+        # the test step seventh and adjacent. The conflict step is the one that
+        # does chain on this step's outcome, and a red build skips it. That is
+        # correct, since it would have no stylesheet to read, but it means this
+        # run cannot be cited as evidence about that step.
         run: npx vite build
       - name: Check Tailwind class conflicts in the stylesheet the build produced
         if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.build.outcome == 'success' }}
