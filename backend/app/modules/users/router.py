@@ -43,6 +43,7 @@ from pydantic import BaseModel
 from app.core.rate_limiter import client_identifier, login_limiter
 from app.dependencies import (
     CurrentUserId,
+    CurrentUserPayload,
     RequirePermission,
     RequireRole,
     SessionDep,
@@ -65,6 +66,7 @@ from app.modules.users.schemas import (
     RefreshRequest,
     ResetPasswordRequest,
     ResetPasswordResponse,
+    SessionListResponse,
     SessionResponse,
     TokenResponse,
     UserAdminUpdate,
@@ -618,12 +620,13 @@ async def change_password(
     return await service.change_password(uuid.UUID(user_id), data)
 
 
-@router.get("/me/sessions/", response_model=list[SessionResponse])
-@router.get("/me/sessions", response_model=list[SessionResponse], include_in_schema=False)
+@router.get("/me/sessions/", response_model=SessionListResponse)
+@router.get("/me/sessions", response_model=SessionListResponse, include_in_schema=False)
 async def list_my_sessions(
     user_id: CurrentUserId,
+    payload: CurrentUserPayload,
     service: UserService = Depends(_get_service),
-) -> list[SessionResponse]:
+) -> SessionListResponse:
     """List the caller's own login sessions, newest first.
 
     Self-service only: the owner comes from the caller's own token and the
@@ -633,9 +636,28 @@ async def list_my_sessions(
 
     Sessions that have already expired are omitted; revoked ones are kept, so
     ending a session shows up as ended rather than as a row that vanished.
+
+    ``current`` is computed here rather than in the service, because it is a
+    property of the request and not of the row: the same session is current to
+    the device holding it and not current to every other device listing it.
     """
+    caller_sid = payload.get("sid")
     sessions = await service.list_sessions(uuid.UUID(user_id))
-    return [SessionResponse.model_validate(s) for s in sessions]
+    items = [
+        SessionResponse(
+            sid=s.sid,
+            created_at=s.created_at,
+            expires_at=s.expires_at,
+            last_used_at=s.last_used_at,
+            revoked_at=s.revoked_at,
+            # ``caller_sid`` is None for a token minted before sessions
+            # existed. ``None == s.sid`` is False for every row, which is the
+            # honest answer: such a token belongs to no row on file.
+            current=s.sid == caller_sid,
+        )
+        for s in sessions
+    ]
+    return SessionListResponse(items=items, total=len(items), offset=0, limit=len(items))
 
 
 @router.delete("/me/sessions/{sid}/", status_code=status.HTTP_204_NO_CONTENT)

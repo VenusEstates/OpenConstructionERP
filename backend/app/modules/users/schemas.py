@@ -110,6 +110,41 @@ class SessionResponse(BaseModel):
     expires_at: datetime
     last_used_at: datetime | None = None
     revoked_at: datetime | None = None
+    # The one field that makes the list actionable. Without it five sessions
+    # are five rows of timestamps and nobody can tell which one they are
+    # sitting on, which is exactly the session they must not end; the real
+    # request behind this feature is "end all of them except this one".
+    #
+    # Deliberately required rather than defaulting to False. A default would
+    # make a caller that forgot to compute it return a list in which no
+    # session is current - a confident wrong answer that reads as an ordinary
+    # one, where a required field makes the omission a failure instead.
+    #
+    # False everywhere is still a legitimate answer: a token minted before
+    # sessions existed carries no ``sid``, so it matches no row, and nothing
+    # is marked current because nothing can be.
+    current: bool
+
+
+class SessionListResponse(BaseModel):
+    """The caller's own sessions, as a page rather than a bare array.
+
+    ``total`` matters more here than on an ordinary list. The action this
+    feature exists for is "end every session except the one I am holding", and
+    a caller that cannot tell a complete answer from a first page would end
+    the sessions it was shown and believe it had ended all of them. The
+    envelope is what makes that state reportable; the array could not say it.
+
+    Not paginated at the query yet, so ``total`` is the length of ``items``
+    and the page covers everything. Declared with the offset and limit anyway,
+    because the field that has to be there on the day a limit is introduced is
+    the one nobody remembers to add on that day.
+    """
+
+    items: list[SessionResponse] = Field(default_factory=list)
+    total: int = 0
+    offset: int = 0
+    limit: int = 50
 
 
 class RefreshRequest(BaseModel):

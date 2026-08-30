@@ -108,9 +108,21 @@ def _whoami(client: TestClient, access_token: str):
 
 
 def _sessions(client: TestClient, access_token: str) -> list[dict]:
+    """The rows out of the page envelope the route answers with.
+
+    The total is asserted against the rows rather than ignored, because the
+    one thing this envelope exists to make sayable is "there are more of these
+    than you were handed", and a helper that dropped it would hide exactly
+    that.
+    """
     resp = client.get("/api/v1/users/me/sessions", headers={"Authorization": f"Bearer {access_token}"})
     assert resp.status_code == 200, f"listing sessions failed: {resp.text}"
-    return resp.json()
+    body = resp.json()
+    assert body["total"] == len(body["items"]), (
+        f"the page reports {body['total']} sessions and carries {len(body['items'])}; "
+        "every assertion below counts rows and would read a truncated page as a shorter list"
+    )
+    return body["items"]
 
 
 def test_revoking_one_session_leaves_the_others_alive(client: TestClient) -> None:
