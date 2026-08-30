@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import type { TaxResolution } from './api';
+import type { TaxResolution, TaxResolutionStatus } from './api';
 import {
   classifyResolution,
   needsSubdivision,
@@ -152,6 +152,24 @@ describe('classifyResolution', () => {
     expect(classified.kind).toBe('standard_rate_not_started');
     expect(UNANSWERED_KINDS).toContain(classified.kind);
     expect(classified).not.toHaveProperty('combinedRatePct');
+  });
+
+  it('degrades a status invented after this client shipped, rather than throwing', () => {
+    // The runtime half of the exhaustiveness guard. The compile-time half is
+    // in the classifier and cannot be asserted from here: a test that failed
+    // to compile would not run at all. This one pins the other direction,
+    // that a client older than its server shows no rate rather than crashing
+    // the panel over a deploy-order skew.
+    const fromANewerServer = classifyResolution(
+      resolution({
+        status: 'a_status_this_client_has_never_heard_of' as TaxResolutionStatus,
+        resolved: false,
+        combined_rate_pct: null,
+      }),
+    );
+
+    expect(UNANSWERED_KINDS).toContain(fromANewerServer.kind);
+    expect(fromANewerServer).not.toHaveProperty('combinedRatePct');
   });
 
   it('refuses to answer when a resolved status arrives with no number', () => {

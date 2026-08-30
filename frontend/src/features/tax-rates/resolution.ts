@@ -63,38 +63,71 @@ export const UNANSWERED_KINDS: readonly ResolutionKind[] = [
   'standard_rate_not_started',
 ];
 
-export function classifyResolution(r: TaxResolution): Classification {
-  if (r.status === 'no_configuration') return { kind: 'no_country_data' };
-  if (r.status === 'default_rate_ambiguous') return { kind: 'rates_conflict' };
-  if (r.status === 'default_rate_not_in_force') return { kind: 'standard_rate_not_started' };
-
-  if (r.status === 'subdivision_unknown') {
-    // Three causes, three different people who can fix them, told apart by
-    // which fields came back populated.
-    //
-    //   no code at all      the caller never named a region, and the person
-    //                       reading the screen can answer it themselves
-    //   code, but no name   the region is not in our registry and has no row,
-    //                       so whether it charges anything is genuinely
-    //                       unknown; somebody has to add the rate
-    //   code and name       we know the region, and the reason we still
-    //                       cannot answer is that our own rows are not
-    //                       labelled yet; an administrator runs the repair
-    if (!r.subdivision_code) return { kind: 'needs_subdivision' };
-    if (!r.subdivision_name) return { kind: 'subdivision_not_carried' };
-    return { kind: 'rates_unlabelled' };
-  }
-
-  if (r.resolved && r.combined_rate_pct !== null) {
-    return { kind: 'answered', combinedRatePct: r.combined_rate_pct, components: r.components };
-  }
-
-  // Unreachable against the server as it stands: the five remaining statuses
-  // all carry a rate. If it ever happens, the rows in force did not yield one
-  // figure, which is what the conflict copy already says, and the honest
-  // reading of a resolved status with no number is that the configuration is
-  // wrong rather than that the question was.
+/**
+ * The end of the switch below, and the reason it is a switch.
+ *
+ * `TaxResolutionStatus` in `api.ts` calls itself a closed union and says a
+ * status added on the server should be a compile error here. Nothing made
+ * that true: the classifier was an if-chain ending in a catch-all, so a new
+ * status compiled silently and fell through to the conflict state. The
+ * promise was written one level across from anything that enforces it, which
+ * is worse than no promise, because it stops the next person checking.
+ *
+ * Typing the parameter `never` is the enforcement. Every status the switch
+ * handles is narrowed away before this call, so a status added to the union
+ * and to nothing else leaves a real type here and the call fails to compile,
+ * naming the status it could not narrow.
+ *
+ * At runtime it degrades instead of throwing. Reaching here means a client
+ * older than the server it is talking to, and the safe reading of a status we
+ * cannot name is the one this file already applies to everything it cannot
+ * turn into a number: show no rate. A throw would take the panel down over a
+ * deploy-order skew.
+ */
+function unclassifiedStatus(_status: never): Classification {
   return { kind: 'rates_conflict' };
+}
+
+export function classifyResolution(r: TaxResolution): Classification {
+  switch (r.status) {
+    case 'no_configuration':
+      return { kind: 'no_country_data' };
+    case 'default_rate_ambiguous':
+      return { kind: 'rates_conflict' };
+    case 'default_rate_not_in_force':
+      return { kind: 'standard_rate_not_started' };
+    case 'subdivision_unknown':
+      // Three causes, three different people who can fix them, told apart by
+      // which fields came back populated.
+      //
+      //   no code at all      the caller never named a region, and the person
+      //                       reading the screen can answer it themselves
+      //   code, but no name   the region is not in our registry and has no row,
+      //                       so whether it charges anything is genuinely
+      //                       unknown; somebody has to add the rate
+      //   code and name       we know the region, and the reason we still
+      //                       cannot answer is that our own rows are not
+      //                       labelled yet; an administrator runs the repair
+      if (!r.subdivision_code) return { kind: 'needs_subdivision' };
+      if (!r.subdivision_name) return { kind: 'subdivision_not_carried' };
+      return { kind: 'rates_unlabelled' };
+    case 'harmonised':
+    case 'stacked':
+    case 'compounded':
+    case 'federal_only':
+    case 'national':
+      if (r.resolved && r.combined_rate_pct !== null) {
+        return { kind: 'answered', combinedRatePct: r.combined_rate_pct, components: r.components };
+      }
+      // These five carry a rate, so arriving without one does not happen
+      // against the server as it stands. If it ever does, the rows in force
+      // did not yield one figure, which is what the conflict copy already
+      // says, and the honest reading of a resolved status with no number is
+      // that the configuration is wrong rather than that the question was.
+      return { kind: 'rates_conflict' };
+    default:
+      return unclassifiedStatus(r.status);
+  }
 }
 
 export interface SubdivisionOption {
