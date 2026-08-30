@@ -13,7 +13,6 @@ export type { BetaBannerProps } from './BetaBanner';
 
 export { PartnerLogoBadge } from './PartnerLogoBadge';
 export { ActivePackChip } from './ActivePackChip';
-export { MarketPackNotice } from './MarketPackNotice';
 export { PackEmblem, packMonogram } from './PackEmblem';
 export type { PackEmblemPack } from './PackEmblem';
 

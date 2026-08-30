@@ -518,6 +518,21 @@ first five entries, which had two separate instruments agreeing on five when
 nine had diverged, and looking like corroboration rather than the same
 truncation reached twice.
 
+A case page named the market whose standards it follows and gave the reader no
+way to act on it. The regional pack that carries those standards is now named at
+the foot of the process column, with the currency, the tax template and the
+version it sets, and it carries the button that switches it on. That button
+opens the same preview and confirm dialog the pack registry uses rather than a
+smaller copy of it, so the dry run of exactly what changes is still the step
+before anything is applied, and a reader without the admin role can see which
+pack the numbers on the page assume without being able to change them. A market
+with no pack on disk shows nothing at all, which is the right answer for the ten
+Spanish cases that ship without a Spanish pack, because a panel that shrugged on
+all ten would teach the reader to stop reading that part of the page. The two
+blocks of that row also end level now. The step strip is one fixed height and
+left the company comb beside it drawing a bordered box seventy pixels taller
+than the content next to it.
+
 ## [16.2.0] - 2026-08-28
 
 Maps work again. Every map surface had been drawing tiles with API KEY REQUIRED
