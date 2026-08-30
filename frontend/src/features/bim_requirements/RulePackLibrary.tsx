@@ -279,7 +279,7 @@ export function RulePackLibrary({ projectId, testId = 'rule-pack-library' }: Rul
               defaultValue: 'Search packs…',
             })}
             data-testid={`${testId}-search`}
-            className="h-9 w-full rounded-lg border border-border-light bg-surface-primary pl-8 pr-3 text-[12px] text-content-primary placeholder:text-content-tertiary focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
+            className="h-9 w-full rounded-lg border border-border-light bg-surface-primary ps-8 pe-3 text-[12px] text-content-primary placeholder:text-content-tertiary focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
           />
         </div>
       </div>

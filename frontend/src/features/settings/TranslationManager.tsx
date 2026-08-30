@@ -354,7 +354,7 @@ export function TranslationManager() {
               placeholder={t('settings.tm_search_placeholder', {
                 defaultValue: 'Search keys or values...',
               })}
-              className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-8 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue transition-all duration-normal"
+              className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-8 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue transition-all duration-normal"
               data-testid="tm-search"
             />
           </div>

@@ -1150,7 +1150,7 @@ export function CreateProjectModal({
           <div className="relative">
             {/* neutral track behind the dots — the dots themselves carry
                 all progress state, so no same-colour camouflage. */}
-            <div className="absolute left-3 right-3 top-3 h-px bg-border-light" />
+            <div className="absolute start-3 end-3 top-3 h-px bg-border-light" />
             <div
               className="relative grid"
               style={{ gridTemplateColumns: `repeat(${STEP_COUNT}, minmax(0, 1fr))` }}

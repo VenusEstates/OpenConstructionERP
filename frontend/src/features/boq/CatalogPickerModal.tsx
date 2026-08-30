@@ -240,7 +240,7 @@ export function CatalogPickerModal({ open, onClose, onSelect }: CatalogPickerMod
               aria-label={t('boq.search_catalog_resources', {
                 defaultValue: 'Search resources by name, code, or category...',
               })}
-              className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+              className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
             />
             {loading && (
               <div className="absolute inset-y-0 right-0 flex items-center pr-3">

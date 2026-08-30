@@ -790,7 +790,7 @@ export function ResourcesPage() {
                 })}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={clsx(inputCls, 'pl-8 pr-8')}
+                className={clsx(inputCls, 'ps-8 pe-8')}
                 aria-label={t('common.search', { defaultValue: 'Search' })}
                 data-testid="resources-search"
               />

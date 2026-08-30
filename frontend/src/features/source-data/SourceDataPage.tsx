@@ -1096,7 +1096,7 @@ export function SourceDataPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('source_data.search_placeholder', { defaultValue: 'Search documents...' })}
-                className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+                className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-8 pe-3 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
               />
             </div>
             <select

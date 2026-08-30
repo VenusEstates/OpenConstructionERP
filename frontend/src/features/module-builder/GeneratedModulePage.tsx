@@ -388,7 +388,7 @@ export function GeneratedModulePage() {
                 placeholder={t('common.search', { defaultValue: 'Search' })}
                 aria-label={t('common.search', { defaultValue: 'Search' })}
                 data-testid="runtime-module-search"
-                className="w-full rounded-lg border border-border-light bg-surface-primary py-1.5 pl-8 pr-8 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
+                className="w-full rounded-lg border border-border-light bg-surface-primary py-1.5 ps-8 pe-8 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
               />
               {query !== '' && (
                 <button

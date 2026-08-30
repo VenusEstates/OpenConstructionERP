@@ -1767,7 +1767,7 @@ export function CostDatabaseSearchModal({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={t('boq.search_cost_items', { defaultValue: 'Search cost items by description...' })}
                   aria-label={t('boq.search_cost_items', { defaultValue: 'Search cost items by description...' })}
-                  className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue"
+                  className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue"
                 />
               </div>
             </div>

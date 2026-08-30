@@ -2524,7 +2524,7 @@ function RequirementsTabContent({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('bim_rules.req_search', { defaultValue: 'Search entity, attribute, value...' })}
-            className="w-full rounded-lg border border-border-light bg-surface-primary pl-8 pr-3 py-1.5 text-[11px] text-content-primary focus:border-oe-blue focus:outline-none"
+            className="w-full rounded-lg border border-border-light bg-surface-primary ps-8 pe-3 py-1.5 text-[11px] text-content-primary focus:border-oe-blue focus:outline-none"
           />
         </div>
 

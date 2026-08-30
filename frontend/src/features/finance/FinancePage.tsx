@@ -627,7 +627,7 @@ export function FinanceSummaryCards({
             key={card.label}
             className="relative overflow-hidden rounded-xl border border-border-light bg-surface-elevated/90 shadow-xs transition-shadow duration-normal ease-oe hover:shadow-sm"
           >
-            <div className={`absolute top-0 left-0 right-0 h-1 ${card.accent}`} />
+            <div className={`absolute top-0 start-0 end-0 h-1 ${card.accent}`} />
             <div className="p-4 pt-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-2xs font-medium uppercase tracking-wider text-content-tertiary">
@@ -1498,7 +1498,7 @@ function BudgetsTab({ projectId }: { projectId: string }) {
             placeholder={t('finance.search_budgets', {
               defaultValue: 'Search by WBS or category...',
             })}
-            className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
+            className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -2342,7 +2342,7 @@ function InvoicesTab({ projectId }: { projectId: string }) {
               placeholder={t('finance.search_invoices', {
                 defaultValue: 'Search invoices...',
               })}
-              className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
+              className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
             />
           </div>
           <div className="relative shrink-0">

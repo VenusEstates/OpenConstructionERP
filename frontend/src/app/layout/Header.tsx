@@ -357,7 +357,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
     >
       {/* Soft hairline at the bottom — replaces a hard 1px border for
           a calmer modern-SaaS-style separation from the page below. */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      <div className="absolute bottom-0 start-0 end-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
       {/* ── Zone 1 (Workspace): mobile menu + project breadcrumb + title ── */}
       <div className="flex items-center gap-3 min-w-0 shrink">
@@ -1671,7 +1671,7 @@ function ProjectSwitcher() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('common.search', { defaultValue: 'Search...' })}
-                className="w-full rounded-lg border border-border-light bg-surface-secondary pl-8 pr-3 py-1.5 text-sm text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+                className="w-full rounded-lg border border-border-light bg-surface-secondary ps-8 pe-3 py-1.5 text-sm text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
               />
             </div>
           </div>

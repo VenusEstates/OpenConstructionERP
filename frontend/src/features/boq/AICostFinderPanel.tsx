@@ -209,7 +209,7 @@ export function AICostFinderPanel({
             placeholder={t('boq.cost_finder_search_placeholder', {
               defaultValue: 'Search cost items by description...',
             })}
-            className="w-full pl-8 pr-3 py-2 text-sm border border-border-light rounded-md bg-surface focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full ps-8 pe-3 py-2 text-sm border border-border-light rounded-md bg-surface focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 

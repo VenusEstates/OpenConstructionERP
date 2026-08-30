@@ -766,7 +766,7 @@ function SearchBar({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+          className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
         />
       </div>
       <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={onCreate}>

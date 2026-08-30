@@ -309,7 +309,7 @@ export function ContactSearchInput({
                       value={browseFilter}
                       onChange={(e) => setBrowseFilter(e.target.value)}
                       placeholder={t('contacts.filter_contacts', { defaultValue: 'Filter contacts...' })}
-                      className="h-8 w-full rounded-md border border-border bg-surface-primary pl-8 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+                      className="h-8 w-full rounded-md border border-border bg-surface-primary ps-8 pe-3 text-xs focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
                     />
                   </div>
                 </div>

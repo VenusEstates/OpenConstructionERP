@@ -2053,7 +2053,7 @@ function CatalogResourcePickerModal({
               placeholder={t('assemblies.catalog_search_ph', {
                 defaultValue: 'Search materials / labor / equipment…',
               })}
-              className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-border-light bg-surface-primary focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              className="w-full ps-8 pe-3 py-1.5 text-sm rounded-lg border border-border-light bg-surface-primary focus:outline-none focus:ring-1 focus:ring-emerald-400"
               autoFocus
             />
           </div>

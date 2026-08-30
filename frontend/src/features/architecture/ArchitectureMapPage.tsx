@@ -1460,7 +1460,7 @@ export function ArchitectureMapPage() {
             placeholder={t('architecture.search', { defaultValue: 'Search nodes...' })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 pr-8 py-1.5 rounded-md text-xs outline-none"
+            className="ps-8 pe-8 py-1.5 rounded-md text-xs outline-none"
             style={{
               background: '#f8fafc',
               border: '1px solid #334155',

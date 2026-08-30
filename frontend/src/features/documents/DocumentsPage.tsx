@@ -1045,7 +1045,7 @@ export function DocumentsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('documents.search', { defaultValue: 'Search files...' })}
-            className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
+            className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-8 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
             aria-label={t('documents.search_label', { defaultValue: 'Search documents' })}
           />
           {query && (

@@ -1161,7 +1161,7 @@ function IncidentsTab({
               defaultValue: 'Search incidents...',
             })}
             aria-label={t('safety.search_incidents', { defaultValue: 'Search incidents...' })}
-            className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
+            className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
           />
         </div>
         <Button
@@ -1722,7 +1722,7 @@ function ObservationsTab({ projectId }: { projectId: string }) {
               defaultValue: 'Search observations...',
             })}
             aria-label={t('safety.search_observations', { defaultValue: 'Search observations...' })}
-            className="h-10 w-full rounded-lg border border-border bg-surface-primary pl-10 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
+            className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
           />
         </div>
         <Button

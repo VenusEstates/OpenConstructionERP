@@ -155,7 +155,7 @@ export function TagPickerModal({
             placeholder={t('files.tags.filter_placeholder', {
               defaultValue: 'Filter tags…',
             })}
-            className="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-light bg-surface-primary text-content-primary placeholder:text-content-tertiary focus:outline-none focus:border-oe-blue focus:ring-2 focus:ring-oe-blue/20"
+            className="w-full h-9 ps-8 pe-3 text-sm rounded-lg border border-border-light bg-surface-primary text-content-primary placeholder:text-content-tertiary focus:outline-none focus:border-oe-blue focus:ring-2 focus:ring-oe-blue/20"
           />
         </div>
 

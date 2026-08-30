@@ -1697,7 +1697,7 @@ export function CatalogPage() {
                 value={region}
                 onChange={(e) => handleRegionChange(e.target.value)}
                 aria-label={t('catalog.filter_region', { defaultValue: 'Filter by region' })}
-                className="h-7 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-8 text-sm text-content-primary transition-all focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
+                className="h-7 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-8 text-sm text-content-primary transition-all focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent"
               >
                 <option value="">
                   {t('catalog.all_regions', { defaultValue: 'All regions' })}

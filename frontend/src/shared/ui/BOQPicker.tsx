@@ -68,7 +68,7 @@ export function BOQPicker({
             onChange={(e) => onSelectProject?.(e.target.value)}
             className={clsx(
               'h-9 appearance-none rounded-lg border border-border bg-surface-primary',
-              'pl-3 pr-8 text-sm text-content-primary',
+              'ps-3 pe-8 text-sm text-content-primary',
               'focus:outline-none focus:ring-2 focus:ring-oe-blue/30',
               'min-w-[160px] max-w-[240px]',
             )}
@@ -98,7 +98,7 @@ export function BOQPicker({
             disabled={boqsLoading || !boqs || boqs.length === 0}
             className={clsx(
               'h-9 appearance-none rounded-lg border border-border bg-surface-primary',
-              'pl-8 pr-8 text-sm text-content-primary',
+              'ps-8 pe-8 text-sm text-content-primary',
               'focus:outline-none focus:ring-2 focus:ring-oe-blue/30',
               'min-w-[160px] max-w-[240px]',
               'disabled:opacity-50 disabled:cursor-not-allowed',

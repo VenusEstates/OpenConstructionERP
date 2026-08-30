@@ -344,7 +344,7 @@ function FilterBar({
                 setUserQuery(e.target.value);
                 if (draft.userId) onChange({ ...draft, userId: null });
               }}
-              className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-8 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+              className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-8 pe-8 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
             />
             {(draft.userId || userQuery) && (
               <button
