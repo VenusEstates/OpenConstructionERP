@@ -35958,6 +35958,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Footer colour",
     "property_dev.doc_appearance.page_size": "Paper size",
     "property_dev.doc_appearance.logo_align": "Header position",
+    "property_dev.doc_appearance.logo_align_hint": "Exports that print their own title in the header keep the logo in the opposite corner, so the two do not overlap.",
     "property_dev.doc_appearance.base_font_size": "Body text size (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} to {{max}}. Headings scale with it.",
     "property_dev.doc_appearance.margin_mm": "Page margin (mm)",

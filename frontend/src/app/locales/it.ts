@@ -40207,6 +40207,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Colore del piè di pagina",
     "property_dev.doc_appearance.page_size": "Formato carta",
     "property_dev.doc_appearance.logo_align": "Posizione dell'intestazione",
+    "property_dev.doc_appearance.logo_align_hint": "Gli export che stampano un proprio titolo in testata tengono il logo nell'angolo opposto, così i due non si sovrappongono.",
     "property_dev.doc_appearance.base_font_size": "Corpo del testo (pt)",
     "property_dev.doc_appearance.font_hint": "Da {{min}} a {{max}}. I titoli scalano di conseguenza.",
     "property_dev.doc_appearance.margin_mm": "Margine di pagina (mm)",

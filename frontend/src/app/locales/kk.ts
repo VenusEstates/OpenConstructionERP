@@ -39226,6 +39226,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Төменгі колонтитул түсі",
     "property_dev.doc_appearance.page_size": "Қағаз өлшемі",
     "property_dev.doc_appearance.logo_align": "Жоғарғы колонтитул орны",
+    "property_dev.doc_appearance.logo_align_hint": "Жоғарғы колонтитулда өз тақырыбын басатын экспорттар логотипті қарама-қарсы бұрышта ұстайды, сонда екеуі бірінің үстіне бірі түспейді.",
     "property_dev.doc_appearance.base_font_size": "Негізгі мәтін өлшемі (пт)",
     "property_dev.doc_appearance.font_hint": "{{min}} мен {{max}} аралығы. Тақырыптар да соған сай өзгереді.",
     "property_dev.doc_appearance.margin_mm": "Бет жиегі (мм)",

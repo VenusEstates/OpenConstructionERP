@@ -41113,6 +41113,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "لون التذييل",
     "property_dev.doc_appearance.page_size": "حجم الورق",
     "property_dev.doc_appearance.logo_align": "موضع الترويسة",
+    "property_dev.doc_appearance.logo_align_hint": "الملفات التي تطبع عنوانها في الترويسة تُبقي الشعار في الزاوية المقابلة، حتى لا يتداخل الاثنان.",
     "property_dev.doc_appearance.base_font_size": "حجم النص الأساسي (نقطة)",
     "property_dev.doc_appearance.font_hint": "من {{min}} إلى {{max}}. تتغير أحجام العناوين تبعًا له.",
     "property_dev.doc_appearance.margin_mm": "هامش الصفحة (مم)",

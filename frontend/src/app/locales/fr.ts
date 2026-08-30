@@ -41595,6 +41595,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Couleur du pied de page",
     "property_dev.doc_appearance.page_size": "Format du papier",
     "property_dev.doc_appearance.logo_align": "Position de l'en-tête",
+    "property_dev.doc_appearance.logo_align_hint": "Les exports qui impriment leur propre titre en en-tête gardent le logo dans le coin opposé, pour que les deux ne se chevauchent pas.",
     "property_dev.doc_appearance.base_font_size": "Taille du texte courant (pt)",
     "property_dev.doc_appearance.font_hint": "De {{min}} à {{max}}. Les titres suivent l'échelle.",
     "property_dev.doc_appearance.margin_mm": "Marge de page (mm)",

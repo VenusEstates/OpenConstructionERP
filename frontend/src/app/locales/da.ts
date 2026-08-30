@@ -39247,6 +39247,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Farve på sidefoden",
     "property_dev.doc_appearance.page_size": "Papirformat",
     "property_dev.doc_appearance.logo_align": "Sidehovedets placering",
+    "property_dev.doc_appearance.logo_align_hint": "Eksporter, der skriver deres egen titel i sidehovedet, holder logoet i det modsatte hjørne, så de to ikke overlapper.",
     "property_dev.doc_appearance.base_font_size": "Brødtekstens størrelse (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} til {{max}}. Overskrifter skalerer med.",
     "property_dev.doc_appearance.margin_mm": "Sidemargen (mm)",

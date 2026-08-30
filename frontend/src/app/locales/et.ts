@@ -39189,6 +39189,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Jaluse värv",
     "property_dev.doc_appearance.page_size": "Paberiformaat",
     "property_dev.doc_appearance.logo_align": "Päise asukoht",
+    "property_dev.doc_appearance.logo_align_hint": "Ekspordid, mis trükivad päisesse oma pealkirja, hoiavad logo vastasnurgas, et need kaks ei kattuks.",
     "property_dev.doc_appearance.base_font_size": "Põhiteksti suurus (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} kuni {{max}}. Pealkirjad skaleeruvad kaasa.",
     "property_dev.doc_appearance.margin_mm": "Lehe veeris (mm)",

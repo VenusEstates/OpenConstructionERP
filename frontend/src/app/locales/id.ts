@@ -39196,6 +39196,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Warna catatan kaki",
     "property_dev.doc_appearance.page_size": "Ukuran kertas",
     "property_dev.doc_appearance.logo_align": "Posisi kepala halaman",
+    "property_dev.doc_appearance.logo_align_hint": "Ekspor yang mencetak judulnya sendiri di kepala halaman menaruh logo di sudut seberang, supaya keduanya tidak bertindihan.",
     "property_dev.doc_appearance.base_font_size": "Ukuran teks isi (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} sampai {{max}}. Judul ikut menyesuaikan.",
     "property_dev.doc_appearance.margin_mm": "Margin halaman (mm)",

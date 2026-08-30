@@ -280,6 +280,17 @@ export function DocumentAppearancePanel() {
                 </option>
               ))}
             </select>
+            {/* The exports that draw their own header title keep the logo in the
+                opposite corner on purpose, so the two never overlap. Without
+                this line a workspace that picks Left, opens a bill of
+                quantities and finds the logo still on the right reads the
+                control as broken rather than as deferring to a layout. */}
+            <p className="mt-1 text-xs text-content-tertiary">
+              {t('property_dev.doc_appearance.logo_align_hint', {
+                defaultValue:
+                  'Exports that print their own title in the header keep the logo in the opposite corner, so the two do not overlap.',
+              })}
+            </p>
           </label>
 
           <Input

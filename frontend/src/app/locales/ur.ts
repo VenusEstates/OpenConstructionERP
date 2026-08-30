@@ -39226,6 +39226,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "فوٹر کا رنگ",
     "property_dev.doc_appearance.page_size": "کاغذ کا سائز",
     "property_dev.doc_appearance.logo_align": "ہیڈر کی جگہ",
+    "property_dev.doc_appearance.logo_align_hint": "جو برآمدات ہیڈر میں اپنا عنوان چھاپتی ہیں وہ لوگو کو مخالف کونے میں رکھتی ہیں، تاکہ دونوں ایک دوسرے پر نہ آئیں۔",
     "property_dev.doc_appearance.base_font_size": "متن کا سائز (پوائنٹ)",
     "property_dev.doc_appearance.font_hint": "{{min}} سے {{max}} تک۔ سرخیاں بھی اسی تناسب سے بدلتی ہیں۔",
     "property_dev.doc_appearance.margin_mm": "صفحے کا حاشیہ (ملی میٹر)",

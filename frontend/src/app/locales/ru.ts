@@ -41017,6 +41017,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Цвет нижнего колонтитула",
     "property_dev.doc_appearance.page_size": "Формат бумаги",
     "property_dev.doc_appearance.logo_align": "Положение шапки",
+    "property_dev.doc_appearance.logo_align_hint": "Экспорты, которые печатают собственный заголовок в шапке, держат логотип в противоположном углу, чтобы они не наложились друг на друга.",
     "property_dev.doc_appearance.base_font_size": "Размер основного текста (пт)",
     "property_dev.doc_appearance.font_hint": "От {{min}} до {{max}}. Заголовки масштабируются вместе с ним.",
     "property_dev.doc_appearance.margin_mm": "Поля страницы (мм)",

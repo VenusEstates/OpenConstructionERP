@@ -39206,6 +39206,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Màu chân trang",
     "property_dev.doc_appearance.page_size": "Khổ giấy",
     "property_dev.doc_appearance.logo_align": "Vị trí đầu trang",
+    "property_dev.doc_appearance.logo_align_hint": "Những bản xuất tự in tiêu đề riêng ở đầu trang sẽ giữ logo ở góc đối diện, để hai thứ không chồng lên nhau.",
     "property_dev.doc_appearance.base_font_size": "Cỡ chữ nội dung (pt)",
     "property_dev.doc_appearance.font_hint": "Từ {{min}} đến {{max}}. Tiêu đề co giãn theo.",
     "property_dev.doc_appearance.margin_mm": "Lề trang (mm)",

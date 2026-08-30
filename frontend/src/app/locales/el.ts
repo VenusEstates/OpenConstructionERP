@@ -39226,6 +39226,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Χρώμα υποσέλιδου",
     "property_dev.doc_appearance.page_size": "Μέγεθος χαρτιού",
     "property_dev.doc_appearance.logo_align": "Θέση κεφαλίδας",
+    "property_dev.doc_appearance.logo_align_hint": "Οι εξαγωγές που τυπώνουν δικό τους τίτλο στην κεφαλίδα κρατούν το λογότυπο στην απέναντι γωνία, ώστε τα δύο να μην επικαλύπτονται.",
     "property_dev.doc_appearance.base_font_size": "Μέγεθος κυρίως κειμένου (pt)",
     "property_dev.doc_appearance.font_hint": "Από {{min}} έως {{max}}. Οι επικεφαλίδες κλιμακώνονται ανάλογα.",
     "property_dev.doc_appearance.margin_mm": "Περιθώριο σελίδας (mm)",

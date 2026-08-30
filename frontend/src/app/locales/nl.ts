@@ -40127,6 +40127,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Kleur van de voettekst",
     "property_dev.doc_appearance.page_size": "Papierformaat",
     "property_dev.doc_appearance.logo_align": "Positie van de koptekst",
+    "property_dev.doc_appearance.logo_align_hint": "Exports die hun eigen titel in de koptekst zetten, houden het logo in de tegenoverliggende hoek, zodat ze elkaar niet overlappen.",
     "property_dev.doc_appearance.base_font_size": "Tekstgrootte (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} tot {{max}}. Koppen schalen mee.",
     "property_dev.doc_appearance.margin_mm": "Paginamarge (mm)",

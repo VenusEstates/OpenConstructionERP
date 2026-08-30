@@ -39307,6 +39307,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "צבע הכותרת התחתונה",
     "property_dev.doc_appearance.page_size": "גודל הנייר",
     "property_dev.doc_appearance.logo_align": "מיקום הכותרת העליונה",
+    "property_dev.doc_appearance.logo_align_hint": "ייצוא שמדפיס כותרת משלו בכותרת העליונה שומר את הלוגו בפינה הנגדית, כדי שהשניים לא יתנגשו.",
     "property_dev.doc_appearance.base_font_size": "גודל טקסט הגוף (נק')",
     "property_dev.doc_appearance.font_hint": "מ-{{min}} עד {{max}}. הכותרות משתנות בהתאם.",
     "property_dev.doc_appearance.margin_mm": "שוליים (מ\"מ)",

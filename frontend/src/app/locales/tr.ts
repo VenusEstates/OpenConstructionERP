@@ -40126,6 +40126,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Alt bilgi rengi",
     "property_dev.doc_appearance.page_size": "Kağıt boyutu",
     "property_dev.doc_appearance.logo_align": "Üst bilginin konumu",
+    "property_dev.doc_appearance.logo_align_hint": "Üst bilgide kendi başlığını basan dışa aktarmalar logoyu karşı köşede tutar, böylece ikisi üst üste binmez.",
     "property_dev.doc_appearance.base_font_size": "Gövde metni boyutu (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} ile {{max}} arası. Başlıklar da bu ölçekle büyür.",
     "property_dev.doc_appearance.margin_mm": "Sayfa kenar boşluğu (mm)",

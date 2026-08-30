@@ -39345,6 +39345,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Boja podnožja",
     "property_dev.doc_appearance.page_size": "Veličina papira",
     "property_dev.doc_appearance.logo_align": "Položaj zaglavlja",
+    "property_dev.doc_appearance.logo_align_hint": "Izvozi koji u zaglavlju ispisuju vlastiti naslov drže logotip u suprotnom kutu, kako se to dvoje ne bi preklapalo.",
     "property_dev.doc_appearance.base_font_size": "Veličina osnovnog teksta (pt)",
     "property_dev.doc_appearance.font_hint": "Od {{min}} do {{max}}. Naslovi se skaliraju s njim.",
     "property_dev.doc_appearance.margin_mm": "Margina stranice (mm)",

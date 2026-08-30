@@ -40729,6 +40729,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "页脚颜色",
     "property_dev.doc_appearance.page_size": "纸张尺寸",
     "property_dev.doc_appearance.logo_align": "页眉位置",
+    "property_dev.doc_appearance.logo_align_hint": "自己在页眉打印标题的导出，会把徽标放在对面一角，以免两者重叠。",
     "property_dev.doc_appearance.base_font_size": "正文字号（磅）",
     "property_dev.doc_appearance.font_hint": "{{min}} 到 {{max}}。标题随之缩放。",
     "property_dev.doc_appearance.margin_mm": "页边距（毫米）",

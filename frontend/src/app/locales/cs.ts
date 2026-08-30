@@ -40031,6 +40031,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Barva zápatí",
     "property_dev.doc_appearance.page_size": "Formát papíru",
     "property_dev.doc_appearance.logo_align": "Umístění záhlaví",
+    "property_dev.doc_appearance.logo_align_hint": "Exporty, které tisknou vlastní nadpis v záhlaví, drží logo v protějším rohu, aby se ty dva nepřekrývaly.",
     "property_dev.doc_appearance.base_font_size": "Velikost základního textu (pt)",
     "property_dev.doc_appearance.font_hint": "Od {{min}} do {{max}}. Nadpisy se škálují s ním.",
     "property_dev.doc_appearance.margin_mm": "Okraj stránky (mm)",

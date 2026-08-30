@@ -38325,6 +38325,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Cor do rodapé",
     "property_dev.doc_appearance.page_size": "Tamanho do papel",
     "property_dev.doc_appearance.logo_align": "Posição do cabeçalho",
+    "property_dev.doc_appearance.logo_align_hint": "As exportações que imprimem o próprio título no cabeçalho mantêm o logotipo no canto oposto, para que os dois não se sobreponham.",
     "property_dev.doc_appearance.base_font_size": "Tamanho do texto (pt)",
     "property_dev.doc_appearance.font_hint": "De {{min}} a {{max}}. Os títulos acompanham a escala.",
     "property_dev.doc_appearance.margin_mm": "Margem da página (mm)",

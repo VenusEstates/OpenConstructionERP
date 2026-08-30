@@ -41577,6 +41577,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Fußzeilenfarbe",
     "property_dev.doc_appearance.page_size": "Papierformat",
     "property_dev.doc_appearance.logo_align": "Position der Kopfzeile",
+    "property_dev.doc_appearance.logo_align_hint": "Exporte, die im Kopf einen eigenen Titel drucken, halten das Logo in der gegenüberliegenden Ecke, damit sich beide nicht überlagern.",
     "property_dev.doc_appearance.base_font_size": "Schriftgröße Fließtext (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} bis {{max}}. Überschriften skalieren mit.",
     "property_dev.doc_appearance.margin_mm": "Seitenrand (mm)",

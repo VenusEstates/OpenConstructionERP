@@ -39360,6 +39360,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Ылдыйкы колонтитул түсү",
     "property_dev.doc_appearance.page_size": "Кагаз өлчөмү",
     "property_dev.doc_appearance.logo_align": "Жогорку колонтитулдун орду",
+    "property_dev.doc_appearance.logo_align_hint": "Жогорку колонтитулда өз аталышын басып чыгарган экспорттор логотипти карама-каршы бурчта кармайт, ошондо экөө бири-биринин үстүнө түшпөйт.",
     "property_dev.doc_appearance.base_font_size": "Негизги текст өлчөмү (пт)",
     "property_dev.doc_appearance.font_hint": "{{min}} менен {{max}} аралыгы. Аталыштар да ошого жараша өзгөрөт.",
     "property_dev.doc_appearance.margin_mm": "Барактын четтери (мм)",

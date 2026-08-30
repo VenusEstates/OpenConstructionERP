@@ -40476,6 +40476,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Quyi kolontitul rangi",
     "property_dev.doc_appearance.page_size": "Qog'oz o'lchami",
     "property_dev.doc_appearance.logo_align": "Yuqori kolontitul joyi",
+    "property_dev.doc_appearance.logo_align_hint": "Yuqori kolontitulda o'z sarlavhasini bosadigan eksportlar logotipni qarama-qarshi burchakda saqlaydi, shunda ikkovi ustma-ust tushmaydi.",
     "property_dev.doc_appearance.base_font_size": "Asosiy matn o'lchami (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} dan {{max}} gacha. Sarlavhalar ham shunga mos o'zgaradi.",
     "property_dev.doc_appearance.margin_mm": "Sahifa cheti (mm)",

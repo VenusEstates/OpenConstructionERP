@@ -39251,6 +39251,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Alatunnisteen väri",
     "property_dev.doc_appearance.page_size": "Paperikoko",
     "property_dev.doc_appearance.logo_align": "Ylätunnisteen sijainti",
+    "property_dev.doc_appearance.logo_align_hint": "Viennit, jotka tulostavat oman otsikkonsa ylätunnisteeseen, pitävät logon vastakkaisessa kulmassa, jotta ne eivät mene päällekkäin.",
     "property_dev.doc_appearance.base_font_size": "Leipätekstin koko (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}}–{{max}}. Otsikot skaalautuvat mukana.",
     "property_dev.doc_appearance.margin_mm": "Sivun marginaali (mm)",

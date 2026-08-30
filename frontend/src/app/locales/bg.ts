@@ -39251,6 +39251,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Цвят на долния колонтитул",
     "property_dev.doc_appearance.page_size": "Размер на хартията",
     "property_dev.doc_appearance.logo_align": "Разположение на горния колонтитул",
+    "property_dev.doc_appearance.logo_align_hint": "Експортите, които печатат собствено заглавие в горния колонтитул, държат логото в отсрещния ъгъл, за да не се застъпват.",
     "property_dev.doc_appearance.base_font_size": "Размер на основния текст (пт)",
     "property_dev.doc_appearance.font_hint": "От {{min}} до {{max}}. Заглавията се мащабират с него.",
     "property_dev.doc_appearance.margin_mm": "Поле на страницата (мм)",

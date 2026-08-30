@@ -39226,6 +39226,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "পাদটীকার রং",
     "property_dev.doc_appearance.page_size": "কাগজের মাপ",
     "property_dev.doc_appearance.logo_align": "শিরোভাগের অবস্থান",
+    "property_dev.doc_appearance.logo_align_hint": "যেসব রপ্তানি শিরোভাগে নিজের শিরোনাম ছাপে, তারা লোগোটি উল্টো কোণে রাখে, যাতে দুটি একে অপরের উপর না পড়ে।",
     "property_dev.doc_appearance.base_font_size": "মূল লেখার আকার (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} থেকে {{max}} পর্যন্ত। শিরোনামও সেই অনুপাতে বদলায়।",
     "property_dev.doc_appearance.margin_mm": "পৃষ্ঠার মার্জিন (মিমি)",

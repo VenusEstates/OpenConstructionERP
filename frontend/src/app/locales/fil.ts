@@ -39226,6 +39226,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Kulay ng footer",
     "property_dev.doc_appearance.page_size": "Sukat ng papel",
     "property_dev.doc_appearance.logo_align": "Posisyon ng header",
+    "property_dev.doc_appearance.logo_align_hint": "Ang mga export na naglilimbag ng sarili nilang pamagat sa header ay iniiwan ang logo sa kabilang sulok, para hindi magpatong ang dalawa.",
     "property_dev.doc_appearance.base_font_size": "Laki ng pangunahing teksto (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} hanggang {{max}}. Sumusunod din ang mga pamagat.",
     "property_dev.doc_appearance.margin_mm": "Margin ng pahina (mm)",

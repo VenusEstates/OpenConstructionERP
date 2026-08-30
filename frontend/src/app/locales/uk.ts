@@ -40860,6 +40860,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Колір нижнього колонтитула",
     "property_dev.doc_appearance.page_size": "Формат паперу",
     "property_dev.doc_appearance.logo_align": "Розташування шапки",
+    "property_dev.doc_appearance.logo_align_hint": "Експорти, що друкують власний заголовок у шапці, тримають логотип у протилежному куті, щоб вони не накладалися.",
     "property_dev.doc_appearance.base_font_size": "Розмір основного тексту (пт)",
     "property_dev.doc_appearance.font_hint": "Від {{min}} до {{max}}. Заголовки масштабуються разом із ним.",
     "property_dev.doc_appearance.margin_mm": "Поля сторінки (мм)",

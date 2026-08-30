@@ -39250,6 +39250,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "फ़ुटर का रंग",
     "property_dev.doc_appearance.page_size": "काग़ज़ का आकार",
     "property_dev.doc_appearance.logo_align": "हेडर की जगह",
+    "property_dev.doc_appearance.logo_align_hint": "जो निर्यात शीर्ष में अपना शीर्षक छापते हैं वे लोगो को विपरीत कोने में रखते हैं, ताकि दोनों एक-दूसरे पर न पड़ें।",
     "property_dev.doc_appearance.base_font_size": "मुख्य पाठ का आकार (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} से {{max}} तक। शीर्षक भी इसी अनुपात में बदलते हैं।",
     "property_dev.doc_appearance.margin_mm": "पृष्ठ का हाशिया (मिमी)",

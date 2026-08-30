@@ -40295,6 +40295,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Kolor stopki",
     "property_dev.doc_appearance.page_size": "Format papieru",
     "property_dev.doc_appearance.logo_align": "Pozycja nagłówka",
+    "property_dev.doc_appearance.logo_align_hint": "Eksporty drukujące własny tytuł w nagłówku trzymają logo w przeciwległym rogu, żeby oba się nie nakładały.",
     "property_dev.doc_appearance.base_font_size": "Wielkość tekstu (pt)",
     "property_dev.doc_appearance.font_hint": "Od {{min}} do {{max}}. Nagłówki skalują się razem z nim.",
     "property_dev.doc_appearance.margin_mm": "Margines strony (mm)",

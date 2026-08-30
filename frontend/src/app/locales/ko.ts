@@ -39815,6 +39815,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "바닥글 색",
     "property_dev.doc_appearance.page_size": "용지 크기",
     "property_dev.doc_appearance.logo_align": "머리글 위치",
+    "property_dev.doc_appearance.logo_align_hint": "머리글에 자체 제목을 인쇄하는 내보내기는 겹치지 않도록 로고를 반대쪽 모서리에 둡니다.",
     "property_dev.doc_appearance.base_font_size": "본문 글자 크기(pt)",
     "property_dev.doc_appearance.font_hint": "{{min}}부터 {{max}}까지. 제목도 함께 커집니다.",
     "property_dev.doc_appearance.margin_mm": "여백(mm)",

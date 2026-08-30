@@ -39226,6 +39226,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "رنگ پاورقی",
     "property_dev.doc_appearance.page_size": "اندازهٔ کاغذ",
     "property_dev.doc_appearance.logo_align": "جای سرصفحه",
+    "property_dev.doc_appearance.logo_align_hint": "خروجی‌هایی که عنوان خودشان را در سرصفحه چاپ می‌کنند، نشان را در گوشهٔ مقابل نگه می‌دارند تا این دو روی هم نیفتند.",
     "property_dev.doc_appearance.base_font_size": "اندازهٔ متن اصلی (پوینت)",
     "property_dev.doc_appearance.font_hint": "از {{min}} تا {{max}}. سرتیترها هم‌مقیاس می‌شوند.",
     "property_dev.doc_appearance.margin_mm": "حاشیهٔ صفحه (میلی‌متر)",

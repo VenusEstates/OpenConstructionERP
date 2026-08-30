@@ -40729,6 +40729,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "フッターの色",
     "property_dev.doc_appearance.page_size": "用紙サイズ",
     "property_dev.doc_appearance.logo_align": "ヘッダーの位置",
+    "property_dev.doc_appearance.logo_align_hint": "ヘッダーに自前の見出しを刷る出力は、重ならないようロゴを反対側の角に置きます。",
     "property_dev.doc_appearance.base_font_size": "本文の文字サイズ（pt）",
     "property_dev.doc_appearance.font_hint": "{{min}} から {{max}} まで。見出しも合わせて変わります。",
     "property_dev.doc_appearance.margin_mm": "余白（mm）",

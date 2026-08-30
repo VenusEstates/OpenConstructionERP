@@ -39335,6 +39335,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Culoarea subsolului",
     "property_dev.doc_appearance.page_size": "Formatul hârtiei",
     "property_dev.doc_appearance.logo_align": "Poziția antetului",
+    "property_dev.doc_appearance.logo_align_hint": "Exporturile care își tipăresc propriul titlu în antet țin sigla în colțul opus, ca cele două să nu se suprapună.",
     "property_dev.doc_appearance.base_font_size": "Mărimea textului (pt)",
     "property_dev.doc_appearance.font_hint": "De la {{min}} la {{max}}. Titlurile se scalează odată cu el.",
     "property_dev.doc_appearance.margin_mm": "Marginea paginii (mm)",

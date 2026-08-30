@@ -39862,6 +39862,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Färg på sidfoten",
     "property_dev.doc_appearance.page_size": "Pappersformat",
     "property_dev.doc_appearance.logo_align": "Sidhuvudets placering",
+    "property_dev.doc_appearance.logo_align_hint": "Exporter som skriver sin egen rubrik i sidhuvudet håller logotypen i motsatt hörn, så att de två inte överlappar.",
     "property_dev.doc_appearance.base_font_size": "Brödtextens storlek (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}} till {{max}}. Rubrikerna skalas med.",
     "property_dev.doc_appearance.margin_mm": "Sidmarginal (mm)",

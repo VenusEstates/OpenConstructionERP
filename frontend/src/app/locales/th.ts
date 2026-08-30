@@ -39198,6 +39198,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "สีท้ายกระดาษ",
     "property_dev.doc_appearance.page_size": "ขนาดกระดาษ",
     "property_dev.doc_appearance.logo_align": "ตำแหน่งหัวกระดาษ",
+    "property_dev.doc_appearance.logo_align_hint": "ไฟล์ที่พิมพ์หัวเรื่องของตัวเองไว้ที่หัวกระดาษจะวางโลโก้ไว้มุมตรงข้าม เพื่อไม่ให้ทับกัน",
     "property_dev.doc_appearance.base_font_size": "ขนาดตัวอักษรเนื้อความ (pt)",
     "property_dev.doc_appearance.font_hint": "ตั้งแต่ {{min}} ถึง {{max}} หัวข้อจะปรับตามไปด้วย",
     "property_dev.doc_appearance.margin_mm": "ระยะขอบ (มม.)",

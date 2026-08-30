@@ -38335,6 +38335,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Color del pie de página",
     "property_dev.doc_appearance.page_size": "Tamaño del papel",
     "property_dev.doc_appearance.logo_align": "Posición del encabezado",
+    "property_dev.doc_appearance.logo_align_hint": "Las exportaciones que imprimen su propio título en el encabezado dejan el logotipo en la esquina opuesta, para que no se superpongan.",
     "property_dev.doc_appearance.base_font_size": "Tamaño del texto (pt)",
     "property_dev.doc_appearance.font_hint": "De {{min}} a {{max}}. Los títulos escalan con él.",
     "property_dev.doc_appearance.margin_mm": "Margen de página (mm)",

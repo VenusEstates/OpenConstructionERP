@@ -39259,6 +39259,7 @@ const resource = {
     "property_dev.doc_appearance.footer_color": "Хөлийн өнгө",
     "property_dev.doc_appearance.page_size": "Цаасны хэмжээ",
     "property_dev.doc_appearance.logo_align": "Толгойн байрлал",
+    "property_dev.doc_appearance.logo_align_hint": "Толгойд өөрийн гарчгаа хэвлэдэг гаралтууд логог эсрэг буланд байлгаж, хоёул давхцахгүй байхаар хийдэг.",
     "property_dev.doc_appearance.base_font_size": "Үндсэн бичвэрийн хэмжээ (pt)",
     "property_dev.doc_appearance.font_hint": "{{min}}-с {{max}} хүртэл. Гарчиг ч мөн хамт хэмжээгээ өөрчилнө.",
     "property_dev.doc_appearance.margin_mm": "Хуудасны зай (мм)",
