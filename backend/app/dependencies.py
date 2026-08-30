@@ -255,15 +255,35 @@ async def reject_revoked_session(
         return
     from app.modules.users.models import UserSession
 
-    revoked_at = (
+    # ``sid`` is selected alongside ``revoked_at`` so that the two passing cases
+    # stay distinguishable. Reading ``revoked_at`` alone cannot tell them apart:
+    # it is NULL both for a live session and for a row that is not there, so the
+    # deliberate fail-open documented above would be indistinguishable in the
+    # code from the ordinary success it is meant to be an exception to, and
+    # would leave no trace to count.
+    row = (
         await session.execute(
-            select(UserSession.revoked_at).where(
+            select(UserSession.sid, UserSession.revoked_at).where(
                 UserSession.sid == sid,
                 UserSession.user_id == user_id,
             )
         )
-    ).scalar_one_or_none()
-    if revoked_at is not None:
+    ).first()
+    if row is None:
+        # The fail-open path. It is logged because its three causes are only
+        # separable by how often it fires: a restore from backup produces a
+        # burst across every live token that decays as sessions refresh, a
+        # pruning predicate that reaches unexpired rows produces a flat rate
+        # that never decays, and isolated events mean the login-time flush
+        # stopped refusing a failed insert. The comment above argues the case
+        # is acceptable; this line is what says whether it is happening.
+        logger.warning(
+            "Session %s claimed by user %s is not on file; honouring the token as unrevocable",
+            sid,
+            user_id,
+        )
+        return
+    if row.revoked_at is not None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="This session has been signed out. Please log in again.",

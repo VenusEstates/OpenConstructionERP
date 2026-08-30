@@ -42,6 +42,7 @@ WORK before it is shown to stop working.
 from __future__ import annotations
 
 import ast
+import logging
 import uuid
 from pathlib import Path
 
@@ -219,8 +220,12 @@ def test_a_token_minted_before_sessions_existed_still_works(client: TestClient) 
     account = _register_and_login(client)
     claims = _unverified(account["access"])
 
+    # ``id`` is a real UUID, not the string form of one, because that is what
+    # ``User.id`` holds. Handing over ``claims["sub"]`` also works today, but
+    # only because the minter happens to call ``str()`` on it, so the test
+    # would break confusingly the moment that line stopped being a no-op.
     legacy = create_access_token(
-        SimpleNamespace(id=claims["sub"], email=claims["email"], role=claims["role"]),
+        SimpleNamespace(id=uuid.UUID(claims["sub"]), email=claims["email"], role=claims["role"]),
         get_settings(),
     )
     assert "sid" not in _unverified(legacy), "the point of this token is that it has no sid; it was built wrong"
@@ -231,6 +236,62 @@ def test_a_token_minted_before_sessions_existed_still_works(client: TestClient) 
     assert _whoami(client, legacy).status_code == 200, (
         "a token issued before sessions existed must keep working; refusing it signs out "
         "every live user on the deploy that introduces revocation"
+    )
+
+
+def test_a_session_that_is_not_on_file_is_honoured_and_says_so(
+    client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The fail-open path passes the caller through and leaves a trace.
+
+    A token can name a session that has no row: restoring the database from a
+    backup taken before the session began produces exactly that. Refusing there
+    would sign out the whole platform at the worst possible moment, so the
+    token is honoured, and the reasoning sits beside the check.
+
+    The trace is the half that is easy to leave out, and without it the branch
+    is unfalsifiable. Reading ``revoked_at`` alone cannot even reach this test:
+    that column is NULL both for a live session and for a row that is not
+    there, so the two cases collapse into one and the deliberate exception
+    becomes indistinguishable in the code from the ordinary success. Nothing
+    would be wrong at runtime and nothing would be measurable either, which is
+    how a restore, a pruning predicate that reaches unexpired rows, and a
+    login-time flush that stopped refusing failed inserts would all look the
+    same: silence.
+
+    So this asserts both halves. The request must succeed, and the log must
+    name the orphaned session, because the frequency of this line is the only
+    thing that separates those three causes.
+    """
+    from types import SimpleNamespace
+
+    account = _register_and_login(client)
+    orphan_sid = "sid-that-no-row-was-ever-written-for"
+    claims = _unverified(account["access"])
+
+    from app.config import get_settings
+    from app.modules.users.service import create_access_token
+
+    orphaned = create_access_token(
+        SimpleNamespace(id=uuid.UUID(claims["sub"]), email=claims["email"], role=claims["role"]),
+        get_settings(),
+        sid=orphan_sid,
+    )
+    assert _unverified(orphaned).get("sid") == orphan_sid, "the token was built without the sid under test"
+
+    # Control: the ordinary session works, so a refusal below would be about
+    # the orphaned sid and not about a broken build.
+    assert _whoami(client, account["access"]).status_code == 200, "the ordinary session should work"
+
+    with caplog.at_level(logging.WARNING):
+        assert _whoami(client, orphaned).status_code == 200, (
+            "a token naming a session with no row must be honoured; failing closed here signs out "
+            "every user at the moment the database is restored from a backup"
+        )
+
+    assert any(orphan_sid in record.getMessage() for record in caplog.records), (
+        "the fail-open path left no trace naming the session, so a restore, a pruning bug and a "
+        "failed insert at login are indistinguishable from one another and from silence"
     )
 
 
