@@ -323,3 +323,73 @@ async def test_compare_partitions_new_resolved_persistent(db_session, monkeypatc
     assert diff2["stats"]["new"] == 0
     assert diff2["stats"]["resolved"] == 0
     assert diff2["persistent"][0]["current"]["a_name"] == (diff2["persistent"][0]["base"]["a_name"])
+
+
+@pytest.mark.asyncio
+async def test_a_failed_smart_issue_write_is_recorded_as_a_failed_run(db_session, monkeypatch):
+    """The same failure must not read as ``completed`` or ``failed`` by luck.
+
+    ``create_run`` wraps the smart-issue write in its own ``try``, inside the
+    ``try`` that guards the whole run. Until 2026-08-30 the inner handler
+    recorded ``completed`` with no error text while the outer one recorded
+    ``failed`` with it, so which of the two a reader saw was decided by which
+    handler caught the exception rather than by what happened.
+
+    ``completed`` is also the condition on the high-severity fan-out at the end
+    of the method, so the old behaviour notified people about clashes whose
+    issue rows had never been written - a notification pointing at nothing.
+    Both halves are asserted here: the recorded outcome, and the silence.
+    """
+    from app.modules.bim_hub.models import BIMElement
+
+    project_id, model_id = await _seed_project(db_session)
+
+    ga = _box_geom("SI-A", (0, 0, 0), (1, 1, 1), "Structural")
+    gb = _box_geom("SI-B", (0.6, 0, 0), (1, 1, 1), "Mechanical")
+    geoms = {}
+    for g in (ga, gb):
+        el = BIMElement(
+            model_id=model_id,
+            stable_id=g.stable_id,
+            name=g.name,
+            element_type="Generic",
+            discipline=g.discipline,
+            bounding_box={
+                "min_x": g.aabb[0],
+                "min_y": g.aabb[1],
+                "min_z": g.aabb[2],
+                "max_x": g.aabb[3],
+                "max_y": g.aabb[4],
+                "max_z": g.aabb[5],
+            },
+        )
+        db_session.add(el)
+        await db_session.flush()
+        geoms[str(el.id)] = g
+    _patch_engine_geometry(monkeypatch, geoms)
+
+    async def _explode(self, run, results):  # noqa: ANN001, ARG001
+        raise RuntimeError("smart-issue write refused")
+
+    monkeypatch.setattr(ClashService, "upsert_clashes_with_signatures", _explode)
+
+    published: list = []
+
+    def _record_publish(self, clash, **kwargs):  # noqa: ANN001, ARG001
+        published.append(clash)
+
+    monkeypatch.setattr(ClashService, "_publish_high_severity", _record_publish)
+
+    svc = ClashService(db_session)
+    create = ClashRunCreate(model_ids=[model_id], tolerance_m=0.01, mode="all")
+    run = await svc.create_run(project_id, create, str(uuid.uuid4()))
+
+    # The detection itself worked - this is specifically about how the failure
+    # that followed it is recorded.
+    assert run.status == "failed"
+    assert run.error
+    assert "smart-issue write refused" in run.error
+    assert run.completed_at is not None
+
+    # Nobody is told about clashes whose issue rows were never written.
+    assert published == []

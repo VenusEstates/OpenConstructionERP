@@ -1710,8 +1710,23 @@ class ClashService:
                 await self._persist_clusters(run, results)
             except Exception:  # noqa: BLE001 - clustering is best-effort
                 logger.exception("Clash run %s cluster pass failed", run.id)
-            # v41 - smart-issue upsert + finalize. Best-effort: failures
-            # leave the run rows in place but skip the smart-issue write.
+            # v41 - smart-issue upsert + finalize.
+            #
+            # This used to record ``completed`` from its own handler while the
+            # outer handler below recorded ``failed`` for the same class of
+            # failure, so which of the two a reader saw depended only on which
+            # ``try`` caught it. ``completed`` is also what gates the
+            # high-severity fan-out further down, so a run whose smart issues
+            # were never written still notified people about clashes they then
+            # could not open. Both handlers now say the same thing.
+            #
+            # ``finalize_run`` is deliberately NOT called from the handler, and
+            # that is not the same as skipping it silently: it resolves and
+            # archives every project issue absent from THIS run's signatures,
+            # so running it after the signature write fell over would read an
+            # empty signature set as "none of these clashes exist any more" and
+            # close the lot. A run that failed is left un-finalised, and now
+            # says so.
             try:
                 await self.session.flush()
                 # Batched smart-issue upsert - one pair of SELECTs + one
@@ -1722,9 +1737,10 @@ class ClashService:
                 run.status = "completed"
                 run.completed_at = _now()
                 await self.finalize_run(run)
-            except Exception:  # noqa: BLE001 - smart issues are best-effort
+            except Exception as exc:  # noqa: BLE001 - recorded on the run, not raised
                 logger.exception("Clash run %s smart-issue upsert failed", run.id)
-                run.status = "completed"
+                run.status = "failed"
+                run.error = f"{type(exc).__name__}: {exc}"[:2000]
                 run.completed_at = _now()
         except Exception as exc:  # noqa: BLE001 - surface, don't 500 the run
             logger.exception("Clash run %s failed", run.id)
