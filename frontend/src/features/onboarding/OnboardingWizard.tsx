@@ -4722,8 +4722,12 @@ export function OnboardingWizard() {
     <div className="relative flex min-h-screen flex-col bg-surface-primary overflow-hidden">
       {/* ── Decorative background: soft mesh + subtle grid ──────────────
           Pure decoration, no interaction. Respects prefers-reduced-motion
-          because the gradients are static (no keyframe animation beyond
-          the slow `animate-oe-pulse` already bundled). */}
+          because the gradients are static: this block runs no keyframe
+          animation at all. It used to claim a bundled `animate-oe-pulse`
+          ran here, and no utility by that name has ever existed. The
+          live-pulse dot is `oe-pulse`, without the prefix, defined in an
+          inline <style> in features/auth/LoginPageNext.tsx and used only
+          on that page. */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         {/* Soft radial mesh — two offset blobs with the brand palette. */}
         <div

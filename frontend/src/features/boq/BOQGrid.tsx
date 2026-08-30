@@ -3000,7 +3000,7 @@ const BOQGrid = forwardRef<BOQGridHandle, BOQGridProps>(function BOQGrid({
           <div className="fixed inset-0 z-[9998]" onClick={closeContextMenu} onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }} />
           {/* Menu — flip to the left if it would overflow the viewport (Bug 11). */}
           <div
-            className="fixed z-[9999] min-w-[200px] rounded-lg border border-border-light bg-surface-elevated shadow-lg py-1 animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-[9999] min-w-[200px] rounded-lg border border-border-light bg-surface-elevated shadow-lg py-1"
             style={(() => {
               const MENU_WIDTH = 240;
               const MENU_HEIGHT_EST = 360;

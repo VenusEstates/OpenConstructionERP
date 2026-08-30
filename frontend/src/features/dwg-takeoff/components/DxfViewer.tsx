@@ -1365,7 +1365,7 @@ function TextPinPopup({
   return (
     <div
       ref={popupRef}
-      className="absolute z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+      className="absolute z-50"
       style={{ left: Math.max(8, left), top: Math.max(8, top), width: popupWidth }}
       onMouseDown={(e) => e.stopPropagation()}
     >

@@ -371,9 +371,6 @@ export function NotificationBell() {
             className={clsx(
               'absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center',
               'rounded-full bg-semantic-error px-1 text-[10px] font-bold text-white',
-              /* Tiny pulse pulls the eye when a fresh notification lands —
-                 stops after one cycle so it doesn't keep flashing. */
-              'animate-pulse-once',
             )}
           >
             {unreadCount > 99 ? '99+' : unreadCount}
