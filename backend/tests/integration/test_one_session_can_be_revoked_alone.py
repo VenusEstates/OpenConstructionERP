@@ -294,6 +294,21 @@ def test_a_session_that_is_not_on_file_is_honoured_and_says_so(
         "failed insert at login are indistinguishable from one another and from silence"
     )
 
+    # The same session must not report itself again. What the log is read for is
+    # the count of DISTINCT sessions, so a repeat adds nothing to it and costs a
+    # line on every request that token makes. One of the three causes never
+    # decays, which is what makes the unbounded version able to fill a disk.
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        assert _whoami(client, orphaned).status_code == 200, (
+            "the second request with the same orphaned session must still be honoured; "
+            "quieting the log must not change who gets in"
+        )
+    assert not [record for record in caplog.records if orphan_sid in record.getMessage()], (
+        "the same missing session was reported twice, so a token whose session never comes back "
+        "writes a line on every request it ever makes"
+    )
+
 
 def _unverified(token: str) -> dict:
     """Claims of a token this test process just minted, read without verifying."""

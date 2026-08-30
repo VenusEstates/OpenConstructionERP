@@ -16,6 +16,7 @@ Usage in routers:
 
 import logging
 import uuid as _uuid
+from collections import OrderedDict
 from collections.abc import AsyncGenerator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -196,6 +197,37 @@ def reject_token_issued_before_password_change(
         )
 
 
+# Sessions already reported by :func:`reject_revoked_session` as missing, most
+# recently seen last. The warning it writes exists to be counted, and what
+# carries the signal is the number of DISTINCT sessions, not the number of
+# lines: a restore from a backup shows up as a burst of new ones that stops
+# arriving, a pruning predicate reaching unexpired rows shows up as new ones
+# that keep arriving. Repeating a line for a session already reported adds
+# nothing to either reading and costs a line on every request that token makes,
+# for as long as it lives. That is the case this exists to prevent: the pruning
+# scenario never decays, so the unbounded version writes forever, and a log
+# filling the disk is a way this diagnostic could take down the host it is
+# diagnosing.
+#
+# The cap bounds the registry itself, which a restore would otherwise grow by
+# one entry per live token. Falling out of it lets a session be reported once
+# more later, so the cap degrades to a rate limit rather than to silence. Hits
+# move to the end, so the sessions asking most often are the ones kept quiet.
+_SESSIONS_REPORTED_MISSING: OrderedDict[str, None] = OrderedDict()
+_SESSIONS_REPORTED_MISSING_CAP = 4096
+
+
+def _first_sighting_of_missing_session(sid: str) -> bool:
+    """True the first time ``sid`` is seen missing, false while it is remembered."""
+    if sid in _SESSIONS_REPORTED_MISSING:
+        _SESSIONS_REPORTED_MISSING.move_to_end(sid)
+        return False
+    _SESSIONS_REPORTED_MISSING[sid] = None
+    while len(_SESSIONS_REPORTED_MISSING) > _SESSIONS_REPORTED_MISSING_CAP:
+        _SESSIONS_REPORTED_MISSING.popitem(last=False)
+    return True
+
+
 async def reject_revoked_session(
     session: AsyncSession,
     sid: str | None,
@@ -277,11 +309,12 @@ async def reject_revoked_session(
         # that never decays, and isolated events mean the login-time flush
         # stopped refusing a failed insert. The comment above argues the case
         # is acceptable; this line is what says whether it is happening.
-        logger.warning(
-            "Session %s claimed by user %s is not on file; honouring the token as unrevocable",
-            sid,
-            user_id,
-        )
+        if _first_sighting_of_missing_session(sid):
+            logger.warning(
+                "Session %s claimed by user %s is not on file; honouring the token as unrevocable",
+                sid,
+                user_id,
+            )
         return
     if row.revoked_at is not None:
         raise HTTPException(
