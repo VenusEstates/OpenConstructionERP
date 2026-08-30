@@ -181,7 +181,13 @@ async def test_the_collection_is_not_created_on_the_general_server(two_disagreei
     """
     _cwicr, general, _uploads, db_id = two_disagreeing_servers
 
-    await _restore(db_id)
+    result = await _restore(db_id)
+
+    # A negative assertion on its own cannot tell "went to the right place"
+    # from "went nowhere": a handler that rejects the request early leaves the
+    # general store just as untouched. So this test states the restore really
+    # happened before it says where it did not happen.
+    assert result["restored"] is True, "the restore did not run at all, so an untouched general store proves nothing"
 
     assert general.created == [], f"an empty collection was left on the general server: {general.created}"
     assert general.calls == [], f"the general vector store was consulted at all: {general.calls}"
