@@ -729,7 +729,7 @@ export default function GAEBExchangeModule() {
                 /* Findings never reprint raw payloads: each entry is
                    truncated and the list wraps anywhere, so a base64 blob
                    or Langtext can not blow the layout sideways. */
-                <ul className="mt-2 space-y-1 text-xs text-content-secondary break-words [overflow-wrap:anywhere]">
+                <ul className="mt-2 space-y-1 text-xs text-content-secondary [overflow-wrap:anywhere]">
                   {importResult.errors.map((err, idx) => (
                     <li key={`err-${err.slice(0, 40)}-${idx}`}>• {truncateFinding(err, 300)}</li>
                   ))}
