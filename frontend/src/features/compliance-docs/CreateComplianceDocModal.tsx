@@ -114,6 +114,7 @@ export function CreateComplianceDocModal({
   return (
     <WideModal
       open
+      testId="create-compliance-modal"
       onClose={onClose}
       title={t('compliance.modal.create_title', {
         defaultValue: 'New compliance document',

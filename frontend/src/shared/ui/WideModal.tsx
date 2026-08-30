@@ -76,6 +76,13 @@ export interface WideModalProps {
   hideCloseButton?: boolean;
   /** Extra class names appended to the panel root. */
   className?: string;
+  /**
+   * Optional hook for end-to-end tests, set as data-testid on the dialog root.
+   * Field-level testids inside a modal are cheap to add and get added; the one
+   * on the container is the one that says "the modal is open", and there was no
+   * way to set it, so specs asserted on a testid that could not exist.
+   */
+  testId?: string;
 }
 
 export function WideModal({
@@ -89,6 +96,7 @@ export function WideModal({
   busy = false,
   hideCloseButton = false,
   className,
+  testId,
 }: WideModalProps) {
   const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -149,6 +157,7 @@ export function WideModal({
     <div
       role="dialog"
       aria-modal="true"
+      data-testid={testId}
       aria-labelledby={headingId}
       aria-describedby={subtitle ? subtitleId : undefined}
       onMouseDown={handleBackdrop}
