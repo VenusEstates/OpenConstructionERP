@@ -276,16 +276,22 @@ def test_backend_worker_context_keeps_source_files(backend_spec: pathspec.PathSp
 
 
 def test_real_local_db_is_excluded(root_spec: pathspec.PathSpec) -> None:
-    """If ``backend/openestimate.db`` exists locally, it must be excluded.
+    """``backend/openestimate.db`` must be excluded from the build context.
 
     The whole reason BUG-B06 was filed is that the QA tarball found this
     1 GB file in build contexts. The test guards against accidental
     pattern weakening.
+
+    It used to skip itself when that file was not on disk, which turned it
+    off in every environment it was written for. The file is gitignored, so
+    a clean checkout never carries one and CI is nothing but clean
+    checkouts: the guard ran only on a developer machine that happened to
+    have a local database, and reported a green skip everywhere else. What
+    is being asked here is whether ``.dockerignore`` excludes that PATH,
+    and the pattern answers that whether or not the path is populated, so
+    consulting the filesystem first could only ever silence the check.
     """
-    db = BACKEND_ROOT / "openestimate.db"
-    if not db.exists():
-        pytest.skip("no local DB present — running in clean env")
-    rel = db.relative_to(REPO_ROOT).as_posix()
+    rel = (BACKEND_ROOT / "openestimate.db").relative_to(REPO_ROOT).as_posix()
     assert root_spec.match_file(rel), f"{rel} would be sent to docker build"
 
 
