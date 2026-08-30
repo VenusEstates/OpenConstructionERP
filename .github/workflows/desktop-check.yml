@@ -43,11 +43,29 @@ on:
 permissions:
   contents: read
 
-# Same reasoning as ci.yml. Commits land on main in bursts, and a run against a
-# commit several behind the tip is worth less than the runner minutes it costs.
+# This used to read "same reasoning as ci.yml", and that cross-reference is the
+# reason for the edit rather than a casualty of it: ci.yml no longer holds the
+# position it was citing. Cancelling on main there meant every push killed the
+# run from the push before it, 28 of the last 30 runs on main were cancelled,
+# and main produced no verdict at all. What that costs is not a wrong answer, it
+# is NO answer: a cancelled run carries no conclusion, nothing goes red, and the
+# silence is indistinguishable from health. Fixed there in 47ccaf7c7.
+#
+# The change here is PROPHYLACTIC and nothing has failed. The mechanism is
+# present and untested, which is not the same as observed misbehaving: this
+# workflow has exactly one run on main in its entire history, 2026-08-29, and it
+# was green. No run of it has ever been cancelled, because none has ever had the
+# chance. What makes it worth closing anyway is that the trigger is a push to
+# main behind a desktop/** path filter, so two commits touching desktop/** in
+# quick succession are the whole requirement, and this lane is the one that
+# reports on signing and packaging, where a verdict that never arrives is
+# exactly the failure we have already been bitten by and did not see.
 concurrency:
   group: desktop-check-${{ github.ref }}
-  cancel-in-progress: true
+  # Not an unconditional true, for the reason written above. Branches still
+  # cancel, because there the original argument holds: a run several commits
+  # behind the tip of a branch is worth less than the minutes it costs.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: always
