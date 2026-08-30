@@ -611,6 +611,34 @@ jobs:
         if: ${{ !cancelled() }}
         run: node ../scripts/check_playwright_config_selection.mjs
 
+      - name: Verify every committed spec is selected by some Playwright config
+        # The step above asks whether every CONFIG selects a spec. This asks the
+        # inverse, whether every SPEC is selected by a config. They are not the
+        # same question and they do not have the same answer: the first is green
+        # and the second finds five specs that no configuration runs. Reading the
+        # first as an answer to the second is a mistake shaped like a
+        # confirmation, which is why it is a second step and not a second
+        # assertion inside the first.
+        #
+        # It asserts only what the repository already states about itself.
+        # playwright.config.ts ignores 'tests/e2e/*.spec.ts' on the written
+        # grounds that those specs "are invoked via their dedicated configs at
+        # the repo root". The gate resolves that pattern against the commit and
+        # requires the claim to hold for every file it really covers, so the
+        # denominator grows on its own when a spec is added next to them. A hand
+        # written exclusion list would have been a denominator somebody has to
+        # remember, and we rejected one of those in a neighbouring task for that
+        # reason. Every other unselected spec is printed as a census with names
+        # and does not affect the exit code, because "no config names this file"
+        # is not by itself a defect.
+        #
+        # Population comes from `git ls-tree` at an explicitly resolved commit,
+        # printed next to the verdict. Not the disk, and not `ls-files`: a count
+        # taken off a working copy is a correct number about a tree nobody else
+        # has.
+        if: ${{ !cancelled() }}
+        run: node ../scripts/check_e2e_spec_coverage.mjs
+
   backend-cross-os:
     name: Backend CI (${{ matrix.os }}, embedded PG, shard ${{ matrix.shard }}/3)
     # GitHub Actions service containers are Linux-only, so the Windows and macOS

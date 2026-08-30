@@ -56,7 +56,7 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..');
@@ -64,7 +64,7 @@ const FRONTEND = path.join(REPO, 'frontend');
 
 // Copied from collectFilesForProject in playwright/lib/runner. Not exported,
 // so it cannot be imported; REPLICATION below proves the copy still agrees.
-const TEST_FILE_EXTENSIONS = new Set([
+export const TEST_FILE_EXTENSIONS = new Set([
   '.js', '.ts', '.mjs', '.mts', '.cjs', '.cts',
   '.jsx', '.tsx', '.mjsx', '.mtsx', '.cjsx', '.ctsx',
 ]);
@@ -83,7 +83,7 @@ function fail(message) {
   process.exit(2);
 }
 
-function loadPlaywrightInternals() {
+export function loadPlaywrightInternals() {
   const require_ = createRequire(path.join(FRONTEND, 'package.json'));
   try {
     // By absolute path, not by package specifier: playwright's "exports" map
@@ -108,7 +108,7 @@ function loadPlaywrightInternals() {
   }
 }
 
-function git(args) {
+export function git(args) {
   return execFileSync('git', args, { cwd: REPO, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     .split('\n')
     .map((line) => line.trim())
@@ -116,7 +116,7 @@ function git(args) {
 }
 
 /** Absolute paths, under the given root, of every file git tracks in frontend/. */
-function trackedFrontendFiles(root) {
+export function trackedFrontendFiles(root) {
   const rel = git(['ls-files', '--', 'frontend']);
   return rel.map((p) => joinUnderRoot(root, p));
 }
@@ -139,7 +139,7 @@ function reroot(absolute, fromRoot, toRoot) {
  * Playwright's own selection rule, over a population we choose.
  * Mirrors collectFilesForProject: extension, then !testIgnore && testMatch.
  */
-function select(createFileMatcher, { testDir, testMatch, testIgnore }, population) {
+export function select(createFileMatcher, { testDir, testMatch, testIgnore }, population) {
   const dirPrefix = `${testDir.replace(/\\/g, '/').replace(/\/+$/, '')}/`;
   const matchTest = createFileMatcher(testMatch);
   const matchIgnore = createFileMatcher(testIgnore);
@@ -359,4 +359,10 @@ async function main() {
   console.log(`OK: every one of the ${projectCount} project(s) selects at least one committed spec, and selects the same set under every checkout root compared.`);
 }
 
-await main();
+// Run only when invoked directly. check_e2e_spec_coverage.mjs imports the four
+// helpers above so that the two halves of the same question -- does every config
+// select a spec, does every spec get selected -- resolve paths through one
+// implementation. Two copies of a selection rule are two things that can drift.
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  await main();
+}
