@@ -17,11 +17,10 @@ Pins the jurisdiction-neutral, crypto-free logic without a DB or a clock:
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
-from uuid import uuid4
 from types import SimpleNamespace
+from uuid import uuid4
 
 from app.modules.signing import intl
-from app.modules.signing.schemas import CAPABILITIES, SigningSessionResponse
 from app.modules.signing.providers import (
     DEFAULT_PROVIDER,
     NullProvider,
@@ -32,6 +31,7 @@ from app.modules.signing.providers import (
     get_provider,
     register_provider,
 )
+from app.modules.signing.schemas import CAPABILITIES, SigningSessionResponse
 from app.modules.signing.service import (
     all_required_signatories_signed,
     cert_expiry_flags,
@@ -305,9 +305,7 @@ def test_a_known_capability_with_no_adapter_resolves_to_a_weaker_provider() -> N
         if capability == "simple_electronic":
             assert provider.capability == capability
         else:
-            assert provider.capability != capability, (
-                f"{capability} resolved to a provider claiming to deliver it"
-            )
+            assert provider.capability != capability, f"{capability} resolved to a provider claiming to deliver it"
 
     # The discriminator this fix rests on: asking for the strongest tier gets a
     # provider that says, on itself, that it delivers the weakest one and

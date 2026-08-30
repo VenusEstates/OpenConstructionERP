@@ -32,7 +32,6 @@ import app.modules.projects.models  # noqa: E402,F401
 import app.modules.users.models  # noqa: E402,F401
 from app.modules.crm.schemas import LeadCreate  # noqa: E402
 from app.modules.crm.service import CrmService  # noqa: E402
-
 from tests._pg import clear_module_tables, create_module_tables  # noqa: E402
 
 

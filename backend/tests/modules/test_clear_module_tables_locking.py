@@ -27,7 +27,6 @@ from sqlalchemy import text
 import app.modules.crm.models  # noqa: F401
 import app.modules.projects.models  # noqa: F401
 import app.modules.users.models  # noqa: F401
-
 from tests import _pg
 from tests._pg import clear_module_tables, create_module_tables
 
@@ -84,8 +83,21 @@ async def test_the_same_leak_would_have_blocked_a_truncate(lead_table) -> None:
     behaviour in miniature - bounded here only because we set a timeout the
     old fixture did not have.
     """
-    from app.database import engine
     from sqlalchemy.exc import DBAPIError
+
+    from app.database import engine
+
+    async def truncate_under_a_two_second_timeout() -> None:
+        """The blocked statement, as one call so the raises block stays one.
+
+        The timeout and the TRUNCATE have to share a transaction - SET LOCAL
+        lasts only as long as the one it is issued in - so they cannot be
+        split apart to satisfy the single-statement rule. Naming the pair is
+        what satisfies it, and it also names what is being timed below.
+        """
+        async with engine.begin() as conn:
+            await conn.exec_driver_sql("SET LOCAL lock_timeout = '2s'")
+            await conn.exec_driver_sql(f'TRUNCATE TABLE "{lead_table.__table__.name}"')
 
     stray = await engine.connect()
     try:
@@ -93,9 +105,7 @@ async def test_the_same_leak_would_have_blocked_a_truncate(lead_table) -> None:
 
         started = time.monotonic()
         with pytest.raises(DBAPIError) as exc:
-            async with engine.begin() as conn:
-                await conn.exec_driver_sql("SET LOCAL lock_timeout = '2s'")
-                await conn.exec_driver_sql(f'TRUNCATE TABLE "{lead_table.__table__.name}"')
+            await truncate_under_a_two_second_timeout()
         elapsed = time.monotonic() - started
 
         assert "lock timeout" in str(exc.value).lower()
@@ -115,8 +125,9 @@ async def test_a_conflicting_lock_fails_fast_instead_of_hanging(lead_table, monk
     it must not - but that it gives up with a named error rather than running
     out the job's clock.
     """
-    from app.database import engine
     from sqlalchemy.exc import DBAPIError
+
+    from app.database import engine
 
     monkeypatch.setattr(_pg, "LOCK_TIMEOUT_S", 2)
 

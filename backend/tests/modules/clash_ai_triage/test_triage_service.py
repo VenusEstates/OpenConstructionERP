@@ -48,7 +48,6 @@ from app.modules.clash_ai_triage.service import (
     ClashTriageUnavailable,
     _estimate_cost_usd,
 )
-
 from tests._pg import clear_module_tables, create_module_tables
 
 

@@ -46,7 +46,6 @@ from app.modules.clash_cost_impact.service import (
 )
 from app.modules.projects.models import Project
 from app.modules.users.models import User
-
 from tests._pg import clear_module_tables, create_module_tables
 
 
