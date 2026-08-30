@@ -1317,6 +1317,10 @@ class ContractSigningSessionResponse(BaseModel):
     document_ref: str
     document_content_hash: str
     provider_capability: str
+    # What the signing registry resolved to, not what was asked for. None when
+    # no status derivation has stamped it; never backfilled from the
+    # requirement, which is the whole point of carrying both.
+    delivered_capability: str | None = None
     status: str
     signatory_map: list[dict[str, Any]] = Field(default_factory=list)
     expires_at: datetime | None = None

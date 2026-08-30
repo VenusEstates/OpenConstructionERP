@@ -36051,6 +36051,8 @@ const resource = {
     "signing.hint_content_hash": "Der Hash der exakten Datei, die zur Unterschrift vorgelegt wird.",
     "signing.content_hash_required": "Inhaltshash ist erforderlich",
     "signing.field_capability": "Erforderliche Berechtigung",
+    "signing.field_delivered_capability": "Bereitgestellte Berechtigung",
+    "signing.capability_not_recorded": "Nicht erfasst",
     "signing.field_expires_at": "Gültig bis",
     "signing.field_status": "Anfangsstatus",
     "signing.hint_status": "Nur Entwurf und ausstehende Unterschriften können direkt gesetzt werden; der Rest wird abgeleitet.",

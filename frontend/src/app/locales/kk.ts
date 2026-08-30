@@ -34648,6 +34648,8 @@ const resource = {
     "signing.hint_content_hash": "Қол қоюға шығарылатын дәл сол файлдың хэші.",
     "signing.content_hash_required": "Мазмұн хэші міндетті",
     "signing.field_capability": "Қажетті мүмкіндік",
+    "signing.field_delivered_capability": "Берілген мүмкіндік",
+    "signing.capability_not_recorded": "Тіркелмеген",
     "signing.field_expires_at": "Мерзімі бітеді",
     "signing.field_status": "Бастапқы мәртебе",
     "signing.hint_status": "Тек жоба мен қол қоюды күтуде тікелей орнатылады; қалғандары туынды.",

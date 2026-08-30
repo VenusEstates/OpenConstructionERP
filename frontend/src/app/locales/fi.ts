@@ -35308,6 +35308,8 @@ const resource = {
     "signing.hint_content_hash": "Allekirjoitettavan tiedoston tarkan sisällön tiiviste.",
     "signing.content_hash_required": "Sisällön tiiviste vaaditaan",
     "signing.field_capability": "Vaadittu kyvykkyys",
+    "signing.field_delivered_capability": "Toteutunut kyvykkyys",
+    "signing.capability_not_recorded": "Ei kirjattu",
     "signing.field_expires_at": "Vanhenee",
     "signing.field_status": "Alkuperäinen tila",
     "signing.hint_status": "Vain luonnos ja allekirjoitusta odottavat voidaan asettaa suoraan; loput johdetaan.",

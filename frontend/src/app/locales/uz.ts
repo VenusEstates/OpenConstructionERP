@@ -35767,6 +35767,8 @@ const resource = {
     "signing.hint_content_hash": "Imzo uchun chiqarilayotgan aynan shu faylning xeshi.",
     "signing.content_hash_required": "Kontent xeshi talab qilinadi",
     "signing.field_capability": "Talab qilinadigan imkoniyat",
+    "signing.field_delivered_capability": "Taqdim etilgan imkoniyat",
+    "signing.capability_not_recorded": "Qayd etilmagan",
     "signing.field_expires_at": "Tugaydi",
     "signing.field_status": "Boshlangʻich holat",
     "signing.hint_status": "Faqat qoralama va imzo kutilmoqda holatlarini bevosita oʻrnatish mumkin; qolganlari chiqariladi.",

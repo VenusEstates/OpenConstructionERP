@@ -35356,6 +35356,8 @@ const resource = {
     "signing.hint_content_hash": "हस्ताक्षर के लिए जारी की जा रही सटीक फ़ाइल का हैश।",
     "signing.content_hash_required": "सामग्री हैश आवश्यक है",
     "signing.field_capability": "आवश्यक क्षमता",
+    "signing.field_delivered_capability": "प्रदान की गई क्षमता",
+    "signing.capability_not_recorded": "दर्ज नहीं",
     "signing.field_expires_at": "समाप्त",
     "signing.field_status": "प्रारंभिक स्थिति",
     "signing.hint_status": "केवल ड्राफ्ट और हस्ताक्षर की प्रतीक्षा को सीधे सेट किया जा सकता है; बाकी व्युत्पन्न होते हैं।",

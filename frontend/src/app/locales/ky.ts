@@ -30031,6 +30031,8 @@ const resource = {
     "signing.hint_content_hash": "Колго коюуга жөнөтүлгөн так файлдын хеши.",
     "signing.content_hash_required": "Мазмундун хеши талап кылынат",
     "signing.field_capability": "Талап кылынган жөндөм",
+    "signing.field_delivered_capability": "Берилген жөндөм",
+    "signing.capability_not_recorded": "Катталган эмес",
     "signing.field_expires_at": "Жарактуулук мөөнөтү",
     "signing.field_status": "Баштапкы статус",
     "signing.hint_status": "Түз эле черновик жана кол коюуга даяр гана коюлушу мүмкүн; калгандары алынат.",

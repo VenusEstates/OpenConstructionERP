@@ -34648,6 +34648,8 @@ const resource = {
     "signing.hint_content_hash": "Ang hash ng eksaktong file na ini-isyu para sa lagda.",
     "signing.content_hash_required": "Kinakailangan ang content hash",
     "signing.field_capability": "Kinakailangang kapasidad",
+    "signing.field_delivered_capability": "Naibigay na kapasidad",
+    "signing.capability_not_recorded": "Hindi naitala",
     "signing.field_expires_at": "Mag-e-expire",
     "signing.field_status": "Panimulang status",
     "signing.hint_status": "Draft at awaiting signatures lang ang direktang maitatakda; ang iba ay nakukuha.",

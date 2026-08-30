@@ -35303,6 +35303,8 @@ const resource = {
     "signing.hint_content_hash": "Hashen til den nøyaktige filen som utstedes for signering.",
     "signing.content_hash_required": "Innholds-hash er påkrevd",
     "signing.field_capability": "Nødvendig kapasitet",
+    "signing.field_delivered_capability": "Levert kapasitet",
+    "signing.capability_not_recorded": "Ikke registrert",
     "signing.field_expires_at": "Utløper",
     "signing.field_status": "Innledende status",
     "signing.hint_status": "Kun utkast og venter på signaturer kan settes direkte; resten er avledet.",

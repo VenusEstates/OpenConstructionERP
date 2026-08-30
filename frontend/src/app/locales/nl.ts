@@ -35309,6 +35309,8 @@ const resource = {
     "signing.hint_content_hash": "De hash van het exacte bestand dat ter ondertekening wordt aangeboden.",
     "signing.content_hash_required": "Content hash is vereist",
     "signing.field_capability": "Vereiste bevoegdheid",
+    "signing.field_delivered_capability": "Geleverde bevoegdheid",
+    "signing.capability_not_recorded": "Niet vastgelegd",
     "signing.field_expires_at": "Vervalt",
     "signing.field_status": "Initiële status",
     "signing.hint_status": "Alleen concept en in afwachting van ondertekening kunnen direct worden ingesteld; de rest wordt afgeleid.",

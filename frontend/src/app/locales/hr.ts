@@ -35458,6 +35458,8 @@ const resource = {
     "signing.hint_content_hash": "Hash točne datoteke koja se izdaje na potpisivanje.",
     "signing.content_hash_required": "Hash sadržaja je obavezan",
     "signing.field_capability": "Potrebna sposobnost",
+    "signing.field_delivered_capability": "Pružena sposobnost",
+    "signing.capability_not_recorded": "Nije zabilježeno",
     "signing.field_expires_at": "Istječe",
     "signing.field_status": "Početni status",
     "signing.hint_status": "Samo nacrt i čekanje potpisa mogu se postaviti izravno; ostali se izvedu.",

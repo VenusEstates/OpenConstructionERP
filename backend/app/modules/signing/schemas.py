@@ -201,6 +201,10 @@ class SigningSessionResponse(BaseModel):
     document_ref: str
     document_content_hash: str
     provider_capability: str = "simple_electronic"
+    # What the resolved provider actually delivers. Never defaulted to the
+    # required value: None means "not recorded", and a reader that renders it
+    # as the requirement is back to claiming a tier nothing delivered.
+    delivered_capability: str | None = None
     signatory_map: list[dict[str, Any]] = Field(default_factory=list)
     status: str = "draft"
     expires_at: datetime | None = None

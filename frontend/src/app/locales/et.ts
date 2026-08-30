@@ -35372,6 +35372,8 @@ const resource = {
     "signing.hint_content_hash": "Allkirjastamiseks väljastatava täpse faili räsi.",
     "signing.content_hash_required": "Sisu räsi on kohustuslik",
     "signing.field_capability": "Nõutud võimekus",
+    "signing.field_delivered_capability": "Pakutud võimekus",
+    "signing.capability_not_recorded": "Ei ole registreeritud",
     "signing.field_expires_at": "Aegub",
     "signing.field_status": "Algolek",
     "signing.hint_status": "Otse saab määrata ainult mustandi ja allkirju ootavaks; ülejäänud tuletatakse.",

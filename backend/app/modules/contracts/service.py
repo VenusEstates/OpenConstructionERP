@@ -1718,6 +1718,7 @@ class ContractsService:
             "document_ref": session_row.document_ref,
             "document_content_hash": session_row.document_content_hash,
             "provider_capability": session_row.provider_capability,
+            "delivered_capability": session_row.delivered_capability,
             "status": session_row.status,
             "signatory_map": list(session_row.signatory_map or []),
             "expires_at": session_row.expires_at,

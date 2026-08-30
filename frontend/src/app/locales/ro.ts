@@ -35350,6 +35350,8 @@ const resource = {
     "signing.hint_content_hash": "Hash-ul fișierului exact emis pentru semnare.",
     "signing.content_hash_required": "Hash-ul conținutului este obligatoriu",
     "signing.field_capability": "Capacitate necesară",
+    "signing.field_delivered_capability": "Capacitate furnizată",
+    "signing.capability_not_recorded": "Neînregistrat",
     "signing.field_expires_at": "Expiră",
     "signing.field_status": "Stare inițială",
     "signing.hint_status": "Doar schiță și în așteptarea semnăturilor pot fi setate direct; restul sunt derivate.",

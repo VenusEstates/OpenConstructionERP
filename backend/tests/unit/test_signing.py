@@ -17,9 +17,11 @@ Pins the jurisdiction-neutral, crypto-free logic without a DB or a clock:
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
+from uuid import uuid4
 from types import SimpleNamespace
 
 from app.modules.signing import intl
+from app.modules.signing.schemas import CAPABILITIES, SigningSessionResponse
 from app.modules.signing.providers import (
     DEFAULT_PROVIDER,
     NullProvider,
@@ -274,11 +276,75 @@ def test_null_provider_fetch_artifact_available_once_signed() -> None:
 
 
 def test_get_provider_defaults_to_null_provider_for_unknown_capability() -> None:
-    provider = get_provider("qualified_electronic")
+    # A capability outside CAPABILITIES entirely - a typo, or a vocabulary a
+    # future pack introduces. This is what the test name has always claimed to
+    # cover; until 2026-08-30 the body passed "qualified_electronic", a known,
+    # documented, pattern-validated tier, so the name read as "a typo must not
+    # crash" while the body quietly blessed "the highest legal tier downgrades".
+    # The known-tier case now has its own test below, which is where it belongs.
+    provider = get_provider("mobile_id_signature")
     assert provider is DEFAULT_PROVIDER
 
     provider_no_capability = get_provider(None)
     assert provider_no_capability is DEFAULT_PROVIDER
+
+
+def test_a_known_capability_with_no_adapter_resolves_to_a_weaker_provider() -> None:
+    """Every declared tier resolves, and three of the four resolve to less.
+
+    ``CAPABILITIES`` is the vocabulary the API accepts and validates against.
+    Core ships one provider, which delivers ``simple_electronic``. So for every
+    tier except that one, ``get_provider`` hands back something that delivers
+    less than was asked for, and it does so without raising - which is the
+    intended behaviour (refusing would break sessions on upgrade) and exactly
+    why the difference has to be legible on the object rather than swallowed.
+    """
+    for capability in CAPABILITIES:
+        provider = get_provider(capability)
+        assert provider is DEFAULT_PROVIDER
+        if capability == "simple_electronic":
+            assert provider.capability == capability
+        else:
+            assert provider.capability != capability, (
+                f"{capability} resolved to a provider claiming to deliver it"
+            )
+
+    # The discriminator this fix rests on: asking for the strongest tier gets a
+    # provider that says, on itself, that it delivers the weakest one and
+    # performs no cryptography. Nothing has to guess.
+    resolved = get_provider("qualified_electronic")
+    assert resolved.capability == "simple_electronic"
+    assert resolved.describe()["cryptographic_verification"] is False
+
+
+def test_an_unstamped_session_reports_no_delivered_capability() -> None:
+    """NULL must survive serialisation as NULL, never as the requirement.
+
+    Every session row written before ``delivered_capability`` existed has NULL
+    in it. The one change that would quietly undo this whole fix is a
+    ``delivered or required`` anywhere between the column and the screen: the
+    two values would then agree, every other test would still pass, and the
+    response would be back to reporting a tier nothing delivered. So assert the
+    absence, not just the presence.
+    """
+    unstamped = SimpleNamespace(
+        id=uuid4(),
+        project_id=uuid4(),
+        document_ref="contract/legacy",
+        document_content_hash="h",
+        provider_capability="qualified_electronic",
+        delivered_capability=None,
+        signatory_map=[],
+        status="fully_signed",
+        expires_at=None,
+        metadata_={},
+        created_by=None,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    payload = SigningSessionResponse.model_validate(unstamped).model_dump()
+    assert payload["provider_capability"] == "qualified_electronic"
+    assert payload["delivered_capability"] is None
 
 
 def test_register_provider_overrides_resolution_for_its_capability() -> None:

@@ -35377,6 +35377,8 @@ const resource = {
     "signing.hint_content_hash": "Hash dari file persis yang diterbitkan untuk ditandatangani.",
     "signing.content_hash_required": "Hash konten wajib diisi",
     "signing.field_capability": "Kemampuan yang diperlukan",
+    "signing.field_delivered_capability": "Kemampuan yang diberikan",
+    "signing.capability_not_recorded": "Tidak tercatat",
     "signing.field_expires_at": "Kedaluwarsa",
     "signing.field_status": "Status awal",
     "signing.hint_status": "Hanya draf dan menunggu tanda tangan yang dapat diatur secara langsung; yang lainnya diturunkan.",

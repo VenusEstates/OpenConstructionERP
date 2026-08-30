@@ -262,6 +262,10 @@ class SigningService:
             document_ref=data.document_ref,
             document_content_hash=data.document_content_hash,
             provider_capability=data.provider_capability,
+            # What the registry actually resolved to, which is not necessarily
+            # what the caller asked for: get_provider falls back to the
+            # built-in provider for any capability no adapter has claimed.
+            delivered_capability=provider.capability,
             signatory_map=signatory_map,
             status=status,
             expires_at=data.expires_at,
@@ -346,6 +350,10 @@ class SigningService:
         signatures = await self.repo.list_signatures_for_session(session_id)
         explicit_status = fields.get("status")
         provider = get_provider(session_row.provider_capability)
+        # The required capability is editable, so re-resolve and re-stamp:
+        # otherwise raising the requirement would leave the old delivered
+        # value standing beside the new requirement.
+        session_row.delivered_capability = provider.capability
         session_row.status = provider.check_status(
             SimpleNamespace(
                 signatory_map=session_row.signatory_map,
@@ -425,6 +433,7 @@ class SigningService:
     async def _recompute_and_save(self, session_row: SigningSession) -> SigningSession:
         signatures = await self.repo.list_signatures_for_session(session_row.id)
         provider = get_provider(session_row.provider_capability)
+        session_row.delivered_capability = provider.capability
         session_row.status = provider.check_status(
             SimpleNamespace(
                 signatory_map=session_row.signatory_map,
@@ -470,6 +479,11 @@ class SigningService:
             "document_ref": session_row.document_ref,
             "document_content_hash": current,
             "provider_capability": session_row.provider_capability,
+            # The manifest is the closest thing this module has to a legal
+            # record, so it carries what was delivered next to what was
+            # required. NULL stays NULL: a session last derived before this
+            # field existed does not get to borrow the required value.
+            "delivered_capability": session_row.delivered_capability,
             "status": session_row.status,
             "manifest": issued_set_manifest([session_row]),
             # Provider-reported view of the same manifest plus (when a

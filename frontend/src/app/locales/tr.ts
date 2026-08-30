@@ -35344,6 +35344,8 @@ const resource = {
     "signing.hint_content_hash": "İmzaya sunulan tam dosyanın karması.",
     "signing.content_hash_required": "İçerik karması gerekli",
     "signing.field_capability": "Gerekli yetenek",
+    "signing.field_delivered_capability": "Sağlanan yetenek",
+    "signing.capability_not_recorded": "Kaydedilmedi",
     "signing.field_expires_at": "Sona erme",
     "signing.field_status": "Başlangıç durumu",
     "signing.hint_status": "Yalnızca taslak ve imzaları bekleyenler doğrudan ayarlanabilir; diğerleri türetilir.",

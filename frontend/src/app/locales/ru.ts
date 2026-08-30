@@ -35297,6 +35297,8 @@ const resource = {
     "signing.hint_content_hash": "Хэш точного файла, который выдается на подпись.",
     "signing.content_hash_required": "Хэш содержимого обязателен",
     "signing.field_capability": "Обязательная возможность",
+    "signing.field_delivered_capability": "Предоставленная возможность",
+    "signing.capability_not_recorded": "Не зафиксировано",
     "signing.field_expires_at": "Истекает",
     "signing.field_status": "Начальный статус",
     "signing.hint_status": "Только черновик и ожидающие подписи могут быть установлены напрямую; остальные выводятся.",

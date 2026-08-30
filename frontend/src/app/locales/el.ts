@@ -34684,6 +34684,8 @@ const resource = {
     "signing.hint_content_hash": "Το hash του ακριβούς αρχείου που εκδίδεται για υπογραφή.",
     "signing.content_hash_required": "Απαιτείται hash περιεχομένου",
     "signing.field_capability": "Απαιτούμενη δυνατότητα",
+    "signing.field_delivered_capability": "Παρεχόμενη δυνατότητα",
+    "signing.capability_not_recorded": "Δεν έχει καταγραφεί",
     "signing.field_expires_at": "Λήγει",
     "signing.field_status": "Αρχική κατάσταση",
     "signing.hint_status": "Μόνο πρόχειρο και αναμονή υπογραφών μπορούν να οριστούν απευθείας· τα υπόλοιπα προκύπτουν αυτόματα.",

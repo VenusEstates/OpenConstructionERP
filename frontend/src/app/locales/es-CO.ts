@@ -35170,6 +35170,8 @@ const resource = {
     "signing.hint_content_hash": "El hash del archivo exacto que se emite para la firma.",
     "signing.content_hash_required": "Se requiere el hash del contenido",
     "signing.field_capability": "Capacidad requerida",
+    "signing.field_delivered_capability": "Capacidad entregada",
+    "signing.capability_not_recorded": "Sin registrar",
     "signing.field_expires_at": "Expira",
     "signing.field_status": "Estado inicial",
     "signing.hint_status": "Solo borrador y pendiente de firmas se pueden establecer directamente; el resto se deriva.",

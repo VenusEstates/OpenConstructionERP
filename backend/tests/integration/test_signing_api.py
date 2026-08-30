@@ -208,6 +208,63 @@ async def test_full_signing_flow(http_client, two_tenants):
 
 
 @pytest.mark.asyncio
+async def test_required_capability_is_not_reported_as_delivered(http_client, two_tenants):
+    """A session may require more than the platform can deliver, and must say so.
+
+    ``_two_party_body`` asks for ``qualified_electronic`` - eIDAS QES and the
+    like. No adapter for it exists in this tree, so the registry resolves to the
+    built-in provider, which performs no cryptography and delivers
+    ``simple_electronic``. The session is still created and can still reach
+    fully_signed: refusing here is a separate product decision and would break
+    existing sessions on upgrade. What must not happen is the record and the
+    interface repeating the requirement as though it had been met.
+
+    The assertions are deliberately on the delivered value being DIFFERENT from
+    the required one rather than merely present. A later ``delivered or
+    required`` fallback anywhere between the column and the response would make
+    the two agree, which reads as correct everywhere except here.
+    """
+    a = two_tenants["a"]
+    create = await http_client.post(
+        "/api/v1/signing/sessions/",
+        json=_two_party_body(a["project_id"], content_hash="hash-capability"),
+        headers=a["headers"],
+    )
+    assert create.status_code == 201, create.text
+    data = create.json()
+
+    assert data["provider_capability"] == "qualified_electronic"
+    assert data["delivered_capability"] == "simple_electronic"
+    assert data["delivered_capability"] != data["provider_capability"]
+
+    # Signing it through does not upgrade the claim.
+    for name, role in (("Contractor Rep", "contractor"), ("Client Rep", "client")):
+        attest = await http_client.post(
+            f"/api/v1/signing/sessions/{data['id']}/attest",
+            json={
+                "signatory_name": name,
+                "signatory_role": role,
+                "content_hash": "hash-capability",
+            },
+            headers=a["headers"],
+        )
+        assert attest.status_code == 201, attest.text
+    assert attest.json()["status"] == "fully_signed"
+    assert attest.json()["delivered_capability"] == "simple_electronic"
+
+    # The manifest is the closest thing to a legal record here, so it carries
+    # both values too.
+    manifest = await http_client.get(
+        f"/api/v1/signing/sessions/{data['id']}/manifest",
+        headers=a["headers"],
+    )
+    assert manifest.status_code == 200, manifest.text
+    body = manifest.json()
+    assert body["provider_capability"] == "qualified_electronic"
+    assert body["delivered_capability"] == "simple_electronic"
+
+
+@pytest.mark.asyncio
 async def test_decline_is_terminal(http_client, two_tenants):
     a = two_tenants["a"]
     create = await http_client.post(

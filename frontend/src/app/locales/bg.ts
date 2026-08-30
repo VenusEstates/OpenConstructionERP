@@ -35424,6 +35424,8 @@ const resource = {
     "signing.hint_content_hash": "Хешът на точния файл, който се издава за подписване.",
     "signing.content_hash_required": "Хешът на съдържанието е задължителен",
     "signing.field_capability": "Необходима възможност",
+    "signing.field_delivered_capability": "Предоставена възможност",
+    "signing.capability_not_recorded": "Не е записано",
     "signing.field_expires_at": "Изтича",
     "signing.field_status": "Първоначален статус",
     "signing.hint_status": "Само чернова и чакащи подписване могат да бъдат зададени директно; останалите се извеждат.",

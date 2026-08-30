@@ -34674,6 +34674,8 @@ const resource = {
     "signing.hint_content_hash": "הגיבוב של הקובץ המדויק המונפק לחתימה.",
     "signing.content_hash_required": "גיבוב תוכן נדרש",
     "signing.field_capability": "יכולת נדרשת",
+    "signing.field_delivered_capability": "יכולת שסופקה",
+    "signing.capability_not_recorded": "לא נרשמה",
     "signing.field_expires_at": "פג תוקף",
     "signing.field_status": "סטטוס ראשוני",
     "signing.hint_status": "ניתן לקבוע ישירות רק טיוטה וממתין לחתימות; השאר נגזרים.",

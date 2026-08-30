@@ -35405,6 +35405,8 @@ const resource = {
     "signing.hint_content_hash": "Hash přesného souboru, který je vydán k podpisu.",
     "signing.content_hash_required": "Hash obsahu je povinný",
     "signing.field_capability": "Požadovaná schopnost",
+    "signing.field_delivered_capability": "Poskytnutá schopnost",
+    "signing.capability_not_recorded": "Nezaznamenáno",
     "signing.field_expires_at": "Platnost vyprší",
     "signing.field_status": "Počáteční stav",
     "signing.hint_status": "Přímo lze nastavit pouze stav koncept a čeká na podpisy; ostatní jsou odvozeny.",

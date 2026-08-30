@@ -35491,6 +35491,8 @@ const resource = {
     "signing.hint_content_hash": "Hashen af den nøjagtige fil, der udstedes til underskrift.",
     "signing.content_hash_required": "Indholdshash er påkrævet",
     "signing.field_capability": "Krævet kapacitet",
+    "signing.field_delivered_capability": "Leveret kapacitet",
+    "signing.capability_not_recorded": "Ikke registreret",
     "signing.field_expires_at": "Udløber",
     "signing.field_status": "Startstatus",
     "signing.hint_status": "Kun kladde og afventer underskrifter kan indstilles direkte; resten er afledt.",

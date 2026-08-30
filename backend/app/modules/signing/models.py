@@ -74,6 +74,25 @@ class SigningSession(Base):
         index=True,
     )
 
+    # What the provider registry actually handed back the last time this
+    # session's status was derived, taken from the resolved provider's own
+    # ``capability``. It is deliberately NOT "the capability that produced the
+    # attestations already recorded": no adapter can be swapped in mid-session
+    # today, but if one ever is, this field moves with the resolver and the
+    # older attestations keep whatever they were signed under.
+    #
+    # ``provider_capability`` above is what the caller REQUIRES. Core ships one
+    # provider, which delivers ``simple_electronic`` and performs no
+    # cryptography, so a session requiring a stronger tier resolves to it and
+    # records the difference here instead of claiming the requirement was met.
+    # NULL means no derivation has stamped it yet (every row written before
+    # this column existed) - it must never be read as "same as required".
+    delivered_capability: Mapped[str | None] = mapped_column(
+        String(48),
+        nullable=True,
+        default=None,
+    )
+
     # ── Who must sign ──────────────────────────────────────────────────
     # A list of {name, role, required} dicts. ``role`` is the key the signature
     # attestations are matched against; ``required`` gates whether the session
@@ -115,7 +134,8 @@ class SigningSession(Base):
     def __repr__(self) -> str:  # pragma: no cover - debug only
         return (
             f"<SigningSession ref={self.document_ref[:40]!r} "
-            f"capability={self.provider_capability} status={self.status}>"
+            f"required={self.provider_capability} delivered={self.delivered_capability} "
+            f"status={self.status}>"
         )
 
 

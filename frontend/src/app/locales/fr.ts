@@ -35462,6 +35462,8 @@ const resource = {
     "signing.hint_content_hash": "Le hash du fichier exact émis pour signature.",
     "signing.content_hash_required": "Le hash du contenu est requis",
     "signing.field_capability": "Capacité requise",
+    "signing.field_delivered_capability": "Capacité fournie",
+    "signing.capability_not_recorded": "Non enregistrée",
     "signing.field_expires_at": "Expire",
     "signing.field_status": "Statut initial",
     "signing.hint_status": "Seuls les statuts Brouillon et En attente de signatures peuvent être définis directement ; les autres sont dérivés.",

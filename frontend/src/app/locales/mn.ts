@@ -35343,6 +35343,8 @@ const resource = {
     "signing.hint_content_hash": "Гарын үсэг зурах зорилгоор гаргасан файлын яг хэш.",
     "signing.content_hash_required": "Агуулгын хэш шаардлагатай",
     "signing.field_capability": "Шаардлагатай чадвар",
+    "signing.field_delivered_capability": "Олгосон чадвар",
+    "signing.capability_not_recorded": "Бүртгэгдээгүй",
     "signing.field_expires_at": "Дуусах хугацаа",
     "signing.field_status": "Анхны төлөв",
     "signing.hint_status": "Зөвхөн ноорог болон гарын үсэг хүлээж буй төлөвүүдийг шууд тогтоож болно; бусад нь тодорхойлогдоно.",

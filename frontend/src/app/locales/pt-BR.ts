@@ -35159,6 +35159,8 @@ const resource = {
     "signing.hint_content_hash": "O hash do arquivo exato a ser emitido para assinatura.",
     "signing.content_hash_required": "Hash do conteúdo é obrigatório",
     "signing.field_capability": "Capacidade necessária",
+    "signing.field_delivered_capability": "Capacidade fornecida",
+    "signing.capability_not_recorded": "Não registrado",
     "signing.field_expires_at": "Expira em",
     "signing.field_status": "Status inicial",
     "signing.hint_status": "Apenas rascunho e aguardando assinaturas podem ser definidos diretamente; os restantes são derivados.",

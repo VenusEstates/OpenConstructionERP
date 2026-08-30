@@ -35403,6 +35403,8 @@ const resource = {
     "signing.hint_content_hash": "Hashen för den exakta filen som skickas för signering.",
     "signing.content_hash_required": "Innehållshash krävs",
     "signing.field_capability": "Nödvändig behörighet",
+    "signing.field_delivered_capability": "Levererad behörighet",
+    "signing.capability_not_recorded": "Ej registrerad",
     "signing.field_expires_at": "Går ut",
     "signing.field_status": "Initial status",
     "signing.hint_status": "Endast utkast och väntar på signaturer kan ställas in direkt; resten härleds.",

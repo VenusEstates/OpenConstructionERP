@@ -35482,6 +35482,8 @@ const resource = {
     "signing.hint_content_hash": "署名のために発行された正確なファイルのハッシュ。",
     "signing.content_hash_required": "コンテンツハッシュは必須です",
     "signing.field_capability": "必要な権限",
+    "signing.field_delivered_capability": "実際の権限",
+    "signing.capability_not_recorded": "記録なし",
     "signing.field_expires_at": "有効期限",
     "signing.field_status": "初期ステータス",
     "signing.hint_status": "下書きと署名を待機中のみ直接設定できます。その他は派生します。",

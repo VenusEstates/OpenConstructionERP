@@ -35337,6 +35337,8 @@ const resource = {
     "signing.hint_content_hash": "Mã băm của tệp chính xác được phát hành để ký.",
     "signing.content_hash_required": "Mã băm nội dung là bắt buộc",
     "signing.field_capability": "Năng lực cần thiết",
+    "signing.field_delivered_capability": "Năng lực được cung cấp",
+    "signing.capability_not_recorded": "Chưa ghi nhận",
     "signing.field_expires_at": "Hết hạn",
     "signing.field_status": "Trạng thái ban đầu",
     "signing.hint_status": "Chỉ bản nháp và đang chờ ký mới có thể được đặt trực tiếp; những trạng thái còn lại được suy ra.",

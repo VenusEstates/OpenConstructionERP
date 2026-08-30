@@ -35456,6 +35456,8 @@ const resource = {
     "signing.hint_content_hash": "Suma kontrolna dokładnego pliku wydanego do podpisu.",
     "signing.content_hash_required": "Suma kontrolna zawartości jest wymagana",
     "signing.field_capability": "Wymagana zdolność",
+    "signing.field_delivered_capability": "Zapewniona zdolność",
+    "signing.capability_not_recorded": "Nie zapisano",
     "signing.field_expires_at": "Wygasa",
     "signing.field_status": "Status początkowy",
     "signing.hint_status": "Tylko wersje robocze i oczekujące na podpisy mogą być ustawiane bezpośrednio; pozostałe są pochodne.",

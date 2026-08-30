@@ -52,6 +52,7 @@ function session(over: Partial<ContractSigningSession> = {}): ContractSigningSes
     document_ref: 'contract:c-1',
     document_content_hash: 'ab12cd34ef56ab12cd34ef56',
     provider_capability: 'advanced_electronic',
+    delivered_capability: 'simple_electronic',
     status: 'awaiting_signatures',
     signatory_map: [
       { name: EMPLOYER, role: 'employer', required: true },
@@ -128,6 +129,29 @@ describe('<ContractSigningPanel>', () => {
 
     await waitFor(() => expect(openMock).toHaveBeenCalledTimes(1));
     expect(openMock).toHaveBeenCalledWith('c-1');
+  });
+
+  it('shows what was delivered beside what was required, and does not conflate them', async () => {
+    // The panel used to render the required capability alone, which reads as a
+    // statement about the signature that was collected. Core delivers a simple
+    // electronic signature whatever is required of it, so both belong on screen.
+    listMock.mockResolvedValue([session()]);
+    renderPanel({ contractStatus: 'active' });
+
+    expect(await screen.findByText('Required capability')).toBeInTheDocument();
+    expect(screen.getByText('Delivered capability')).toBeInTheDocument();
+    expect(screen.getByText('Advanced electronic')).toBeInTheDocument();
+    expect(screen.getByText('Simple electronic')).toBeInTheDocument();
+  });
+
+  it('reports an unrecorded delivered capability as unrecorded, not as the requirement', async () => {
+    // Every session created before the platform recorded this has null here.
+    // Borrowing the requirement to fill the gap is the exact claim we removed.
+    listMock.mockResolvedValue([session({ delivered_capability: null })]);
+    renderPanel({ contractStatus: 'active' });
+
+    expect(await screen.findByText('Not recorded')).toBeInTheDocument();
+    expect(screen.queryAllByText('Advanced electronic')).toHaveLength(1);
   });
 
   it('says nobody has been asked yet when there is no session', async () => {

@@ -34648,6 +34648,8 @@ const resource = {
     "signing.hint_content_hash": "স্বাক্ষরের জন্য ইস্যু করা সঠিক ফাইলের হ্যাশ।",
     "signing.content_hash_required": "কন্টেন্ট হ্যাশ আবশ্যক",
     "signing.field_capability": "প্রয়োজনীয় সক্ষমতা",
+    "signing.field_delivered_capability": "প্রদত্ত সক্ষমতা",
+    "signing.capability_not_recorded": "নথিভুক্ত নয়",
     "signing.field_expires_at": "মেয়াদোত্তীর্ণ হয়",
     "signing.field_status": "প্রাথমিক স্ট্যাটাস",
     "signing.hint_status": "শুধু draft ও awaiting signatures সরাসরি সেট করা যায়; বাকিগুলো নির্ণীত।",

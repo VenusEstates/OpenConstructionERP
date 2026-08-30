@@ -34648,6 +34648,8 @@ const resource = {
     "signing.hint_content_hash": "هش فایل دقیقی که برای امضا صادر می‌شود.",
     "signing.content_hash_required": "هش محتوا الزامی است",
     "signing.field_capability": "قابلیت الزامی",
+    "signing.field_delivered_capability": "قابلیت ارائه‌شده",
+    "signing.capability_not_recorded": "ثبت نشده",
     "signing.field_expires_at": "انقضا",
     "signing.field_status": "وضعیت اولیه",
     "signing.hint_status": "فقط پیش‌نویس و در انتظار امضا مستقیماً قابل تنظیم‌اند؛ بقیه استنتاج می‌شوند.",

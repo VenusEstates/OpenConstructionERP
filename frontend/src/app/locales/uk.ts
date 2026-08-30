@@ -35841,6 +35841,8 @@ const resource = {
     "signing.hint_content_hash": "Хеш точного файлу, що передається на підписання.",
     "signing.content_hash_required": "Хеш вмісту обов'язковий",
     "signing.field_capability": "Потрібний рівень",
+    "signing.field_delivered_capability": "Наданий рівень",
+    "signing.capability_not_recorded": "Не зафіксовано",
     "signing.field_expires_at": "Закінчується",
     "signing.field_status": "Початковий статус",
     "signing.hint_status": "Напряму можна встановити лише «Чернетка» та «Очікує підписів»; решта визначається автоматично.",

@@ -319,6 +319,31 @@ export function ContractSigningPanel({
                   })}
                 </dd>
               </div>
+              {/* Shown beside the requirement, always, and never falling back
+                  to it. The platform resolves a session to whatever provider
+                  is registered for the required capability, and core ships one
+                  that performs no cryptography - so the two can differ, and a
+                  reader who only ever sees the requirement would take it for
+                  what was done. A null value means no derivation recorded one;
+                  it renders as that rather than borrowing the line above. */}
+              <div className="flex items-center gap-1.5">
+                <dt className="text-content-tertiary">
+                  {t('signing.field_delivered_capability', {
+                    defaultValue: 'Delivered capability',
+                  })}
+                </dt>
+                <dd className="text-content-secondary">
+                  {current.delivered_capability
+                    ? t(`signing.capability_${current.delivered_capability}`, {
+                        defaultValue:
+                          CAPABILITY_LABELS[current.delivered_capability] ??
+                          current.delivered_capability,
+                      })
+                    : t('signing.capability_not_recorded', {
+                        defaultValue: 'Not recorded',
+                      })}
+                </dd>
+              </div>
               <div className="flex items-center gap-1.5">
                 <dt className="text-content-tertiary">
                   {t('signing.label_content_hash', { defaultValue: 'Content hash' })}

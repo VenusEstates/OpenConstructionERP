@@ -31125,6 +31125,8 @@ const resource = {
     "signing.hint_content_hash": "The hash of the exact file being issued for signature.",
     "signing.content_hash_required": "Content hash is required",
     "signing.field_capability": "Required capability",
+    "signing.field_delivered_capability": "Delivered capability",
+    "signing.capability_not_recorded": "Not recorded",
     "signing.field_expires_at": "Expires",
     "signing.field_status": "Initial status",
     "signing.hint_status": "Only draft and awaiting signatures can be set directly; the rest are derived.",

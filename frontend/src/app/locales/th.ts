@@ -35328,6 +35328,8 @@ const resource = {
     "signing.hint_content_hash": "แฮชของไฟล์ที่แน่นอนที่ออกให้ลงนาม",
     "signing.content_hash_required": "ต้องระบุแฮชเนื้อหา",
     "signing.field_capability": "ความสามารถที่จำเป็น",
+    "signing.field_delivered_capability": "ความสามารถที่ได้รับ",
+    "signing.capability_not_recorded": "ไม่ได้บันทึก",
     "signing.field_expires_at": "หมดอายุ",
     "signing.field_status": "สถานะเริ่มต้น",
     "signing.hint_status": "เฉพาะร่างและรอการลงนามเท่านั้นที่สามารถตั้งค่าได้โดยตรง ส่วนที่เหลือจะถูกสร้างขึ้นโดยอัตโนมัติ",

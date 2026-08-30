@@ -34648,6 +34648,8 @@ const resource = {
     "signing.hint_content_hash": "بالکل اس فائل کا hash جو دستخط کے لیے جاری کی جا رہی ہے۔",
     "signing.content_hash_required": "Content hash لازمی ہے",
     "signing.field_capability": "درکار capability",
+    "signing.field_delivered_capability": "فراہم کردہ صلاحیت",
+    "signing.capability_not_recorded": "ریکارڈ نہیں",
     "signing.field_expires_at": "میعاد ختم",
     "signing.field_status": "ابتدائی اسٹیٹس",
     "signing.hint_status": "صرف draft اور awaiting signatures براہ راست سیٹ ہو سکتے ہیں؛ باقی derived ہیں۔",

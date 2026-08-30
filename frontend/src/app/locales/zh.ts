@@ -35331,6 +35331,8 @@ const resource = {
     "signing.hint_content_hash": "正在签名的确切文件的哈希。",
     "signing.content_hash_required": "需要内容哈希",
     "signing.field_capability": "所需能力",
+    "signing.field_delivered_capability": "实际能力",
+    "signing.capability_not_recorded": "未记录",
     "signing.field_expires_at": "到期日期",
     "signing.field_status": "初始状态",
     "signing.hint_status": "只有草稿和等待签名可以直接设置；其余的都是派生的。",

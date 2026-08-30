@@ -35614,6 +35614,8 @@ const resource = {
     "signing.hint_content_hash": "تجزئة الملف المحدد الذي يتم إصداره للتوقيع.",
     "signing.content_hash_required": "تجزئة المحتوى مطلوبة",
     "signing.field_capability": "القدرة المطلوبة",
+    "signing.field_delivered_capability": "القدرة المقدَّمة",
+    "signing.capability_not_recorded": "غير مسجَّلة",
     "signing.field_expires_at": "تنتهي صلاحيته",
     "signing.field_status": "الحالة الأولية",
     "signing.hint_status": "يمكن تعيين المسودة والانتظار للتوقيعات فقط مباشرة؛ الباقي مشتق.",

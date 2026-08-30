@@ -1411,6 +1411,7 @@ export interface ContractSigningSession {
   document_ref: string;
   document_content_hash: string;
   provider_capability: string;
+  delivered_capability: string | null;
   status: string;
   signatory_map: ContractSignatory[];
   expires_at: string | null;

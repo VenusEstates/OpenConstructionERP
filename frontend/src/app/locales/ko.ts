@@ -35332,6 +35332,8 @@ const resource = {
     "signing.hint_content_hash": "서명용으로 발행된 정확한 파일의 해시입니다.",
     "signing.content_hash_required": "콘텐츠 해시가 필요합니다.",
     "signing.field_capability": "필수 기능",
+    "signing.field_delivered_capability": "제공된 기능",
+    "signing.capability_not_recorded": "기록되지 않음",
     "signing.field_expires_at": "만료일",
     "signing.field_status": "초기 상태",
     "signing.hint_status": "초안 및 서명 대기 중인 항목만 직접 설정할 수 있으며, 나머지는 파생됩니다.",
