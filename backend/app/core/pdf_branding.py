@@ -81,6 +81,24 @@ def _read_branding() -> dict[str, Any]:
         return {}
 
 
+def _read_appearance() -> dict[str, Any]:
+    """Return the persisted document appearance, or defaults, never raising.
+
+    Same lazy-import, degrade-never-break contract as :func:`_read_branding`.
+    A workspace that has customised nothing, and a workspace whose appearance
+    file cannot be read, both land on the platform defaults - which are the
+    values this module used to hold as constants, so neither sees a change.
+    """
+    try:
+        from app.core.pdf_appearance import DEFAULT_APPEARANCE, read_appearance
+
+        data = read_appearance()
+        return data if isinstance(data, dict) else dict(DEFAULT_APPEARANCE)
+    except Exception:  # noqa: BLE001 - degrade, never break PDF output
+        logger.debug("Could not read document appearance; using platform default", exc_info=True)
+        return {}
+
+
 def _company_name(branding: dict[str, Any] | None = None) -> str:
     """Return the trimmed company name, or the default brand when unset."""
     data = branding if branding is not None else _read_branding()
@@ -151,6 +169,7 @@ def _draw_logo(
     top_y: float,
     x: float | None = None,
     right_x: float | None = None,
+    center_x: float | None = None,
 ) -> bool:
     """Try to draw the workspace logo in the header. Return True on success.
 
@@ -181,9 +200,16 @@ def _draw_logo(
         scale = min(_LOGO_MAX_W / float(iw), _LOGO_MAX_H / float(ih), 1.0)
         draw_w = float(iw) * scale
         draw_h = float(ih) * scale
-        # Left-aligned at ``x`` by default, or right-aligned so the logo's right
-        # edge sits at ``right_x`` when that is supplied instead.
-        draw_x = (right_x - draw_w) if right_x is not None else (x if x is not None else 0.0)
+        # Left-aligned at ``x`` by default; right-aligned so the logo's right edge
+        # sits at ``right_x``; or centred on ``center_x``. The caller cannot work
+        # out the centred origin itself because the drawn width is only known
+        # here, after the aspect-preserving scale has been applied.
+        if center_x is not None:
+            draw_x = center_x - draw_w / 2.0
+        elif right_x is not None:
+            draw_x = right_x - draw_w
+        else:
+            draw_x = x if x is not None else 0.0
         canvas.drawImage(
             reader,
             draw_x,
@@ -222,6 +248,7 @@ def branded_header_footer(canvas: Any, doc: Any) -> None:
         from app.core.pdf_fonts import BODY_FONT, BOLD_FONT
 
         branding = _read_branding()
+        appearance = _read_appearance()
 
         page_w, page_h = _page_size(doc)
         left = float(getattr(doc, "leftMargin", 56.0) or 56.0)
@@ -232,11 +259,27 @@ def branded_header_footer(canvas: Any, doc: Any) -> None:
 
         # -- Header: logo or brand text, with a thin rule under it. --
         header_baseline = page_h - 15.0 * MM
-        drew_logo = _draw_logo(canvas, branding, x=left, top_y=page_h - 8.0 * MM)
+        logo_top = page_h - 8.0 * MM
+        align = appearance.get("logo_align") or "left"
+        if align == "right":
+            drew_logo = _draw_logo(canvas, branding, right_x=right_x, top_y=logo_top)
+        elif align == "center":
+            drew_logo = _draw_logo(canvas, branding, center_x=(left + right_x) / 2.0, top_y=logo_top)
+        else:
+            drew_logo = _draw_logo(canvas, branding, x=left, top_y=logo_top)
         if not drew_logo:
+            # The text brand follows the same alignment, so a workspace that has
+            # not uploaded a logo still sees the setting take effect rather than
+            # a control that appears to do nothing.
             canvas.setFont(BOLD_FONT, 9)
-            canvas.setFillColor(colors.HexColor(_HEADER_COLOR))
-            canvas.drawString(left, header_baseline, _company_name(branding)[:80])
+            canvas.setFillColor(colors.HexColor(appearance.get("accent_color") or _HEADER_COLOR))
+            name = _company_name(branding)[:80]
+            if align == "right":
+                canvas.drawRightString(right_x, header_baseline, name)
+            elif align == "center":
+                canvas.drawCentredString((left + right_x) / 2.0, header_baseline, name)
+            else:
+                canvas.drawString(left, header_baseline, name)
         canvas.setStrokeColor(colors.HexColor("#cccccc"))
         canvas.setLineWidth(0.5)
         line_y = page_h - 17.0 * MM
@@ -244,18 +287,24 @@ def branded_header_footer(canvas: Any, doc: Any) -> None:
 
         # -- Footer: brand + generated date (left), page number (right). --
         canvas.setFont(BODY_FONT, 7)
-        canvas.setFillColor(colors.HexColor(_FOOTER_COLOR))
-        generated = datetime.now(tz=UTC).strftime("%Y-%m-%d")
-        canvas.drawString(
-            left,
-            10.0 * MM,
-            f"{_company_name(branding)}  |  Generated: {generated}"[:160],
-        )
-        if getattr(doc, "page_count", 0) > 0:
-            page_text = f"Page {doc.page} of {doc.page_count}"
+        canvas.setFillColor(colors.HexColor(appearance.get("footer_color") or _FOOTER_COLOR))
+        custom_footer = (appearance.get("footer_text") or "").strip()
+        if custom_footer:
+            # A workspace that sets its own footer line means it: the generated
+            # date is dropped rather than appended, because these documents are
+            # filed by customers and an unexpected date in the footer of a
+            # signed contract is a support ticket.
+            footer_left = custom_footer[:160]
         else:
-            page_text = f"Page {getattr(doc, 'page', 1)}"
-        canvas.drawRightString(right_x, 10.0 * MM, page_text)
+            generated = datetime.now(tz=UTC).strftime("%Y-%m-%d")
+            footer_left = f"{_company_name(branding)}  |  Generated: {generated}"[:160]
+        canvas.drawString(left, 10.0 * MM, footer_left)
+        if appearance.get("show_page_numbers", True):
+            if getattr(doc, "page_count", 0) > 0:
+                page_text = f"Page {doc.page} of {doc.page_count}"
+            else:
+                page_text = f"Page {getattr(doc, 'page', 1)}"
+            canvas.drawRightString(right_x, 10.0 * MM, page_text)
 
         canvas.restoreState()
     except Exception:  # noqa: BLE001 - brand draw must never break a PDF export
