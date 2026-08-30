@@ -67,12 +67,12 @@ type SpanStep = (typeof SPAN_STEPS)[number];
 
 interface GalleryShape {
   /** Case tiles to preview. The "all cases" tile is drawn on top of this, so
-   *  each count is one short of a whole number of rows - measured at the WIDEST
-   *  column count in `columns`, which is the width the card is really designed
-   *  at. It was never true at every breakpoint and is not claimed to be: at
-   *  span 4 and 3, `sm:grid-cols-3` leaves a short last row either way. Span 6
-   *  is the exception that holds at all four column counts, because its total
-   *  of twelve divides by 2, 3, 4 and 6 alike. */
+   *  each count is one short of a whole number of rows.
+   *
+   *  Every column count in the same `columns` string divides that total, which
+   *  used to hold only at span 6. It holds at all four now because the ladders
+   *  were rebuilt around it: no breakpoint is left drawing a short last row,
+   *  which is what a gallery meant to read as two tidy rows was always for. */
   count: number;
   /** Complete literal Tailwind column classes. NEVER built by concatenation:
    *  the JIT only keeps classes it can see whole, which is the same rule the
@@ -86,9 +86,18 @@ interface GalleryShape {
 
 /**
  * How the gallery is drawn at each width. Full width is the default and is
- * meant to read as a real part of the dashboard: eleven cases plus the way into
- * the rest, six across on a wide screen, which is TWO rows, with tiles big
- * enough that the drawing on each one is a picture rather than a smudge.
+ * meant to read as a real part of the dashboard: seventeen cases plus the way
+ * into the rest, NINE across on a wide screen, which is TWO rows.
+ *
+ * Nine, not the six it drew before, and the block loses about a quarter of its
+ * height for it. Height here is not set by a height: a tile is a 16/9 banner
+ * over two lines of text that never wrap (both are `truncate`), so the text
+ * block is a constant and only the banner moves with the column width. On a
+ * 1400px-wide card - stated because the number depends on it - the tile goes
+ * from roughly 227px across to 148px, its banner from 128px to 83px, and the
+ * two rows from about 366px to 272px. Six MORE cases in a quarter LESS room,
+ * which is the trade the width was hiding all along: at six across the tiles
+ * were larger than the line art inside them needed.
  *
  * Two rows is the rule at every width, not a number chosen for the full-width
  * card alone. Each count is two rows at the widest column count in its own
@@ -97,30 +106,42 @@ interface GalleryShape {
  * count fixed only at span 6 would have left a card that grew when you shrank
  * it. Spans 4 and 3 land on the same number because they share a `columns`
  * string; only the portrait size and the type scale differ between them.
+ *
+ * The narrow breakpoints moved up with the wide ones on purpose. Raising only
+ * the widest column count would have kept the same tile count on a phone at
+ * two across, so the block a laptop shows a third shorter would have grown by
+ * half on the device with the least room for it.
+ *
+ * Six across starts at `md` rather than `sm` for the same reason nine is the
+ * ceiling and not twelve. A tile is only ever as tall as it is wide, so the
+ * column count that reads well is the one where the drawing still reads: six
+ * across a 640px viewport is a 105px tile, narrower than the portrait band and
+ * the title need, while at 768 it is 128px. The ladder is bounded by the
+ * smallest tile that still shows a picture, not by how many will fit.
  */
 const GALLERY_BY_SPAN: Record<SpanStep, GalleryShape> = {
   6: {
-    count: 11,
-    columns: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6',
-    faceClass: 'w-[26%] max-w-[3.5rem]',
-    titleClass: 'text-sm',
+    count: 17,
+    columns: 'grid-cols-3 md:grid-cols-6 xl:grid-cols-9',
+    faceClass: 'w-[26%] max-w-[3rem]',
+    titleClass: 'text-xs',
   },
   4: {
-    count: 7,
-    columns: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
-    faceClass: 'w-[26%] max-w-[3.25rem]',
-    titleClass: 'text-sm',
+    count: 11,
+    columns: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-6',
+    faceClass: 'w-[26%] max-w-[2.75rem]',
+    titleClass: 'text-xs',
   },
   3: {
-    count: 7,
-    columns: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
-    faceClass: 'w-[30%] max-w-[2.75rem]',
+    count: 11,
+    columns: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-6',
+    faceClass: 'w-[30%] max-w-[2.5rem]',
     titleClass: 'text-xs',
   },
   2: {
-    count: 5,
-    columns: 'grid-cols-2 sm:grid-cols-3',
-    faceClass: 'w-[30%] max-w-[2.75rem]',
+    count: 7,
+    columns: 'grid-cols-2 sm:grid-cols-4',
+    faceClass: 'w-[30%] max-w-[2.5rem]',
     titleClass: 'text-xs',
   },
 };
@@ -372,14 +393,19 @@ export function DashboardCasesCard() {
                   />
                   {/* The specialist the case is written for, cut to the same
                       honeycomb cell the Cases hub and the marketing site use.
-                      It sits over a corner rather than beside the diagram, so
-                      the drawing keeps its full width at every tile size.
+                      Centred on the banner's own axis rather than pinned to its
+                      bottom edge: the art is already nudged clear of the
+                      inline-start band by `ps-[14%]`, so the portrait has that
+                      band to itself, and sitting in the middle of it reads as
+                      placed rather than as having fallen into the corner. A
+                      hexagon on the baseline also grew a visible gap under its
+                      point, because the cell's clip path narrows exactly there.
                       Decorative - the case title below carries the meaning. */}
                   {face && (
                     <span
                       aria-hidden="true"
                       className={clsx(
-                        'pointer-events-none absolute bottom-1 start-1 block',
+                        'pointer-events-none absolute top-1/2 start-1 block -translate-y-1/2',
                         shape.faceClass,
                       )}
                     >

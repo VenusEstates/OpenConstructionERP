@@ -126,17 +126,33 @@ beforeEach(() => {
 });
 
 describe('DashboardCasesCard size', () => {
-  it('opens as two rows: 11 cases plus the way into the rest', () => {
+  it('opens as two rows: 17 cases plus the way into the rest', () => {
     renderCard();
 
-    // Eleven cases and the "all cases" tile is twelve cells, and twelve cells
-    // six across is two rows. Both halves are asserted here on purpose: two
-    // rows is a JOINT property of the count and the column class, so a test
+    // Seventeen cases and the "all cases" tile is eighteen cells, and eighteen
+    // cells nine across is two rows. Both halves are asserted here on purpose:
+    // two rows is a JOINT property of the count and the column class, so a test
     // that pinned only the count would stay green if someone dropped the `xl:`
     // column and turned the block back into three rows on a wide screen.
-    expect(caseTileCount()).toBe(11);
-    expect(tileCount()).toBe(12);
-    expect(grid().className).toContain('xl:grid-cols-6');
+    expect(caseTileCount()).toBe(17);
+    expect(tileCount()).toBe(18);
+    expect(grid().className).toContain('xl:grid-cols-9');
+  });
+
+  it('divides evenly at every breakpoint it declares, not only the widest', () => {
+    // A short last row is what "two rows" quietly turns into on the widths
+    // nobody looks at. Read the column counts out of the class string the card
+    // actually rendered and check the total against each one, so a future
+    // breakpoint added to that string is checked by this test on the day it is
+    // added rather than on the day someone notices the ragged row.
+    renderCard();
+    const columns = Array.from(grid().className.matchAll(/grid-cols-(\d+)/g)).map((m) =>
+      Number(m[1]),
+    );
+    expect(columns.length).toBeGreaterThan(1);
+    for (const c of columns) {
+      expect({ columns: c, remainder: tileCount() % c }).toEqual({ columns: c, remainder: 0 });
+    }
   });
 
   it('draws fewer, and fewer across, at a width the user saved earlier', () => {
@@ -145,12 +161,12 @@ describe('DashboardCasesCard size', () => {
     useDashboardLayoutStore.setState({ spans: { [WIDGET_ID]: 2 } });
     renderCard();
 
-    expect(tileCount()).toBe(6);
+    expect(tileCount()).toBe(8);
     // The column count has to come off the same number as the tile count: the
     // grid's breakpoints are viewport-wide, so a third-width card asking for
-    // six columns would draw six microscopic tiles on a wide screen.
-    expect(grid().className).toContain('sm:grid-cols-3');
-    expect(grid().className).not.toContain('xl:grid-cols-6');
+    // nine columns would draw nine microscopic tiles on a wide screen.
+    expect(grid().className).toContain('sm:grid-cols-4');
+    expect(grid().className).not.toContain('xl:grid-cols-9');
   });
 
   it('never shows more cases in a narrower card than in a wider one', () => {
@@ -167,7 +183,7 @@ describe('DashboardCasesCard size', () => {
     // The whole ladder, so every width is pinned here and not only in the
     // constant it is read from, and the same list sorted, so the property the
     // test is named for survives a deliberate change to the numbers.
-    expect(seen).toEqual([5, 7, 7, 11]);
+    expect(seen).toEqual([7, 11, 11, 17]);
     expect(seen).toEqual([...seen].sort((a, b) => a - b));
   });
 });
@@ -179,7 +195,7 @@ describe('DashboardCasesCard way out', () => {
 
     // The value Customize shows and persists - not a private flag of this card.
     expect(useDashboardLayoutStore.getState().spans[WIDGET_ID]).toBe(4);
-    expect(tileCount()).toBe(8);
+    expect(tileCount()).toBe(12);
   });
 
   it('grows back the same way', () => {
