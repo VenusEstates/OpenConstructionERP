@@ -351,9 +351,29 @@ function generateSheet(tokens, outDir) {
   // Spread the real config and replace only `content`. Using it as a *preset*
   // silently drops `theme.extend.animation`, which loses the custom keyframes -
   // the exact blind spot this gate exists to close.
-  const base = 'const base = require(' + JSON.stringify(path.join(FRONTEND, 'tailwind.config.js')) + ');\n';
+  // tailwind.config.js is transpiled ESM, so `require` hands back
+  // { __esModule, default } rather than the config itself. Spreading that
+  // wrapper yields { __esModule, default, content }: a config with no theme and
+  // no plugins. Tailwind accepts it and emits a sheet containing NO utilities
+  // at all, so every class in the tree reads as "resolves to nothing" - the
+  // loudest false positive this gate can produce, and it fires on thousands of
+  // sites at once.
+  const base = 'const _m = require(' + JSON.stringify(path.join(FRONTEND, 'tailwind.config.js')) + ');\n' +
+    'const base = _m.default || _m;\n';
   const body = 'module.exports = Object.assign({}, base, { content: [{ raw: ' + JSON.stringify(tokens.join(' ')) + ' }] });\n';
   fs.writeFileSync(cfgPath, base + body);
+
+  // Check the config we just wrote rather than trusting the unwrap above. A
+  // config that lost its theme is the difference between a real stylesheet and
+  // an empty one, and the emptiness is not visible until every class is already
+  // being reported as broken.
+  const written = require(cfgPath);
+  if (!written.theme) {
+    throw new Error(
+      'generated config carries no `theme`: the real config was not unwrapped, ' +
+      'so the sheet would contain no utilities and every class would read as unresolved',
+    );
+  }
   // The input is the app's real entry sheet, not a bare set of @tailwind
   // directives. src/index.css carries the directives AND two dozen hand-written
   // @keyframes plus the .animate-* classes that use them, none of which live in
@@ -417,11 +437,33 @@ function main() {
     }
   }
 
+  // How much of the input actually came back as rules. This has to be reported
+  // next to the verdict, not merely used internally: a reader cannot otherwise
+  // tell a complete sheet from an empty one, and an empty one makes every class
+  // in the tree look broken while making every conflict look absent. Both
+  // failures are silent, and they point in opposite directions.
+  const resolved = [...used].filter((c) => byClass.has(c)).length;
+  const coverage = used.size ? resolved / used.size : 0;
+
   // An obviously wrong sheet is worth refusing outright, because every check
   // below would come back clean and mean nothing.
+  //
+  // Counting rules is not enough on its own. The entry sheet is src/index.css,
+  // which carries a couple of hundred hand-written rules of its own, so a run
+  // that generated NO utilities whatsoever still parsed to 190 rules and sailed
+  // past a threshold of 100. What distinguishes the two is whether the classes
+  // the tree actually uses came back, so that is what is measured.
   if (utilities.size < 100) {
     console.error('Tailwind conflict gate: the stylesheet parsed to only ' + utilities.size + ' rules.');
     console.error('That is not a real sheet, and a green result from it would be meaningless.');
+    console.error(cssPath);
+    process.exit(2);
+  }
+  if (generated && coverage < 0.25) {
+    console.error('Tailwind conflict gate: only ' + resolved + ' of ' + used.size +
+      ' classes (' + Math.round(coverage * 100) + '%) resolved to a rule.');
+    console.error('The generator produced a sheet that does not cover the tree, so every');
+    console.error('class would read as unresolved and every conflict as absent.');
     console.error(cssPath);
     process.exit(2);
   }
@@ -525,6 +567,8 @@ function main() {
   if (!quiet) {
     console.log('className sites scanned      : ' + total);
     console.log('sites with 2+ certain classes: ' + sites.length);
+    console.log('classes fed to the generator : ' + used.size + (generated ? '' : ' (sheet supplied, not generated)'));
+    console.log('of them resolved to a rule   : ' + resolved + ' (' + Math.round(coverage * 100) + '%)');
     console.log('utility rules in stylesheet  : ' + utilities.size);
     console.log('animations resolved          : ' + animations.size);
     console.log('stylesheet                   : ' + cssPath + (generated ? ' (generated here)' : ' (provided)'));
