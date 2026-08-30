@@ -722,6 +722,12 @@ markers = [
     "unit: Unit tests (no database)",
     "integration: Integration tests (requires database)",
     "slow: Slow tests (>5s)",
+    # Opt out of the outbound-HTTP guard in tests/conftest.py. The suite is
+    # meant to be hermetic, so reaching a real third-party host is a defect
+    # rather than a configuration choice: it makes the run depend on somebody
+    # else's uptime and can spend money against a real key. Carry this marker
+    # only where talking to the network IS the thing under test.
+    "allow_network: Test may make real outbound HTTP calls",
     "benchmark: Recall/perf benchmarks — opt-in via `pytest -m benchmark`",
     # A test earns `tenant_isolation` by what it exercises, not by what it is named.
     # It qualifies when identity is the variable under test: the test establishes who

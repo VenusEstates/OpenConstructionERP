@@ -33,22 +33,41 @@ import app.modules.users.models  # noqa: E402,F401
 from app.modules.crm.schemas import LeadCreate  # noqa: E402
 from app.modules.crm.service import CrmService  # noqa: E402
 
+from tests._pg import clear_module_tables, create_module_tables  # noqa: E402
+
+
+@pytest_asyncio.fixture(scope="module")
+async def _schema():
+    """Create this module's tables once, rather than once per test."""
+    from app.modules.crm.models import Lead
+    from app.modules.projects.models import Project
+    from app.modules.users.models import User
+
+    await create_module_tables(User, Project, Lead)
+    # Only Lead gets emptied between tests: dedup keys off the email, so a
+    # leftover lead really would change an answer. Users and projects are
+    # shared parents and stale rows there are inert.
+    return (Lead,)
+
 
 @pytest_asyncio.fixture
-async def session():
-    """Per-test session against the conftest-provisioned PostgreSQL."""
-    from app.database import Base, async_session_factory, engine
+async def session(_schema):
+    """Per-test session against the conftest-provisioned PostgreSQL.
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    Emptying this module's tables buys the same clean slate the old
+    per-test ``create_all``/``drop_all`` pair did, without rebuilding
+    every table the rest of the shard happened to register - which is
+    what exhausted the server's lock table and left these dedup tests
+    failing on whichever shard they landed in.
+    """
+    from app.database import async_session_factory
+
+    await clear_module_tables(_schema)
 
     async with async_session_factory() as sess:
         yield sess
         # Best-effort cleanup so test rows don't accumulate.
         await sess.rollback()
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
 
 # ── Dedup behaviour ───────────────────────────────────────────────────────

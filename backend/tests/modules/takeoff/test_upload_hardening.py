@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -197,20 +198,48 @@ class TestWorkerContract:
         assert len(result["pages"]) == 2
         assert result["truncated"] is True
 
-    def test_main_emits_json_and_exits_zero(self, tmp_path, capsys):
+    @staticmethod
+    def _run_worker(argv: list[str]) -> subprocess.CompletedProcess:
+        """Run the entry point in a child interpreter, the way the service does.
+
+        ``main()`` starts by capping its own address space with ``RLIMIT_AS``,
+        which is correct for the worker and ruinous for whoever calls it
+        in-process: the cap lands on the test runner and is never lifted.
+        ``setrlimit`` does not look at what is already mapped, so the call
+        itself succeeds and it is the *next* allocation that dies. On the
+        nightly full suite this starved the interpreter into a ``MemoryError``
+        raised through ``sys.unraisablehook``, which belongs to no test and so
+        could not be attributed to one, and the shard then sat wedged until the
+        120 minute job ceiling. It is a no-op on Windows, so only the POSIX
+        runners paid. Launching a child keeps the cap where it belongs and
+        exercises the same ``python -m`` path the service uses in production.
+        """
+        return subprocess.run(
+            [sys.executable, "-m", "app.modules.takeoff.pdf_extract_worker", *argv],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(service._backend_root()),
+            env=service._pdf_worker_env(),
+            check=False,
+        )
+
+    def test_main_emits_json_and_exits_zero(self, tmp_path):
         pdf = tmp_path / "tiny.pdf"
         _make_tiny_pdf(pdf)
-        rc = pdf_extract_worker.main([str(pdf), "10"])
-        assert rc == 0
-        data = json.loads(capsys.readouterr().out)
+        proc = self._run_worker([str(pdf), "10"])
+        assert proc.returncode == 0, proc.stderr
+        data = json.loads(proc.stdout)
         assert data["page_count"] == 1
         assert "Hello" in data["pages"][0]["text"]
 
     def test_main_missing_input_exits_nonzero(self, tmp_path):
-        assert pdf_extract_worker.main([str(tmp_path / "nope.pdf")]) == 3
+        assert self._run_worker([str(tmp_path / "nope.pdf")]).returncode == 3
 
     def test_main_no_args_exits_nonzero(self):
-        assert pdf_extract_worker.main([]) == 2
+        # Returns before the memory cap is applied, but goes through the child
+        # too: a reordering inside main() must not quietly re-arm the trap.
+        assert self._run_worker([]).returncode == 2
 
     def test_mem_cap_default_and_clamp(self, monkeypatch):
         monkeypatch.delenv("OE_TAKEOFF_PARSE_MEM_MB", raising=False)

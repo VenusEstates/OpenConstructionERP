@@ -187,6 +187,87 @@ if not os.environ.get("DATABASE_URL", "").strip():
 
     atexit.register(_stop_and_remove_cluster)
 
+# ── Bound abandoned transactions on the test database ──────────────────────
+# `lock_timeout` makes the VICTIM of a leaked transaction fail fast, which is
+# what we want for readability, but it does nothing about the culprit: the
+# abandoned transaction stays open and waits for the next victim. Only
+# `idle_in_transaction_session_timeout` removes it, and it appeared nowhere in
+# this tree.
+#
+# Set it on the DATABASE rather than in a fixture so it covers every connection
+# the suite opens, including ones opened by application code rather than by a
+# test, which is where the leak we chased actually came from.
+#
+# 300 seconds. It has to be far above any legitimate idle gap - a session sits
+# "idle in transaction" for the whole time a test does Python work between
+# queries, and that is normal - and far below the 900s per-test timeout that
+# used to kill the nightly process, so a leak cannot outlive the test that made
+# it by enough to matter. Nothing here should ever reach it; if something does,
+# the kill is the report.
+_IDLE_IN_TRANSACTION_TIMEOUT_S = 300
+
+
+def _bound_idle_transactions() -> None:
+    """Set it, then READ IT BACK - an unverified guard is not a guard.
+
+    ``ALTER DATABASE ... SET`` lands only for sessions opened afterwards, and a
+    silent failure here would look exactly like success: nothing raises, nothing
+    logs, and the leak we are bounding stays unbounded. So this reconnects and
+    asks the server what the value actually is, and says so loudly when the two
+    disagree. It warns rather than raises because a managed PostgreSQL may
+    refuse ALTER DATABASE to a non-owner, and a suite that cannot set this
+    should still run - just not while believing it did.
+    """
+    import warnings
+
+    try:
+        import psycopg2
+        from sqlalchemy.engine.url import make_url
+
+        # DATABASE_SYNC_URL is what the psycopg2 helpers in tests/_pg.py use,
+        # but CI supplies only DATABASE_URL, so fall back to it.
+        raw = os.environ.get("DATABASE_SYNC_URL") or os.environ["DATABASE_URL"]
+        url = make_url(raw)
+        database = url.database
+        libpq = url.set(drivername="postgresql").render_as_string(hide_password=False)
+
+        conn = psycopg2.connect(libpq)
+        try:
+            conn.autocommit = True
+            conn.cursor().execute(
+                f'ALTER DATABASE "{database}" SET idle_in_transaction_session_timeout = '
+                f"'{_IDLE_IN_TRANSACTION_TIMEOUT_S}s'"
+            )
+        finally:
+            conn.close()
+
+        # A NEW session, because that is the only kind the setting reaches.
+        check = psycopg2.connect(libpq)
+        try:
+            cur = check.cursor()
+            cur.execute("SHOW idle_in_transaction_session_timeout")
+            observed = cur.fetchone()[0]
+        finally:
+            check.close()
+    except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+        warnings.warn(
+            f"could not bound idle transactions on the test database: {exc!r}. "
+            "A leaked transaction will survive until the connection closes.",
+            stacklevel=2,
+        )
+        return
+
+    if observed in ("0", "0ms"):
+        warnings.warn(
+            "ALTER DATABASE reported success but idle_in_transaction_session_timeout "
+            f"reads back as {observed!r}; the bound is NOT in force.",
+            stacklevel=2,
+        )
+
+
+_bound_idle_transactions()
+
+
 # ── Rate-limiter relaxation for tests ──────────────────────────────────────
 # The integration suites repeatedly hit ``/auth/register`` and ``/auth/login``
 # from the same in-process ``test`` client. The default 10/min login limit
@@ -434,6 +515,92 @@ def _sync_publish_detached(name, data=None, source_module=None):
 
 
 _event_bus.publish_detached = _sync_publish_detached  # type: ignore[method-assign]
+
+
+_LOCAL_HTTP_HOSTS = frozenset({"", "localhost", "127.0.0.1", "::1", "test", "testserver"})
+
+
+@pytest.fixture(autouse=True)
+def _no_outbound_http(request, monkeypatch):
+    """Turn a real call to a third-party host into a named test failure.
+
+    The suite is supposed to be hermetic, and mostly is - clients are mocked
+    per test. But nothing enforced it, so a path that slipped past its mock
+    just went out and left a line in the log that somebody had to notice. The
+    nightly full run did exactly that: one ``POST https://api.anthropic.com``
+    per night, answered 401 because the only key in play was the fixture's own
+    ``sk-test-fake-key``. Harmless that time, and precisely the point - the
+    same escape with a real key spends money, and either way it makes our runs
+    depend on somebody else's availability.
+
+    What counts as egress is the transport, not the hostname. A test that
+    installs ``MockTransport`` or ``ASGITransport`` is hermetic no matter how
+    real its base URL looks, and plenty of them point at the very vendor URLs
+    the production client uses - judging by host would fail those for doing
+    exactly the right thing. Resolving the transport the way httpx itself does
+    also leaves PostgreSQL and any loopback service alone for free. Mark a test
+    ``allow_network`` where reaching the network is the thing under test.
+    """
+    if request.node.get_closest_marker("allow_network"):
+        return
+
+    import httpx
+
+    real_transports = (httpx.HTTPTransport, httpx.AsyncHTTPTransport)
+
+    def _reject(url) -> None:
+        raise RuntimeError(
+            f"Outbound HTTP to {url.host} is blocked in tests: {url}. Mock the client, "
+            "or mark the test `allow_network` if the call is the point."
+        )
+
+    def _check(client, url) -> None:
+        resolve = getattr(client, "_transport_for_url", None)
+        transport = resolve(url) if resolve is not None else getattr(client, "_transport", None)
+        if isinstance(transport, real_transports):
+            _reject(url)
+
+    send = httpx.Client.send
+    asend = httpx.AsyncClient.send
+
+    def _guarded_send(self, request_, *args, **kwargs):
+        _check(self, request_.url)
+        return send(self, request_, *args, **kwargs)
+
+    async def _guarded_asend(self, request_, *args, **kwargs):
+        _check(self, request_.url)
+        return await asend(self, request_, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.Client, "send", _guarded_send)
+    monkeypatch.setattr(httpx.AsyncClient, "send", _guarded_asend)
+
+    # A handful of modules still reach for urllib rather than httpx, and they
+    # reach for it three different ways. Patching only `urlopen` would leave
+    # two of them open: `urlretrieve` never goes near it, and a custom opener
+    # from `build_opener` calls `OpenerDirector.open` directly.
+    import urllib.request
+
+    def _check_url(target) -> None:
+        # urllib exposes no transport to inspect, so host is all there is.
+        url = httpx.URL(str(getattr(target, "full_url", target)))
+        if (url.host or "").lower() not in _LOCAL_HTTP_HOSTS:
+            _reject(url)
+
+    opener_open = urllib.request.OpenerDirector.open
+    urlretrieve = urllib.request.urlretrieve
+
+    def _guarded_open(self, fullurl, *args, **kwargs):
+        _check_url(fullurl)
+        return opener_open(self, fullurl, *args, **kwargs)
+
+    def _guarded_urlretrieve(url, *args, **kwargs):
+        _check_url(url)
+        return urlretrieve(url, *args, **kwargs)
+
+    # `urlopen` delegates to the global opener, so guarding `OpenerDirector.open`
+    # covers it and every custom opener along with it.
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", _guarded_open)
+    monkeypatch.setattr(urllib.request, "urlretrieve", _guarded_urlretrieve)
 
 
 @pytest.fixture(autouse=True)

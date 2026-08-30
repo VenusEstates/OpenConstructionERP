@@ -36,7 +36,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import Base, async_session_factory, engine
+from app.database import async_session_factory
 from app.modules.clash.models import ClashIssue, ClashResult, ClashRun
 from app.modules.clash_ai_triage.models import ClashTriageResult
 from app.modules.clash_ai_triage.prompts import PROMPT_VERSION
@@ -48,6 +48,8 @@ from app.modules.clash_ai_triage.service import (
     ClashTriageUnavailable,
     _estimate_cost_usd,
 )
+
+from tests._pg import clear_module_tables, create_module_tables
 
 
 def _register_models() -> None:
@@ -61,19 +63,46 @@ def _register_models() -> None:
     import app.modules.users.models  # noqa: F401
 
 
+@pytest_asyncio.fixture(scope="module")
+async def _schema():
+    """Create this module's tables once, rather than once per test.
+
+    Only the tables these tests touch, FK closure included - not all of
+    ``Base.metadata``, whose size depends on what the rest of the shard
+    imported rather than on anything here.
+    """
+    _register_models()
+    from app.modules.ai.models import AISettings
+    from app.modules.projects.models import Project
+    from app.modules.users.models import User
+
+    await create_module_tables(
+        User,
+        Project,
+        AISettings,
+        ClashRun,
+        ClashResult,
+        ClashIssue,
+        ClashTriageResult,
+    )
+    # Emptied between tests: this module's own tables only. Users, projects
+    # and AI settings are shared parents - other modules point at them, and
+    # nothing here reads a row it did not just create.
+    return (ClashRun, ClashResult, ClashIssue, ClashTriageResult)
+
+
 @pytest_asyncio.fixture
-async def session():
+async def session(_schema):
     """Per-test PostgreSQL session via the conftest-bound ``async_session_factory``.
 
     Uses the GLOBAL ``async_session_factory`` so the batch worker (which
     also spawns sessions via that factory) talks to the same DB the
-    fixture seeded. Pre-test we drop+recreate ``Base.metadata`` to wipe
-    rows that a previous test in the suite left behind.
+    fixture seeded. Pre-test we empty this module's tables to wipe rows a
+    previous test left behind; the schema itself is built once, because
+    rebuilding it per test both blew the server's lock table and let one
+    leaked connection block the next DROP TABLE indefinitely.
     """
-    _register_models()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    await clear_module_tables(_schema)
 
     async with async_session_factory() as s:
         from app.modules.ai.models import AISettings

@@ -77,6 +77,13 @@ def _connect_admin():
     """Autocommit connection to the maintenance database (for CREATE/DROP)."""
     conn = psycopg2.connect(_sync_url_for(_maintenance_db()))
     conn.autocommit = True
+    # A whole-suite run stalled on `CREATE DATABASE ... TEMPLATE` here until the
+    # per-test timeout killed the process. The cause was NOT isolated - that run
+    # had a second pytest session and a second cluster live on the same machine,
+    # and a 624-table template copy is slow under that on its own - so this is a
+    # bound, not a diagnosis. If the stall is a file copy rather than a lock
+    # wait, `lock_timeout` will not fire and the bound costs nothing.
+    conn.cursor().execute(f"SET lock_timeout = '{LOCK_TIMEOUT_S}s'")
     return conn
 
 
@@ -306,3 +313,115 @@ def schema_inspection_engine():
     """
     _ensure_unit_db()
     return create_engine(_sync_url_for(_UNIT_DB))
+
+
+# ── Per-module tables on the SHARED database ───────────────────────────────
+# The helpers above hand out a private database, which is the better answer
+# whenever a test can take one. A few modules cannot: their code under test
+# spawns its own sessions from the global ``async_session_factory``, so the
+# fixture has to seed the very database that factory is bound to.
+#
+# Those modules reached for ``Base.metadata.drop_all`` + ``create_all`` in a
+# per-test fixture to get a clean slate, and at this size that is a trap twice
+# over.
+#
+# It is enormous. ``Base.metadata`` holds whatever every module imported so far
+# registered - 624 tables on a full run - so the cost is set by the rest of the
+# shard rather than by the test doing the work. One rebuild was measured
+# holding 19529 locks in a single transaction and taking 78 seconds, once per
+# test. That is what exhausts the server's shared lock table (asyncpg
+# ``OutOfMemory``, "You might need to increase max_locks_per_transaction"), and
+# it is why the casualties moved between nightly runs: they are whichever
+# schema-rebuilding tests happen to share a shard, never a fixed list of names.
+#
+# It is also fragile in a way that costs hours. DROP TABLE needs ACCESS
+# EXCLUSIVE, which conflicts with the ACCESS SHARE an ordinary reader holds, so
+# a single connection left ``idle in transaction`` by a failing test blocks the
+# next test's drop forever - no statement timeout covers a lock wait. On the
+# nightly cross-OS run that wedged the job at 9% of the suite until the
+# per-test timeout killed the process 900 seconds later.
+#
+# So build the module's own tables once and delete rows between tests. DELETE
+# needs only ROW EXCLUSIVE, which does not conflict with a stray reader, so a
+# leaked connection can no longer stop the suite.
+
+
+# Seconds any of this module's operations may wait for a lock before giving up:
+# the per-test clear, the per-module `create_all`, and the admin connection that
+# issues CREATE/DROP DATABASE. DELETE takes ROW
+# EXCLUSIVE and so does not queue behind a stray reader, but it can still wait
+# on the ROW locks of a transaction that WROTE the rows we are deleting - and a
+# leaked transaction is exactly the shape that does. ``lock_timeout`` covers
+# that too: PostgreSQL applies it while acquiring a lock on "a table, index,
+# row, or other database object". The number is a budget, not a tuning knob.
+# It has to be long enough that a slow-but-healthy CI machine never trips it,
+# and short enough that a genuine wedge is a named failure inside one test
+# rather than a job that runs to the 900-second per-test timeout and dies with
+# no name attached, which is what the nightly did. Thirty seconds is two orders
+# of magnitude above the observed healthy clear (0.38-1.63s) and one below the
+# timeout that used to kill the process.
+LOCK_TIMEOUT_S = 30
+
+
+def tables_for(*models) -> list:
+    """The models' tables plus every table they reference, in creation order."""
+    from app.database import Base
+
+    wanted: set[str] = set()
+    queue = [model.__table__ for model in models]
+    while queue:
+        table = queue.pop()
+        if table.key in wanted:
+            continue
+        wanted.add(table.key)
+        queue.extend(fk.column.table for fk in table.foreign_keys)
+    return [t for t in Base.metadata.sorted_tables if t.key in wanted]
+
+
+async def create_module_tables(*models) -> None:
+    """Create the tables ``models`` need, foreign-key closure included.
+
+    The closure is wider than the module's own tables because ``create_all``
+    has to be able to resolve every foreign key it emits. What gets *emptied*
+    between tests is deliberately narrower - see :func:`clear_module_tables`.
+    """
+    from app.database import Base, engine
+
+    async with engine.begin() as conn:
+        # DDL is the half that can actually queue: CREATE TABLE takes ACCESS
+        # EXCLUSIVE, so a connection left open by an earlier test blocks it and
+        # no statement timeout covers a lock wait. The clear below is DELETE and
+        # cannot hang this way; this is the call that needs the bound.
+        await conn.exec_driver_sql(f"SET LOCAL lock_timeout = '{LOCK_TIMEOUT_S}s'")
+        await conn.run_sync(Base.metadata.create_all, tables=tables_for(*models))
+
+
+async def clear_module_tables(models) -> None:
+    """Empty these models' own tables between tests, children first.
+
+    Pass the module's OWN tables, not the closure. Shared parents like users
+    and projects are deliberately left alone: other modules' tables reference
+    them, so emptying them would either break a foreign key or force a CASCADE
+    that reaches into tables this module knows nothing about. Nothing here
+    needs them empty - these tests mint a fresh user and project per test and
+    scope every assertion by an id they just created.
+
+    DELETE is the point of the exercise. It takes ROW EXCLUSIVE, which does not
+    conflict with the ACCESS SHARE an ordinary reader holds, so a connection
+    left ``idle in transaction`` by a failing test cannot block it. DROP TABLE
+    and TRUNCATE both take ACCESS EXCLUSIVE and would block on exactly that.
+    ``lock_timeout`` covers what DELETE alone does not - see
+    :data:`LOCK_TIMEOUT_S`. It is set on the connection doing the clear,
+    which is the one that can block; setting it on the test's own session would
+    read as working right up to the first time it was needed.
+
+    Order is children first, so a foreign key never refuses the delete.
+    """
+    from app.database import Base, engine
+
+    own = {model.__table__.key for model in models}
+    ordered = [t for t in Base.metadata.sorted_tables if t.key in own]
+    async with engine.begin() as conn:
+        await conn.exec_driver_sql(f"SET LOCAL lock_timeout = '{LOCK_TIMEOUT_S}s'")
+        for table in reversed(ordered):
+            await conn.execute(table.delete())

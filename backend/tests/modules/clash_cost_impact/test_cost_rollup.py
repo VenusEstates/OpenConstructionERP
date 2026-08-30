@@ -33,7 +33,7 @@ from decimal import Decimal
 import pytest
 import pytest_asyncio
 
-from app.database import Base, async_session_factory, engine
+from app.database import async_session_factory
 from app.modules.boq.models import BOQ, Position
 from app.modules.clash.models import ClashResult, ClashRun
 from app.modules.clash_cost_impact.service import (
@@ -47,17 +47,31 @@ from app.modules.clash_cost_impact.service import (
 from app.modules.projects.models import Project
 from app.modules.users.models import User
 
+from tests._pg import clear_module_tables, create_module_tables
+
+
+@pytest_asyncio.fixture(scope="module")
+async def _schema():
+    """Create this module's tables once, rather than once per test."""
+    await create_module_tables(User, Project, BOQ, Position, ClashRun, ClashResult)
+    # Emptied between tests: this module's own tables only, never the shared
+    # user and project parents other modules reference.
+    return (BOQ, Position, ClashRun, ClashResult)
+
 
 @pytest_asyncio.fixture
-async def db_session():
-    """Per-test PostgreSQL session with the tables freshly created.
+async def db_session(_schema):
+    """Per-test PostgreSQL session with this module's tables emptied.
 
     Each test gets a clean slate so cross-test bleed-through (e.g. one
     test's "closed" clash polluting another's open-rollup) is impossible.
+    The slate comes from emptying these tables rather than rebuilding
+    the whole schema: ``Base.metadata`` carries whatever the rest of the
+    shard imported, and dropping all of it per test both exhausted the
+    server's lock table and blocked on any connection a failing test left
+    open.
     """
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    await clear_module_tables(_schema)
     async with async_session_factory() as session:
         yield session
 

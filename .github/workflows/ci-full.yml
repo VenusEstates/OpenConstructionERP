@@ -57,6 +57,54 @@ jobs:
           POSTGRES_USER: oe
           POSTGRES_PASSWORD: oe
           POSTGRES_DB: openconstructionerp_test
+          # A BACKSTOP, NOT THE FIX. The fix is that the fixtures which used to
+          # rebuild the schema per test now build it once per module and delete
+          # rows between tests (backend/tests/_pg.py, clear_module_tables); no
+          # test in the tree does `Base.metadata.drop_all` any more. This
+          # setting stays for the NEXT person who writes a create_all over a
+          # wide closure without knowing why we care, so that lands as a slow
+          # test rather than as a shard of unexplained `out of shared memory`.
+          # If it is ever the thing keeping the nightly green, something has
+          # regressed to the per-test rebuild and that is the thing to fix.
+          #
+          # Raise the per-transaction lock allowance above the stock 64. Several
+          # test modules rebuild the whole schema per test - one `begin()` doing
+          # `Base.metadata.drop_all` then `create_all`, every table plus its
+          # indexes and sequences taking an ACCESS EXCLUSIVE lock held to commit
+          # - and the stock allowance cannot hold that many. Measured rather than
+          # estimated: with all 151 model modules imported, the state a shard
+          # reaches part way through, `Base.metadata` holds 624 tables and one
+          # such transaction was observed holding 19529 lock entries against a
+          # populated schema (8539 when there was nothing to drop). The stock
+          # setting allots max_locks_per_transaction 64 x max_connections 100 =
+          # 6400 nominal slots, below both. The lock table can spill into spare
+          # shared memory, which is why a quiet cluster survives the overdraft
+          # and a shard running the heavy tree does not; 256 gives 25600 slots
+          # and stops the arithmetic depending on the spare.
+          # PostgreSQL answers `out of shared memory` with `HINT: You might need
+          # to increase max_locks_per_transaction`, which is what the nightly has
+          # been reporting: on run 33245180634 it produced 29 of the 34 failures
+          # on shard 4, and every one of that shard's ERRORs was this and nothing
+          # else. It is a real ceiling, not a flaky one - the 2026-08-25 nightly
+          # hit the identical 29 on the same shard.
+          #
+          # The population matters more than the count, because it is why these
+          # cannot simply be listed as known failures: the victims are whichever
+          # schema-rebuilding tests land together in one shard, and pytest-split
+          # partitions the COLLECTED tree by count, so the set moves whenever the
+          # tree grows. On 2026-08-25 the same defect also took five
+          # `test_crm_lead_dedup` tests down in shard 7; four days and ~2000 new
+          # tests later those five had moved to another shard and passed. A list
+          # of test names would have gone stale on its own.
+          #
+          # It has to be set here rather than at runtime: max_locks_per_transaction
+          # is postmaster-level, so `ALTER SYSTEM` plus a reload cannot move it,
+          # and a GitHub Actions service block takes no `command:` to pass `-c`
+          # to the server. `initdb --set` writes it into postgresql.conf while the
+          # cluster is being created, which the entrypoint does before first
+          # start. Verified against PostgreSQL 16.11's own initdb:
+          # `-c, --set NAME=VALUE  override default setting for server parameter`.
+          POSTGRES_INITDB_ARGS: "-c max_locks_per_transaction=256"
         ports:
           - 5432:5432
         options: >-
