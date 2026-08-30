@@ -52,6 +52,13 @@ JSON_SUFFIX = ".json"
 JSONC_PREFIX = "tsconfig"
 EXPECTED_JSONC = 4
 
+# Anchored to this file rather than to the caller's working directory. git
+# ls-files answers about the directory it is run in, so from backend/ it lists
+# backend/ alone and reports zero tsconfig files - which is not a smaller tree,
+# it is a different question. The hygiene workflow runs this from the root and
+# saw four; CI runs the test from backend/ and saw none.
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def _tracked() -> list[str]:
     """Every tracked YAML and JSON path, from git rather than from a tree walk."""
@@ -60,6 +67,7 @@ def _tracked() -> list[str]:
         capture_output=True,
         text=True,
         check=False,
+        cwd=ROOT,
     )
     if result.returncode != 0:
         print(f"ERROR: git ls-files failed: {result.stderr.strip()}", file=sys.stderr)
@@ -76,12 +84,14 @@ def check_paths(paths: list[str]) -> list[tuple[str, str]]:
     """Return (path, message) for every file that will not parse.
 
     Takes the paths rather than finding them, so a test can hand it a planted
-    broken file and see the refusal for itself.
+    broken file and see the refusal for itself. Paths from _tracked are relative
+    to the repository root, so they are joined to it; an absolute path, which is
+    what a planted-file test hands over, survives that join unchanged.
     """
     failures: list[tuple[str, str]] = []
     for path in paths:
         try:
-            text = Path(path).read_text(encoding="utf-8")
+            text = (ROOT / path).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             failures.append((path, f"{type(exc).__name__}: {exc}"))
             continue
