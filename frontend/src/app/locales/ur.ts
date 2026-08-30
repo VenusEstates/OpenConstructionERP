@@ -36902,7 +36902,7 @@ const resource = {
     "validation.all_passed": "تمام validation قواعد کامیابی سے پاس ہو گئے!",
     "validation.empty_description": "ایک مقدار کا بل منتخب کریں اور اس کے ڈیٹا کے معیار کو چیک کرنے کے لیے \"Run تصدیق\" پر کلک کریں۔",
     "validation.error_description": "validation نہیں چل سکی۔ چیک کریں کہ مقدار کا بل میں پوزیشنیں موجود ہیں اور دوبارہ کوشش کریں۔",
-    "validation.subtitle": "پروجیکٹ کے لیے سیٹ کیے گئے قواعد کے سیٹس کے خلاف ایک Bill of Quantities چیک کریں۔",
+    "validation.subtitle": "پروجیکٹ کے لیے سیٹ کیے گئے قواعد کے سیٹس کے خلاف ایک مقدار کا بل چیک کریں۔",
     "cost_match.tier_exact": "بالکل درست",
     "cost_match.tier_high_confidence": "پراعتماد",
     "cost_match.tier_needs_review": "نظرثانی درکار",

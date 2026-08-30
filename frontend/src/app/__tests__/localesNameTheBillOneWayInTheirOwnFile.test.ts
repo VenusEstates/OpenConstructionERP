@@ -18,8 +18,8 @@ import { describe, expect, it } from 'vitest';
  * plausible thing two screens later has the disease the sibling gate was
  * written for, and it has it in a language nobody here can adjudicate.
  *
- * It is a floor, not a standard. The twenty one divergences that predate it,
- * across eighteen locales and three keys, are recorded below with the locale
+ * It is a floor, not a standard. The twenty divergences that predate it,
+ * across seventeen locales and three keys, are recorded below with the locale
  * named, and the baseline may only shrink. Both directions are checked, in
  * two separate tests per key so that the failure says which way it went: a new
  * divergence is the gate proper, and a baselined locale that has been fixed is
@@ -30,11 +30,18 @@ import { describe, expect, it } from 'vitest';
  * label reads closer to "budget" - and which of the two moves is a question
  * for a native speaker, not for a test.
  *
- * The seventeen on validation.subtitle were arrived at twice, by two methods
- * sharing no code: a stem and inflection reading of each pair, which accepts
- * Turkish keşif özetini for keşif özeti, and the normalised substring
- * containment this file implements. Both name the same seventeen locales, so
- * doubting the list means doubting two instruments rather than one.
+ * The seventeen on validation.subtitle at the time this gate landed were
+ * arrived at twice, by two methods sharing no code: a stem and inflection
+ * reading of each pair, which accepts Turkish keşif özetini for keşif özeti,
+ * and the normalised substring containment this file implements. Both named
+ * the same seventeen locales, so doubting the list meant doubting two
+ * instruments rather than one. Urdu was one of the seventeen and is no longer
+ * baselined below: its divergence was not a second name, it was a hole.
+ * `.i18n-work/ur/_glossary.md` records "Bill of Quantities" as translated to
+ * مقدار کا بل (BOQ) everywhere, the catalogue label already carries that
+ * string, and validation.subtitle alone had left the English in place. There
+ * was no second term to adjudicate, so this one moved without a native
+ * speaker, unlike the sixteen still recorded below.
  *
  * What the containment rule cannot see: where the catalogue label is a generic
  * word for money on a page - Raming, Rozpočet, Kosztorys, Presupuesto - any
@@ -108,9 +115,9 @@ const SHORT_FORMS: Record<string, RegExp> = {
  * to remove later, because the next reader cannot tell whether it was fixed
  * or merely reworded.
  *
- * Arabic, Persian and Urdu carry their second name in a right-to-left script,
- * and pasting it into a comment reorders the whole line in most editors, so
- * those three are described in English instead of quoted.
+ * Arabic and Persian carry their second name in a right-to-left script, and
+ * pasting it into a comment reorders the whole line in most editors, so those
+ * two are described in English instead of quoted.
  */
 const BASELINE: Record<(typeof NAMING_KEYS)[number], Record<string, string>> = {
   'nav.boq': {
@@ -140,7 +147,6 @@ const BASELINE: Record<(typeof NAMING_KEYS)[number], Record<string, string>> = {
     pl: 'przedmiar robót, the settled Polish trade term, against the catalogue Kosztorys',
     pt: 'mapa de quantidades against the catalogue Planilha Orçamentária',
     th: 'บัญชีแสดงปริมาณงาน against the catalogue บัญชีปริมาณงาน',
-    ur: 'the English name, left in Latin script inside the sentence',
   },
 };
 
