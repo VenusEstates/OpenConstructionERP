@@ -5,6 +5,38 @@ All notable changes to OpenConstructionERP are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.4.0] - 2026-08-31
+
+How a generated PDF looks is a setting now. Until this release the accent colour
+across the top of every export, the grey of the footer under it, the page size,
+the margin and the size of the body type were literals in the drawing code, so a
+workspace that wanted paper of its own had either to edit the renderer or to
+accept ours. Property development settings now carry a document appearance panel:
+the two colours, A4, Letter or Legal, the margin in millimetres, the base type
+size, which corner the brand sits in, a footer line in your own wording, and
+whether pages are numbered. The controls sit beside a live preview of the page
+they describe, so the effect is visible before anything is exported, only an
+administrator can save, and one button returns everything to the defaults the
+platform ships with. The settings live in a single file next to the rest of the
+instance data and are read fresh each time a document is drawn, so a change
+applies to the next export rather than to the next restart. A settings file that
+cannot be read at all falls back to those same defaults instead of failing the
+export, because a malformed preference must never lose a document somebody is
+waiting for.
+
+Changing the body type size moves the whole family with it. Raising one number
+and leaving the headings where they were would set a fourteen point paragraph
+under a heading sized for a ten point one, which reads as a broken document
+rather than a larger one.
+
+One of those controls defers to a layout, and the panel now says so rather than
+leaving you to discover it. Bills of quantities, daily diaries and methodology
+statements print a title of their own in the header and hold the brand in the
+opposite corner deliberately, so that the two never sit on top of each other.
+Choosing Left, opening one of those three and finding the logo still on the right
+reads as a control that does not work. It is a deliberate deference, the panel
+explains it in place, and the setting is honoured everywhere else.
+
 ## [16.3.0] - 2026-08-30
 
 Three things worth knowing before you upgrade.

@@ -46,6 +46,13 @@ interface ChangelogEntry {
 // carry the long form and are left alone as the record of what shipped.
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '16.4.0',
+    date: '2026-08-31',
+    tag: 'NEW',
+    summary:
+      'How a generated PDF looks is a setting rather than a constant. Property development settings carry a document appearance panel that sets the accent colour across the top of an export, the grey of the footer under it, A4, Letter or Legal, the margin in millimetres, the size of the body type, which corner the brand sits in, a footer line in your own wording and whether pages are numbered, with a live preview of the page beside the controls. Only an administrator can save, one button returns everything to the defaults the platform ships with, and a change applies to the next export rather than to the next restart. Raising the body type size moves the headings with it, so a larger document stays a document. One control defers to a layout and the panel now says so: bills of quantities, daily diaries and methodology statements print a title of their own in the header and hold the brand in the opposite corner deliberately, so that the two never sit on top of each other.',
+  },
+  {
     version: '16.3.0',
     date: '2026-08-30',
     tag: 'NEW',
