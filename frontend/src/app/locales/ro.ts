@@ -39324,6 +39324,37 @@ const resource = {
     "cases.regional_pack_needed": "Necesită {{name}}",
     "cases.regional_pack_set_up": "Configurează",
     "cases.regional_pack_setup_hint": "Acest caz respectă standardele pieței sale. Deschide pachetul care le conține, unde îl poți activa.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Stânga",
+    "common.center": "Centru",
+    "common.right": "Dreapta",
+    "property_dev.doc_appearance.title": "Cum arată documentele dvs.",
+    "property_dev.doc_appearance.subtitle": "Se aplică fiecărui PDF generat de platformă, nu doar șabloanelor de mai jos. Sigla și denumirea firmei se setează în identitatea spațiului de lucru.",
+    "property_dev.doc_appearance.accent_color": "Culoarea titlurilor",
+    "property_dev.doc_appearance.footer_color": "Culoarea subsolului",
+    "property_dev.doc_appearance.page_size": "Formatul hârtiei",
+    "property_dev.doc_appearance.logo_align": "Poziția antetului",
+    "property_dev.doc_appearance.base_font_size": "Mărimea textului (pt)",
+    "property_dev.doc_appearance.font_hint": "De la {{min}} la {{max}}. Titlurile se scalează odată cu el.",
+    "property_dev.doc_appearance.margin_mm": "Marginea paginii (mm)",
+    "property_dev.doc_appearance.margin_hint": "De la {{min}} la {{max}}. Sub 10, majoritatea imprimantelor taie.",
+    "property_dev.doc_appearance.footer_text": "Rândul de subsol",
+    "property_dev.doc_appearance.footer_placeholder": "Lăsați gol pentru a afișa denumirea firmei și data",
+    "property_dev.doc_appearance.footer_hint": "Înlocuiește data generării. Potrivit pentru datele de la registrul comerțului.",
+    "property_dev.doc_appearance.page_numbers": "Afișează numerele de pagină",
+    "property_dev.doc_appearance.page_numbers_hint": "Dezactivați când documentele intră într-un dosar care își numerotează singur paginile.",
+    "property_dev.doc_appearance.preview": "Previzualizare",
+    "property_dev.doc_appearance.preview_brand": "Firma dvs.",
+    "property_dev.doc_appearance.preview_footer": "Firma dvs. | Generat 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Doar aranjarea în pagină. Pentru un PDF real folosiți Previzualizare la un șablon de mai jos.",
+    "property_dev.doc_appearance.reset": "Revenire la aspectul implicit",
+    "property_dev.doc_appearance.saved": "Aspectul a fost salvat. Exporturile noi îl folosesc.",
+    "property_dev.doc_appearance.reset_done": "Înapoi la aspectul implicit.",
+    "property_dev.doc_appearance.admin_only": "Doar un administrator poate modifica acest lucru.",
+    "property_dev.doc_appearance.unsaved": "Modificări nesalvate. PDF-urile deja generate nu se refac.",
+    "property_dev.doc_appearance.load_failed": "Setările de aspect nu au putut fi încărcate. Șabloanele de mai jos nu sunt afectate.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

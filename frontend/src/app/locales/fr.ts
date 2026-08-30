@@ -41584,6 +41584,37 @@ const resource = {
     "cases.regional_pack_needed": "Nécessite {{name}}",
     "cases.regional_pack_set_up": "Configurer",
     "cases.regional_pack_setup_hint": "Ce cas suit les normes de son marché. Ouvre le pack qui les porte, où vous pouvez l'activer.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Gauche",
+    "common.center": "Centre",
+    "common.right": "Droite",
+    "property_dev.doc_appearance.title": "L'apparence de vos documents",
+    "property_dev.doc_appearance.subtitle": "S'applique à chaque PDF généré par la plateforme, pas seulement aux modèles ci-dessous. Le logo et la raison sociale se règlent dans l'identité de l'espace de travail.",
+    "property_dev.doc_appearance.accent_color": "Couleur des titres",
+    "property_dev.doc_appearance.footer_color": "Couleur du pied de page",
+    "property_dev.doc_appearance.page_size": "Format du papier",
+    "property_dev.doc_appearance.logo_align": "Position de l'en-tête",
+    "property_dev.doc_appearance.base_font_size": "Taille du texte courant (pt)",
+    "property_dev.doc_appearance.font_hint": "De {{min}} à {{max}}. Les titres suivent l'échelle.",
+    "property_dev.doc_appearance.margin_mm": "Marge de page (mm)",
+    "property_dev.doc_appearance.margin_hint": "De {{min}} à {{max}}. En dessous de 10, la plupart des imprimantes rognent.",
+    "property_dev.doc_appearance.footer_text": "Ligne de pied de page",
+    "property_dev.doc_appearance.footer_placeholder": "Laisser vide pour afficher la raison sociale et la date",
+    "property_dev.doc_appearance.footer_hint": "Remplace la date de génération. Utile pour une mention légale de société.",
+    "property_dev.doc_appearance.page_numbers": "Afficher les numéros de page",
+    "property_dev.doc_appearance.page_numbers_hint": "À désactiver si ces documents sont classés dans un dossier qui gère sa propre pagination.",
+    "property_dev.doc_appearance.preview": "Aperçu",
+    "property_dev.doc_appearance.preview_brand": "Votre société",
+    "property_dev.doc_appearance.preview_footer": "Votre société | Généré le 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Mise en page uniquement. Utilisez Aperçu sur un modèle ci-dessous pour un vrai PDF.",
+    "property_dev.doc_appearance.reset": "Revenir à l'apparence par défaut",
+    "property_dev.doc_appearance.saved": "Apparence enregistrée. Les prochains exports l'utilisent.",
+    "property_dev.doc_appearance.reset_done": "Retour à l'apparence par défaut.",
+    "property_dev.doc_appearance.admin_only": "Seul un administrateur peut modifier ce réglage.",
+    "property_dev.doc_appearance.unsaved": "Modifications non enregistrées. Les PDF déjà produits ne sont pas régénérés.",
+    "property_dev.doc_appearance.load_failed": "Impossible de charger les réglages d'apparence. Les modèles ci-dessous ne sont pas affectés.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

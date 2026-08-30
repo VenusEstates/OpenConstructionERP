@@ -35947,6 +35947,37 @@ const resource = {
     "cases.regional_pack_needed": "Needs {{name}}",
     "cases.regional_pack_set_up": "Set up",
     "cases.regional_pack_setup_hint": "This case follows the standards of its market. Opens the pack that carries them, where you can switch it on.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Left",
+    "common.center": "Centre",
+    "common.right": "Right",
+    "property_dev.doc_appearance.title": "How your documents look",
+    "property_dev.doc_appearance.subtitle": "Applies to every PDF the platform generates, not just the templates below. Your logo and company name are set in workspace branding.",
+    "property_dev.doc_appearance.accent_color": "Heading colour",
+    "property_dev.doc_appearance.footer_color": "Footer colour",
+    "property_dev.doc_appearance.page_size": "Paper size",
+    "property_dev.doc_appearance.logo_align": "Header position",
+    "property_dev.doc_appearance.base_font_size": "Body text size (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} to {{max}}. Headings scale with it.",
+    "property_dev.doc_appearance.margin_mm": "Page margin (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} to {{max}}. Most printers clip below 10.",
+    "property_dev.doc_appearance.footer_text": "Footer line",
+    "property_dev.doc_appearance.footer_placeholder": "Leave empty to show the company name and date",
+    "property_dev.doc_appearance.footer_hint": "Replaces the generated date. Use it for a registered company line.",
+    "property_dev.doc_appearance.page_numbers": "Show page numbers",
+    "property_dev.doc_appearance.page_numbers_hint": "Turn off when these documents are filed inside a bundle that paginates itself.",
+    "property_dev.doc_appearance.preview": "Preview",
+    "property_dev.doc_appearance.preview_brand": "Your company",
+    "property_dev.doc_appearance.preview_footer": "Your company | Generated 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Layout only. Use Preview on a template below to render a real PDF.",
+    "property_dev.doc_appearance.reset": "Reset to platform look",
+    "property_dev.doc_appearance.saved": "Document appearance saved. New exports use it.",
+    "property_dev.doc_appearance.reset_done": "Back to the platform look.",
+    "property_dev.doc_appearance.admin_only": "Only an admin can change this.",
+    "property_dev.doc_appearance.unsaved": "Unsaved changes. Existing PDFs are not re-rendered.",
+    "property_dev.doc_appearance.load_failed": "Could not load the document appearance settings. Templates below are unaffected.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

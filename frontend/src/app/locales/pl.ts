@@ -40284,6 +40284,37 @@ const resource = {
     "cases.regional_pack_needed": "Wymaga {{name}}",
     "cases.regional_pack_set_up": "Skonfiguruj",
     "cases.regional_pack_setup_hint": "Ten scenariusz stosuje się do standardów swojego rynku. Otwiera pakiet, który je zawiera, gdzie można go włączyć.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Do lewej",
+    "common.center": "Do środka",
+    "common.right": "Do prawej",
+    "property_dev.doc_appearance.title": "Jak wyglądają Twoje dokumenty",
+    "property_dev.doc_appearance.subtitle": "Dotyczy każdego pliku PDF tworzonego przez platformę, nie tylko szablonów poniżej. Logo i nazwę firmy ustawisz w identyfikacji wizualnej przestrzeni roboczej.",
+    "property_dev.doc_appearance.accent_color": "Kolor nagłówków",
+    "property_dev.doc_appearance.footer_color": "Kolor stopki",
+    "property_dev.doc_appearance.page_size": "Format papieru",
+    "property_dev.doc_appearance.logo_align": "Pozycja nagłówka",
+    "property_dev.doc_appearance.base_font_size": "Wielkość tekstu (pt)",
+    "property_dev.doc_appearance.font_hint": "Od {{min}} do {{max}}. Nagłówki skalują się razem z nim.",
+    "property_dev.doc_appearance.margin_mm": "Margines strony (mm)",
+    "property_dev.doc_appearance.margin_hint": "Od {{min}} do {{max}}. Poniżej 10 większość drukarek obcina.",
+    "property_dev.doc_appearance.footer_text": "Wiersz stopki",
+    "property_dev.doc_appearance.footer_placeholder": "Zostaw puste, aby pokazać nazwę firmy i datę",
+    "property_dev.doc_appearance.footer_hint": "Zastępuje datę wygenerowania. Przydatne dla danych rejestrowych firmy.",
+    "property_dev.doc_appearance.page_numbers": "Pokaż numery stron",
+    "property_dev.doc_appearance.page_numbers_hint": "Wyłącz, gdy dokumenty trafiają do teczki, która sama numeruje strony.",
+    "property_dev.doc_appearance.preview": "Podgląd",
+    "property_dev.doc_appearance.preview_brand": "Twoja firma",
+    "property_dev.doc_appearance.preview_footer": "Twoja firma | Wygenerowano 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Tylko układ. Aby zobaczyć prawdziwy PDF, użyj Podglądu przy szablonie poniżej.",
+    "property_dev.doc_appearance.reset": "Przywróć wygląd domyślny",
+    "property_dev.doc_appearance.saved": "Wygląd zapisany. Nowe eksporty będą go używać.",
+    "property_dev.doc_appearance.reset_done": "Powrót do wyglądu domyślnego.",
+    "property_dev.doc_appearance.admin_only": "Tylko administrator może to zmienić.",
+    "property_dev.doc_appearance.unsaved": "Niezapisane zmiany. Wcześniej utworzone pliki PDF nie są tworzone ponownie.",
+    "property_dev.doc_appearance.load_failed": "Nie udało się wczytać ustawień wyglądu. Szablony poniżej działają normalnie.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -39334,6 +39334,37 @@ const resource = {
     "cases.regional_pack_needed": "Zahtijeva {{name}}",
     "cases.regional_pack_set_up": "Postavi",
     "cases.regional_pack_setup_hint": "Ovaj slučaj slijedi standarde svog tržišta. Otvara paket koji ih nosi, gdje ga možete uključiti.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Lijevo",
+    "common.center": "Sredina",
+    "common.right": "Desno",
+    "property_dev.doc_appearance.title": "Kako izgledaju vaši dokumenti",
+    "property_dev.doc_appearance.subtitle": "Vrijedi za svaki PDF koji platforma izradi, ne samo za predloške ispod. Logotip i naziv tvrtke postavljaju se u identitetu radnog prostora.",
+    "property_dev.doc_appearance.accent_color": "Boja naslova",
+    "property_dev.doc_appearance.footer_color": "Boja podnožja",
+    "property_dev.doc_appearance.page_size": "Veličina papira",
+    "property_dev.doc_appearance.logo_align": "Položaj zaglavlja",
+    "property_dev.doc_appearance.base_font_size": "Veličina osnovnog teksta (pt)",
+    "property_dev.doc_appearance.font_hint": "Od {{min}} do {{max}}. Naslovi se skaliraju s njim.",
+    "property_dev.doc_appearance.margin_mm": "Margina stranice (mm)",
+    "property_dev.doc_appearance.margin_hint": "Od {{min}} do {{max}}. Ispod 10 većina pisača reže.",
+    "property_dev.doc_appearance.footer_text": "Redak podnožja",
+    "property_dev.doc_appearance.footer_placeholder": "Ostavite prazno za prikaz naziva tvrtke i datuma",
+    "property_dev.doc_appearance.footer_hint": "Zamjenjuje datum izrade. Prikladno za podatke iz sudskog registra.",
+    "property_dev.doc_appearance.page_numbers": "Prikaži brojeve stranica",
+    "property_dev.doc_appearance.page_numbers_hint": "Isključite kada dokumenti idu u spis koji sam numerira stranice.",
+    "property_dev.doc_appearance.preview": "Pretpregled",
+    "property_dev.doc_appearance.preview_brand": "Vaša tvrtka",
+    "property_dev.doc_appearance.preview_footer": "Vaša tvrtka | Izrađeno 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Samo raspored. Za pravi PDF upotrijebite Pretpregled na predlošku ispod.",
+    "property_dev.doc_appearance.reset": "Vrati zadani izgled",
+    "property_dev.doc_appearance.saved": "Izgled je spremljen. Novi izvozi ga koriste.",
+    "property_dev.doc_appearance.reset_done": "Natrag na zadani izgled.",
+    "property_dev.doc_appearance.admin_only": "Ovo može promijeniti samo administrator.",
+    "property_dev.doc_appearance.unsaved": "Nespremljene promjene. Već izrađeni PDF-ovi ne izrađuju se ponovno.",
+    "property_dev.doc_appearance.load_failed": "Postavke izgleda nije bilo moguće učitati. Predlošci ispod rade normalno.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

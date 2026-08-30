@@ -39240,6 +39240,37 @@ const resource = {
     "cases.regional_pack_needed": "Изисква {{name}}",
     "cases.regional_pack_set_up": "Настройка",
     "cases.regional_pack_setup_hint": "Този казус следва стандартите на своя пазар. Отваря пакета, който ги носи, откъдето можете да го включите.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Ляво",
+    "common.center": "Центрирано",
+    "common.right": "Дясно",
+    "property_dev.doc_appearance.title": "Как изглеждат вашите документи",
+    "property_dev.doc_appearance.subtitle": "Важи за всеки PDF, който платформата създава, не само за шаблоните по-долу. Логото и името на фирмата се задават във визуалната идентичност на работното пространство.",
+    "property_dev.doc_appearance.accent_color": "Цвят на заглавията",
+    "property_dev.doc_appearance.footer_color": "Цвят на долния колонтитул",
+    "property_dev.doc_appearance.page_size": "Размер на хартията",
+    "property_dev.doc_appearance.logo_align": "Разположение на горния колонтитул",
+    "property_dev.doc_appearance.base_font_size": "Размер на основния текст (пт)",
+    "property_dev.doc_appearance.font_hint": "От {{min}} до {{max}}. Заглавията се мащабират с него.",
+    "property_dev.doc_appearance.margin_mm": "Поле на страницата (мм)",
+    "property_dev.doc_appearance.margin_hint": "От {{min}} до {{max}}. Под 10 повечето принтери отрязват.",
+    "property_dev.doc_appearance.footer_text": "Ред в долния колонтитул",
+    "property_dev.doc_appearance.footer_placeholder": "Оставете празно, за да се показват името на фирмата и датата",
+    "property_dev.doc_appearance.footer_hint": "Заменя датата на създаване. Подходящо за данните по търговската регистрация.",
+    "property_dev.doc_appearance.page_numbers": "Показвай номера на страниците",
+    "property_dev.doc_appearance.page_numbers_hint": "Изключете, когато документите се подшиват в папка със собствена номерация.",
+    "property_dev.doc_appearance.preview": "Преглед",
+    "property_dev.doc_appearance.preview_brand": "Вашата фирма",
+    "property_dev.doc_appearance.preview_footer": "Вашата фирма | Създадено 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Само оформлението. За истински PDF използвайте Преглед при шаблон по-долу.",
+    "property_dev.doc_appearance.reset": "Връщане към стандартния вид",
+    "property_dev.doc_appearance.saved": "Видът е запазен. Новите експорти го използват.",
+    "property_dev.doc_appearance.reset_done": "Обратно към стандартния вид.",
+    "property_dev.doc_appearance.admin_only": "Само администратор може да променя това.",
+    "property_dev.doc_appearance.unsaved": "Незапазени промени. Вече създадените PDF файлове не се създават наново.",
+    "property_dev.doc_appearance.load_failed": "Настройките за вид не можаха да се заредят. Шаблоните по-долу не са засегнати.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

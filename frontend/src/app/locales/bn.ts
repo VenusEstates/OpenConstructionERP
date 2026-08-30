@@ -39215,6 +39215,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} প্রয়োজন",
     "cases.regional_pack_set_up": "সেট আপ করুন",
     "cases.regional_pack_setup_hint": "এই কেসটি তার বাজারের মানদণ্ড অনুসরণ করে। যে প্যাক এগুলো বহন করে সেটি খোলে, যেখানে আপনি এটি চালু করতে পারেন।",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "বাঁয়ে",
+    "common.center": "মাঝে",
+    "common.right": "ডানে",
+    "property_dev.doc_appearance.title": "আপনার নথি দেখতে কেমন",
+    "property_dev.doc_appearance.subtitle": "প্ল্যাটফর্মের তৈরি প্রতিটি PDF-এ প্রযোজ্য, কেবল নিচের ছাঁচগুলোতে নয়। লোগো ও কোম্পানির নাম কর্মক্ষেত্রের ব্র্যান্ডিংয়ে ঠিক করা হয়।",
+    "property_dev.doc_appearance.accent_color": "শিরোনামের রং",
+    "property_dev.doc_appearance.footer_color": "পাদটীকার রং",
+    "property_dev.doc_appearance.page_size": "কাগজের মাপ",
+    "property_dev.doc_appearance.logo_align": "শিরোভাগের অবস্থান",
+    "property_dev.doc_appearance.base_font_size": "মূল লেখার আকার (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} থেকে {{max}} পর্যন্ত। শিরোনামও সেই অনুপাতে বদলায়।",
+    "property_dev.doc_appearance.margin_mm": "পৃষ্ঠার মার্জিন (মিমি)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} থেকে {{max}} পর্যন্ত। ১০-এর কম হলে বেশির ভাগ প্রিন্টার কেটে ফেলে।",
+    "property_dev.doc_appearance.footer_text": "পাদটীকার লাইন",
+    "property_dev.doc_appearance.footer_placeholder": "কোম্পানির নাম ও তারিখ দেখাতে ফাঁকা রাখুন",
+    "property_dev.doc_appearance.footer_hint": "তৈরির তারিখের জায়গা নেয়। নিবন্ধিত কোম্পানির তথ্যের জন্য উপযোগী।",
+    "property_dev.doc_appearance.page_numbers": "পৃষ্ঠা সংখ্যা দেখান",
+    "property_dev.doc_appearance.page_numbers_hint": "নথিগুলো নিজে পৃষ্ঠা গোনে এমন নথিগুচ্ছে ঢুকলে বন্ধ রাখুন।",
+    "property_dev.doc_appearance.preview": "পূর্বরূপ",
+    "property_dev.doc_appearance.preview_brand": "আপনার কোম্পানি",
+    "property_dev.doc_appearance.preview_footer": "আপনার কোম্পানি | তৈরি ২০২৬-০১-০১",
+    "property_dev.doc_appearance.preview_note": "কেবল বিন্যাস। আসল PDF দেখতে নিচের কোনো ছাঁচের পূর্বরূপ ব্যবহার করুন।",
+    "property_dev.doc_appearance.reset": "সাধারণ চেহারায় ফিরুন",
+    "property_dev.doc_appearance.saved": "নথির চেহারা সংরক্ষিত হয়েছে। নতুন রপ্তানিতে এটাই চলবে।",
+    "property_dev.doc_appearance.reset_done": "সাধারণ চেহারায় ফেরা হলো।",
+    "property_dev.doc_appearance.admin_only": "এটি কেবল প্রশাসক বদলাতে পারেন।",
+    "property_dev.doc_appearance.unsaved": "অসংরক্ষিত পরিবর্তন আছে। আগে তৈরি PDF নতুন করে বানানো হয় না।",
+    "property_dev.doc_appearance.load_failed": "চেহারার সেটিং লোড করা যায়নি। নিচের ছাঁচগুলো অক্ষত আছে।",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

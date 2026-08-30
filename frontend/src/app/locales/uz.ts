@@ -40465,6 +40465,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} talab qilinadi",
     "cases.regional_pack_set_up": "Sozlash",
     "cases.regional_pack_setup_hint": "Bu holat oʻz bozorining standartlariga amal qiladi. Ularni olib yuruvchi paketni ochadi, u yerda uni yoqishingiz mumkin.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Chapga",
+    "common.center": "O'rtaga",
+    "common.right": "O'ngga",
+    "property_dev.doc_appearance.title": "Hujjatlaringiz qanday ko'rinadi",
+    "property_dev.doc_appearance.subtitle": "Platforma yaratadigan har bir PDF uchun amal qiladi, faqat quyidagi andozalar uchun emas. Logotip va kompaniya nomi ish maydoni brendida beriladi.",
+    "property_dev.doc_appearance.accent_color": "Sarlavhalar rangi",
+    "property_dev.doc_appearance.footer_color": "Quyi kolontitul rangi",
+    "property_dev.doc_appearance.page_size": "Qog'oz o'lchami",
+    "property_dev.doc_appearance.logo_align": "Yuqori kolontitul joyi",
+    "property_dev.doc_appearance.base_font_size": "Asosiy matn o'lchami (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} dan {{max}} gacha. Sarlavhalar ham shunga mos o'zgaradi.",
+    "property_dev.doc_appearance.margin_mm": "Sahifa cheti (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} dan {{max}} gacha. 10 dan kam bo'lsa ko'p printerlar qirqib yuboradi.",
+    "property_dev.doc_appearance.footer_text": "Quyi qator",
+    "property_dev.doc_appearance.footer_placeholder": "Kompaniya nomi va sanani ko'rsatish uchun bo'sh qoldiring",
+    "property_dev.doc_appearance.footer_hint": "Yaratilgan sana o'rnini egallaydi. Ro'yxatdan o'tish ma'lumotlari uchun qulay.",
+    "property_dev.doc_appearance.page_numbers": "Sahifa raqamlarini ko'rsatish",
+    "property_dev.doc_appearance.page_numbers_hint": "Bu hujjatlar o'zi raqamlaydigan jildga tikilsa, o'chirib qo'ying.",
+    "property_dev.doc_appearance.preview": "Oldindan ko'rish",
+    "property_dev.doc_appearance.preview_brand": "Sizning kompaniyangiz",
+    "property_dev.doc_appearance.preview_footer": "Sizning kompaniyangiz | Yaratilgan 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Faqat joylashuv. Haqiqiy PDF uchun quyidagi andozadan oldindan ko'rishni ishlating.",
+    "property_dev.doc_appearance.reset": "Odatdagi ko'rinishga qaytish",
+    "property_dev.doc_appearance.saved": "Hujjat ko'rinishi saqlandi. Yangi eksportlar shundan foydalanadi.",
+    "property_dev.doc_appearance.reset_done": "Odatdagi ko'rinishga qaytdik.",
+    "property_dev.doc_appearance.admin_only": "Buni faqat administrator o'zgartira oladi.",
+    "property_dev.doc_appearance.unsaved": "Saqlanmagan o'zgarishlar bor. Avval yaratilgan PDF fayllar qayta yaratilmaydi.",
+    "property_dev.doc_appearance.load_failed": "Ko'rinish sozlamalarini yuklab bo'lmadi. Quyidagi andozalarga ta'siri yo'q.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

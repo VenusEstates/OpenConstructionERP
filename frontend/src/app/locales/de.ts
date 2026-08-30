@@ -41566,6 +41566,37 @@ const resource = {
     "cases.regional_pack_needed": "Benötigt {{name}}",
     "cases.regional_pack_set_up": "Einrichten",
     "cases.regional_pack_setup_hint": "Dieses Fallbeispiel folgt den Standards seines Marktes. Öffnet das Paket, das sie enthält, wo Sie es aktivieren können.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Links",
+    "common.center": "Mitte",
+    "common.right": "Rechts",
+    "property_dev.doc_appearance.title": "So sehen Ihre Dokumente aus",
+    "property_dev.doc_appearance.subtitle": "Gilt für jedes PDF, das die Plattform erzeugt, nicht nur für die Vorlagen unten. Logo und Firmenname legen Sie im Workspace-Branding fest.",
+    "property_dev.doc_appearance.accent_color": "Überschriftenfarbe",
+    "property_dev.doc_appearance.footer_color": "Fußzeilenfarbe",
+    "property_dev.doc_appearance.page_size": "Papierformat",
+    "property_dev.doc_appearance.logo_align": "Position der Kopfzeile",
+    "property_dev.doc_appearance.base_font_size": "Schriftgröße Fließtext (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} bis {{max}}. Überschriften skalieren mit.",
+    "property_dev.doc_appearance.margin_mm": "Seitenrand (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} bis {{max}}. Unter 10 schneiden die meisten Drucker ab.",
+    "property_dev.doc_appearance.footer_text": "Fußzeile",
+    "property_dev.doc_appearance.footer_placeholder": "Leer lassen, um Firmenname und Datum anzuzeigen",
+    "property_dev.doc_appearance.footer_hint": "Ersetzt das Erstellungsdatum. Geeignet für eine Zeile mit Handelsregisterangaben.",
+    "property_dev.doc_appearance.page_numbers": "Seitenzahlen anzeigen",
+    "property_dev.doc_appearance.page_numbers_hint": "Ausschalten, wenn diese Dokumente in einer Sammlung abgelegt werden, die selbst nummeriert.",
+    "property_dev.doc_appearance.preview": "Vorschau",
+    "property_dev.doc_appearance.preview_brand": "Ihr Unternehmen",
+    "property_dev.doc_appearance.preview_footer": "Ihr Unternehmen | Erstellt 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Nur das Layout. Für ein echtes PDF die Vorschau einer Vorlage unten verwenden.",
+    "property_dev.doc_appearance.reset": "Auf Standarddarstellung zurücksetzen",
+    "property_dev.doc_appearance.saved": "Dokumentdarstellung gespeichert. Neue Exporte verwenden sie.",
+    "property_dev.doc_appearance.reset_done": "Zurück zur Standarddarstellung.",
+    "property_dev.doc_appearance.admin_only": "Nur ein Administrator kann das ändern.",
+    "property_dev.doc_appearance.unsaved": "Nicht gespeicherte Änderungen. Bereits erzeugte PDFs werden nicht neu gerendert.",
+    "property_dev.doc_appearance.load_failed": "Die Einstellungen zur Dokumentdarstellung konnten nicht geladen werden. Die Vorlagen unten sind nicht betroffen.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

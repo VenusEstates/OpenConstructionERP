@@ -39185,6 +39185,37 @@ const resource = {
     "cases.regional_pack_needed": "Membutuhkan {{name}}",
     "cases.regional_pack_set_up": "Siapkan",
     "cases.regional_pack_setup_hint": "Kasus ini mengikuti standar pasarnya. Membuka paket yang membawa standar tersebut, tempat Anda dapat mengaktifkannya.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Kiri",
+    "common.center": "Tengah",
+    "common.right": "Kanan",
+    "property_dev.doc_appearance.title": "Tampilan dokumen Anda",
+    "property_dev.doc_appearance.subtitle": "Berlaku untuk setiap PDF yang dibuat platform, bukan hanya templat di bawah. Logo dan nama perusahaan diatur di identitas ruang kerja.",
+    "property_dev.doc_appearance.accent_color": "Warna judul",
+    "property_dev.doc_appearance.footer_color": "Warna catatan kaki",
+    "property_dev.doc_appearance.page_size": "Ukuran kertas",
+    "property_dev.doc_appearance.logo_align": "Posisi kepala halaman",
+    "property_dev.doc_appearance.base_font_size": "Ukuran teks isi (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} sampai {{max}}. Judul ikut menyesuaikan.",
+    "property_dev.doc_appearance.margin_mm": "Margin halaman (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} sampai {{max}}. Di bawah 10 kebanyakan pencetak memotong.",
+    "property_dev.doc_appearance.footer_text": "Baris catatan kaki",
+    "property_dev.doc_appearance.footer_placeholder": "Kosongkan untuk menampilkan nama perusahaan dan tanggal",
+    "property_dev.doc_appearance.footer_hint": "Menggantikan tanggal pembuatan. Cocok untuk baris data badan usaha.",
+    "property_dev.doc_appearance.page_numbers": "Tampilkan nomor halaman",
+    "property_dev.doc_appearance.page_numbers_hint": "Matikan bila dokumen ini diarsipkan dalam berkas yang menomori halamannya sendiri.",
+    "property_dev.doc_appearance.preview": "Pratinjau",
+    "property_dev.doc_appearance.preview_brand": "Perusahaan Anda",
+    "property_dev.doc_appearance.preview_footer": "Perusahaan Anda | Dibuat 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Tata letak saja. Untuk PDF sungguhan, gunakan Pratinjau pada templat di bawah.",
+    "property_dev.doc_appearance.reset": "Kembalikan ke tampilan bawaan",
+    "property_dev.doc_appearance.saved": "Tampilan dokumen tersimpan. Ekspor baru memakainya.",
+    "property_dev.doc_appearance.reset_done": "Kembali ke tampilan bawaan.",
+    "property_dev.doc_appearance.admin_only": "Hanya admin yang dapat mengubah ini.",
+    "property_dev.doc_appearance.unsaved": "Ada perubahan yang belum disimpan. PDF yang sudah dibuat tidak dibuat ulang.",
+    "property_dev.doc_appearance.load_failed": "Pengaturan tampilan tidak dapat dimuat. Templat di bawah tidak terpengaruh.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

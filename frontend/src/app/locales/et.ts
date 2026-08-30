@@ -39178,6 +39178,37 @@ const resource = {
     "cases.regional_pack_needed": "Vajab paketti {{name}}",
     "cases.regional_pack_set_up": "Seadista",
     "cases.regional_pack_setup_hint": "See juhtum järgib oma turu standardeid. Avab paketi, mis need kannab, kus saad selle sisse lülitada.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Vasakule",
+    "common.center": "Keskele",
+    "common.right": "Paremale",
+    "property_dev.doc_appearance.title": "Kuidas teie dokumendid välja näevad",
+    "property_dev.doc_appearance.subtitle": "Kehtib igale PDF-ile, mille platvorm loob, mitte ainult allolevatele mallidele. Logo ja ärinime määrate tööruumi kaubamärgi seadetes.",
+    "property_dev.doc_appearance.accent_color": "Pealkirjade värv",
+    "property_dev.doc_appearance.footer_color": "Jaluse värv",
+    "property_dev.doc_appearance.page_size": "Paberiformaat",
+    "property_dev.doc_appearance.logo_align": "Päise asukoht",
+    "property_dev.doc_appearance.base_font_size": "Põhiteksti suurus (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} kuni {{max}}. Pealkirjad skaleeruvad kaasa.",
+    "property_dev.doc_appearance.margin_mm": "Lehe veeris (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} kuni {{max}}. Alla 10 lõikab enamik printereid ära.",
+    "property_dev.doc_appearance.footer_text": "Jaluse rida",
+    "property_dev.doc_appearance.footer_placeholder": "Jätke tühjaks, et näidata ärinime ja kuupäeva",
+    "property_dev.doc_appearance.footer_hint": "Asendab loomiskuupäeva. Sobib registrikoodiga rea jaoks.",
+    "property_dev.doc_appearance.page_numbers": "Näita leheküljenumbreid",
+    "property_dev.doc_appearance.page_numbers_hint": "Lülitage välja, kui dokumendid lähevad kausta, mis nummerdab lehed ise.",
+    "property_dev.doc_appearance.preview": "Eelvaade",
+    "property_dev.doc_appearance.preview_brand": "Teie ettevõte",
+    "property_dev.doc_appearance.preview_footer": "Teie ettevõte | Loodud 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Ainult paigutus. Päris PDF-i saate alloleva malli eelvaatest.",
+    "property_dev.doc_appearance.reset": "Taasta vaikimisi välimus",
+    "property_dev.doc_appearance.saved": "Välimus salvestatud. Uued ekspordid kasutavad seda.",
+    "property_dev.doc_appearance.reset_done": "Tagasi vaikimisi välimuse juurde.",
+    "property_dev.doc_appearance.admin_only": "Seda saab muuta ainult administraator.",
+    "property_dev.doc_appearance.unsaved": "Salvestamata muudatused. Juba loodud PDF-e uuesti ei looda.",
+    "property_dev.doc_appearance.load_failed": "Välimuse seadeid ei õnnestunud laadida. Allolevad mallid töötavad edasi.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

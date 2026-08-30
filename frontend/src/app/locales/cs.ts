@@ -40020,6 +40020,37 @@ const resource = {
     "cases.regional_pack_needed": "Vyžaduje {{name}}",
     "cases.regional_pack_set_up": "Nastavit",
     "cases.regional_pack_setup_hint": "Tento případ se řídí standardy svého trhu. Otevře balíček, který je přináší, kde jej můžete zapnout.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Vlevo",
+    "common.center": "Na střed",
+    "common.right": "Vpravo",
+    "property_dev.doc_appearance.title": "Jak vypadají vaše dokumenty",
+    "property_dev.doc_appearance.subtitle": "Platí pro každé PDF, které platforma vytvoří, nejen pro šablony níže. Logo a název firmy nastavíte ve firemní identitě pracovního prostoru.",
+    "property_dev.doc_appearance.accent_color": "Barva nadpisů",
+    "property_dev.doc_appearance.footer_color": "Barva zápatí",
+    "property_dev.doc_appearance.page_size": "Formát papíru",
+    "property_dev.doc_appearance.logo_align": "Umístění záhlaví",
+    "property_dev.doc_appearance.base_font_size": "Velikost základního textu (pt)",
+    "property_dev.doc_appearance.font_hint": "Od {{min}} do {{max}}. Nadpisy se škálují s ním.",
+    "property_dev.doc_appearance.margin_mm": "Okraj stránky (mm)",
+    "property_dev.doc_appearance.margin_hint": "Od {{min}} do {{max}}. Pod 10 většina tiskáren ořízne.",
+    "property_dev.doc_appearance.footer_text": "Řádek zápatí",
+    "property_dev.doc_appearance.footer_placeholder": "Nechte prázdné, aby se zobrazil název firmy a datum",
+    "property_dev.doc_appearance.footer_hint": "Nahrazuje datum vytvoření. Hodí se pro řádek s údaji z obchodního rejstříku.",
+    "property_dev.doc_appearance.page_numbers": "Zobrazovat čísla stránek",
+    "property_dev.doc_appearance.page_numbers_hint": "Vypněte, když se dokumenty zakládají do složky, která si stránky čísluje sama.",
+    "property_dev.doc_appearance.preview": "Náhled",
+    "property_dev.doc_appearance.preview_brand": "Vaše firma",
+    "property_dev.doc_appearance.preview_footer": "Vaše firma | Vytvořeno 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Pouze rozvržení. Skutečné PDF získáte přes Náhled u šablony níže.",
+    "property_dev.doc_appearance.reset": "Obnovit výchozí vzhled",
+    "property_dev.doc_appearance.saved": "Vzhled uložen. Nové exporty ho použijí.",
+    "property_dev.doc_appearance.reset_done": "Zpět na výchozí vzhled.",
+    "property_dev.doc_appearance.admin_only": "Změnit to může jen správce.",
+    "property_dev.doc_appearance.unsaved": "Neuložené změny. Již vytvořená PDF se znovu negenerují.",
+    "property_dev.doc_appearance.load_failed": "Nastavení vzhledu se nepodařilo načíst. Šablony níže to neovlivní.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

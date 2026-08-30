@@ -39215,6 +39215,37 @@ const resource = {
     "cases.regional_pack_needed": "Απαιτεί {{name}}",
     "cases.regional_pack_set_up": "Ρύθμιση",
     "cases.regional_pack_setup_hint": "Αυτή η περίπτωση ακολουθεί τα πρότυπα της αγοράς της. Ανοίγει το πακέτο που τα περιέχει, όπου μπορείτε να το ενεργοποιήσετε.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Αριστερά",
+    "common.center": "Κέντρο",
+    "common.right": "Δεξιά",
+    "property_dev.doc_appearance.title": "Πώς φαίνονται τα έγγραφά σας",
+    "property_dev.doc_appearance.subtitle": "Ισχύει για κάθε PDF που παράγει η πλατφόρμα, όχι μόνο για τα πρότυπα παρακάτω. Το λογότυπο και η επωνυμία ορίζονται στην ταυτότητα του χώρου εργασίας.",
+    "property_dev.doc_appearance.accent_color": "Χρώμα επικεφαλίδων",
+    "property_dev.doc_appearance.footer_color": "Χρώμα υποσέλιδου",
+    "property_dev.doc_appearance.page_size": "Μέγεθος χαρτιού",
+    "property_dev.doc_appearance.logo_align": "Θέση κεφαλίδας",
+    "property_dev.doc_appearance.base_font_size": "Μέγεθος κυρίως κειμένου (pt)",
+    "property_dev.doc_appearance.font_hint": "Από {{min}} έως {{max}}. Οι επικεφαλίδες κλιμακώνονται ανάλογα.",
+    "property_dev.doc_appearance.margin_mm": "Περιθώριο σελίδας (mm)",
+    "property_dev.doc_appearance.margin_hint": "Από {{min}} έως {{max}}. Κάτω από 10 οι περισσότεροι εκτυπωτές κόβουν.",
+    "property_dev.doc_appearance.footer_text": "Γραμμή υποσέλιδου",
+    "property_dev.doc_appearance.footer_placeholder": "Αφήστε το κενό για να εμφανίζονται επωνυμία και ημερομηνία",
+    "property_dev.doc_appearance.footer_hint": "Αντικαθιστά την ημερομηνία δημιουργίας. Χρήσιμο για στοιχεία ΓΕΜΗ.",
+    "property_dev.doc_appearance.page_numbers": "Εμφάνιση αριθμών σελίδας",
+    "property_dev.doc_appearance.page_numbers_hint": "Απενεργοποιήστε το όταν τα έγγραφα μπαίνουν σε φάκελο που αριθμεί μόνος του.",
+    "property_dev.doc_appearance.preview": "Προεπισκόπηση",
+    "property_dev.doc_appearance.preview_brand": "Η εταιρεία σας",
+    "property_dev.doc_appearance.preview_footer": "Η εταιρεία σας | Δημιουργήθηκε 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Μόνο η διάταξη. Για πραγματικό PDF χρησιμοποιήστε την Προεπισκόπηση σε πρότυπο παρακάτω.",
+    "property_dev.doc_appearance.reset": "Επαναφορά στην προεπιλεγμένη εμφάνιση",
+    "property_dev.doc_appearance.saved": "Η εμφάνιση αποθηκεύτηκε. Οι νέες εξαγωγές τη χρησιμοποιούν.",
+    "property_dev.doc_appearance.reset_done": "Επιστροφή στην προεπιλεγμένη εμφάνιση.",
+    "property_dev.doc_appearance.admin_only": "Μόνο διαχειριστής μπορεί να το αλλάξει.",
+    "property_dev.doc_appearance.unsaved": "Μη αποθηκευμένες αλλαγές. Τα ήδη παραγμένα PDF δεν ξαναδημιουργούνται.",
+    "property_dev.doc_appearance.load_failed": "Δεν ήταν δυνατή η φόρτωση των ρυθμίσεων εμφάνισης. Τα πρότυπα παρακάτω δεν επηρεάζονται.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -40116,6 +40116,37 @@ const resource = {
     "cases.regional_pack_needed": "Vereist {{name}}",
     "cases.regional_pack_set_up": "Instellen",
     "cases.regional_pack_setup_hint": "Deze case volgt de normen van zijn markt. Opent het pakket dat deze bevat, waar u het kunt inschakelen.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Links",
+    "common.center": "Midden",
+    "common.right": "Rechts",
+    "property_dev.doc_appearance.title": "Hoe uw documenten eruitzien",
+    "property_dev.doc_appearance.subtitle": "Geldt voor elke pdf die het platform maakt, niet alleen voor de sjablonen hieronder. Logo en bedrijfsnaam stelt u in bij de workspace-huisstijl.",
+    "property_dev.doc_appearance.accent_color": "Kleur van koppen",
+    "property_dev.doc_appearance.footer_color": "Kleur van de voettekst",
+    "property_dev.doc_appearance.page_size": "Papierformaat",
+    "property_dev.doc_appearance.logo_align": "Positie van de koptekst",
+    "property_dev.doc_appearance.base_font_size": "Tekstgrootte (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} tot {{max}}. Koppen schalen mee.",
+    "property_dev.doc_appearance.margin_mm": "Paginamarge (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} tot {{max}}. Onder 10 snijden de meeste printers af.",
+    "property_dev.doc_appearance.footer_text": "Voettekstregel",
+    "property_dev.doc_appearance.footer_placeholder": "Laat leeg om bedrijfsnaam en datum te tonen",
+    "property_dev.doc_appearance.footer_hint": "Vervangt de generatiedatum. Handig voor een regel met KvK-gegevens.",
+    "property_dev.doc_appearance.page_numbers": "Paginanummers tonen",
+    "property_dev.doc_appearance.page_numbers_hint": "Zet uit wanneer deze documenten in een dossier komen dat zelf nummert.",
+    "property_dev.doc_appearance.preview": "Voorbeeld",
+    "property_dev.doc_appearance.preview_brand": "Uw bedrijf",
+    "property_dev.doc_appearance.preview_footer": "Uw bedrijf | Gegenereerd 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Alleen de opmaak. Gebruik Voorbeeld bij een sjabloon hieronder voor een echte pdf.",
+    "property_dev.doc_appearance.reset": "Terug naar de standaardweergave",
+    "property_dev.doc_appearance.saved": "Weergave opgeslagen. Nieuwe exports gebruiken deze.",
+    "property_dev.doc_appearance.reset_done": "Terug naar de standaardweergave.",
+    "property_dev.doc_appearance.admin_only": "Alleen een beheerder kan dit wijzigen.",
+    "property_dev.doc_appearance.unsaved": "Niet-opgeslagen wijzigingen. Bestaande pdf's worden niet opnieuw gemaakt.",
+    "property_dev.doc_appearance.load_failed": "Kan de weergave-instellingen niet laden. De sjablonen hieronder werken gewoon.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

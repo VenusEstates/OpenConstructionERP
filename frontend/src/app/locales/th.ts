@@ -39187,6 +39187,37 @@ const resource = {
     "cases.regional_pack_needed": "ต้องใช้ {{name}}",
     "cases.regional_pack_set_up": "ตั้งค่า",
     "cases.regional_pack_setup_hint": "กรณีนี้เป็นไปตามมาตรฐานของตลาดของมัน เปิดแพ็กที่มีมาตรฐานเหล่านั้น ซึ่งคุณสามารถเปิดใช้งานได้ที่นั่น",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "ซ้าย",
+    "common.center": "กึ่งกลาง",
+    "common.right": "ขวา",
+    "property_dev.doc_appearance.title": "หน้าตาเอกสารของคุณ",
+    "property_dev.doc_appearance.subtitle": "ใช้กับไฟล์ PDF ทุกไฟล์ที่ระบบสร้าง ไม่ใช่เฉพาะแม่แบบด้านล่าง โลโก้และชื่อบริษัทตั้งค่าที่ตราสัญลักษณ์ของพื้นที่ทำงาน",
+    "property_dev.doc_appearance.accent_color": "สีหัวข้อ",
+    "property_dev.doc_appearance.footer_color": "สีท้ายกระดาษ",
+    "property_dev.doc_appearance.page_size": "ขนาดกระดาษ",
+    "property_dev.doc_appearance.logo_align": "ตำแหน่งหัวกระดาษ",
+    "property_dev.doc_appearance.base_font_size": "ขนาดตัวอักษรเนื้อความ (pt)",
+    "property_dev.doc_appearance.font_hint": "ตั้งแต่ {{min}} ถึง {{max}} หัวข้อจะปรับตามไปด้วย",
+    "property_dev.doc_appearance.margin_mm": "ระยะขอบ (มม.)",
+    "property_dev.doc_appearance.margin_hint": "ตั้งแต่ {{min}} ถึง {{max}} ต่ำกว่า 10 เครื่องพิมพ์ส่วนใหญ่จะตัดขอบ",
+    "property_dev.doc_appearance.footer_text": "ข้อความท้ายกระดาษ",
+    "property_dev.doc_appearance.footer_placeholder": "เว้นว่างไว้เพื่อแสดงชื่อบริษัทและวันที่",
+    "property_dev.doc_appearance.footer_hint": "ใช้แทนวันที่สร้าง เหมาะกับข้อมูลทะเบียนนิติบุคคล",
+    "property_dev.doc_appearance.page_numbers": "แสดงเลขหน้า",
+    "property_dev.doc_appearance.page_numbers_hint": "ปิดเมื่อเอกสารเหล่านี้ถูกรวมเข้าแฟ้มที่ให้เลขหน้าของตัวเอง",
+    "property_dev.doc_appearance.preview": "ตัวอย่าง",
+    "property_dev.doc_appearance.preview_brand": "บริษัทของคุณ",
+    "property_dev.doc_appearance.preview_footer": "บริษัทของคุณ | สร้างเมื่อ 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "แสดงเฉพาะการจัดหน้า หากต้องการ PDF จริงให้ใช้ตัวอย่างของแม่แบบด้านล่าง",
+    "property_dev.doc_appearance.reset": "กลับไปใช้รูปแบบเริ่มต้น",
+    "property_dev.doc_appearance.saved": "บันทึกรูปแบบเอกสารแล้ว การส่งออกครั้งถัดไปจะใช้ค่านี้",
+    "property_dev.doc_appearance.reset_done": "กลับไปใช้รูปแบบเริ่มต้นแล้ว",
+    "property_dev.doc_appearance.admin_only": "ผู้ดูแลระบบเท่านั้นที่แก้ไขได้",
+    "property_dev.doc_appearance.unsaved": "มีการเปลี่ยนแปลงที่ยังไม่บันทึก ไฟล์ PDF ที่สร้างไปแล้วจะไม่ถูกสร้างใหม่",
+    "property_dev.doc_appearance.load_failed": "โหลดการตั้งค่ารูปแบบไม่สำเร็จ แม่แบบด้านล่างไม่ได้รับผลกระทบ",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -41006,6 +41006,37 @@ const resource = {
     "cases.regional_pack_needed": "Требуется {{name}}",
     "cases.regional_pack_set_up": "Настроить",
     "cases.regional_pack_setup_hint": "Этот кейс следует стандартам своего рынка. Открывает пакет, который их несёт, где его можно включить.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Слева",
+    "common.center": "По центру",
+    "common.right": "Справа",
+    "property_dev.doc_appearance.title": "Как выглядят ваши документы",
+    "property_dev.doc_appearance.subtitle": "Действует для каждого PDF, который создаёт платформа, а не только для шаблонов ниже. Логотип и название компании задаются в фирменном стиле рабочего пространства.",
+    "property_dev.doc_appearance.accent_color": "Цвет заголовков",
+    "property_dev.doc_appearance.footer_color": "Цвет нижнего колонтитула",
+    "property_dev.doc_appearance.page_size": "Формат бумаги",
+    "property_dev.doc_appearance.logo_align": "Положение шапки",
+    "property_dev.doc_appearance.base_font_size": "Размер основного текста (пт)",
+    "property_dev.doc_appearance.font_hint": "От {{min}} до {{max}}. Заголовки масштабируются вместе с ним.",
+    "property_dev.doc_appearance.margin_mm": "Поля страницы (мм)",
+    "property_dev.doc_appearance.margin_hint": "От {{min}} до {{max}}. Меньше 10 большинство принтеров обрезает.",
+    "property_dev.doc_appearance.footer_text": "Строка колонтитула",
+    "property_dev.doc_appearance.footer_placeholder": "Оставьте пустым, чтобы показать название компании и дату",
+    "property_dev.doc_appearance.footer_hint": "Заменяет дату создания. Подходит для реквизитов компании.",
+    "property_dev.doc_appearance.page_numbers": "Показывать номера страниц",
+    "property_dev.doc_appearance.page_numbers_hint": "Отключите, если документы подшиваются в комплект со своей нумерацией.",
+    "property_dev.doc_appearance.preview": "Предпросмотр",
+    "property_dev.doc_appearance.preview_brand": "Ваша компания",
+    "property_dev.doc_appearance.preview_footer": "Ваша компания | Создано 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Только макет. Чтобы получить настоящий PDF, нажмите «Предпросмотр» у шаблона ниже.",
+    "property_dev.doc_appearance.reset": "Вернуть стандартный вид",
+    "property_dev.doc_appearance.saved": "Оформление сохранено. Новые выгрузки используют его.",
+    "property_dev.doc_appearance.reset_done": "Возврат к стандартному виду.",
+    "property_dev.doc_appearance.admin_only": "Изменить это может только администратор.",
+    "property_dev.doc_appearance.unsaved": "Несохранённые изменения. Уже созданные PDF заново не формируются.",
+    "property_dev.doc_appearance.load_failed": "Не удалось загрузить настройки оформления. На шаблоны ниже это не влияет.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -39349,6 +39349,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} керек",
     "cases.regional_pack_set_up": "Жөндөө",
     "cases.regional_pack_setup_hint": "Бул кейс өз рыногунун стандарттарын карманат. Аларды алып жүргөн пакетти ачат, ошол жерден аны күйгүзсө болот.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Сол жак",
+    "common.center": "Ортосу",
+    "common.right": "Оң жак",
+    "property_dev.doc_appearance.title": "Документтериңиз кандай көрүнөт",
+    "property_dev.doc_appearance.subtitle": "Платформа түзгөн ар бир PDF файлга колдонулат, төмөнкү үлгүлөргө гана эмес. Логотип менен компаниянын аты жумуш мейкиндигинин бренд бөлүмүндө коюлат.",
+    "property_dev.doc_appearance.accent_color": "Аталыштардын түсү",
+    "property_dev.doc_appearance.footer_color": "Ылдыйкы колонтитул түсү",
+    "property_dev.doc_appearance.page_size": "Кагаз өлчөмү",
+    "property_dev.doc_appearance.logo_align": "Жогорку колонтитулдун орду",
+    "property_dev.doc_appearance.base_font_size": "Негизги текст өлчөмү (пт)",
+    "property_dev.doc_appearance.font_hint": "{{min}} менен {{max}} аралыгы. Аталыштар да ошого жараша өзгөрөт.",
+    "property_dev.doc_appearance.margin_mm": "Барактын четтери (мм)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} менен {{max}} аралыгы. 10дон азында көпчүлүк принтер кесип салат.",
+    "property_dev.doc_appearance.footer_text": "Ылдыйкы сап",
+    "property_dev.doc_appearance.footer_placeholder": "Компаниянын аты менен күндү көрсөтүү үчүн бош калтырыңыз",
+    "property_dev.doc_appearance.footer_hint": "Түзүлгөн күндүн ордун ээлейт. Каттоо маалыматын жазууга ыңгайлуу.",
+    "property_dev.doc_appearance.page_numbers": "Барак номерлерин көрсөтүү",
+    "property_dev.doc_appearance.page_numbers_hint": "Бул документтер өз номерлөөсү бар ишке тигилсе, өчүрүңүз.",
+    "property_dev.doc_appearance.preview": "Алдын ала көрүү",
+    "property_dev.doc_appearance.preview_brand": "Сиздин компания",
+    "property_dev.doc_appearance.preview_footer": "Сиздин компания | Түзүлдү 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Жайгашуусу гана. Чыныгы PDF үчүн төмөнкү үлгүдөн алдын ала көрүүнү колдонуңуз.",
+    "property_dev.doc_appearance.reset": "Демейки көрүнүшкө кайтуу",
+    "property_dev.doc_appearance.saved": "Документтин көрүнүшү сакталды. Жаңы экспорттор ушуну колдонот.",
+    "property_dev.doc_appearance.reset_done": "Демейки көрүнүшкө кайттык.",
+    "property_dev.doc_appearance.admin_only": "Муну администратор гана өзгөртө алат.",
+    "property_dev.doc_appearance.unsaved": "Сакталбаган өзгөрүүлөр бар. Мурда түзүлгөн PDF файлдар кайра түзүлбөйт.",
+    "property_dev.doc_appearance.load_failed": "Көрүнүш жөндөөлөрүн жүктөө мүмкүн болбоду. Төмөнкү үлгүлөргө таасири жок.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

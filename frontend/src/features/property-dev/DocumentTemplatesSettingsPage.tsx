@@ -74,6 +74,7 @@ import {
   ConfirmDialog,
 } from '@/shared/ui';
 import { PageHeader } from '@/shared/ui/PageHeader';
+import { DocumentAppearancePanel } from './DocumentAppearancePanel';
 import { useToastStore } from '@/stores/useToastStore';
 import { getErrorMessage } from '@/shared/lib/api';
 import {
@@ -441,6 +442,11 @@ export function DocumentTemplatesSettingsPage() {
           })}
         </Button>
       </Card>
+
+      {/* How the documents look. Above the template list on purpose: it is
+          the setting that applies to all of them, and to every other PDF
+          the platform generates. */}
+      <DocumentAppearancePanel />
 
       {/* Upload custom template */}
       <UploadCustomTemplateForm

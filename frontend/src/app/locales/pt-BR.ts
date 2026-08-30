@@ -38314,6 +38314,37 @@ const resource = {
     "modules.pp_name_us_california": "Pacote de Construção da Califórnia",
     "modules.pp_name_us_costdata": "Pacote de Construção dos EUA",
     "modules.pp_name_us_texas": "Pacote de Construção do Texas",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Esquerda",
+    "common.center": "Centro",
+    "common.right": "Direita",
+    "property_dev.doc_appearance.title": "Como seus documentos aparecem",
+    "property_dev.doc_appearance.subtitle": "Vale para todo PDF que a plataforma gera, não só para os modelos abaixo. O logotipo e a razão social são definidos na identidade do espaço de trabalho.",
+    "property_dev.doc_appearance.accent_color": "Cor dos títulos",
+    "property_dev.doc_appearance.footer_color": "Cor do rodapé",
+    "property_dev.doc_appearance.page_size": "Tamanho do papel",
+    "property_dev.doc_appearance.logo_align": "Posição do cabeçalho",
+    "property_dev.doc_appearance.base_font_size": "Tamanho do texto (pt)",
+    "property_dev.doc_appearance.font_hint": "De {{min}} a {{max}}. Os títulos acompanham a escala.",
+    "property_dev.doc_appearance.margin_mm": "Margem da página (mm)",
+    "property_dev.doc_appearance.margin_hint": "De {{min}} a {{max}}. Abaixo de 10 a maioria das impressoras corta.",
+    "property_dev.doc_appearance.footer_text": "Linha de rodapé",
+    "property_dev.doc_appearance.footer_placeholder": "Deixe vazio para mostrar a razão social e a data",
+    "property_dev.doc_appearance.footer_hint": "Substitui a data de geração. Útil para a linha com CNPJ e razão social.",
+    "property_dev.doc_appearance.page_numbers": "Mostrar números de página",
+    "property_dev.doc_appearance.page_numbers_hint": "Desligue quando estes documentos forem juntados a um processo que já numera as páginas.",
+    "property_dev.doc_appearance.preview": "Pré-visualização",
+    "property_dev.doc_appearance.preview_brand": "Sua empresa",
+    "property_dev.doc_appearance.preview_footer": "Sua empresa | Gerado 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Apenas o layout. Use Pré-visualizar em um modelo abaixo para gerar um PDF real.",
+    "property_dev.doc_appearance.reset": "Restaurar a aparência padrão",
+    "property_dev.doc_appearance.saved": "Aparência salva. As novas exportações passam a usá-la.",
+    "property_dev.doc_appearance.reset_done": "De volta à aparência padrão.",
+    "property_dev.doc_appearance.admin_only": "Só um administrador pode alterar isso.",
+    "property_dev.doc_appearance.unsaved": "Alterações não salvas. Os PDF já gerados não são refeitos.",
+    "property_dev.doc_appearance.load_failed": "Não foi possível carregar as configurações de aparência. Os modelos abaixo não são afetados.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -39215,6 +39215,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} қажет",
     "cases.regional_pack_set_up": "Баптау",
     "cases.regional_pack_setup_hint": "Бұл кейс өз нарығының стандарттарын сақтайды. Оларды алып жүретін пакетті ашады, сол жерде оны қосуға болады.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Сол жақ",
+    "common.center": "Ортасы",
+    "common.right": "Оң жақ",
+    "property_dev.doc_appearance.title": "Құжаттарыңыз қалай көрінеді",
+    "property_dev.doc_appearance.subtitle": "Платформа жасайтын әрбір PDF файлға қолданылады, тек төмендегі үлгілерге ғана емес. Логотип пен компания атауы жұмыс кеңістігінің бренд бөлімінде беріледі.",
+    "property_dev.doc_appearance.accent_color": "Тақырыптардың түсі",
+    "property_dev.doc_appearance.footer_color": "Төменгі колонтитул түсі",
+    "property_dev.doc_appearance.page_size": "Қағаз өлшемі",
+    "property_dev.doc_appearance.logo_align": "Жоғарғы колонтитул орны",
+    "property_dev.doc_appearance.base_font_size": "Негізгі мәтін өлшемі (пт)",
+    "property_dev.doc_appearance.font_hint": "{{min}} мен {{max}} аралығы. Тақырыптар да соған сай өзгереді.",
+    "property_dev.doc_appearance.margin_mm": "Бет жиегі (мм)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} мен {{max}} аралығы. 10-нан аз болса, көп принтер қиып жібереді.",
+    "property_dev.doc_appearance.footer_text": "Төменгі жол",
+    "property_dev.doc_appearance.footer_placeholder": "Компания атауы мен күнін көрсету үшін бос қалдырыңыз",
+    "property_dev.doc_appearance.footer_hint": "Жасалған күнін алмастырады. Тіркеу деректерін жазуға ыңғайлы.",
+    "property_dev.doc_appearance.page_numbers": "Бет нөмірлерін көрсету",
+    "property_dev.doc_appearance.page_numbers_hint": "Бұл құжаттар өз нөмірлеуі бар іске тігілсе, өшіріңіз.",
+    "property_dev.doc_appearance.preview": "Алдын ала қарау",
+    "property_dev.doc_appearance.preview_brand": "Сіздің компанияңыз",
+    "property_dev.doc_appearance.preview_footer": "Сіздің компанияңыз | Жасалды 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Тек орналасуы. Нақты PDF үшін төмендегі үлгіден алдын ала қарауды пайдаланыңыз.",
+    "property_dev.doc_appearance.reset": "Әдепкі көрініске оралу",
+    "property_dev.doc_appearance.saved": "Құжат көрінісі сақталды. Жаңа экспорттар осыны қолданады.",
+    "property_dev.doc_appearance.reset_done": "Әдепкі көрініске оралдық.",
+    "property_dev.doc_appearance.admin_only": "Мұны тек әкімші өзгерте алады.",
+    "property_dev.doc_appearance.unsaved": "Сақталмаған өзгерістер бар. Бұрын жасалған PDF файлдар қайта жасалмайды.",
+    "property_dev.doc_appearance.load_failed": "Көрініс баптауларын жүктеу мүмкін болмады. Төмендегі үлгілерге әсері жоқ.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

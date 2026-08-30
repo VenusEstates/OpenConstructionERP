@@ -39240,6 +39240,37 @@ const resource = {
     "cases.regional_pack_needed": "Vaatii paketin {{name}}",
     "cases.regional_pack_set_up": "Määritä",
     "cases.regional_pack_setup_hint": "Tämä tapaus noudattaa markkina-alueensa standardeja. Avaa paketin, joka sisältää ne ja jossa voit ottaa sen käyttöön.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Vasen",
+    "common.center": "Keskitetty",
+    "common.right": "Oikea",
+    "property_dev.doc_appearance.title": "Miltä asiakirjasi näyttävät",
+    "property_dev.doc_appearance.subtitle": "Koskee jokaista alustan luomaa PDF-tiedostoa, ei vain alla olevia malleja. Logo ja yrityksen nimi asetetaan työtilan ilmeessä.",
+    "property_dev.doc_appearance.accent_color": "Otsikoiden väri",
+    "property_dev.doc_appearance.footer_color": "Alatunnisteen väri",
+    "property_dev.doc_appearance.page_size": "Paperikoko",
+    "property_dev.doc_appearance.logo_align": "Ylätunnisteen sijainti",
+    "property_dev.doc_appearance.base_font_size": "Leipätekstin koko (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}}–{{max}}. Otsikot skaalautuvat mukana.",
+    "property_dev.doc_appearance.margin_mm": "Sivun marginaali (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}}–{{max}}. Alle 10:n useimmat tulostimet leikkaavat.",
+    "property_dev.doc_appearance.footer_text": "Alatunnisteen rivi",
+    "property_dev.doc_appearance.footer_placeholder": "Jätä tyhjäksi, niin näytetään yrityksen nimi ja päivämäärä",
+    "property_dev.doc_appearance.footer_hint": "Korvaa luontipäivän. Sopii riville, jolla on Y-tunnus.",
+    "property_dev.doc_appearance.page_numbers": "Näytä sivunumerot",
+    "property_dev.doc_appearance.page_numbers_hint": "Poista käytöstä, kun asiakirjat liitetään kokonaisuuteen, joka numeroi sivut itse.",
+    "property_dev.doc_appearance.preview": "Esikatselu",
+    "property_dev.doc_appearance.preview_brand": "Yrityksesi",
+    "property_dev.doc_appearance.preview_footer": "Yrityksesi | Luotu 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Vain asettelu. Oikean PDF:n saat alla olevan mallin esikatselusta.",
+    "property_dev.doc_appearance.reset": "Palauta oletusulkoasu",
+    "property_dev.doc_appearance.saved": "Ulkoasu tallennettu. Uudet viennit käyttävät sitä.",
+    "property_dev.doc_appearance.reset_done": "Takaisin oletusulkoasuun.",
+    "property_dev.doc_appearance.admin_only": "Vain ylläpitäjä voi muuttaa tätä.",
+    "property_dev.doc_appearance.unsaved": "Tallentamattomia muutoksia. Jo luotuja PDF-tiedostoja ei luoda uudelleen.",
+    "property_dev.doc_appearance.load_failed": "Ulkoasun asetuksia ei voitu ladata. Alla olevat mallit toimivat normaalisti.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

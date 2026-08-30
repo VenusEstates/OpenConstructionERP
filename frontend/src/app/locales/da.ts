@@ -39236,6 +39236,37 @@ const resource = {
     "cases.regional_pack_needed": "Kræver {{name}}",
     "cases.regional_pack_set_up": "Opsæt",
     "cases.regional_pack_setup_hint": "Denne case følger standarderne for sit marked. Åbner pakken, der indeholder dem, hvor du kan slå den til.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Venstre",
+    "common.center": "Midten",
+    "common.right": "Højre",
+    "property_dev.doc_appearance.title": "Sådan ser dine dokumenter ud",
+    "property_dev.doc_appearance.subtitle": "Gælder alle PDF-filer, platformen laver, ikke kun skabelonerne nedenfor. Logo og firmanavn sættes i arbejdsområdets branding.",
+    "property_dev.doc_appearance.accent_color": "Farve på overskrifter",
+    "property_dev.doc_appearance.footer_color": "Farve på sidefoden",
+    "property_dev.doc_appearance.page_size": "Papirformat",
+    "property_dev.doc_appearance.logo_align": "Sidehovedets placering",
+    "property_dev.doc_appearance.base_font_size": "Brødtekstens størrelse (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} til {{max}}. Overskrifter skalerer med.",
+    "property_dev.doc_appearance.margin_mm": "Sidemargen (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} til {{max}}. Under 10 beskærer de fleste printere.",
+    "property_dev.doc_appearance.footer_text": "Linje i sidefoden",
+    "property_dev.doc_appearance.footer_placeholder": "Lad feltet stå tomt for at vise firmanavn og dato",
+    "property_dev.doc_appearance.footer_hint": "Erstatter datoen. Brug den til en linje med CVR-oplysninger.",
+    "property_dev.doc_appearance.page_numbers": "Vis sidetal",
+    "property_dev.doc_appearance.page_numbers_hint": "Slå fra, når dokumenterne lægges i en samling, der selv nummererer siderne.",
+    "property_dev.doc_appearance.preview": "Forhåndsvisning",
+    "property_dev.doc_appearance.preview_brand": "Din virksomhed",
+    "property_dev.doc_appearance.preview_footer": "Din virksomhed | Oprettet 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Kun layout. Brug Forhåndsvis på en skabelon nedenfor for en rigtig PDF.",
+    "property_dev.doc_appearance.reset": "Nulstil til standardudseendet",
+    "property_dev.doc_appearance.saved": "Udseendet er gemt. Nye eksporter bruger det.",
+    "property_dev.doc_appearance.reset_done": "Tilbage til standardudseendet.",
+    "property_dev.doc_appearance.admin_only": "Kun en administrator kan ændre dette.",
+    "property_dev.doc_appearance.unsaved": "Ikke-gemte ændringer. Allerede oprettede PDF-filer laves ikke om.",
+    "property_dev.doc_appearance.load_failed": "Indstillingerne for udseende kunne ikke indlæses. Skabelonerne nedenfor er upåvirkede.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

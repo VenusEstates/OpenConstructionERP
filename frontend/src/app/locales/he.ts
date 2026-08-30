@@ -39296,6 +39296,37 @@ const resource = {
     "cases.regional_pack_needed": "דורש את {{name}}",
     "cases.regional_pack_set_up": "הגדרה",
     "cases.regional_pack_setup_hint": "תרחיש זה עוקב אחר התקנים של השוק שלו. פותח את החבילה שמביאה אותם, שם ניתן להפעיל אותה.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "שמאל",
+    "common.center": "מרכז",
+    "common.right": "ימין",
+    "property_dev.doc_appearance.title": "איך המסמכים שלך נראים",
+    "property_dev.doc_appearance.subtitle": "חל על כל קובץ PDF שהמערכת מייצרת, לא רק על התבניות שלמטה. הלוגו ושם החברה נקבעים במיתוג סביבת העבודה.",
+    "property_dev.doc_appearance.accent_color": "צבע הכותרות",
+    "property_dev.doc_appearance.footer_color": "צבע הכותרת התחתונה",
+    "property_dev.doc_appearance.page_size": "גודל הנייר",
+    "property_dev.doc_appearance.logo_align": "מיקום הכותרת העליונה",
+    "property_dev.doc_appearance.base_font_size": "גודל טקסט הגוף (נק')",
+    "property_dev.doc_appearance.font_hint": "מ-{{min}} עד {{max}}. הכותרות משתנות בהתאם.",
+    "property_dev.doc_appearance.margin_mm": "שוליים (מ\"מ)",
+    "property_dev.doc_appearance.margin_hint": "מ-{{min}} עד {{max}}. מתחת ל-10 רוב המדפסות חותכות.",
+    "property_dev.doc_appearance.footer_text": "שורת כותרת תחתונה",
+    "property_dev.doc_appearance.footer_placeholder": "השאירו ריק כדי להציג את שם החברה והתאריך",
+    "property_dev.doc_appearance.footer_hint": "מחליף את תאריך ההפקה. מתאים לשורת פרטי חברה רשומה.",
+    "property_dev.doc_appearance.page_numbers": "הצגת מספרי עמודים",
+    "property_dev.doc_appearance.page_numbers_hint": "כבו כאשר המסמכים מתויקים בתוך חוברת הממספרת את עצמה.",
+    "property_dev.doc_appearance.preview": "תצוגה מקדימה",
+    "property_dev.doc_appearance.preview_brand": "החברה שלך",
+    "property_dev.doc_appearance.preview_footer": "החברה שלך | הופק 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "פריסה בלבד. להפקת PDF אמיתי השתמשו בתצוגה מקדימה של תבנית למטה.",
+    "property_dev.doc_appearance.reset": "איפוס למראה ברירת המחדל",
+    "property_dev.doc_appearance.saved": "המראה נשמר. ייצוא חדש ישתמש בו.",
+    "property_dev.doc_appearance.reset_done": "חזרה למראה ברירת המחדל.",
+    "property_dev.doc_appearance.admin_only": "רק מנהל מערכת יכול לשנות זאת.",
+    "property_dev.doc_appearance.unsaved": "שינויים שלא נשמרו. קבצי PDF שכבר הופקו אינם מופקים מחדש.",
+    "property_dev.doc_appearance.load_failed": "לא ניתן לטעון את הגדרות המראה. התבניות שלמטה אינן מושפעות.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

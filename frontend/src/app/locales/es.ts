@@ -41583,6 +41583,37 @@ const resource = {
     "cases.regional_pack_needed": "Requiere {{name}}",
     "cases.regional_pack_set_up": "Configurar",
     "cases.regional_pack_setup_hint": "Este caso sigue los estándares de su mercado. Abre el paquete que los aporta, donde puede activarlo.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Izquierda",
+    "common.center": "Centro",
+    "common.right": "Derecha",
+    "property_dev.doc_appearance.title": "Cómo se ven sus documentos",
+    "property_dev.doc_appearance.subtitle": "Se aplica a todos los PDF que genera la plataforma, no solo a las plantillas de abajo. El logotipo y el nombre de la empresa se definen en la marca del espacio de trabajo.",
+    "property_dev.doc_appearance.accent_color": "Color de los títulos",
+    "property_dev.doc_appearance.footer_color": "Color del pie de página",
+    "property_dev.doc_appearance.page_size": "Tamaño del papel",
+    "property_dev.doc_appearance.logo_align": "Posición del encabezado",
+    "property_dev.doc_appearance.base_font_size": "Tamaño del texto (pt)",
+    "property_dev.doc_appearance.font_hint": "De {{min}} a {{max}}. Los títulos escalan con él.",
+    "property_dev.doc_appearance.margin_mm": "Margen de página (mm)",
+    "property_dev.doc_appearance.margin_hint": "De {{min}} a {{max}}. Por debajo de 10 la mayoría de impresoras recorta.",
+    "property_dev.doc_appearance.footer_text": "Línea de pie de página",
+    "property_dev.doc_appearance.footer_placeholder": "Déjelo vacío para mostrar el nombre de la empresa y la fecha",
+    "property_dev.doc_appearance.footer_hint": "Sustituye a la fecha de generación. Úselo para los datos registrales de la empresa.",
+    "property_dev.doc_appearance.page_numbers": "Mostrar números de página",
+    "property_dev.doc_appearance.page_numbers_hint": "Desactívelo si estos documentos se archivan dentro de un expediente que se pagina solo.",
+    "property_dev.doc_appearance.preview": "Vista previa",
+    "property_dev.doc_appearance.preview_brand": "Su empresa",
+    "property_dev.doc_appearance.preview_footer": "Su empresa | Generado 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Solo la maquetación. Use Vista previa en una plantilla de abajo para generar un PDF real.",
+    "property_dev.doc_appearance.reset": "Restablecer la apariencia estándar",
+    "property_dev.doc_appearance.saved": "Apariencia guardada. Los nuevos exportados la usan.",
+    "property_dev.doc_appearance.reset_done": "Vuelta a la apariencia estándar.",
+    "property_dev.doc_appearance.admin_only": "Solo un administrador puede cambiarlo.",
+    "property_dev.doc_appearance.unsaved": "Cambios sin guardar. Los PDF ya generados no se vuelven a producir.",
+    "property_dev.doc_appearance.load_failed": "No se pudieron cargar los ajustes de apariencia. Las plantillas de abajo no se ven afectadas.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -39215,6 +39215,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} درکار ہے",
     "cases.regional_pack_set_up": "سیٹ اپ کریں",
     "cases.regional_pack_setup_hint": "یہ کیس اپنی مارکیٹ کے معیارات کی پیروی کرتا ہے۔ وہ پیکج کھولتا ہے جو انہیں لاتا ہے، جہاں آپ اسے فعال کر سکتے ہیں۔",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "بائیں",
+    "common.center": "درمیان",
+    "common.right": "دائیں",
+    "property_dev.doc_appearance.title": "آپ کی دستاویزات کیسی دکھتی ہیں",
+    "property_dev.doc_appearance.subtitle": "پلیٹ فارم کی بنائی ہوئی ہر PDF پر لاگو ہوتا ہے، صرف نیچے کے سانچوں پر نہیں۔ لوگو اور کمپنی کا نام ورک اسپیس برانڈنگ میں طے ہوتا ہے۔",
+    "property_dev.doc_appearance.accent_color": "سرخیوں کا رنگ",
+    "property_dev.doc_appearance.footer_color": "فوٹر کا رنگ",
+    "property_dev.doc_appearance.page_size": "کاغذ کا سائز",
+    "property_dev.doc_appearance.logo_align": "ہیڈر کی جگہ",
+    "property_dev.doc_appearance.base_font_size": "متن کا سائز (پوائنٹ)",
+    "property_dev.doc_appearance.font_hint": "{{min}} سے {{max}} تک۔ سرخیاں بھی اسی تناسب سے بدلتی ہیں۔",
+    "property_dev.doc_appearance.margin_mm": "صفحے کا حاشیہ (ملی میٹر)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} سے {{max}} تک۔ 10 سے کم پر اکثر پرنٹر کاٹ دیتے ہیں۔",
+    "property_dev.doc_appearance.footer_text": "فوٹر کی سطر",
+    "property_dev.doc_appearance.footer_placeholder": "کمپنی کا نام اور تاریخ دکھانے کے لیے خالی چھوڑ دیں",
+    "property_dev.doc_appearance.footer_hint": "تیاری کی تاریخ کی جگہ لیتا ہے۔ رجسٹرڈ کمپنی کی تفصیل کے لیے موزوں۔",
+    "property_dev.doc_appearance.page_numbers": "صفحہ نمبر دکھائیں",
+    "property_dev.doc_appearance.page_numbers_hint": "بند کریں جب یہ دستاویزات ایسے مسل میں لگیں جو خود صفحات گنتا ہے۔",
+    "property_dev.doc_appearance.preview": "پیش منظر",
+    "property_dev.doc_appearance.preview_brand": "آپ کی کمپنی",
+    "property_dev.doc_appearance.preview_footer": "آپ کی کمپنی | تیار شدہ 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "صرف ترتیب۔ اصل PDF کے لیے نیچے کسی سانچے کا پیش منظر دیکھیں۔",
+    "property_dev.doc_appearance.reset": "طے شدہ شکل پر واپس",
+    "property_dev.doc_appearance.saved": "شکل محفوظ ہو گئی۔ نئی برآمدات یہی استعمال کریں گی۔",
+    "property_dev.doc_appearance.reset_done": "طے شدہ شکل پر واپس آ گئے۔",
+    "property_dev.doc_appearance.admin_only": "اسے صرف ایڈمن بدل سکتا ہے۔",
+    "property_dev.doc_appearance.unsaved": "غیر محفوظ تبدیلیاں۔ پہلے بنی PDF دوبارہ نہیں بنتیں۔",
+    "property_dev.doc_appearance.load_failed": "شکل کی ترتیبات لوڈ نہیں ہو سکیں۔ نیچے کے سانچے متاثر نہیں ہوئے۔",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

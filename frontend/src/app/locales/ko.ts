@@ -39804,6 +39804,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} 필요",
     "cases.regional_pack_set_up": "설정하기",
     "cases.regional_pack_setup_hint": "이 사례는 해당 시장의 표준을 따릅니다. 그 표준을 담은 팩을 열며, 여기서 활성화할 수 있습니다.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "왼쪽",
+    "common.center": "가운데",
+    "common.right": "오른쪽",
+    "property_dev.doc_appearance.title": "문서 모양",
+    "property_dev.doc_appearance.subtitle": "아래 서식뿐 아니라 시스템이 만드는 모든 PDF에 적용됩니다. 로고와 회사명은 작업 공간 브랜딩에서 지정합니다.",
+    "property_dev.doc_appearance.accent_color": "제목 색",
+    "property_dev.doc_appearance.footer_color": "바닥글 색",
+    "property_dev.doc_appearance.page_size": "용지 크기",
+    "property_dev.doc_appearance.logo_align": "머리글 위치",
+    "property_dev.doc_appearance.base_font_size": "본문 글자 크기(pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}}부터 {{max}}까지. 제목도 함께 커집니다.",
+    "property_dev.doc_appearance.margin_mm": "여백(mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}}부터 {{max}}까지. 10 미만이면 대부분의 프린터가 잘라냅니다.",
+    "property_dev.doc_appearance.footer_text": "바닥글 문구",
+    "property_dev.doc_appearance.footer_placeholder": "비워 두면 회사명과 날짜가 표시됩니다",
+    "property_dev.doc_appearance.footer_hint": "생성 날짜를 대신합니다. 법인 등록 정보를 넣기에 적합합니다.",
+    "property_dev.doc_appearance.page_numbers": "쪽 번호 표시",
+    "property_dev.doc_appearance.page_numbers_hint": "자체 쪽 번호가 붙는 묶음 문서에 편철할 때는 끄십시오.",
+    "property_dev.doc_appearance.preview": "미리 보기",
+    "property_dev.doc_appearance.preview_brand": "귀사",
+    "property_dev.doc_appearance.preview_footer": "귀사 | 생성 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "배치만 보여 줍니다. 실제 PDF는 아래 서식의 미리 보기를 사용하십시오.",
+    "property_dev.doc_appearance.reset": "기본 모양으로 되돌리기",
+    "property_dev.doc_appearance.saved": "문서 모양을 저장했습니다. 새 내보내기에 적용됩니다.",
+    "property_dev.doc_appearance.reset_done": "기본 모양으로 되돌렸습니다.",
+    "property_dev.doc_appearance.admin_only": "관리자만 변경할 수 있습니다.",
+    "property_dev.doc_appearance.unsaved": "저장하지 않은 변경이 있습니다. 이미 만든 PDF는 다시 만들어지지 않습니다.",
+    "property_dev.doc_appearance.load_failed": "모양 설정을 불러오지 못했습니다. 아래 서식은 영향을 받지 않습니다.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

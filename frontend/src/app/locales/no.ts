@@ -39236,6 +39236,37 @@ const resource = {
     "cases.regional_pack_needed": "Krever {{name}}",
     "cases.regional_pack_set_up": "Sett opp",
     "cases.regional_pack_setup_hint": "Denne casen følger standardene for markedet sitt. Åpner pakken som inneholder dem, der du kan slå den på.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Venstre",
+    "common.center": "Midten",
+    "common.right": "Høyre",
+    "property_dev.doc_appearance.title": "Slik ser dokumentene dine ut",
+    "property_dev.doc_appearance.subtitle": "Gjelder alle PDF-er plattformen lager, ikke bare malene nedenfor. Logo og firmanavn settes i arbeidsområdets profil.",
+    "property_dev.doc_appearance.accent_color": "Farge på overskrifter",
+    "property_dev.doc_appearance.footer_color": "Farge på bunnteksten",
+    "property_dev.doc_appearance.page_size": "Papirformat",
+    "property_dev.doc_appearance.logo_align": "Plassering av topptekst",
+    "property_dev.doc_appearance.base_font_size": "Størrelse på brødtekst (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} til {{max}}. Overskrifter skalerer med.",
+    "property_dev.doc_appearance.margin_mm": "Sidemarg (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} til {{max}}. Under 10 beskjærer de fleste skrivere.",
+    "property_dev.doc_appearance.footer_text": "Linje i bunnteksten",
+    "property_dev.doc_appearance.footer_placeholder": "La feltet stå tomt for å vise firmanavn og dato",
+    "property_dev.doc_appearance.footer_hint": "Erstatter datoen. Bruk den til en linje med organisasjonsnummer.",
+    "property_dev.doc_appearance.page_numbers": "Vis sidetall",
+    "property_dev.doc_appearance.page_numbers_hint": "Slå av når dokumentene arkiveres i en samling som nummererer sidene selv.",
+    "property_dev.doc_appearance.preview": "Forhåndsvisning",
+    "property_dev.doc_appearance.preview_brand": "Firmaet ditt",
+    "property_dev.doc_appearance.preview_footer": "Firmaet ditt | Opprettet 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Bare oppsettet. Bruk Forhåndsvis på en mal nedenfor for en ekte PDF.",
+    "property_dev.doc_appearance.reset": "Tilbakestill til standardutseendet",
+    "property_dev.doc_appearance.saved": "Utseendet er lagret. Nye eksporter bruker det.",
+    "property_dev.doc_appearance.reset_done": "Tilbake til standardutseendet.",
+    "property_dev.doc_appearance.admin_only": "Bare en administrator kan endre dette.",
+    "property_dev.doc_appearance.unsaved": "Ulagrede endringer. PDF-er som alt er laget, lages ikke på nytt.",
+    "property_dev.doc_appearance.load_failed": "Klarte ikke å laste utseendeinnstillingene. Malene nedenfor påvirkes ikke.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

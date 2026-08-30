@@ -40115,6 +40115,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} gerektirir",
     "cases.regional_pack_set_up": "Ayarla",
     "cases.regional_pack_setup_hint": "Bu vaka, kendi pazarının standartlarını izler. Bunları taşıyan paketi açar; buradan etkinleştirebilirsiniz.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Sol",
+    "common.center": "Orta",
+    "common.right": "Sağ",
+    "property_dev.doc_appearance.title": "Belgeleriniz nasıl görünüyor",
+    "property_dev.doc_appearance.subtitle": "Platformun ürettiği her PDF için geçerlidir, yalnızca aşağıdaki şablonlar için değil. Logo ve şirket adı çalışma alanı kimliğinde ayarlanır.",
+    "property_dev.doc_appearance.accent_color": "Başlık rengi",
+    "property_dev.doc_appearance.footer_color": "Alt bilgi rengi",
+    "property_dev.doc_appearance.page_size": "Kağıt boyutu",
+    "property_dev.doc_appearance.logo_align": "Üst bilginin konumu",
+    "property_dev.doc_appearance.base_font_size": "Gövde metni boyutu (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} ile {{max}} arası. Başlıklar da bu ölçekle büyür.",
+    "property_dev.doc_appearance.margin_mm": "Sayfa kenar boşluğu (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} ile {{max}} arası. 10'un altında çoğu yazıcı kırpar.",
+    "property_dev.doc_appearance.footer_text": "Alt bilgi satırı",
+    "property_dev.doc_appearance.footer_placeholder": "Şirket adı ve tarihi göstermek için boş bırakın",
+    "property_dev.doc_appearance.footer_hint": "Oluşturma tarihinin yerini alır. Ticaret sicil bilgileri için uygundur.",
+    "property_dev.doc_appearance.page_numbers": "Sayfa numaralarını göster",
+    "property_dev.doc_appearance.page_numbers_hint": "Belgeler kendi sayfa numarasını veren bir dosyaya konuyorsa kapatın.",
+    "property_dev.doc_appearance.preview": "Önizleme",
+    "property_dev.doc_appearance.preview_brand": "Şirketiniz",
+    "property_dev.doc_appearance.preview_footer": "Şirketiniz | Oluşturuldu 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Yalnızca yerleşim. Gerçek PDF için aşağıdaki bir şablonda Önizleme'yi kullanın.",
+    "property_dev.doc_appearance.reset": "Varsayılan görünüme dön",
+    "property_dev.doc_appearance.saved": "Belge görünümü kaydedildi. Yeni dışa aktarmalar bunu kullanır.",
+    "property_dev.doc_appearance.reset_done": "Varsayılan görünüme dönüldü.",
+    "property_dev.doc_appearance.admin_only": "Bunu yalnızca bir yönetici değiştirebilir.",
+    "property_dev.doc_appearance.unsaved": "Kaydedilmemiş değişiklikler. Daha önce üretilen PDF'ler yeniden oluşturulmaz.",
+    "property_dev.doc_appearance.load_failed": "Görünüm ayarları yüklenemedi. Aşağıdaki şablonlar bundan etkilenmez.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

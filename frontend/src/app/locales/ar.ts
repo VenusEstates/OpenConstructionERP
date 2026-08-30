@@ -41102,6 +41102,37 @@ const resource = {
     "cases.regional_pack_needed": "يتطلب {{name}}",
     "cases.regional_pack_set_up": "إعداد",
     "cases.regional_pack_setup_hint": "تتبع هذه الحالة معايير سوقها. يفتح الحزمة التي تحملها، حيث يمكنك تفعيلها.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "يسار",
+    "common.center": "وسط",
+    "common.right": "يمين",
+    "property_dev.doc_appearance.title": "شكل مستنداتك",
+    "property_dev.doc_appearance.subtitle": "ينطبق على كل ملف PDF تنشئه المنصة، وليس على القوالب أدناه فقط. يتم ضبط الشعار واسم الشركة في هوية مساحة العمل.",
+    "property_dev.doc_appearance.accent_color": "لون العناوين",
+    "property_dev.doc_appearance.footer_color": "لون التذييل",
+    "property_dev.doc_appearance.page_size": "حجم الورق",
+    "property_dev.doc_appearance.logo_align": "موضع الترويسة",
+    "property_dev.doc_appearance.base_font_size": "حجم النص الأساسي (نقطة)",
+    "property_dev.doc_appearance.font_hint": "من {{min}} إلى {{max}}. تتغير أحجام العناوين تبعًا له.",
+    "property_dev.doc_appearance.margin_mm": "هامش الصفحة (مم)",
+    "property_dev.doc_appearance.margin_hint": "من {{min}} إلى {{max}}. أقل من 10 تقتطع معظم الطابعات.",
+    "property_dev.doc_appearance.footer_text": "سطر التذييل",
+    "property_dev.doc_appearance.footer_placeholder": "اتركه فارغًا لعرض اسم الشركة والتاريخ",
+    "property_dev.doc_appearance.footer_hint": "يحل محل تاريخ الإنشاء. مناسب لسطر بيانات السجل التجاري.",
+    "property_dev.doc_appearance.page_numbers": "إظهار أرقام الصفحات",
+    "property_dev.doc_appearance.page_numbers_hint": "أوقفه عندما تُحفظ هذه المستندات ضمن ملف يرقّم صفحاته بنفسه.",
+    "property_dev.doc_appearance.preview": "معاينة",
+    "property_dev.doc_appearance.preview_brand": "شركتك",
+    "property_dev.doc_appearance.preview_footer": "شركتك | أُنشئ 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "التخطيط فقط. استخدم المعاينة على قالب أدناه للحصول على ملف PDF حقيقي.",
+    "property_dev.doc_appearance.reset": "إعادة الضبط إلى الشكل الافتراضي",
+    "property_dev.doc_appearance.saved": "تم حفظ شكل المستندات. ستستخدمه عمليات التصدير الجديدة.",
+    "property_dev.doc_appearance.reset_done": "عدنا إلى الشكل الافتراضي.",
+    "property_dev.doc_appearance.admin_only": "لا يمكن تغيير هذا إلا للمسؤول.",
+    "property_dev.doc_appearance.unsaved": "تغييرات غير محفوظة. لا يُعاد إنشاء ملفات PDF السابقة.",
+    "property_dev.doc_appearance.load_failed": "تعذّر تحميل إعدادات الشكل. القوالب أدناه غير متأثرة.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

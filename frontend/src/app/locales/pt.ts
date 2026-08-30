@@ -41577,6 +41577,37 @@ const resource = {
     "cases.regional_pack_needed": "Requer {{name}}",
     "cases.regional_pack_set_up": "Configurar",
     "cases.regional_pack_setup_hint": "Este caso segue os padrões do seu mercado. Abre o pacote que os traz, onde pode ativá-lo.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Esquerda",
+    "common.center": "Centro",
+    "common.right": "Direita",
+    "property_dev.doc_appearance.title": "O aspeto dos seus documentos",
+    "property_dev.doc_appearance.subtitle": "Aplica-se a todos os PDF gerados pela plataforma, não apenas aos modelos abaixo. O logótipo e o nome da empresa definem-se na identidade do espaço de trabalho.",
+    "property_dev.doc_appearance.accent_color": "Cor dos títulos",
+    "property_dev.doc_appearance.footer_color": "Cor do rodapé",
+    "property_dev.doc_appearance.page_size": "Tamanho do papel",
+    "property_dev.doc_appearance.logo_align": "Posição do cabeçalho",
+    "property_dev.doc_appearance.base_font_size": "Tamanho do texto (pt)",
+    "property_dev.doc_appearance.font_hint": "De {{min}} a {{max}}. Os títulos acompanham a escala.",
+    "property_dev.doc_appearance.margin_mm": "Margem da página (mm)",
+    "property_dev.doc_appearance.margin_hint": "De {{min}} a {{max}}. Abaixo de 10 a maioria das impressoras corta.",
+    "property_dev.doc_appearance.footer_text": "Linha de rodapé",
+    "property_dev.doc_appearance.footer_placeholder": "Deixe vazio para mostrar o nome da empresa e a data",
+    "property_dev.doc_appearance.footer_hint": "Substitui a data de geração. Útil para os dados de registo da empresa.",
+    "property_dev.doc_appearance.page_numbers": "Mostrar números de página",
+    "property_dev.doc_appearance.page_numbers_hint": "Desligue se estes documentos forem arquivados num processo que já numera as páginas.",
+    "property_dev.doc_appearance.preview": "Pré-visualização",
+    "property_dev.doc_appearance.preview_brand": "A sua empresa",
+    "property_dev.doc_appearance.preview_footer": "A sua empresa | Gerado 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Apenas o layout. Use Pré-visualizar num modelo abaixo para gerar um PDF real.",
+    "property_dev.doc_appearance.reset": "Repor o aspeto predefinido",
+    "property_dev.doc_appearance.saved": "Aspeto guardado. As novas exportações passam a usá-lo.",
+    "property_dev.doc_appearance.reset_done": "De volta ao aspeto predefinido.",
+    "property_dev.doc_appearance.admin_only": "Só um administrador pode alterar isto.",
+    "property_dev.doc_appearance.unsaved": "Alterações por guardar. Os PDF já produzidos não são gerados de novo.",
+    "property_dev.doc_appearance.load_failed": "Não foi possível carregar as definições de aspeto. Os modelos abaixo não são afetados.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

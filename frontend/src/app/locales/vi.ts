@@ -39195,6 +39195,37 @@ const resource = {
     "cases.regional_pack_needed": "Cần {{name}}",
     "cases.regional_pack_set_up": "Thiết lập",
     "cases.regional_pack_setup_hint": "Trường hợp này tuân theo tiêu chuẩn của thị trường của nó. Mở gói mang các tiêu chuẩn đó, nơi bạn có thể bật nó lên.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Trái",
+    "common.center": "Giữa",
+    "common.right": "Phải",
+    "property_dev.doc_appearance.title": "Tài liệu của bạn trông thế nào",
+    "property_dev.doc_appearance.subtitle": "Áp dụng cho mọi tệp PDF hệ thống tạo ra, không riêng các mẫu bên dưới. Logo và tên công ty được đặt trong nhận diện không gian làm việc.",
+    "property_dev.doc_appearance.accent_color": "Màu tiêu đề",
+    "property_dev.doc_appearance.footer_color": "Màu chân trang",
+    "property_dev.doc_appearance.page_size": "Khổ giấy",
+    "property_dev.doc_appearance.logo_align": "Vị trí đầu trang",
+    "property_dev.doc_appearance.base_font_size": "Cỡ chữ nội dung (pt)",
+    "property_dev.doc_appearance.font_hint": "Từ {{min}} đến {{max}}. Tiêu đề co giãn theo.",
+    "property_dev.doc_appearance.margin_mm": "Lề trang (mm)",
+    "property_dev.doc_appearance.margin_hint": "Từ {{min}} đến {{max}}. Dưới 10 thì hầu hết máy in sẽ cắt mất.",
+    "property_dev.doc_appearance.footer_text": "Dòng chân trang",
+    "property_dev.doc_appearance.footer_placeholder": "Để trống để hiển thị tên công ty và ngày",
+    "property_dev.doc_appearance.footer_hint": "Thay cho ngày tạo. Phù hợp để ghi thông tin đăng ký doanh nghiệp.",
+    "property_dev.doc_appearance.page_numbers": "Hiển thị số trang",
+    "property_dev.doc_appearance.page_numbers_hint": "Tắt khi tài liệu được đóng vào hồ sơ tự đánh số trang.",
+    "property_dev.doc_appearance.preview": "Xem trước",
+    "property_dev.doc_appearance.preview_brand": "Công ty bạn",
+    "property_dev.doc_appearance.preview_footer": "Công ty bạn | Lập ngày 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Chỉ là bố cục. Muốn xem PDF thật, hãy dùng Xem trước ở một mẫu bên dưới.",
+    "property_dev.doc_appearance.reset": "Trở về kiểu mặc định",
+    "property_dev.doc_appearance.saved": "Đã lưu kiểu tài liệu. Các bản xuất mới sẽ dùng kiểu này.",
+    "property_dev.doc_appearance.reset_done": "Đã trở về kiểu mặc định.",
+    "property_dev.doc_appearance.admin_only": "Chỉ quản trị viên mới đổi được mục này.",
+    "property_dev.doc_appearance.unsaved": "Có thay đổi chưa lưu. Các PDF đã tạo không được tạo lại.",
+    "property_dev.doc_appearance.load_failed": "Không tải được thiết lập kiểu hiển thị. Các mẫu bên dưới không bị ảnh hưởng.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

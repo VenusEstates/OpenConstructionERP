@@ -39215,6 +39215,37 @@ const resource = {
     "cases.regional_pack_needed": "Kailangan ang {{name}}",
     "cases.regional_pack_set_up": "I-set up",
     "cases.regional_pack_setup_hint": "Sinusunod ng case na ito ang mga pamantayan ng kanyang market. Binubuksan ang pack na nagdadala ng mga ito, kung saan puwede mo itong i-on.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Kaliwa",
+    "common.center": "Gitna",
+    "common.right": "Kanan",
+    "property_dev.doc_appearance.title": "Ang itsura ng iyong mga dokumento",
+    "property_dev.doc_appearance.subtitle": "Nalalapat sa bawat PDF na ginagawa ng platform, hindi lang sa mga template sa ibaba. Ang logo at pangalan ng kompanya ay itinatakda sa branding ng workspace.",
+    "property_dev.doc_appearance.accent_color": "Kulay ng mga pamagat",
+    "property_dev.doc_appearance.footer_color": "Kulay ng footer",
+    "property_dev.doc_appearance.page_size": "Sukat ng papel",
+    "property_dev.doc_appearance.logo_align": "Posisyon ng header",
+    "property_dev.doc_appearance.base_font_size": "Laki ng pangunahing teksto (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} hanggang {{max}}. Sumusunod din ang mga pamagat.",
+    "property_dev.doc_appearance.margin_mm": "Margin ng pahina (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} hanggang {{max}}. Sa ibaba ng 10 ay pinuputol ng karamihan ng printer.",
+    "property_dev.doc_appearance.footer_text": "Linya ng footer",
+    "property_dev.doc_appearance.footer_placeholder": "Iwanang blangko para ipakita ang pangalan ng kompanya at petsa",
+    "property_dev.doc_appearance.footer_hint": "Pumapalit sa petsa ng paggawa. Angkop para sa linya ng rehistradong kompanya.",
+    "property_dev.doc_appearance.page_numbers": "Ipakita ang numero ng pahina",
+    "property_dev.doc_appearance.page_numbers_hint": "Patayin kapag isinasampa ang mga dokumentong ito sa bundle na may sariling pagnunumero.",
+    "property_dev.doc_appearance.preview": "Preview",
+    "property_dev.doc_appearance.preview_brand": "Ang iyong kompanya",
+    "property_dev.doc_appearance.preview_footer": "Ang iyong kompanya | Ginawa 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Layout lamang. Gamitin ang Preview sa template sa ibaba para sa tunay na PDF.",
+    "property_dev.doc_appearance.reset": "Ibalik sa karaniwang itsura",
+    "property_dev.doc_appearance.saved": "Na-save ang itsura. Ito na ang gagamitin ng mga bagong export.",
+    "property_dev.doc_appearance.reset_done": "Bumalik sa karaniwang itsura.",
+    "property_dev.doc_appearance.admin_only": "Admin lang ang makapagbabago nito.",
+    "property_dev.doc_appearance.unsaved": "May mga hindi pa na-save. Hindi na muling ginagawa ang mga PDF na nagawa na.",
+    "property_dev.doc_appearance.load_failed": "Hindi ma-load ang mga setting ng itsura. Hindi apektado ang mga template sa ibaba.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

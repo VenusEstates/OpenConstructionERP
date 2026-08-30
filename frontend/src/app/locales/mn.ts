@@ -39248,6 +39248,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} шаардлагатай",
     "cases.regional_pack_set_up": "Тохируулах",
     "cases.regional_pack_setup_hint": "Энэ тохиолдол өөрийн зах зээлийн стандартыг дагадаг. Тэдгээрийг агуулсан багцыг нээж, тэндээс идэвхжүүлэх боломжтой.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Зүүн",
+    "common.center": "Голд",
+    "common.right": "Баруун",
+    "property_dev.doc_appearance.title": "Таны баримт хэрхэн харагдах",
+    "property_dev.doc_appearance.subtitle": "Системийн үүсгэсэн бүх PDF-д үйлчилнэ, зөвхөн доорх загваруудад биш. Лого болон компанийн нэрийг ажлын орчны брэндийн хэсэгт тохируулна.",
+    "property_dev.doc_appearance.accent_color": "Гарчгийн өнгө",
+    "property_dev.doc_appearance.footer_color": "Хөлийн өнгө",
+    "property_dev.doc_appearance.page_size": "Цаасны хэмжээ",
+    "property_dev.doc_appearance.logo_align": "Толгойн байрлал",
+    "property_dev.doc_appearance.base_font_size": "Үндсэн бичвэрийн хэмжээ (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}}-с {{max}} хүртэл. Гарчиг ч мөн хамт хэмжээгээ өөрчилнө.",
+    "property_dev.doc_appearance.margin_mm": "Хуудасны зай (мм)",
+    "property_dev.doc_appearance.margin_hint": "{{min}}-с {{max}} хүртэл. 10-аас бага бол ихэнх хэвлэгч тайрна.",
+    "property_dev.doc_appearance.footer_text": "Хөлийн мөр",
+    "property_dev.doc_appearance.footer_placeholder": "Компанийн нэр, огноог харуулахын тулд хоосон орхи",
+    "property_dev.doc_appearance.footer_hint": "Үүсгэсэн огнооны оронд гарна. Улсын бүртгэлийн мэдээлэлд тохиромжтой.",
+    "property_dev.doc_appearance.page_numbers": "Хуудасны дугаар харуулах",
+    "property_dev.doc_appearance.page_numbers_hint": "Эдгээр баримт өөрөө дугаарладаг хавтаст хэрэгт орох бол унтраа.",
+    "property_dev.doc_appearance.preview": "Урьдчилан харах",
+    "property_dev.doc_appearance.preview_brand": "Таны компани",
+    "property_dev.doc_appearance.preview_footer": "Таны компани | Үүсгэсэн 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Зөвхөн байршуулалт. Жинхэнэ PDF-ийг доорх загварын урьдчилан харахаар үзнэ үү.",
+    "property_dev.doc_appearance.reset": "Анхны байдалд буцаах",
+    "property_dev.doc_appearance.saved": "Баримтын харагдах байдлыг хадгаллаа. Шинэ гаралтууд үүнийг ашиглана.",
+    "property_dev.doc_appearance.reset_done": "Анхны байдалд буцлаа.",
+    "property_dev.doc_appearance.admin_only": "Үүнийг зөвхөн админ өөрчилнө.",
+    "property_dev.doc_appearance.unsaved": "Хадгалаагүй өөрчлөлт байна. Өмнө үүсгэсэн PDF дахин үүсэхгүй.",
+    "property_dev.doc_appearance.load_failed": "Харагдах байдлын тохиргоог ачаалж чадсангүй. Доорх загварууд хэвийн ажиллана.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -40718,6 +40718,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}}が必要です",
     "cases.regional_pack_set_up": "設定する",
     "cases.regional_pack_setup_hint": "このケースはその市場の基準に従います。それらを含むパックを開き、そこで有効化できます。",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "左",
+    "common.center": "中央",
+    "common.right": "右",
+    "property_dev.doc_appearance.title": "書類の見た目",
+    "property_dev.doc_appearance.subtitle": "下のテンプレートだけでなく、本システムが作成するすべての PDF に適用されます。ロゴと会社名はワークスペースのブランド設定で指定します。",
+    "property_dev.doc_appearance.accent_color": "見出しの色",
+    "property_dev.doc_appearance.footer_color": "フッターの色",
+    "property_dev.doc_appearance.page_size": "用紙サイズ",
+    "property_dev.doc_appearance.logo_align": "ヘッダーの位置",
+    "property_dev.doc_appearance.base_font_size": "本文の文字サイズ（pt）",
+    "property_dev.doc_appearance.font_hint": "{{min}} から {{max}} まで。見出しも合わせて変わります。",
+    "property_dev.doc_appearance.margin_mm": "余白（mm）",
+    "property_dev.doc_appearance.margin_hint": "{{min}} から {{max}} まで。10 未満はほとんどのプリンターで切れます。",
+    "property_dev.doc_appearance.footer_text": "フッターの一行",
+    "property_dev.doc_appearance.footer_placeholder": "空欄にすると会社名と日付を表示します",
+    "property_dev.doc_appearance.footer_hint": "作成日の代わりに表示されます。法人登記の情報を入れるのに向いています。",
+    "property_dev.doc_appearance.page_numbers": "ページ番号を表示",
+    "property_dev.doc_appearance.page_numbers_hint": "独自に採番する綴じ込み書類に入れる場合はオフにします。",
+    "property_dev.doc_appearance.preview": "プレビュー",
+    "property_dev.doc_appearance.preview_brand": "貴社名",
+    "property_dev.doc_appearance.preview_footer": "貴社名 | 作成日 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "レイアウトのみです。実際の PDF は下のテンプレートのプレビューで確認してください。",
+    "property_dev.doc_appearance.reset": "既定の見た目に戻す",
+    "property_dev.doc_appearance.saved": "見た目を保存しました。以後の出力に反映されます。",
+    "property_dev.doc_appearance.reset_done": "既定の見た目に戻しました。",
+    "property_dev.doc_appearance.admin_only": "変更できるのは管理者だけです。",
+    "property_dev.doc_appearance.unsaved": "未保存の変更があります。作成済みの PDF は作り直されません。",
+    "property_dev.doc_appearance.load_failed": "見た目の設定を読み込めませんでした。下のテンプレートには影響ありません。",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

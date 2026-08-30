@@ -3518,3 +3518,67 @@ export function bulkReleaseInventory(
   );
 }
 
+
+// ── Document appearance ──────────────────────────────────────────────────
+//
+// How a generated PDF looks, as opposed to whose it is (that is the workspace
+// brand, /api/v1/branding/). Not under BASE: the setting is platform-wide -
+// the colours, logo alignment, footer line and page numbering are drawn by the
+// shared header and footer on every PDF the platform makes - and it is edited
+// from this module's settings page because that is where documents are
+// configured. Reading the value needs any signed-in user; writing needs admin.
+
+/** The stored look. Always complete: the server never returns a partial set. */
+export interface DocumentAppearance {
+  accent_color: string;
+  footer_color: string;
+  base_font_size: number;
+  page_size: string;
+  margin_mm: number;
+  logo_align: string;
+  footer_text: string;
+  show_page_numbers: boolean;
+}
+
+/**
+ * The choices and bounds the form is built from.
+ *
+ * Served from the same constants the server sanitises with, so a control built
+ * from this can never offer a value the server would silently discard - which
+ * is how a settings screen ends up with a knob that appears to do nothing.
+ */
+export interface DocumentAppearanceOptions {
+  page_sizes: string[];
+  logo_alignments: string[];
+  min_font_size: number;
+  max_font_size: number;
+  min_margin_mm: number;
+  max_margin_mm: number;
+  max_footer_text: number;
+  defaults: DocumentAppearance;
+}
+
+export function getDocumentAppearance(): Promise<DocumentAppearance> {
+  return apiGet<DocumentAppearance>('/api/v1/document-appearance/');
+}
+
+export function getDocumentAppearanceOptions(): Promise<DocumentAppearanceOptions> {
+  return apiGet<DocumentAppearanceOptions>('/api/v1/document-appearance/options/');
+}
+
+/**
+ * Save the fields that changed. Admin only.
+ *
+ * The server merges the patch over what is stored, so sending one field leaves
+ * the rest alone; clearing everything is `resetDocumentAppearance`.
+ */
+export function saveDocumentAppearance(
+  patch: Partial<DocumentAppearance>,
+): Promise<DocumentAppearance> {
+  return apiPut<DocumentAppearance>('/api/v1/document-appearance/', patch);
+}
+
+/** Drop the customisation and go back to the platform look. Admin only. */
+export function resetDocumentAppearance(): Promise<DocumentAppearance> {
+  return apiDelete<DocumentAppearance>('/api/v1/document-appearance/');
+}

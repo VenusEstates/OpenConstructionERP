@@ -40718,6 +40718,37 @@ const resource = {
     "cases.regional_pack_needed": "需要 {{name}}",
     "cases.regional_pack_set_up": "设置",
     "cases.regional_pack_setup_hint": "此案例遵循其市场的标准。打开携带这些标准的数据包，您可以在其中启用它。",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "居左",
+    "common.center": "居中",
+    "common.right": "居右",
+    "property_dev.doc_appearance.title": "文档外观",
+    "property_dev.doc_appearance.subtitle": "适用于平台生成的每一份 PDF，不只是下方的模板。徽标和公司名称在工作区品牌设置中配置。",
+    "property_dev.doc_appearance.accent_color": "标题颜色",
+    "property_dev.doc_appearance.footer_color": "页脚颜色",
+    "property_dev.doc_appearance.page_size": "纸张尺寸",
+    "property_dev.doc_appearance.logo_align": "页眉位置",
+    "property_dev.doc_appearance.base_font_size": "正文字号（磅）",
+    "property_dev.doc_appearance.font_hint": "{{min}} 到 {{max}}。标题随之缩放。",
+    "property_dev.doc_appearance.margin_mm": "页边距（毫米）",
+    "property_dev.doc_appearance.margin_hint": "{{min}} 到 {{max}}。小于 10 时多数打印机会裁切。",
+    "property_dev.doc_appearance.footer_text": "页脚文字",
+    "property_dev.doc_appearance.footer_placeholder": "留空则显示公司名称和日期",
+    "property_dev.doc_appearance.footer_hint": "替代生成日期。适合放工商登记信息。",
+    "property_dev.doc_appearance.page_numbers": "显示页码",
+    "property_dev.doc_appearance.page_numbers_hint": "若这些文档要装入自带页码的卷宗，请关闭。",
+    "property_dev.doc_appearance.preview": "预览",
+    "property_dev.doc_appearance.preview_brand": "贵公司",
+    "property_dev.doc_appearance.preview_footer": "贵公司 | 生成于 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "仅示意版式。要看真实 PDF，请在下方模板上使用预览。",
+    "property_dev.doc_appearance.reset": "恢复默认外观",
+    "property_dev.doc_appearance.saved": "文档外观已保存。新导出的文件将采用该设置。",
+    "property_dev.doc_appearance.reset_done": "已恢复默认外观。",
+    "property_dev.doc_appearance.admin_only": "只有管理员可以修改此项。",
+    "property_dev.doc_appearance.unsaved": "有未保存的修改。已生成的 PDF 不会重新生成。",
+    "property_dev.doc_appearance.load_failed": "无法加载外观设置。下方模板不受影响。",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

@@ -40196,6 +40196,37 @@ const resource = {
     "cases.regional_pack_needed": "Richiede {{name}}",
     "cases.regional_pack_set_up": "Configura",
     "cases.regional_pack_setup_hint": "Questo caso segue gli standard del suo mercato. Apre il pacchetto che li porta, dove puoi attivarlo.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Sinistra",
+    "common.center": "Centro",
+    "common.right": "Destra",
+    "property_dev.doc_appearance.title": "L'aspetto dei tuoi documenti",
+    "property_dev.doc_appearance.subtitle": "Vale per ogni PDF generato dalla piattaforma, non solo per i modelli qui sotto. Logo e ragione sociale si impostano nel branding dello spazio di lavoro.",
+    "property_dev.doc_appearance.accent_color": "Colore dei titoli",
+    "property_dev.doc_appearance.footer_color": "Colore del piè di pagina",
+    "property_dev.doc_appearance.page_size": "Formato carta",
+    "property_dev.doc_appearance.logo_align": "Posizione dell'intestazione",
+    "property_dev.doc_appearance.base_font_size": "Corpo del testo (pt)",
+    "property_dev.doc_appearance.font_hint": "Da {{min}} a {{max}}. I titoli scalano di conseguenza.",
+    "property_dev.doc_appearance.margin_mm": "Margine di pagina (mm)",
+    "property_dev.doc_appearance.margin_hint": "Da {{min}} a {{max}}. Sotto 10 la maggior parte delle stampanti taglia.",
+    "property_dev.doc_appearance.footer_text": "Riga del piè di pagina",
+    "property_dev.doc_appearance.footer_placeholder": "Lascia vuoto per mostrare ragione sociale e data",
+    "property_dev.doc_appearance.footer_hint": "Sostituisce la data di generazione. Utile per i dati societari.",
+    "property_dev.doc_appearance.page_numbers": "Mostra i numeri di pagina",
+    "property_dev.doc_appearance.page_numbers_hint": "Disattiva se questi documenti finiscono in un fascicolo che numera già le pagine.",
+    "property_dev.doc_appearance.preview": "Anteprima",
+    "property_dev.doc_appearance.preview_brand": "La tua azienda",
+    "property_dev.doc_appearance.preview_footer": "La tua azienda | Generato 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Solo impaginazione. Usa Anteprima su un modello qui sotto per un PDF reale.",
+    "property_dev.doc_appearance.reset": "Ripristina l'aspetto predefinito",
+    "property_dev.doc_appearance.saved": "Aspetto salvato. I nuovi export lo useranno.",
+    "property_dev.doc_appearance.reset_done": "Tornato all'aspetto predefinito.",
+    "property_dev.doc_appearance.admin_only": "Solo un amministratore può modificarlo.",
+    "property_dev.doc_appearance.unsaved": "Modifiche non salvate. I PDF già prodotti non vengono rigenerati.",
+    "property_dev.doc_appearance.load_failed": "Impossibile caricare le impostazioni di aspetto. I modelli qui sotto non sono interessati.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

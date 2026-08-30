@@ -39239,6 +39239,37 @@ const resource = {
     "cases.regional_pack_needed": "{{name}} की आवश्यकता है",
     "cases.regional_pack_set_up": "सेट अप करें",
     "cases.regional_pack_setup_hint": "यह केस अपने बाज़ार के मानकों का पालन करता है। वह पैक खोलता है जो इन्हें लाता है, जहाँ आप इसे चालू कर सकते हैं।",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "बाएँ",
+    "common.center": "बीच में",
+    "common.right": "दाएँ",
+    "property_dev.doc_appearance.title": "आपके दस्तावेज़ कैसे दिखते हैं",
+    "property_dev.doc_appearance.subtitle": "यह प्लेटफ़ॉर्म द्वारा बनाई गई हर PDF पर लागू होता है, केवल नीचे दिए टेम्पलेट पर नहीं। लोगो और कंपनी का नाम वर्कस्पेस ब्रांडिंग में तय होता है।",
+    "property_dev.doc_appearance.accent_color": "शीर्षकों का रंग",
+    "property_dev.doc_appearance.footer_color": "फ़ुटर का रंग",
+    "property_dev.doc_appearance.page_size": "काग़ज़ का आकार",
+    "property_dev.doc_appearance.logo_align": "हेडर की जगह",
+    "property_dev.doc_appearance.base_font_size": "मुख्य पाठ का आकार (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} से {{max}} तक। शीर्षक भी इसी अनुपात में बदलते हैं।",
+    "property_dev.doc_appearance.margin_mm": "पृष्ठ का हाशिया (मिमी)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} से {{max}} तक। 10 से कम पर अधिकांश प्रिंटर किनारा काट देते हैं।",
+    "property_dev.doc_appearance.footer_text": "फ़ुटर की पंक्ति",
+    "property_dev.doc_appearance.footer_placeholder": "कंपनी का नाम और तारीख़ दिखाने के लिए खाली छोड़ें",
+    "property_dev.doc_appearance.footer_hint": "बनाने की तारीख़ की जगह लेता है। पंजीकृत कंपनी के विवरण के लिए उपयुक्त।",
+    "property_dev.doc_appearance.page_numbers": "पृष्ठ संख्या दिखाएँ",
+    "property_dev.doc_appearance.page_numbers_hint": "जब ये दस्तावेज़ ऐसी फ़ाइल में लगें जो स्वयं पृष्ठ गिनती है, तब बंद कर दें।",
+    "property_dev.doc_appearance.preview": "पूर्वावलोकन",
+    "property_dev.doc_appearance.preview_brand": "आपकी कंपनी",
+    "property_dev.doc_appearance.preview_footer": "आपकी कंपनी | निर्मित 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "केवल विन्यास। असली PDF के लिए नीचे किसी टेम्पलेट का पूर्वावलोकन देखें।",
+    "property_dev.doc_appearance.reset": "मूल रूप पर लौटें",
+    "property_dev.doc_appearance.saved": "दस्तावेज़ का रूप सहेजा गया। नए निर्यात इसी का उपयोग करेंगे।",
+    "property_dev.doc_appearance.reset_done": "मूल रूप पर लौट आए।",
+    "property_dev.doc_appearance.admin_only": "इसे केवल प्रशासक बदल सकता है।",
+    "property_dev.doc_appearance.unsaved": "बिना सहेजे बदलाव हैं। पहले बनी PDF दोबारा नहीं बनतीं।",
+    "property_dev.doc_appearance.load_failed": "रूप की सेटिंग लोड नहीं हो सकी। नीचे दिए टेम्पलेट प्रभावित नहीं हैं।",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

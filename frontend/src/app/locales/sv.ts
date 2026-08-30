@@ -39851,6 +39851,37 @@ const resource = {
     "cases.regional_pack_needed": "Kräver {{name}}",
     "cases.regional_pack_set_up": "Konfigurera",
     "cases.regional_pack_setup_hint": "Det här fallet följer standarderna för sin marknad. Öppnar paketet som innehåller dem, där du kan slå på det.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Vänster",
+    "common.center": "Mitten",
+    "common.right": "Höger",
+    "property_dev.doc_appearance.title": "Så ser dina dokument ut",
+    "property_dev.doc_appearance.subtitle": "Gäller varje PDF som plattformen skapar, inte bara mallarna nedan. Logotyp och företagsnamn ställer du in i arbetsytans varumärkesprofil.",
+    "property_dev.doc_appearance.accent_color": "Färg på rubriker",
+    "property_dev.doc_appearance.footer_color": "Färg på sidfoten",
+    "property_dev.doc_appearance.page_size": "Pappersformat",
+    "property_dev.doc_appearance.logo_align": "Sidhuvudets placering",
+    "property_dev.doc_appearance.base_font_size": "Brödtextens storlek (pt)",
+    "property_dev.doc_appearance.font_hint": "{{min}} till {{max}}. Rubrikerna skalas med.",
+    "property_dev.doc_appearance.margin_mm": "Sidmarginal (mm)",
+    "property_dev.doc_appearance.margin_hint": "{{min}} till {{max}}. Under 10 beskär de flesta skrivare.",
+    "property_dev.doc_appearance.footer_text": "Rad i sidfoten",
+    "property_dev.doc_appearance.footer_placeholder": "Lämna tomt för att visa företagsnamn och datum",
+    "property_dev.doc_appearance.footer_hint": "Ersätter datumet. Använd den för en rad med organisationsnummer.",
+    "property_dev.doc_appearance.page_numbers": "Visa sidnummer",
+    "property_dev.doc_appearance.page_numbers_hint": "Stäng av när dokumenten arkiveras i en pärm som numrerar sidorna själv.",
+    "property_dev.doc_appearance.preview": "Förhandsgranskning",
+    "property_dev.doc_appearance.preview_brand": "Ditt företag",
+    "property_dev.doc_appearance.preview_footer": "Ditt företag | Skapad 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Endast layout. Använd Förhandsgranska på en mall nedan för en riktig PDF.",
+    "property_dev.doc_appearance.reset": "Återställ standardutseendet",
+    "property_dev.doc_appearance.saved": "Utseendet är sparat. Nya exporter använder det.",
+    "property_dev.doc_appearance.reset_done": "Tillbaka till standardutseendet.",
+    "property_dev.doc_appearance.admin_only": "Endast en administratör kan ändra detta.",
+    "property_dev.doc_appearance.unsaved": "Osparade ändringar. Redan skapade PDF:er görs inte om.",
+    "property_dev.doc_appearance.load_failed": "Det gick inte att läsa in utseendeinställningarna. Mallarna nedan påverkas inte.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

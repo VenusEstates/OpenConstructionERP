@@ -39215,6 +39215,37 @@ const resource = {
     "cases.regional_pack_needed": "به {{name}} نیاز دارد",
     "cases.regional_pack_set_up": "راه‌اندازی",
     "cases.regional_pack_setup_hint": "این سناریو از استانداردهای بازار خود پیروی می‌کند. بسته‌ای را که آن‌ها را دارد باز می‌کند، جایی که می‌توانید آن را فعال کنید.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "چپ",
+    "common.center": "وسط",
+    "common.right": "راست",
+    "property_dev.doc_appearance.title": "ظاهر سندهای شما",
+    "property_dev.doc_appearance.subtitle": "برای هر PDF که سامانه می‌سازد اعمال می‌شود، نه فقط قالب‌های زیر. نشان و نام شرکت در هویت فضای کاری تنظیم می‌شود.",
+    "property_dev.doc_appearance.accent_color": "رنگ سرتیترها",
+    "property_dev.doc_appearance.footer_color": "رنگ پاورقی",
+    "property_dev.doc_appearance.page_size": "اندازهٔ کاغذ",
+    "property_dev.doc_appearance.logo_align": "جای سرصفحه",
+    "property_dev.doc_appearance.base_font_size": "اندازهٔ متن اصلی (پوینت)",
+    "property_dev.doc_appearance.font_hint": "از {{min}} تا {{max}}. سرتیترها هم‌مقیاس می‌شوند.",
+    "property_dev.doc_appearance.margin_mm": "حاشیهٔ صفحه (میلی‌متر)",
+    "property_dev.doc_appearance.margin_hint": "از {{min}} تا {{max}}. زیر ۱۰ بیشتر چاپگرها می‌برند.",
+    "property_dev.doc_appearance.footer_text": "سطر پاورقی",
+    "property_dev.doc_appearance.footer_placeholder": "خالی بگذارید تا نام شرکت و تاریخ نشان داده شود",
+    "property_dev.doc_appearance.footer_hint": "جایگزین تاریخ ساخت می‌شود. برای درج شمارهٔ ثبت شرکت مناسب است.",
+    "property_dev.doc_appearance.page_numbers": "نمایش شمارهٔ صفحه",
+    "property_dev.doc_appearance.page_numbers_hint": "وقتی این سندها در پرونده‌ای بایگانی می‌شوند که خودش صفحه‌شماری دارد، خاموش کنید.",
+    "property_dev.doc_appearance.preview": "پیش‌نمایش",
+    "property_dev.doc_appearance.preview_brand": "شرکت شما",
+    "property_dev.doc_appearance.preview_footer": "شرکت شما | ساخته‌شده ۲۰۲۶-۰۱-۰۱",
+    "property_dev.doc_appearance.preview_note": "فقط چیدمان. برای PDF واقعی از پیش‌نمایش یکی از قالب‌های زیر استفاده کنید.",
+    "property_dev.doc_appearance.reset": "بازگشت به ظاهر پیش‌فرض",
+    "property_dev.doc_appearance.saved": "ظاهر سند ذخیره شد. خروجی‌های تازه از آن استفاده می‌کنند.",
+    "property_dev.doc_appearance.reset_done": "بازگشت به ظاهر پیش‌فرض.",
+    "property_dev.doc_appearance.admin_only": "فقط مدیر می‌تواند این را تغییر دهد.",
+    "property_dev.doc_appearance.unsaved": "تغییرات ذخیره‌نشده. PDFهای ساخته‌شده دوباره تولید نمی‌شوند.",
+    "property_dev.doc_appearance.load_failed": "تنظیمات ظاهر بارگذاری نشد. قالب‌های زیر بدون تغییر کار می‌کنند.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 

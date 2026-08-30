@@ -40849,6 +40849,37 @@ const resource = {
     "cases.regional_pack_needed": "Потребує {{name}}",
     "cases.regional_pack_set_up": "Налаштувати",
     "cases.regional_pack_setup_hint": "Цей кейс дотримується стандартів свого ринку. Відкриває пакет, який їх містить, де його можна увімкнути.",
+
+    // --- Property Development → Document appearance ---
+    "common.left": "Ліворуч",
+    "common.center": "По центру",
+    "common.right": "Праворуч",
+    "property_dev.doc_appearance.title": "Який вигляд мають ваші документи",
+    "property_dev.doc_appearance.subtitle": "Діє для кожного PDF, який створює платформа, а не лише для шаблонів нижче. Логотип і назву компанії задають у фірмовому стилі робочого простору.",
+    "property_dev.doc_appearance.accent_color": "Колір заголовків",
+    "property_dev.doc_appearance.footer_color": "Колір нижнього колонтитула",
+    "property_dev.doc_appearance.page_size": "Формат паперу",
+    "property_dev.doc_appearance.logo_align": "Розташування шапки",
+    "property_dev.doc_appearance.base_font_size": "Розмір основного тексту (пт)",
+    "property_dev.doc_appearance.font_hint": "Від {{min}} до {{max}}. Заголовки масштабуються разом із ним.",
+    "property_dev.doc_appearance.margin_mm": "Поля сторінки (мм)",
+    "property_dev.doc_appearance.margin_hint": "Від {{min}} до {{max}}. Менше 10 більшість принтерів обрізає.",
+    "property_dev.doc_appearance.footer_text": "Рядок колонтитула",
+    "property_dev.doc_appearance.footer_placeholder": "Залиште порожнім, щоб показати назву компанії та дату",
+    "property_dev.doc_appearance.footer_hint": "Замінює дату створення. Підходить для реквізитів компанії.",
+    "property_dev.doc_appearance.page_numbers": "Показувати номери сторінок",
+    "property_dev.doc_appearance.page_numbers_hint": "Вимкніть, якщо документи підшивають у комплект із власною нумерацією.",
+    "property_dev.doc_appearance.preview": "Попередній перегляд",
+    "property_dev.doc_appearance.preview_brand": "Ваша компанія",
+    "property_dev.doc_appearance.preview_footer": "Ваша компанія | Створено 2026-01-01",
+    "property_dev.doc_appearance.preview_note": "Лише макет. Щоб отримати справжній PDF, натисніть «Перегляд» біля шаблону нижче.",
+    "property_dev.doc_appearance.reset": "Повернути стандартний вигляд",
+    "property_dev.doc_appearance.saved": "Оформлення збережено. Нові вивантаження використовують його.",
+    "property_dev.doc_appearance.reset_done": "Повернення до стандартного вигляду.",
+    "property_dev.doc_appearance.admin_only": "Змінити це може лише адміністратор.",
+    "property_dev.doc_appearance.unsaved": "Незбережені зміни. Уже створені PDF не формуються заново.",
+    "property_dev.doc_appearance.load_failed": "Не вдалося завантажити налаштування оформлення. На шаблони нижче це не впливає.",
+    // --- /Property Development → Document appearance ---
   }
 } as { translation: Record<string, string> };
 
