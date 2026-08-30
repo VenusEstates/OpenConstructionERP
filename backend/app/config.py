@@ -315,6 +315,21 @@ class Settings(BaseSettings):
     # pool_pre_ping in ``app.database``. Ignored on SQLite. Env:
     # ``OE_DATABASE_POOL_RECYCLE`` / ``DATABASE_POOL_RECYCLE``.
     database_pool_recycle: int = 1800
+    # PostgreSQL only: seconds a session may sit "idle in transaction" before
+    # the server terminates it. This is the only bound that removes an
+    # ABANDONED transaction. A timeout on the far side (``lock_timeout``) makes
+    # the victims of one give up faster, but the culprit keeps its locks and
+    # waits for the next victim; ``statement_timeout`` does not cover a lock
+    # wait at all. It never touches a session that is running a statement - a
+    # long query is ``active``, not idle - so slow migrations and long imports
+    # are unaffected; only a transaction whose owner stopped talking is. The
+    # default is well above any legitimate gap between two statements of one
+    # request and far below "forever". Applied as an asyncpg startup parameter
+    # on every connection - see ``app.database``. Set to 0 to disable and leave
+    # whatever the server or database default is. Env:
+    # ``OE_DATABASE_IDLE_IN_TRANSACTION_TIMEOUT`` /
+    # ``DATABASE_IDLE_IN_TRANSACTION_TIMEOUT``.
+    database_idle_in_transaction_timeout: int = 300
     max_batch_size: int = 1000
     # Slow-query threshold (milliseconds). Statements exceeding this elapsed
     # wall time are logged at WARNING level via SQLAlchemy ``before_cursor_execute``

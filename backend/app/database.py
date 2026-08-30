@@ -262,6 +262,37 @@ def create_engine_from_settings():
     kwargs["pool_pre_ping"] = True
     kwargs["pool_recycle"] = settings.database_pool_recycle
 
+    # Bound abandoned transactions at the server, on the connection that made
+    # one - not on whoever ends up waiting behind it.
+    #
+    # A session that opens a transaction and then stops talking (a request that
+    # died between two statements, a task killed mid-work) holds every lock it
+    # took until its connection closes, and nothing on the victim's side ends
+    # that: ``statement_timeout`` does not cover a lock wait, and
+    # ``lock_timeout`` only makes each victim give up faster while the culprit
+    # stays open and waits for the next one.
+    # ``idle_in_transaction_session_timeout`` is the setting that removes the
+    # culprit, so it goes on every connection the app opens.
+    #
+    # As an asyncpg *startup parameter* rather than a per-checkout ``SET``: it
+    # travels in the connection packet, so it costs no round-trip, it cannot be
+    # missed by a code path that forgot to issue the SET, and it covers pooled
+    # connections handed to background workers as well as request sessions.
+    # PostgreSQL only counts a session that is *idle* inside a transaction - a
+    # running statement is ``active`` and is never touched - so a slow
+    # migration or a long import is not at risk. See
+    # ``Settings.database_idle_in_transaction_timeout``; 0 disables it.
+    idle_in_transaction_ms = max(0, settings.database_idle_in_transaction_timeout) * 1000
+    if idle_in_transaction_ms:
+        connect_args = dict(kwargs.get("connect_args", {}))
+        connect_args["server_settings"] = {
+            **connect_args.get("server_settings", {}),
+            # asyncpg requires string values here; PostgreSQL reads a bare
+            # number as milliseconds.
+            "idle_in_transaction_session_timeout": str(idle_in_transaction_ms),
+        }
+        kwargs["connect_args"] = connect_args
+
     # Disable TLS for loopback PostgreSQL.
     #
     # asyncpg defaults to sslmode "prefer", which eagerly builds an
