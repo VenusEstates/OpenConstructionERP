@@ -226,7 +226,7 @@ export function CatalogPickerModal({ open, onClose, onSelect }: CatalogPickerMod
         {/* Search input */}
         <div className="px-6 py-3 border-b border-border-light shrink-0">
           <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center pl-3 text-content-tertiary">
               <Search size={16} />
             </div>
             <input
@@ -243,7 +243,7 @@ export function CatalogPickerModal({ open, onClose, onSelect }: CatalogPickerMod
               className="h-10 w-full rounded-lg border border-border bg-surface-primary ps-10 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
             />
             {loading && (
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <div className="absolute inset-y-0 end-0 flex items-center pr-3">
                 <Loader2 size={14} className="animate-spin text-content-quaternary" />
               </div>
             )}

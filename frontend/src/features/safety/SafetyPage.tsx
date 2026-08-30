@@ -1150,7 +1150,7 @@ function IncidentsTab({
       {/* Search + Export + New */}
       <div className="p-4 border-b border-border-light flex items-center gap-3">
         <div className="relative max-w-sm flex-1">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center pl-3 text-content-tertiary">
             <Search size={16} />
           </div>
           <input
@@ -1711,7 +1711,7 @@ function ObservationsTab({ projectId }: { projectId: string }) {
       {/* Search + Export + New */}
       <div className="p-4 border-b border-border-light flex items-center gap-3">
         <div className="relative max-w-sm flex-1">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center pl-3 text-content-tertiary">
             <Search size={16} />
           </div>
           <input

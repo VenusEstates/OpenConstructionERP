@@ -269,7 +269,7 @@ export function RulePackLibrary({ projectId, testId = 'rule-pack-library' }: Rul
         <div className="relative ml-auto min-w-[220px] flex-1 max-w-sm">
           <Search
             size={14}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
+            className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
           />
           <input
             type="search"

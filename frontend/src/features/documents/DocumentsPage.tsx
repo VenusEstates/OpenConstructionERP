@@ -1039,7 +1039,7 @@ export function DocumentsPage() {
       {/* ── Filters + Sort ──────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary pointer-events-none" />
+          <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-content-tertiary pointer-events-none" />
           <input
             type="text"
             value={query}
@@ -1051,7 +1051,7 @@ export function DocumentsPage() {
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
+              className="absolute end-3 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
               aria-label={t('common.clear_search', { defaultValue: 'Clear search' })}
             >
               <X size={14} />

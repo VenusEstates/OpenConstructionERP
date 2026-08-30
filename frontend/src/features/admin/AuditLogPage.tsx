@@ -330,7 +330,7 @@ function FilterBar({
             {t('audit.filter_user', { defaultValue: 'User' })}
           </label>
           <div className="relative">
-            <UserIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" size={14} />
+            <UserIcon className="absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" size={14} />
             <input
               type="text"
               role="combobox"
@@ -354,7 +354,7 @@ function FilterBar({
                   onChange({ ...draft, userId: null });
                 }}
                 aria-label={t('common.clear', { defaultValue: 'Clear' })}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
+                className="absolute end-2 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
               >
                 <X size={14} />
               </button>

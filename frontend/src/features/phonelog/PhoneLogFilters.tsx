@@ -88,7 +88,7 @@ export function PhoneLogFilters({
     <Card className="space-y-3 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[12rem] flex-1">
-          <Search className="pointer-events-none absolute inset-y-0 left-2 my-auto h-4 w-4 text-content-tertiary" />
+          <Search className="pointer-events-none absolute inset-y-0 start-2 my-auto h-4 w-4 text-content-tertiary" />
           <input
             value={value.query}
             onChange={(e) => set('query', e.target.value)}

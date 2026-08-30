@@ -1664,7 +1664,7 @@ function ProjectSwitcher() {
           </div>
           <div className="px-3 py-2 border-b border-border-light">
             <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-quaternary pointer-events-none" />
+              <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-content-quaternary pointer-events-none" />
               <input
                 ref={searchRef}
                 type="text"

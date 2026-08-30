@@ -379,7 +379,7 @@ export function GeneratedModulePage() {
               <Search
                 size={14}
                 aria-hidden
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-content-quaternary"
+                className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-content-quaternary"
               />
               <input
                 type="search"
@@ -395,7 +395,7 @@ export function GeneratedModulePage() {
                   type="button"
                   onClick={() => setQuery('')}
                   aria-label={t('common.clear', { defaultValue: 'Clear' })}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-content-tertiary hover:text-content-primary"
+                  className="absolute end-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-content-tertiary hover:text-content-primary"
                 >
                   <X size={13} />
                 </button>

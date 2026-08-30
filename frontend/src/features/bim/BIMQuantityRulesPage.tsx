@@ -2518,7 +2518,7 @@ function RequirementsTabContent({
         )}
 
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" />
+          <Search size={13} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" />
           <input
             type="text"
             value={searchQuery}

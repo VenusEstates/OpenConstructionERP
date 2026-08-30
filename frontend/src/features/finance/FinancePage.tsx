@@ -1487,7 +1487,7 @@ function BudgetsTab({ projectId }: { projectId: string }) {
       {/* Search + actions */}
       <div className="p-4 border-b border-border-light flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center pl-3 text-content-tertiary">
             <Search size={16} />
           </div>
           <input
@@ -2331,7 +2331,7 @@ function InvoicesTab({ projectId }: { projectId: string }) {
         {/* Search + Status filter */}
         <div className="p-4 border-b border-border-light flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center pl-3 text-content-tertiary">
               <Search size={16} />
             </div>
             <input

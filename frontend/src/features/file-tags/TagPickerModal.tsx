@@ -146,7 +146,7 @@ export function TagPickerModal({
         <div className="relative">
           <Search
             size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary pointer-events-none"
+            className="absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary pointer-events-none"
           />
           <input
             type="search"

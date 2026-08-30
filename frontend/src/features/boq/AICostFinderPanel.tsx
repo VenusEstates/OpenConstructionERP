@@ -196,7 +196,7 @@ export function AICostFinderPanel({
         <div className="relative">
           <Search
             size={14}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
+            className="absolute start-2.5 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <input
             ref={inputRef}

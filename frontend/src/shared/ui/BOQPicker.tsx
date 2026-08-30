@@ -84,7 +84,7 @@ export function BOQPicker({
           </select>
           <ChevronDown
             size={14}
-            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
+            className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
           />
         </div>
       )}
@@ -119,11 +119,11 @@ export function BOQPicker({
           </select>
           <FileText
             size={14}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
+            className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
           />
           <ChevronDown
             size={14}
-            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
+            className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-content-tertiary"
           />
         </div>
       )}

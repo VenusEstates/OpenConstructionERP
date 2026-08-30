@@ -1754,7 +1754,7 @@ export function CostDatabaseSearchModal({
                 <ChevronDown size={12} />
               </button>
               <div className="relative flex-1">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+                <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center pl-3 text-content-tertiary">
                   <Search size={16} />
                 </div>
                 <input

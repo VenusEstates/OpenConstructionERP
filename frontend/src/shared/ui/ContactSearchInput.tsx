@@ -300,7 +300,7 @@ export function ContactSearchInput({
                 {/* Filter input inside dropdown */}
                 <div className="p-2 border-b border-border-light">
                   <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-content-tertiary">
+                    <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center pl-2.5 text-content-tertiary">
                       <Search size={13} />
                     </div>
                     <input

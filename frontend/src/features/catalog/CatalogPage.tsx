@@ -1711,7 +1711,7 @@ export function CatalogPage() {
                   );
                 })}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-content-tertiary">
+              <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pr-2 text-content-tertiary">
                 <ChevronDown size={14} />
               </div>
             </div>
