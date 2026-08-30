@@ -1154,6 +1154,10 @@ const ROUTE_COMPONENT_MAP: ReadonlyArray<readonly [string, string]> = [
   ['/catalog', 'Resource Catalog'],
   ['/assemblies', 'Assemblies'],
   ['/validation', 'Validation'],
+  // `/compliance` itself mounts nothing; it is the prefix the Rule Builder
+  // hangs off. Name the builder explicitly so a bug report from that screen
+  // says which screen it came from rather than the bare prefix.
+  ['/compliance/builder', 'Compliance Rule Builder'],
   ['/compliance', 'Compliance'],
   ['/quantities', 'Quantity Takeoff'],
   ['/takeoff', 'PDF Takeoff'],

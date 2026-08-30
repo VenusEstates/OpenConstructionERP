@@ -13,10 +13,10 @@ export const complianceModules: ModuleExplanation[] = [
   {
     id: 'compliance-builder',
     route: '/compliance/builder',
-    // The builder lives under Validation in the sidebar; its sub-route has no
-    // sidebar link, so spotlight the Validation entry while "Open module" uses
-    // the precise route above.
-    spotlightRoute: '/validation',
+    // No `spotlightRoute`. The builder has its own sidebar row now (Quality
+    // group, beside Validation), so the spotlight lands on the screen the
+    // "Open module" button opens. It used to point at `/validation` because
+    // the sub-route had no row of its own, which sent the tour to a neighbour.
     icon: 'Wand2',
     category: 'quality',
     keywords:

@@ -634,6 +634,14 @@ export const navGroups: NavGroup[] = [
     items: [
       { labelKey: 'nav.issues', to: '/issues', icon: CircleDot },
       { labelKey: 'validation.title', to: '/validation', icon: ShieldCheck, moduleKey: 'validation' },
+      // The rule builder authors what Validation runs, so it belongs beside it.
+      // It was routed (`App.tsx` `/compliance/builder`) and named in the title
+      // map from the day it shipped, and no surface ever linked to it: the only
+      // ways in were typing the URL and the "Open module" button on its
+      // how-it-works card, whose spotlight had to point at the Validation row
+      // because the builder had none of its own. No `moduleKey` - App.tsx
+      // mounts the screen statically, so the row cannot outlive it.
+      { labelKey: 'nav.compliance_rule_builder', to: '/compliance/builder', icon: Wand2 },
       { labelKey: 'inspections.title', to: '/inspections', icon: ClipboardCheck },
       { labelKey: 'construction_control.title', to: '/construction-control', icon: ClipboardList },
       { labelKey: 'ncr.title', to: '/ncr', icon: AlertOctagon },
