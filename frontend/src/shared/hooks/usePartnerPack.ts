@@ -21,8 +21,16 @@ export interface PartnerPackBranding {
   powered_by_text: string;
 }
 
+/** Pack type under the Packs umbrella. The backend infers it from the
+ *  manifest when it is not declared, and country metadata beats partner
+ *  co-branding in that inference, so a partner pack written for one country
+ *  resolves to ``country``. */
+export type PackType = 'country' | 'industry' | 'partner' | 'showcase';
+
 export interface PartnerPackManifest {
   slug: string;
+  /** Absent on older backends; callers treat that as ``partner``. */
+  type?: PackType;
   partner_name: string;
   partner_url: string | null;
   pack_version: string;

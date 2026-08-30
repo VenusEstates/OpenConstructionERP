@@ -61,6 +61,7 @@ import {
   useRescanPacks,
   MAX_PACK_UPLOAD_BYTES,
 } from './partnerPacks';
+import type { PackType } from '@/shared/hooks/usePartnerPack';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { useTabKeyboardNav } from '@/shared/hooks/useTabKeyboardNav';
 import { apiGet, apiPost, apiDelete } from '@/shared/lib/api';
@@ -76,6 +77,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { getModulesByCategory } from '@/modules/_registry';
 import { translateManifestText } from '@/modules/_i18n';
 import { fmtList, fmtFixed } from '@/shared/lib/formatters';
+import { PackEmblem } from '@/shared/ui/PackEmblem';
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -126,8 +128,6 @@ interface PartnerPackBranding {
   has_favicon: boolean;
   powered_by_text: string;
 }
-
-type PackType = 'country' | 'industry' | 'partner' | 'showcase';
 
 interface PartnerPackManifestAPI {
   slug: string;
@@ -1107,47 +1107,6 @@ function asStringArray(value: unknown): string[] {
   return value.filter((v): v is string => typeof v === 'string');
 }
 
-/* Two-letter monogram from the partner name, for the no-logo fallback. */
-function packInitials(name: string): string {
-  const words = name.trim().split(/[\s._-]+/).filter(Boolean);
-  const letters =
-    words.length >= 2
-      ? `${words[0]?.[0] ?? ''}${words[1]?.[0] ?? ''}`
-      : name.trim().slice(0, 2);
-  return letters.toUpperCase() || '?';
-}
-
-/* The pack's app-icon emblem (served per-slug from the pack package).
-   Falls back to a brand-gradient monogram built from the partner's own name,
-   so a pack with no logo still gets a distinct mark - never our building icon. */
-function PartnerPackLogo({ pack }: { pack: PartnerPackManifestAPI }) {
-  const [errored, setErrored] = useState(false);
-  const accent = pack.branding.accent_color ?? pack.branding.primary_color;
-
-  if (errored) {
-    return (
-      <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-bold tracking-tight text-white shadow-sm"
-        style={{
-          background: `linear-gradient(135deg, ${pack.branding.primary_color}, ${accent})`,
-        }}
-      >
-        {packInitials(pack.partner_name)}
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={`/api/v1/partner-pack/logo/${encodeURIComponent(pack.slug)}`}
-      alt={`${pack.partner_name} logo`}
-      className="h-12 w-12 shrink-0 rounded-xl object-contain shadow-sm"
-      loading="lazy"
-      onError={() => setErrored(true)}
-    />
-  );
-}
-
 function PartnerPackCard({ pack, index, isActive, activeSource, envPinned }: PartnerPackCardProps) {
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
@@ -1209,9 +1168,10 @@ function PartnerPackCard({ pack, index, isActive, activeSource, envPinned }: Par
       />
 
       <div className="pl-2">
-        {/* Logo plate — the pack's own emblem with its name and version */}
+        {/* Emblem plate — the country's flag, or the pack's own mark where
+            there is no country to draw. */}
         <div className="mb-3 flex items-center gap-3">
-          <PartnerPackLogo pack={pack} />
+          <PackEmblem pack={pack} size={48} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-[15px] font-bold leading-tight text-content-primary">

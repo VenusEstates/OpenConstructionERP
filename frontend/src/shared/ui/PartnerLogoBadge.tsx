@@ -23,7 +23,8 @@
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usePartnerPack, partnerLogoUrl } from '@/shared/hooks/usePartnerPack';
+import { usePartnerPack } from '@/shared/hooks/usePartnerPack';
+import { PackEmblem } from '@/shared/ui/PackEmblem';
 import { useTranslation } from 'react-i18next';
 
 const SESSION_DISMISS_KEY = 'partner-pack:dismissed';
@@ -36,20 +37,9 @@ interface PartnerLogoBadgeProps {
   className?: string;
 }
 
-/** Two-letter monogram from the partner name, for the no-logo fallback. */
-function partnerInitials(name: string): string {
-  const words = name.trim().split(/[\s._-]+/).filter(Boolean);
-  const letters =
-    words.length >= 2
-      ? `${words[0]?.[0] ?? ''}${words[1]?.[0] ?? ''}`
-      : name.trim().slice(0, 2);
-  return letters.toUpperCase() || '?';
-}
-
 export function PartnerLogoBadge({ variant, className = '' }: PartnerLogoBadgeProps) {
   const { t } = useTranslation();
   const packQ = usePartnerPack();
-  const [logoBroken, setLogoBroken] = useState(false);
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
       return sessionStorage.getItem(SESSION_DISMISS_KEY) === '1';
@@ -77,17 +67,10 @@ export function PartnerLogoBadge({ variant, className = '' }: PartnerLogoBadgePr
   const brand = m.branding.primary_color || '';
   const isHex = /^#[0-9a-f]{6}$/i.test(brand);
   const accent = isHex ? brand : 'var(--accent)';
-  const accentEnd = /^#[0-9a-f]{6}$/i.test(m.branding.accent_color ?? '')
-    ? m.branding.accent_color!
-    : accent;
   // Clearly-visible, brand-tinted background for the dashboard banner.
   const dashBg = isHex
     ? `linear-gradient(90deg, ${brand}26, ${brand}0d 55%, transparent)`
     : undefined;
-  // Show the logo image only when the pack declares one AND it actually loads;
-  // a declared-but-unreadable logo falls back to a brand-gradient monogram.
-  const showLogo = m.branding.has_logo && !logoBroken;
-  const initials = partnerInitials(m.partner_name);
 
   if (variant === 'nav') {
     return (
@@ -100,21 +83,7 @@ export function PartnerLogoBadge({ variant, className = '' }: PartnerLogoBadgePr
           className="inline-flex items-center gap-1.5 hover:text-content-primary"
           title={m.branding.powered_by_text}
         >
-          {showLogo ? (
-            <img
-              src={partnerLogoUrl(m.slug)}
-              alt={`${m.partner_name} logo`}
-              className="h-5 w-5 shrink-0 rounded-[5px] object-contain"
-              onError={() => setLogoBroken(true)}
-            />
-          ) : (
-            <span
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-[9px] font-bold text-white"
-              style={{ background: `linear-gradient(135deg, ${accent}, ${accentEnd})` }}
-            >
-              {initials}
-            </span>
-          )}
+          <PackEmblem pack={m} size={20} />
           <span className="max-w-[10rem] truncate font-medium">{m.partner_name}</span>
         </Link>
         <button
@@ -141,21 +110,7 @@ export function PartnerLogoBadge({ variant, className = '' }: PartnerLogoBadgePr
         className="flex min-w-0 items-center gap-3 hover:opacity-90"
         title={m.branding.powered_by_text}
       >
-        {showLogo ? (
-          <img
-            src={partnerLogoUrl(m.slug)}
-            alt={`${m.partner_name} logo`}
-            className="h-11 w-11 shrink-0 rounded-xl object-contain shadow-sm ring-1 ring-black/5"
-            onError={() => setLogoBroken(true)}
-          />
-        ) : (
-          <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white shadow-sm"
-            style={{ background: `linear-gradient(135deg, ${accent}, ${accentEnd})` }}
-          >
-            {initials}
-          </span>
-        )}
+        <PackEmblem pack={m} size={44} />
         <div className="min-w-0 leading-tight">
           <div className="text-sm font-semibold text-content-primary">{m.partner_name}</div>
           <div className="mt-0.5 text-2xs uppercase tracking-wide text-content-tertiary">

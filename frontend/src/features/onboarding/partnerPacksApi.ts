@@ -17,6 +17,7 @@
  */
 
 import { apiGet, apiPost, API_BASE, getAuthToken } from '@/shared/lib/api';
+import type { PackType } from '@/shared/hooks/usePartnerPack';
 import { packCountryCode } from '@/shared/lib/regionalPack';
 
 // ── Installed packs ──────────────────────────────────────────────────────────
@@ -40,6 +41,8 @@ export interface PartnerPackBranding {
  */
 export interface InstalledPartnerPack {
   slug: string;
+  /** Pack type; absent on older backends, treated as ``partner``. */
+  type?: PackType;
   partner_name: string;
   partner_url: string | null;
   pack_version: string;

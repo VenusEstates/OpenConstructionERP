@@ -89,12 +89,11 @@ import {
 } from './countryPacks';
 import { resolveCountryOffer } from './countryOffer';
 import { packNameSlug } from '@/shared/lib/regionalPack';
+import { PackEmblem } from '@/shared/ui/PackEmblem';
 import {
   fetchInstalledPacks,
   fullInstallPackStream,
-  packInitials,
   packCountryCode,
-  partnerPackLogoUrl,
   FULL_INSTALL_STEPS,
   type InstalledPartnerPack,
   type FullInstallStepName,
@@ -2752,51 +2751,22 @@ const FULL_INSTALL_STEP_ICONS: Record<FullInstallStepName, LucideIcon> = {
 type ChecklistState = 'pending' | 'running' | FullInstallStepStatus;
 
 /**
- * A small square logo tile for a partner pack in the picker grid.
+ * A small square emblem for a pack in the picker grid.
  *
- * The packs ship *wide wordmark* logos (≈5:1, e.g. 240×50) sized for the
- * co-brand strip; jammed into this ~40px square they render as an
- * illegible sliver (the "logos not visible / badly thought out" report).
- * For a compact square slot the right, always-legible treatment is a
- * monogram badge: a rounded square (radius lg = 10px) filled with the
- * pack's own brand colour and the pack's initials in medium-weight white.
+ * A country pack shows its flag, which is the one mark that answers "whose
+ * rules is this" at 40px. Everything else keeps the older behaviour and the
+ * reason it exists: these packs ship wide wordmark logos, roughly 5:1, drawn
+ * for the co-brand strip, and one jammed into a 40px square renders as an
+ * illegible sliver that briefly shows raw alt text on a slow first paint. So
+ * a pack with no country falls to its own logo and then to a monogram, which
+ * can never 404 and is always legible at this size.
  *
- * This deliberately replaces the previous ``<img src=/logo/{slug}>`` — the
- * wordmark endpoint returns 200, but a 5:1 mark in a 40px square is an
- * unreadable sliver, and on the slow first paint it briefly showed raw alt
- * text ("…Construction Pack logo"). The monogram is brand-correct, legible,
- * and can never 404 or flash a broken image. The wide wordmark is still used
- * where it has room (the co-brand strip + the /modules Partner Packs grid).
+ * The decision itself lives in ``PackEmblem`` and not here, so the picker,
+ * the packs page and the co-brand strip cannot disagree about what a pack
+ * looks like.
  */
 function PackLogo({ pack }: { pack: InstalledPartnerPack }) {
-  const [imgError, setImgError] = useState(false);
-  // Each pack now ships a real designed emblem (square app-icon: brand-colour
-  // gradient + skyline/building motif), which reads well at this 40px tile.
-  // Fall back to a brand-coloured monogram only if the image can't load.
-  if (pack.branding?.has_logo && !imgError) {
-    return (
-      <img
-        src={partnerPackLogoUrl(pack.slug)}
-        alt={`${pack.partner_name} logo`}
-        className="h-10 w-10 shrink-0 rounded-lg object-contain shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-        onError={() => setImgError(true)}
-      />
-    );
-  }
-  // Brand gradient from the pack's own colours; falls back to the app blue
-  // when a pack omits them. Two-stop gradient gives the flat badge depth.
-  const initials = packInitials(pack);
-  const from = pack.branding?.primary_color || '#2563eb';
-  const to = pack.branding?.accent_color || from;
-  return (
-    <span
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10 select-none"
-      style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
-      aria-hidden
-    >
-      <span className="text-sm font-semibold tracking-tight leading-none">{initials}</span>
-    </span>
-  );
+  return <PackEmblem pack={pack} size={40} className="ring-1 ring-black/5 dark:ring-white/10" />;
 }
 
 /**
