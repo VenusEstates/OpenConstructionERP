@@ -12,7 +12,7 @@ function pack(over: Partial<PackEmblemPack> = {}): PackEmblemPack {
     type: 'country',
     default_locale: 'en-US',
     metadata: { country: 'US' },
-    branding: { primary_color: '#123456', accent_color: null, has_logo: true },
+    branding: { primary_color: '#123456', accent_color: null },
     ...over,
   };
 }
@@ -28,7 +28,7 @@ describe('PackEmblem', () => {
     expect(container.querySelector('img[alt$="logo"]')).toBeNull();
   });
 
-  it('keeps the logo for a pack that serves no single country', () => {
+  it('flies no flag for a pack that serves no single country', () => {
     // Cross-region packs declare XX. It is a real value meaning "no single
     // market", so it must not resolve to a flag of anything.
     const { container } = render(
@@ -38,11 +38,11 @@ describe('PackEmblem', () => {
       />,
     );
     expect(container.querySelector('[data-pack-emblem]')?.getAttribute('data-pack-emblem')).toBe(
-      'logo',
+      'monogram',
     );
   });
 
-  it('keeps the logo for an industry pack that carries a country anyway', () => {
+  it('flies no flag for an industry pack that carries a country anyway', () => {
     // The gate is the pack's type, not the presence of a country key. An
     // industry pack with a country would otherwise fly a flag for a market it
     // does not claim.
@@ -50,23 +50,16 @@ describe('PackEmblem', () => {
       <PackEmblem pack={pack({ type: 'industry', metadata: { country: 'DE' } })} size={48} />,
     );
     expect(container.querySelector('[data-pack-emblem]')?.getAttribute('data-pack-emblem')).toBe(
-      'logo',
+      'monogram',
     );
   });
 
-  it('falls back to a monogram rather than an empty plate when nothing can be drawn', () => {
-    const { container } = render(
-      <PackEmblem
-        pack={pack({
-          type: 'partner',
-          branding: { primary_color: '#123456', accent_color: null, has_logo: false },
-        })}
-        size={48}
-      />,
-    );
+  it('draws a monogram, never a logo, for a pack with no country', () => {
+    const { container } = render(<PackEmblem pack={pack({ type: 'partner' })} size={48} />);
     const plate = container.querySelector('[data-pack-emblem]');
     expect(plate?.getAttribute('data-pack-emblem')).toBe('monogram');
     expect(plate?.textContent).toBe('SP');
+    expect(container.querySelector('img')).toBeNull();
   });
 
   it('tells the two packs apart that share one flag', () => {

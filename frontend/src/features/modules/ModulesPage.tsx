@@ -77,6 +77,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { getModulesByCategory } from '@/modules/_registry';
 import { translateManifestText } from '@/modules/_i18n';
 import { fmtList, fmtFixed } from '@/shared/lib/formatters';
+import { packSummary } from '@/shared/lib/regionalPack';
 import { PackEmblem } from '@/shared/ui/PackEmblem';
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
@@ -763,6 +764,17 @@ function PartnerPacksTab() {
   const activeSlug = data?.active_slug ?? null;
   const activeSource = applied.data?.applied ? applied.data.source ?? null : null;
 
+  // ``/modules?tab=packs&pack=<slug>`` — a named pack, reached from somewhere
+  // that already knows which one it means. A case page says which pack carries
+  // its market's standards, and before this the only thing it could offer was
+  // the tab: eighteen cards, the right one somewhere in them, and the reader
+  // left to match a name they had just read. This scrolls that card into view
+  // and opens its setup dialog, which is where the dry-run preview and the
+  // confirm already live - so the deep link shortens the path without skipping
+  // the step that makes applying a pack safe.
+  const [packSearchParams] = useSearchParams();
+  const focusSlug = packSearchParams.get('pack');
+
   return (
     <div className="animate-card-in" style={{ animationDelay: '60ms' }}>
       <div className="mb-4">
@@ -848,6 +860,7 @@ function PartnerPacksTab() {
               isActive={activeSlug === pack.slug}
               activeSource={activeSlug === pack.slug ? activeSource : null}
               envPinned={activeSource === 'env'}
+              focused={focusSlug === pack.slug}
             />
           ))}
         </div>
@@ -1100,6 +1113,9 @@ interface PartnerPackCardProps {
    *  Activating a different pack from the UI then silently fails, so we warn
    *  instead of opening the apply dialog. */
   envPinned?: boolean;
+  /** This is the pack named by ``?pack=<slug>``. Scroll it into view and, when
+   *  there is something to do with it, open its setup dialog. */
+  focused?: boolean;
 }
 
 function asStringArray(value: unknown): string[] {
@@ -1107,11 +1123,33 @@ function asStringArray(value: unknown): string[] {
   return value.filter((v): v is string => typeof v === 'string');
 }
 
-function PartnerPackCard({ pack, index, isActive, activeSource, envPinned }: PartnerPackCardProps) {
+function PartnerPackCard({
+  pack,
+  index,
+  isActive,
+  activeSource,
+  envPinned,
+  focused = false,
+}: PartnerPackCardProps) {
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
   const [applyOpen, setApplyOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  // Addressed by id rather than by a ref: `Card` spreads its extra props onto
+  // its div but does not forward a ref, and wrapping it in a ref-carrying div
+  // would make that div the grid item and hand the card a different height
+  // than its neighbours.
+  const cardId = `pack-card-${pack.slug}`;
+
+  // The deep-linked card brings itself into view, and opens its setup dialog
+  // only when opening it would mean anything: an already-active pack has
+  // nothing to apply, and an env-pinned deployment cannot be changed from the
+  // UI at all, so in both cases the scroll and the ring are the whole answer.
+  useEffect(() => {
+    if (!focused) return;
+    document.getElementById(cardId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!isActive && !envPinned) setApplyOpen(true);
+  }, [focused, isActive, envPinned, cardId]);
 
   // Activating from the UI cannot override an env-pinned pack — the backend
   // keeps the OE_PARTNER_PACK selection. Warn and skip opening the dialog.
@@ -1132,10 +1170,6 @@ function PartnerPackCard({ pack, index, isActive, activeSource, envPinned }: Par
     setApplyOpen(true);
   }
 
-  const countryName =
-    typeof pack.metadata.country_name_en === 'string'
-      ? pack.metadata.country_name_en
-      : null;
   const supportEmail =
     typeof pack.metadata.support_email === 'string'
       ? pack.metadata.support_email
@@ -1146,6 +1180,9 @@ function PartnerPackCard({ pack, index, isActive, activeSource, envPinned }: Par
   const standards = regulatorRefs.length > 0 ? regulatorRefs : pack.validation_rule_packs;
 
   const accent = pack.branding.accent_color ?? pack.branding.primary_color;
+  // One line, not the whole paragraph: see packSummary for why the split is on
+  // the colon rather than a CSS clamp.
+  const summary = packSummary(pack.description);
 
   const packType = packTypeOf(pack);
   // Co-branding line stays a property of the ``partner`` type only.
@@ -1157,7 +1194,12 @@ function PartnerPackCard({ pack, index, isActive, activeSource, envPinned }: Par
   return (
     <Card
       hoverable
-      className="animate-card-in group relative overflow-hidden"
+      id={cardId}
+      data-pack-slug={pack.slug}
+      className={clsx(
+        'animate-card-in group relative overflow-hidden',
+        focused && 'ring-2 ring-oe-blue/40',
+      )}
       style={{ animationDelay: `${80 + index * 30}ms` }}
     >
       {/* Brand accent — left border strip distinguishes each company */}
@@ -1168,67 +1210,57 @@ function PartnerPackCard({ pack, index, isActive, activeSource, envPinned }: Par
       />
 
       <div className="pl-2">
-        {/* Emblem plate — the country's flag, or the pack's own mark where
-            there is no country to draw. */}
-        <div className="mb-3 flex items-center gap-3">
-          <PackEmblem pack={pack} size={48} />
+        {/* Identity: the flag, the name, and the one line that says who the
+            pack is for. The name used to sit over a slug and a coloured
+            version chip, which read as three titles of similar weight before
+            the reader reached anything about the pack itself. */}
+        <div className="flex items-start gap-3.5">
+          <PackEmblem pack={pack} size={52} />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="truncate text-[15px] font-bold leading-tight text-content-primary">
+            <div className="flex items-start gap-2">
+              <h3 className="min-w-0 flex-1 text-[15px] font-bold leading-snug text-content-primary">
                 {pack.partner_name}
               </h3>
               {isActive && (
-                <Badge variant="success" size="sm" className="shrink-0">
+                <Badge variant="success" size="sm" className="mt-0.5 shrink-0">
                   <Check size={10} className="mr-0.5" />
                   {t('modules.active', { defaultValue: 'Active' })}
                 </Badge>
               )}
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-2xs text-content-tertiary">
-              <span className="truncate font-mono">{pack.slug}</span>
-              <span className="text-border">·</span>
-              <span
-                className="shrink-0 rounded-full px-1.5 py-0.5 font-mono font-semibold"
-                style={{
-                  color: pack.branding.primary_color,
-                  backgroundColor: `${pack.branding.primary_color}14`,
-                }}
-              >
-                v{pack.pack_version}
-              </span>
-            </div>
+            {summary && (
+              <p className="mt-1 text-xs leading-relaxed text-content-secondary">{summary}</p>
+            )}
           </div>
         </div>
 
-        {/* Type / region / currency badges */}
-        <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+        {/* What the pack sets, in one quiet line. This was four badges of the
+            same weight as the Active one, so a currency code drew the eye as
+            hard as whether the pack was switched on. */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-content-tertiary">
           {(() => {
             const meta = PACK_TYPE_META[packType];
             const TypeIcon = meta.icon;
             return (
-              <Badge variant={meta.variant} size="sm">
-                <TypeIcon size={10} className="mr-0.5" />
+              <span className="inline-flex items-center gap-1 font-semibold uppercase tracking-wide" style={{ color: accent }}>
+                <TypeIcon size={11} />
                 {t(meta.labelKey, { defaultValue: meta.defaultLabel })}
-              </Badge>
+              </span>
             );
           })()}
-          {countryName && (
-            <Badge variant="blue" size="sm">
-              <Globe size={10} className="mr-0.5" />
-              {countryName}
-            </Badge>
-          )}
-          <Badge variant="neutral" size="sm">{pack.default_currency}</Badge>
+          <span className="text-border">·</span>
+          <span className="font-mono">{pack.default_currency}</span>
           {pack.default_tax_template && (
-            <Badge variant="neutral" size="sm">{pack.default_tax_template}</Badge>
+            <>
+              <span className="text-border">·</span>
+              <span className="truncate font-mono">{pack.default_tax_template}</span>
+            </>
           )}
+          <span className="text-border">·</span>
+          <span className="font-mono">v{pack.pack_version}</span>
+          <span className="text-border">·</span>
+          <span className="truncate font-mono">{pack.slug}</span>
         </div>
-
-        {pack.description && (
-          <p className="mt-2.5 text-xs text-content-secondary line-clamp-3 leading-relaxed">
-            {pack.description}
-          </p>
-        )}
 
         {/* Co-branding line - partner-type packs only */}
         {poweredBy && (

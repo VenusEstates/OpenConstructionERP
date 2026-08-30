@@ -17,10 +17,12 @@
  * the system's own reckoning and gets its flag. A list in this file would be a
  * second register of the same fact and would drift from the first.
  *
- * Industry and cross-region packs (``metadata.country === "XX"``) keep the
- * logo-then-monogram behaviour, because there is no country to draw. So does a
- * country pack whose ISO code has no flag in the table: an empty plate would
- * be worse than the mark it replaced.
+ * A pack with no country to draw - an industry or cross-region pack, or a
+ * country pack whose ISO code has no flag in the table - gets a monogram in
+ * its own colours. It does not get its logo back. The packs ship wide wordmark
+ * logos drawn for a co-brand strip, and one squeezed into a 48px square was an
+ * illegible sliver that also flashed raw alt text on a slow first paint, so
+ * the logo was never the better of the two even before the flags arrived.
  *
  * Sub-national packs are the case the flag alone cannot carry. California and
  * Texas both fly the same national flag, so the plate adds the subdivision
@@ -29,8 +31,6 @@
  * bear, and a hand-reduced bear reads as a mistake rather than as a flag.
  */
 
-import { useState } from 'react';
-import { partnerLogoUrl } from '@/shared/hooks/usePartnerPack';
 import { packCountryCode } from '@/shared/lib/regionalPack';
 import { CountryFlag } from '@/shared/ui/CountryFlag';
 
@@ -46,7 +46,6 @@ export interface PackEmblemPack {
   branding: {
     primary_color: string;
     accent_color: string | null;
-    has_logo?: boolean;
   };
 }
 
@@ -92,8 +91,6 @@ function subdivisionCode(pack: PackEmblemPack): string | null {
 }
 
 export function PackEmblem({ pack, size, className = '' }: PackEmblemProps) {
-  const [logoBroken, setLogoBroken] = useState(false);
-
   const radius = size <= 24 ? 'rounded-[5px]' : 'rounded-xl';
   const country = flagCodeFor(pack);
   const subdivision = country ? subdivisionCode(pack) : null;
@@ -133,22 +130,6 @@ export function PackEmblem({ pack, size, className = '' }: PackEmblemProps) {
   }
 
   const accent = pack.branding.accent_color ?? pack.branding.primary_color;
-  const showLogo = pack.branding.has_logo !== false && !logoBroken;
-
-  if (showLogo) {
-    return (
-      <img
-        src={partnerLogoUrl(pack.slug)}
-        alt={`${pack.partner_name} logo`}
-        className={`shrink-0 object-contain shadow-sm ${radius} ${className}`}
-        style={{ width: size, height: size }}
-        loading="lazy"
-        data-testid={`pack-emblem-${pack.slug}`}
-        data-pack-emblem="logo"
-        onError={() => setLogoBroken(true)}
-      />
-    );
-  }
 
   return (
     <span

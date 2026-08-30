@@ -77,3 +77,67 @@ export function packCountryCode(pack: RegionalPackFacts): string | null {
 export function packNameSlug(slug: string): string {
   return slug.replace(/-/g, '_');
 }
+
+/**
+ * The one line of a pack's description worth showing on a card.
+ *
+ * Every shipped pack writes its description the same way: a clause naming who
+ * the pack is for, a colon, then the list of what it carries. "Pre-configured
+ * for UK general contractors: RICS NRM 1+2 (2nd ed, 2021) with optional NRM 3
+ * ...". The clause before the colon is the answer to "is this mine", and the
+ * list after it is detail nobody reads from a grid of eighteen cards.
+ *
+ * Measured against the eighteen packs on disk, that clause runs 39 to 81
+ * characters and every one of them reads as a sentence. Clamping the full text
+ * with CSS instead would cut mid-list at a different point on every card,
+ * which is what a wall of eighteen ragged paragraphs looked like.
+ *
+ * A description with no colon, or one whose head is too long to be a summary,
+ * falls back to the whole text: a bad guess at brevity is worse than the
+ * paragraph, because the reader cannot tell that anything was dropped.
+ */
+export function packSummary(description: string | null | undefined): string {
+  const text = (description ?? '').trim();
+  if (!text) return '';
+  const head = text.split(':')[0]?.trim() ?? '';
+  if (head.length >= 12 && head.length <= 95 && head.length < text.length) return head;
+  return text;
+}
+
+/**
+ * A market's packs, split by whether one of them is the applied pack.
+ *
+ * Three states have to be told apart and the obvious source tells apart only
+ * two of them. ``GET /partner-pack/installed`` is named for installation but
+ * returns every pack discovered on disk - eighteen here, with `active_slug`
+ * null - so a caller reading only that list sees "installed" and offers no
+ * action, while a caller reading only ``/current`` sees "no pack" and cannot
+ * name the one that would serve the market. The three states a reader in front
+ * of a German case actually has are: a German pack is applied, a German pack is
+ * on disk and switched off, or there is no German pack at all. `active_slug`,
+ * which the same envelope already carries, is what separates the first two.
+ *
+ * The applied pack sorts first because it is the answer to "what am I looking
+ * at", and the rest follow as alternatives. Several packs can serve one market
+ * - us-california, us-costdata and us-texas all declare US - so this is a list
+ * and not a lookup.
+ *
+ * `region` is compared case-insensitively: cases spell it `DE` and packs spell
+ * it `de`, and both spellings are correct in their own file.
+ */
+export function resolveMarketPacks<T extends RegionalPackFacts>(
+  installed: readonly T[],
+  activeSlug: string | null | undefined,
+  region: string | null | undefined,
+): { packs: T[]; applied: T | null } {
+  const wanted = region?.trim().toLowerCase();
+  // `xx` is a pack's own word for "no single market" and can never be a
+  // market, so a case that somehow carried it must not match every
+  // cross-region pack at once.
+  if (!wanted || wanted === 'xx' || wanted === 'all') return { packs: [], applied: null };
+
+  const packs = installed.filter((p) => packCountryCode(p) === wanted);
+  const applied = packs.find((p) => p.slug === activeSlug) ?? null;
+  if (!applied) return { packs, applied: null };
+  return { packs: [applied, ...packs.filter((p) => p !== applied)], applied };
+}

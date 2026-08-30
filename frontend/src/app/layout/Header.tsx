@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useUploadQueueStore } from '@/stores/useUploadQueueStore';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';
 import { useThemeStore } from '@/stores/useThemeStore';
-import { CountryFlag, ModuleInfoButton, PartnerLogoBadge } from '@/shared/ui';
+import { ActivePackChip, CountryFlag, ModuleInfoButton, PartnerLogoBadge } from '@/shared/ui';
 import { usePartnerPack } from '@/shared/hooks/usePartnerPack';
 import { NotificationBell } from '@/shared/ui/NotificationBell';
 import { HeaderNewsButton } from '@/shared/ui/HeaderNewsButton';
@@ -327,7 +327,15 @@ export function Header({ title, onMenuClick }: HeaderProps) {
   // form whether or not a pack is active, so the top bar looks the same for
   // every operator. The chip sits in a flex-1 column that yields space, so it
   // never has to push the action buttons into icon-only mode to fit.
-  const packActive = usePartnerPack().data?.active === true;
+  // The co-brand strip is a partner's mark, so it belongs to a partner pack and
+  // to nothing else. Measured against the packs this deployment ships: fourteen
+  // country, four industry, zero partner - so on a stock install the header now
+  // carries the pack readout and no co-brand, which is the intent rather than a
+  // regression. The readout itself is `ActivePackChip` and is deliberately not
+  // this component; see the note there on why a dismissible badge cannot be the
+  // answer to "which pack am I on".
+  const packData = usePartnerPack().data;
+  const showCoBrand = packData?.active === true && packData.manifest?.type === 'partner';
   const location = useLocation();
   const translatedTitle = title
     ? t(resolvePageTitleKey(title) ?? title, { defaultValue: title })
@@ -432,11 +440,10 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           the zones, and the chip's own name truncation keeps it from
           overflowing. Below lg the co-brand still shows in the dashboard
           banner. */}
-      {packActive && (
-        <div className="hidden lg:flex flex-1 min-w-0 items-center justify-center px-2">
-          <PartnerLogoBadge variant="nav" />
-        </div>
-      )}
+      <div className="hidden lg:flex flex-1 min-w-0 items-center justify-center gap-2 px-2">
+        <ActivePackChip />
+        {showCoBrand && <PartnerLogoBadge variant="nav" />}
+      </div>
 
       {/* Right side — three zones separated by hairline dividers.
           Zone 2: Search · Zone 3: Notifications + Help · Zone 4: Account
