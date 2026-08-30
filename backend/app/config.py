@@ -325,7 +325,8 @@ class Settings(BaseSettings):
     # are unaffected; only a transaction whose owner stopped talking is. The
     # default is well above any legitimate gap between two statements of one
     # request and far below "forever". Applied as an asyncpg startup parameter
-    # on every connection - see ``app.database``. Set to 0 to disable and leave
+    # on every connection the engine factory builds - see ``app.database``,
+    # which also names the one engine that bypasses it. Set to 0 to disable and leave
     # whatever the server or database default is. Env:
     # ``OE_DATABASE_IDLE_IN_TRANSACTION_TIMEOUT`` /
     # ``DATABASE_IDLE_IN_TRANSACTION_TIMEOUT``.
