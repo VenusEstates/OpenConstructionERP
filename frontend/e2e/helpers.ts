@@ -7,11 +7,21 @@
 import { type Page, expect } from '@playwright/test';
 
 // ── Default test credentials ─────────────────────────────────────────────────
-// These credentials match the demo / seed user created by backend seed scripts.
-// Override via environment variables for CI or custom setups.
+// The demo account the seeder actually creates, and the password the CLI banner
+// prints when it starts a local demo. The previous defaults here,
+// admin@openestimate.local and OpenEstimate2024!, carried the product's name
+// from before the rename and no seeder has ever created that account. It did
+// not merely fail to authenticate: POST /auth/login answers 422 for it, because
+// the .local domain does not survive email validation, so the request never
+// reached a password check. Every spec that logs in through this helper
+// therefore sat on /login until the redirect assertion timed out, and read as a
+// broken spec rather than a broken helper.
+//
+// Operators whose install generated its own demo password (the platform mints
+// one per install unless OE_DEMO_PASSWORD is set) override both values here.
 export const TEST_USER = {
-  email: process.env.E2E_USER_EMAIL ?? 'admin@openestimate.local',
-  password: process.env.E2E_USER_PASSWORD ?? 'OpenEstimate2024!',
+  email: process.env.E2E_USER_EMAIL ?? 'demo@openconstructionerp.com',
+  password: process.env.E2E_USER_PASSWORD ?? 'DemoPass1234!',
 };
 
 // ── Auth helpers ─────────────────────────────────────────────────────────────
