@@ -68,6 +68,66 @@ def test_a_contact_with_no_name_at_all_returns_empty_rather_than_raising():
     assert contact_display_name(contact) == ""
 
 
+def test_the_registered_name_is_used_before_the_email():
+    """A firm with a registered name and no trading name is not billed to its inbox.
+
+    Two functions called ``contact_display_name`` existed, one here and one in
+    ``app.core.party_names``, and each docstring claimed to be the only place
+    that knows how to name a contact. They agreed on company and person and
+    parted company on the last step: the register fell back to ``legal_name``,
+    this one to the email address. So the same firm read as "Nordbau Hoch- und
+    Tiefbau GmbH" in search and on the punch list, and as an email address on
+    its invoice, where BT-44 is the buyer's name.
+    """
+    contact = _contact(
+        company_name=None,
+        legal_name="Nordbau Hoch- und Tiefbau GmbH",
+        primary_email="rechnung@nordbau.de",
+    )
+    assert contact_display_name(contact) == "Nordbau Hoch- und Tiefbau GmbH"
+
+
+def test_a_trading_name_of_only_spaces_does_not_erase_the_person():
+    """Whitespace is truthy, and that used to be the whole bug.
+
+    ``if contact.company_name`` passes for a string of spaces, so the name was
+    returned and then stripped to nothing: an invoice whose buyer line was blank
+    on a record that named a person perfectly well.
+    """
+    contact = _contact(company_name="   ", first_name="Anke", last_name="Petersen")
+    assert contact_display_name(contact) == "Anke Petersen"
+
+
+@pytest.mark.parametrize(
+    "over",
+    [
+        {},
+        {"company_name": None, "first_name": "Anke", "last_name": "Petersen"},
+        {"company_name": None, "legal_name": "Nordbau GmbH"},
+        {"company_name": "   ", "first_name": "Anke", "last_name": "Petersen"},
+        {"company_name": None, "legal_name": "Nordbau GmbH", "primary_email": "a@b.de"},
+    ],
+    ids=["company", "person", "registered", "blank-company", "registered-and-email"],
+)
+def test_the_invoice_and_the_registers_call_one_party_one_name(over: dict[str, object]):
+    """The property that makes "one place knows how to name a contact" true.
+
+    Asserted as agreement between the two functions rather than against literals,
+    because literals in this file would go on passing after the two rules drifted
+    apart again, which is exactly how they drifted apart the first time. The
+    email is the one step this side may add, and only when the register has
+    nothing at all to say.
+    """
+    from app.core.party_names import contact_display_name as register_display_name
+
+    contact = _contact(**over)
+    register_label = register_display_name(
+        contact.company_name, contact.legal_name, contact.first_name, contact.last_name
+    )
+    assert register_label, "the fixture must give the register something to name, or it proves nothing"
+    assert contact_display_name(contact) == register_label
+
+
 # ── the address a document needs ──────────────────────────────────────────────
 
 

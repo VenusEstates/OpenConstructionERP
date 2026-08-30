@@ -59,17 +59,36 @@ def contact_display_name(contact: Contact) -> str:
     Company first, because an invoice is addressed to an organisation and the
     person is an attribute of it.
 
+    The ordering is not decided here. :func:`app.core.party_names.contact_display_name`
+    holds it, and the registers, the punch list and global search read the same
+    function, so one party carries one label wherever it appears. This wrapper
+    adds the one step an invoice needs beyond a register: an address as the last
+    resort, because a document has to name its buyer and BT-44 cannot be blank.
+
+    Two answers used to differ from the register's, and both showed up on an
+    invoice. A contact with a registered name but no trading name and no person
+    was billed to its email address, because this copy fell through to the email
+    without ever consulting ``legal_name``. And a ``company_name`` of nothing but
+    spaces is truthy, so it was returned, stripped, and the buyer name came out
+    empty on a record that had a perfectly good person in it.
+
     Args:
         contact: the counterparty record.
 
     Returns:
-        The company name, else the person's full name, else the primary email,
-        else an empty string when the record answers none of them.
+        The trading name, else the person's full name, else the registered name,
+        else the primary email, else an empty string when the record answers
+        none of them.
     """
-    if contact.company_name:
-        return str(contact.company_name).strip()
-    full = f"{contact.first_name or ''} {contact.last_name or ''}".strip()
-    return full or str(contact.primary_email or "").strip()
+    from app.core.party_names import contact_display_name as register_display_name  # noqa: PLC0415
+
+    label = register_display_name(
+        contact.company_name,
+        contact.legal_name,
+        contact.first_name,
+        contact.last_name,
+    )
+    return label or str(contact.primary_email or "").strip()
 
 
 def _first_present(address: dict[str, Any], keys: tuple[str, ...]) -> str:
