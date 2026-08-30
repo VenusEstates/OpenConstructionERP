@@ -13,35 +13,13 @@ import { Wrench, Lock } from 'lucide-react';
 import clsx from 'clsx';
 
 import { useAuthStore } from '@/stores/useAuthStore';
+import { ROLE_ALIASES, ROLE_RANK } from '@/shared/lib/roles';
 import { toolLabel } from './agentMeta';
 import type { ToolWithPermission } from '../api';
-
-// Role hierarchy mirrored from the backend (app/core/permissions.py). Used only
-// for the best-effort client-side grey-out; the backend remains the authority.
-const ROLE_RANK = {
-  field_worker: -2,
-  site_foreman: -1,
-  site_inspector: 0,
-  viewer: 0,
-  editor: 1,
-  manager: 2,
-  admin: 3,
-} as const;
 
 function rankOf(role: string): number | undefined {
   return (ROLE_RANK as Record<string, number>)[role];
 }
-
-const ROLE_ALIASES: Record<string, string> = {
-  estimator: 'editor',
-  quantity_surveyor: 'editor',
-  qs: 'editor',
-  user: 'editor',
-  superuser: 'admin',
-  owner: 'admin',
-  readonly: 'viewer',
-  guest: 'viewer',
-};
 
 // Minimum role each known tool permission requires (mirrors the modules'
 // permission registrations — all VIEWER today). Unknown permissions fall back
@@ -56,6 +34,11 @@ const PERMISSION_MIN_RANK: Record<string, number> = {
   'ai_agents.run': ROLE_RANK.editor,
 };
 
+// Resolves through ROLE_ALIASES by hand rather than through normalizeRole,
+// and the difference is load bearing. normalizeRole maps an absent role to
+// `viewer`; here that would be a grant, because ranks are compared rather than
+// names, `viewer` ranks 0, and the read permissions above need 0. Leaving an
+// unknown role without a rank is what makes the unknown case deny.
 function canGrant(role: string | null, permission: string): boolean {
   const key = (role ?? '').toLowerCase();
   const resolved = ROLE_ALIASES[key] ?? key;

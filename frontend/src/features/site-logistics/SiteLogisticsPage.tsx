@@ -79,6 +79,7 @@ import {
   type UpdateLaydownZonePayload,
 } from './api';
 import { getIntlLocale } from '@/shared/lib/formatters';
+import { normalizeRole } from '@/shared/lib/roles';
 
 /* ── Constants & helpers ───────────────────────────────────────────────── */
 
@@ -222,21 +223,6 @@ function escHtml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function normalizeRole(role: string | null | undefined): string {
-  const r = (role ?? 'viewer').trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    estimator: 'editor',
-    quantity_surveyor: 'editor',
-    qs: 'editor',
-    user: 'editor',
-    superuser: 'admin',
-    owner: 'admin',
-    readonly: 'viewer',
-    guest: 'viewer',
-  };
-  return aliases[r] ?? r;
 }
 
 /* ── Book / edit delivery modal ────────────────────────────────────────── */

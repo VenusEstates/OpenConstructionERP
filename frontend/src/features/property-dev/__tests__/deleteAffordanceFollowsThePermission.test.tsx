@@ -19,7 +19,7 @@
  * query is by accessible role and name, which is what a person clicking has.
  *
  * The other half of the invariant, that the constant equals what the backend
- * admits, is enforced by scripts/check_property_dev_role_gate_parity.py. This
+ * admits, is enforced by scripts/check_role_mirrors_match_the_backend.py. This
  * file proves the constant reaches the screen; that one proves it is right.
  */
 

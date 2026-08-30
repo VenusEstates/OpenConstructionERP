@@ -16,7 +16,7 @@
 // honest about what they are gating and lets a later change swap the array
 // for a real permission lookup without touching them.
 //
-// Kept equal to the backend by scripts/check_property_dev_role_gate_parity.py,
+// Kept equal to the backend by scripts/check_role_mirrors_match_the_backend.py,
 // which resolves the closure through the same registry the request path uses
 // and asserts set equality in both directions.
 

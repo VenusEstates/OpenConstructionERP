@@ -57,6 +57,7 @@ import { CDETransmittalsBadge } from './CDETransmittalsBadge';
 import { CDESetupWizard } from './CDESetupWizard';
 import { cdeGuide } from './cdeGuide';
 import { fmtFixed } from '@/shared/lib/formatters';
+import { normalizeRole } from '@/shared/lib/roles';
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 
@@ -105,21 +106,6 @@ const STATE_ORDER: CDEState[] = ['wip', 'shared', 'published', 'archived'];
  * Editors and viewers can never promote, so we hide the action for them
  * rather than letting the click 400.
  */
-function normalizeRole(role: string | null | undefined): string {
-  const r = (role ?? 'viewer').trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    estimator: 'editor',
-    quantity_surveyor: 'editor',
-    qs: 'editor',
-    user: 'editor',
-    superuser: 'admin',
-    owner: 'admin',
-    readonly: 'viewer',
-    guest: 'viewer',
-  };
-  return aliases[r] ?? r;
-}
-
 function canRoleCrossGate(role: string | null | undefined, fromState: CDEState): boolean {
   const r = normalizeRole(role);
   if (fromState === 'published') return r === 'admin'; // Gate C — archive

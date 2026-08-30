@@ -400,12 +400,19 @@ repos:
       # the change was made for, and the successful change reads as a failed
       # one. Watches both sides, since either can move. Stdlib only, so it
       # needs no backend install.
-      - id: property-dev-role-gate-parity
-        name: Gate a UI role list that drifted from the permission it mirrors
-        entry: python scripts/check_property_dev_role_gate_parity.py
+      #
+      # Scoped to the whole of frontend/src rather than to the files that
+      # hold the tables today, because the failure it guards against is a
+      # NEW copy appearing somewhere else: the alias map is eight short lines
+      # and had already been typed out by hand in three features. Locales are
+      # excluded because they name every role as translated UI text, which is
+      # data rather than a mirror, and they are large and edited constantly.
+      - id: role-mirrors-match-the-backend
+        name: Gate a UI copy of the backend role tables that drifted from it
+        entry: python scripts/check_role_mirrors_match_the_backend.py
         language: system
         pass_filenames: false
-        files: ^(frontend/src/features/property-dev/(permissions\.ts|PropertyDevPage\.tsx)|backend/app/modules/property_dev/permissions\.py|backend/app/core/permissions\.py|scripts/check_property_dev_role_gate_parity\.py)$
+        files: ^(frontend/src/(?!app/locales/).*\.tsx?|backend/app/modules/property_dev/permissions\.py|backend/app/core/permissions\.py|scripts/check_role_mirrors_match_the_backend\.py)$
 
       # A playbook carries its English inline, so adding one looks correct
       # locally and renders English in every other language. One commit added

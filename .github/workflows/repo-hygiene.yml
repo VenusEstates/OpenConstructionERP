@@ -866,9 +866,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_i18n_placeholder_parity.py
 
-      - name: Check a UI role list still equals the permission it mirrors
+      - name: Check the UI copies of the backend role tables still match it
         if: ${{ !cancelled() }}
-        run: python scripts/check_property_dev_role_gate_parity.py
+        run: python scripts/check_role_mirrors_match_the_backend.py
 
       - name: Check for keys written beside the translation object
         if: ${{ !cancelled() }}
