@@ -52,7 +52,7 @@ async function dismissOnboardingTourIfPresent(page: Page): Promise<void> {
 async function openFilesForFirstProject(page: Page): Promise<void> {
   await page.goto('/projects');
   await dismissOnboardingTourIfPresent(page);
-  const card = page.locator('h3').first();
+  const card = page.getByTestId('project-card').first();
   await card.waitFor({ state: 'visible', timeout: 15_000 });
   await card.click();
   // Clicking a card only navigates. Nothing on the project LIST has ever set

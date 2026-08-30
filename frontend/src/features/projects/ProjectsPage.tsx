@@ -1274,6 +1274,13 @@ function ProjectCard({
   return (
     <Card
       hoverable
+      // The only stable hook on a project card. Everything a test could reach
+      // for before this was incidental: the title is the one <h3> on the page
+      // today and the first neighbouring component to add one silently moves
+      // the click somewhere else, with the spec staying syntactically valid.
+      // Deliberately not project-card-<id>, because a prefix match on that
+      // would also catch project-card-view-on-map on the button inside.
+      data-testid="project-card"
       padding="none"
       className="group cursor-pointer relative animate-card-in overflow-hidden rounded-xl bg-gradient-to-b from-surface-elevated to-surface-primary hover:shadow-xl hover:border-oe-blue/40 focus-within:ring-2 focus-within:ring-oe-blue/30 motion-safe:transition-all"
       style={style}
