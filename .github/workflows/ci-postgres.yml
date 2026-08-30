@@ -1403,12 +1403,21 @@ jobs:
         #
         # The budget, written down because the number is not obvious from the
         # step. This job is not on the critical path of this workflow, so the
-        # step spends slack rather than merge time. Measured 2026-08-30 on run
-        # 33282669232: no job here declares needs, all four start together, and
-        # they take 17.2m (backend-postgres), 17.1m (object ownership), 4.2m
-        # (upgrade) and 1.4m (this one). The run is ~17m with or without this
-        # step. Headroom was 15.7m; a full npm run build, the worst case, is
-        # 11m, which would leave about 4.7m.
+        # step spends slack rather than merge time. No job in this file declares
+        # needs, so all four start together and the run lasts as long as its
+        # longest job, which is backend-postgres or object ownership and has
+        # never been this one.
+        #
+        # Re-measured 2026-08-30 once the step had actually run, because the
+        # figures first written here were taken before it existed and were then
+        # quoted elsewhere as if they still held. On runs 33289881033 and
+        # 33292412212 this step took 6m42s and 5m55s, carrying the job from the
+        # 1m09s to 1m27s it took across the six runs before the step to 7m59s
+        # and 7m10s after. The run itself was 17m23s and 17m22s, against a
+        # 16m11s to 19m13s band over those six earlier runs, so merge time did
+        # not move. What shrank is the headroom, from 15.7m to 10m12s and 9m24s,
+        # and it is that smaller figure a later step has left to spend, not the
+        # one this paragraph used to carry.
         #
         # Re-measure rather than trust those figures, because they go stale in
         # both directions: compare this job's own duration against the whole
@@ -1416,6 +1425,16 @@ jobs:
         # of "gh run view <id> --json jobs". The day this job's duration
         # approaches the run's it has become the critical path, and this step
         # is the first thing to question.
+        #
+        # Shown able to fail rather than assumed able to, on run 33297794309: a
+        # throwaway branch carrying one unresolvable import in src/main.tsx
+        # failed here in a second with "Could not resolve", and the job went
+        # red. Worth repeating after any change to this step, because a build
+        # step that cannot refuse anything is indistinguishable from no build
+        # step at all. That run answers the other half too. The test step below
+        # does not depend on this one, so it still ran rather than being swept
+        # into skipped, and the two tests/pwa files failed 11 assertions with
+        # "No build output to inspect" instead of going quietly green.
         run: npx vite build
       - name: Check Tailwind class conflicts in the stylesheet the build produced
         if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.build.outcome == 'success' }}
