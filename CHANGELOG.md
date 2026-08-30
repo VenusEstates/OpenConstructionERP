@@ -5,7 +5,7 @@ All notable changes to OpenConstructionERP are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [16.3.0] - 2026-08-29
+## [16.3.0] - 2026-08-30
 
 Three things worth knowing before you upgrade.
 
@@ -532,6 +532,31 @@ all ten would teach the reader to stop reading that part of the page. The two
 blocks of that row also end level now. The step strip is one fixed height and
 left the company comb beside it drawing a bordered box seventy pixels taller
 than the content next to it.
+
+Signing in is now something you can take back. Every pair of tokens is minted
+together with a session row that names it, so a session can be ended on its own
+instead of only by ending all of them, and changing a password ends every
+session rather than only the browser doing the changing. Refreshing rotates the
+session it already belongs to rather than opening another, so a revoked session
+cannot refresh its way back. The list of your own sessions marks the one you are
+reading it from, which is the field the whole feature turns on: without it the
+action people actually want, end everything except the device in my hand, has no
+way to tell the device in your hand apart from the rest. That list answers with a
+page rather than an array, so a caller can tell a complete answer from a first
+one, which for this list is the difference between having ended every other
+session and believing you had.
+
+Sign-in on the public demo works again. The demo refuses writes at the database
+as well as at the door, and the session row a sign-in now writes was not on the
+short list of things sign-in is allowed to write, so the write was refused, and
+because the tokens and their row are deliberately created together the refusal
+took the whole login with it rather than degrading to a session nobody could
+revoke. Anyone running with OE_DEMO_READ_ONLY on was met with a read-only
+refusal on the sign-in form itself. The permitted set now names the statement
+kinds per table, so the account row keeps the narrow permission it was given,
+an insert there still being account creation, while the session row may be
+written and rotated. Self-hosted installs were never affected: none of this
+arms unless that flag is on.
 
 ## [16.2.0] - 2026-08-28
 
