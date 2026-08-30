@@ -1633,7 +1633,7 @@ export function ReviewAuthorityPage() {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as CycleStatus | '')}
                 aria-label={t('review_authority.filter_all_status', { defaultValue: 'All Statuses' })}
-                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-44"
+                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-44"
               >
                 <option value="">
                   {t('review_authority.filter_all_status', { defaultValue: 'All Statuses' })}
@@ -1644,7 +1644,7 @@ export function ReviewAuthorityPage() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+              <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
                 <ChevronDown size={14} />
               </div>
             </div>
@@ -1654,7 +1654,7 @@ export function ReviewAuthorityPage() {
                 value={authorityFilter}
                 onChange={(e) => setAuthorityFilter(e.target.value as AuthorityKind | '')}
                 aria-label={t('review_authority.filter_all_authority', { defaultValue: 'All Authority Kinds' })}
-                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-52"
+                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-52"
               >
                 <option value="">
                   {t('review_authority.filter_all_authority', { defaultValue: 'All Authority Kinds' })}
@@ -1665,7 +1665,7 @@ export function ReviewAuthorityPage() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+              <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
                 <ChevronDown size={14} />
               </div>
             </div>

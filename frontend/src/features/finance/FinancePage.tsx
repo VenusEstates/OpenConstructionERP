@@ -2350,7 +2350,7 @@ function InvoicesTab({ projectId }: { projectId: string }) {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               aria-label={t('finance.filter_status', { defaultValue: 'Filter by status' })}
-              className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
+              className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
             >
               <option value="">{t('finance.filter_all_statuses', { defaultValue: 'All Statuses' })}</option>
               <option value="draft">{t('finance.status_draft', { defaultValue: 'Draft' })}</option>
@@ -2363,7 +2363,7 @@ function InvoicesTab({ projectId }: { projectId: string }) {
                 {t('finance.status_credit_note_issued', { defaultValue: 'Credit note issued' })}
               </option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+            <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
               <ChevronDown size={14} />
             </div>
           </div>

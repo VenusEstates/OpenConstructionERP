@@ -4162,7 +4162,7 @@ export function EditableResourceRow({ data, ctx, slots, leftPad }: { data: Recor
   const renderBimLinkSlot = (width: number) => (
     <span
       key="_bim_link"
-      className="shrink-0 inline-flex items-center justify-end self-center pl-2 pr-3"
+      className="shrink-0 inline-flex items-center justify-end self-center ps-2 pe-3"
       style={{ width: `${width}px` }}
     >
       <ResourceTypePicker
@@ -4669,7 +4669,7 @@ function VariantHeaderResourceRow({
   const renderBimLinkSlot = (width: number) => (
     <span
       key="_bim_link"
-      className="shrink-0 inline-flex items-center justify-end self-center pl-2 pr-3"
+      className="shrink-0 inline-flex items-center justify-end self-center ps-2 pe-3"
       style={{ width: `${width}px` }}
     >
       <button

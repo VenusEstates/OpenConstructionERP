@@ -4002,7 +4002,7 @@ export function QuickEstimatePage() {
                                       <X size={12} />
                                     </button>
                                   </td>
-                                  <td className="px-4 py-1.5 text-sm text-content-secondary pl-10">
+                                  <td className="px-4 py-1.5 text-sm text-content-secondary ps-10">
                                     <span className="text-border mr-1.5">|--</span>
                                     {cleanValue(groupByCols[0]!, g.key_parts[groupByCols[0]!] || '')}
                                   </td>

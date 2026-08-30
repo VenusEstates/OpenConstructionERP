@@ -1738,7 +1738,7 @@ function PivotTab({ sessionId, describe, thresholdRules, setThresholdRules }: Pi
                         </tr>
                         {isOpen && children.map((g) => (
                           <tr key={Object.values(g.key).join('-')} className="border-b border-border-light">
-                            <td className="px-3 py-1.5 pl-8 text-content-quaternary">{g.key[groupBy[0]!]}</td>
+                            <td className="px-3 py-1.5 ps-8 text-content-quaternary">{g.key[groupBy[0]!]}</td>
                             {groupBy.slice(1).map((col) => <td key={col} className="px-3 py-1.5 text-content-secondary">{g.key[col] || '—'}</td>)}
                             <td className="px-3 py-1.5 text-right tabular-nums text-content-secondary">{g.count.toLocaleString(getNumberLocale())}</td>
                             {aggCols.map((col) => {

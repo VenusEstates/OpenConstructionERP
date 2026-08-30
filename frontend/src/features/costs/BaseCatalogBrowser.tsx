@@ -435,7 +435,7 @@ export function BaseCatalogBrowser({
       {/* Search + summary */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
-          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-quaternary" />
+          <Search size={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-content-quaternary" />
           <input
             type="search"
             value={query}
@@ -443,7 +443,7 @@ export function BaseCatalogBrowser({
             placeholder={t('costs.base_search_placeholder', {
               defaultValue: 'Search country, city, currency, language or norm...',
             })}
-            className="w-full rounded-lg border border-transparent bg-surface-secondary/70 py-2 pl-9 pr-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue/40 focus:bg-surface-secondary focus:outline-none"
+            className="w-full rounded-lg border border-transparent bg-surface-secondary/70 py-2 ps-9 pe-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue/40 focus:bg-surface-secondary focus:outline-none"
           />
         </div>
         <span className="shrink-0 text-xs text-content-tertiary tabular-nums">

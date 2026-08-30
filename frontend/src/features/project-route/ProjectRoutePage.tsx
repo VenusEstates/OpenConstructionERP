@@ -707,7 +707,7 @@ export function ProjectRoutePage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'draft' | 'confirmed' | '')}
             aria-label={t('project_route.filter_all_status', { defaultValue: 'All Statuses' })}
-            className="h-10 rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-44"
+            className="h-10 rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-44"
           >
             <option value="">{t('project_route.filter_all_status', { defaultValue: 'All Statuses' })}</option>
             <option value="draft">{t('project_route.status_draft', { defaultValue: 'Draft' })}</option>

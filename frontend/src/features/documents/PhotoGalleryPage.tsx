@@ -1542,18 +1542,18 @@ export function PhotoGalleryPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Search */}
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-quaternary" />
+            <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-content-quaternary" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('photos.search_placeholder', { defaultValue: 'Search captions, filenames...' })}
-              className="w-full rounded-lg border border-border-light bg-surface-primary pl-9 pr-8 py-2 text-sm text-content-primary placeholder-content-quaternary focus:border-oe-blue focus:ring-1 focus:ring-oe-blue/30 outline-none"
+              className="w-full rounded-lg border border-border-light bg-surface-primary ps-9 pe-8 py-2 text-sm text-content-primary placeholder-content-quaternary focus:border-oe-blue focus:ring-1 focus:ring-oe-blue/30 outline-none"
             />
             {searchQuery && (
               <button aria-label={t('common.clear_search', { defaultValue: 'Clear search' })}
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-content-quaternary hover:text-content-secondary"
+                className="absolute end-2 top-1/2 -translate-y-1/2 text-content-quaternary hover:text-content-secondary"
               >
                 <X size={14} />
               </button>

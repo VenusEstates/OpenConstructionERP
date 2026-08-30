@@ -209,14 +209,14 @@ export function ConnectorsPage() {
         {sources.length >= 2 && !sourcesQuery.isError ? (
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-[12rem] flex-1">
-              <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary" />
+              <Search className="pointer-events-none absolute start-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('connectors.filter_search_ph', {
                   defaultValue: 'Search by name or path',
                 })}
-                className="w-full rounded-md border border-border-light bg-surface-primary py-1.5 pl-8 pr-2 text-sm text-content-primary"
+                className="w-full rounded-md border border-border-light bg-surface-primary py-1.5 ps-8 pe-2 text-sm text-content-primary"
               />
             </div>
             <select

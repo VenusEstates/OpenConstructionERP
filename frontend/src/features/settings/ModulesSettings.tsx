@@ -510,7 +510,7 @@ export function ModulesSettings() {
             <div className="relative sm:w-64">
               <Search
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-quaternary"
+                className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-content-quaternary"
                 aria-hidden
               />
               <input
@@ -519,7 +519,7 @@ export function ModulesSettings() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('settings.modules_search', { defaultValue: 'Search modules' })}
                 aria-label={t('settings.modules_search', { defaultValue: 'Search modules' })}
-                className="w-full rounded-lg border border-border-light bg-surface-primary py-2 pl-9 pr-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none"
+                className="w-full rounded-lg border border-border-light bg-surface-primary py-2 ps-9 pe-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none"
               />
             </div>
           </div>

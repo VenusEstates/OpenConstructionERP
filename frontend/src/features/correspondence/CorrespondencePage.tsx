@@ -1917,7 +1917,7 @@ export function CorrespondencePage() {
               setDirectionFilter(e.target.value as CorrespondenceDirection | '')
             }
             aria-label={t('correspondence.filter_all_dir', { defaultValue: 'All Directions' })}
-            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
+            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
           >
             <option value="">
               {t('correspondence.filter_all_dir', { defaultValue: 'All Directions' })}
@@ -1929,7 +1929,7 @@ export function CorrespondencePage() {
               {t('correspondence.dir_outgoing', { defaultValue: 'Outgoing' })}
             </option>
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
             <ChevronDown size={14} />
           </div>
         </div>
@@ -1940,7 +1940,7 @@ export function CorrespondencePage() {
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as CorrespondenceType | '')}
             aria-label={t('correspondence.filter_all_type', { defaultValue: 'All Types' })}
-            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
+            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
           >
             <option value="">
               {t('correspondence.filter_all_type', { defaultValue: 'All Types' })}
@@ -1951,7 +1951,7 @@ export function CorrespondencePage() {
               </option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
             <ChevronDown size={14} />
           </div>
         </div>
@@ -1962,7 +1962,7 @@ export function CorrespondencePage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as CorrespondenceStatus | '')}
             aria-label={t('correspondence.filter_all_status', { defaultValue: 'All Statuses' })}
-            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-40"
+            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-40"
           >
             <option value="">
               {t('correspondence.filter_all_status', { defaultValue: 'All Statuses' })}
@@ -1973,7 +1973,7 @@ export function CorrespondencePage() {
               </option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
             <ChevronDown size={14} />
           </div>
         </div>

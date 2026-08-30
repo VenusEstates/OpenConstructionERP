@@ -405,7 +405,7 @@ function RegionTabBar({
         <button
           onClick={() => scroll('left')}
           aria-label={t('common.scroll_left', { defaultValue: 'Scroll left' })}
-          className="absolute left-0 top-0 bottom-0 z-10 flex items-center pl-0.5 pr-3 bg-gradient-to-r from-surface-primary via-surface-primary/90 to-transparent"
+          className="absolute start-0 top-0 bottom-0 z-10 flex items-center ps-0.5 pe-3 bg-gradient-to-r from-surface-primary via-surface-primary/90 to-transparent"
         >
           <ChevronLeft size={16} className="text-content-tertiary" />
         </button>
@@ -416,7 +416,7 @@ function RegionTabBar({
         <button
           onClick={() => scroll('right')}
           aria-label={t('common.scroll_right', { defaultValue: 'Scroll right' })}
-          className="absolute right-0 top-0 bottom-0 z-10 flex items-center pr-0.5 pl-3 bg-gradient-to-l from-surface-primary via-surface-primary/90 to-transparent"
+          className="absolute end-0 top-0 bottom-0 z-10 flex items-center pe-0.5 ps-3 bg-gradient-to-l from-surface-primary via-surface-primary/90 to-transparent"
         >
           <ChevronRight size={16} className="text-content-tertiary" />
         </button>
@@ -1352,7 +1352,7 @@ export function CostsPage() {
           {/* Search input + AI toggle */}
           <div className="relative flex-1 flex gap-2" data-guide="costs-search">
             <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+              <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-content-tertiary">
                 <Search size={16} />
               </div>
               <input
@@ -1367,7 +1367,7 @@ export function CostsPage() {
                       : t('costs.search_placeholder', 'Search by description or code...')
                 }
                 aria-label={t('costs.search_placeholder', { defaultValue: 'Search cost items' })}
-                className={`h-10 w-full rounded-lg border bg-surface-primary pl-10 ${query ? 'pr-8' : 'pr-3'} text-sm text-content-primary placeholder:text-content-tertiary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:border-transparent hover:border-content-tertiary ${
+                className={`h-10 w-full rounded-lg border bg-surface-primary ps-10 ${query ? 'pe-8' : 'pe-3'} text-sm text-content-primary placeholder:text-content-tertiary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:border-transparent hover:border-content-tertiary ${
                   semanticSearch ? 'border-purple-400 focus:ring-purple-400/30' : 'border-border focus:ring-oe-blue'
                 }`}
               />
@@ -1375,7 +1375,7 @@ export function CostsPage() {
                 <button
                   onClick={() => { setQuery(''); setDebouncedQuery(''); setOffset(0); }}
                   aria-label={t('common.clear_search', { defaultValue: 'Clear search' })}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-content-tertiary hover:text-content-primary"
+                  className="absolute inset-y-0 end-0 flex items-center pe-3 text-content-tertiary hover:text-content-primary"
                 >
                   <X size={14} />
                 </button>
@@ -1422,7 +1422,7 @@ export function CostsPage() {
             <select
               value={unit}
               onChange={(e) => handleUnitChange(e.target.value)}
-              className="h-10 w-full appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary sm:w-32"
+              className="h-10 w-full appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary sm:w-32"
             >
               <option value="">{t('costs.all_units', 'All units')}</option>
               {unitOptions.map((u) => (
@@ -1431,7 +1431,7 @@ export function CostsPage() {
                 </option>
               ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+            <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
               <ChevronDown size={14} />
             </div>
           </div>
@@ -1441,7 +1441,7 @@ export function CostsPage() {
             <select
               value={source}
               onChange={(e) => handleSourceChange(e.target.value)}
-              className="h-10 w-full appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary sm:w-36"
+              className="h-10 w-full appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary sm:w-36"
             >
               <option value="">{t('costs.all_sources', 'All sources')}</option>
               {SOURCES.filter(Boolean).map((s) => (
@@ -1450,7 +1450,7 @@ export function CostsPage() {
                 </option>
               ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+            <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
               <ChevronDown size={14} />
             </div>
           </div>
@@ -1461,7 +1461,7 @@ export function CostsPage() {
               <select
                 value={category}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="h-10 w-full appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary sm:w-48"
+                className="h-10 w-full appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary sm:w-48"
               >
                 <option value="">
                   {t('costs.all_categories', 'All categories')}
@@ -1472,7 +1472,7 @@ export function CostsPage() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+              <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
                 <ChevronDown size={14} />
               </div>
             </div>
@@ -2572,9 +2572,9 @@ function MassPricingFields({
               value={massPerUnit}
               onChange={(e) => onChange({ massPerUnit: e.target.value })}
               placeholder={t('costs.mass_per_unit_placeholder', { defaultValue: 'e.g. 44.7' })}
-              className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-3 pr-14 text-sm text-right focus:outline-none focus:ring-2 focus:ring-oe-blue disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-3 pe-14 text-sm text-end focus:outline-none focus:ring-2 focus:ring-oe-blue disabled:opacity-60 disabled:cursor-not-allowed"
             />
-            <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-2xs text-content-tertiary">
+            <span className="pointer-events-none absolute inset-y-0 end-2 flex items-center text-2xs text-content-tertiary">
               {t('costs.mass_per_unit_suffix', { defaultValue: 'kg/{{unit}}', unit })}
             </span>
           </div>

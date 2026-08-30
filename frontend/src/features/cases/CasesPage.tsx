@@ -1280,7 +1280,7 @@ function CasesList() {
             <div className="relative w-full shrink-0 sm:w-64">
               <Search
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary"
+                className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-content-tertiary"
                 aria-hidden="true"
               />
               <input
@@ -1293,7 +1293,7 @@ function CasesList() {
                 aria-label={t("cases.search_placeholder", {
                   defaultValue: "Search cases...",
                 })}
-                className="w-full rounded-lg border border-border-light bg-surface-primary py-2 pl-9 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-oe-blue/50 focus:outline-none focus:ring-2 focus:ring-oe-blue/20"
+                className="w-full rounded-lg border border-border-light bg-surface-primary py-2 ps-9 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-oe-blue/50 focus:outline-none focus:ring-2 focus:ring-oe-blue/20"
               />
             </div>
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">

@@ -1238,7 +1238,7 @@ export function PermissionsMatrixPage() {
             <div className="relative flex-1 min-w-[240px] max-w-md">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
                 aria-hidden
               />
               <input
@@ -1252,7 +1252,7 @@ export function PermissionsMatrixPage() {
                   defaultValue: 'Search permissions',
                 })}
                 data-testid="permissions-matrix-search"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-border-light rounded-md bg-white/80 focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                className="w-full ps-9 pe-3 py-2 text-sm border border-border-light rounded-md bg-white/80 focus:outline-none focus:ring-2 focus:ring-accent-primary"
               />
             </div>
             <label className="flex items-center gap-2 text-sm text-text-secondary">

@@ -3128,14 +3128,14 @@ export function ClashDetectionPage() {
                     </h2>
 
                     <div className="relative ml-auto">
-                      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary" />
+                      <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary" />
                       <input
                         value={fSearch}
                         onChange={(e) => setFSearch(e.target.value)}
                         placeholder={t('clash.search_ph', {
                           defaultValue: 'Search element name…',
                         })}
-                        className="h-8 w-56 rounded-md border border-border bg-surface-primary pl-8 pr-2 text-xs"
+                        className="h-8 w-56 rounded-md border border-border bg-surface-primary ps-8 pe-2 text-xs"
                       />
                     </div>
 

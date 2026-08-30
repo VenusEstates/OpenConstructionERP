@@ -309,7 +309,7 @@ function FilterBar({
             {t('audit.search_label', { defaultValue: 'Search' })}
           </label>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" size={14} />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" size={14} />
             <input
               id="audit-search"
               type="search"
@@ -319,7 +319,7 @@ function FilterBar({
                 defaultValue: 'Search actor, entity, IP, payload…',
               })}
               data-testid="audit-search"
-              className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-8 pr-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+              className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-8 pe-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
             />
           </div>
         </div>
@@ -414,14 +414,14 @@ function FilterBar({
             {t('audit.filter_action', { defaultValue: 'Action' })}
           </label>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" size={14} />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" size={14} />
             <input
               type="text"
               list="audit-action-suggestions"
               value={draft.action ?? ''}
               onChange={(e) => onChange({ ...draft, action: e.target.value || null })}
               placeholder={t('audit.filter_action_placeholder', { defaultValue: 'create, update, delete…' })}
-              className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-8 pr-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+              className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-8 pe-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
               aria-label={t('audit.filter_action', { defaultValue: 'Action' })}
             />
             <datalist id="audit-action-suggestions">

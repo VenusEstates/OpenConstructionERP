@@ -75,7 +75,7 @@ export function BOQFilterBar({
       <div className="relative">
         <Search
           size={13}
-          className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-content-tertiary"
+          className="pointer-events-none absolute start-2 top-1/2 -translate-y-1/2 text-content-tertiary"
         />
         <input
           type="text"
@@ -83,14 +83,14 @@ export function BOQFilterBar({
           onChange={(e) => onSearch(e.target.value)}
           placeholder={t('boq.filter_search_ph', { defaultValue: 'Search positions...' })}
           aria-label={t('boq.filter_search_aria', { defaultValue: 'Search positions by text or number' })}
-          className="h-7 w-44 rounded-md border border-border-light bg-surface-primary pl-7 pr-6 text-xs text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 sm:w-56"
+          className="h-7 w-44 rounded-md border border-border-light bg-surface-primary ps-7 pe-6 text-xs text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 sm:w-56"
         />
         {search && (
           <button
             type="button"
             onClick={() => onSearch('')}
             aria-label={t('common.clear', { defaultValue: 'Clear' })}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
+            className="absolute end-1.5 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
           >
             <X size={13} />
           </button>

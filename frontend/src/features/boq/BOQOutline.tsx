@@ -130,7 +130,7 @@ export function BOQOutline({ positions, onJump }: BOQOutlineProps) {
             <div className="relative">
               <Search
                 size={13}
-                className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-content-tertiary"
+                className="pointer-events-none absolute start-2 top-1/2 -translate-y-1/2 text-content-tertiary"
               />
               <input
                 autoFocus
@@ -139,14 +139,14 @@ export function BOQOutline({ positions, onJump }: BOQOutlineProps) {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('boq.outline_filter_ph', { defaultValue: 'Filter sections...' })}
                 aria-label={t('boq.outline_filter_ph', { defaultValue: 'Filter sections...' })}
-                className="h-7 w-full rounded-md border border-border-light bg-surface-primary pl-7 pr-6 text-xs text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
+                className="h-7 w-full rounded-md border border-border-light bg-surface-primary ps-7 pe-6 text-xs text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery('')}
                   aria-label={t('common.clear', { defaultValue: 'Clear' })}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
+                  className="absolute end-1.5 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-primary"
                 >
                   <X size={13} />
                 </button>

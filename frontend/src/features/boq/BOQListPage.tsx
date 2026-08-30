@@ -994,14 +994,14 @@ export function BOQListPage() {
                   aria-label={t('a11y.boq.project_filter', {
                     defaultValue: 'Filter estimates by project',
                   })}
-                  className="h-10 max-w-full appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:min-w-44 sm:max-w-80"
+                  className="h-10 max-w-full appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:min-w-44 sm:max-w-80"
                 >
                   <option value="">{t('boq.all_projects', { defaultValue: 'All projects' })}</option>
                   {uniqueProjects.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+                <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
                   <ChevronDown size={14} />
                 </div>
               </div>
@@ -1016,14 +1016,14 @@ export function BOQListPage() {
                   aria-label={t('a11y.boq.status_filter', {
                     defaultValue: 'Filter estimates by status',
                   })}
-                  className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-32"
+                  className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-32"
                 >
                   <option value="">{t('boq.all_statuses', { defaultValue: 'All statuses' })}</option>
                   {uniqueStatuses.map((s) => (
                     <option key={s} value={s}>{statusLabel(s)}</option>
                   ))}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+                <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
                   <ChevronDown size={14} />
                 </div>
               </div>

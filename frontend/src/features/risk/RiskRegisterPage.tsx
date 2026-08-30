@@ -933,13 +933,13 @@ export function RiskRegisterPage() {
       {activeTab === 'register' && risks.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" />
+            <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-content-tertiary" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('risk.search', { defaultValue: 'Search risks...' })}
               aria-label={t('risk.search', { defaultValue: 'Search risks...' })}
-              className="h-8 w-full rounded-lg border border-border bg-surface-primary pl-8 pr-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
+              className="h-8 w-full rounded-lg border border-border bg-surface-primary ps-8 pe-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue"
             />
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowFilters(!showFilters)} className={showFilters ? 'text-oe-blue' : ''} icon={<Filter size={14} />}>

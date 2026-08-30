@@ -914,13 +914,13 @@ function CostDbSearchForAssembly({
         {/* Search */}
         <div className="px-6 py-3 border-b border-border-light shrink-0">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-quaternary" />
+            <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-content-quaternary" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('assemblies.search_cost_placeholder', { defaultValue: 'Search cost items by description or code...' })}
-              className="w-full h-9 pl-9 pr-3 rounded-lg border border-border-light bg-surface-primary text-sm text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
+              className="w-full h-9 ps-9 pe-3 rounded-lg border border-border-light bg-surface-primary text-sm text-content-primary placeholder:text-content-quaternary focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
               autoFocus
             />
           </div>

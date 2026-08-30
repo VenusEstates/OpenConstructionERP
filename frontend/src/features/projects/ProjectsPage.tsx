@@ -841,7 +841,7 @@ export function ProjectsPage() {
                 aria-label={t('a11y.projects.status_filter', {
                   defaultValue: 'Filter projects by status',
                 })}
-                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
+                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-36"
               >
                 {availableStatuses.map((s) => (
                   <option key={s} value={s}>
@@ -855,7 +855,7 @@ export function ProjectsPage() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+              <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
                 <ChevronDown size={14} />
               </div>
             </div>
@@ -868,7 +868,7 @@ export function ProjectsPage() {
                 aria-label={t('a11y.projects.region_filter', {
                   defaultValue: 'Filter projects by region',
                 })}
-                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-40"
+                className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue sm:w-40"
               >
                 {availableRegions.map((r) => (
                   <option key={r} value={r}>
@@ -878,7 +878,7 @@ export function ProjectsPage() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+              <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
                 <ChevronDown size={14} />
               </div>
             </div>

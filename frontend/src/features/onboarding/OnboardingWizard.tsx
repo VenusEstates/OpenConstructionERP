@@ -2593,7 +2593,7 @@ function StepModuleConfig({
       <div className="mt-4 w-full max-w-2xl relative">
         <Search
           size={15}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-quaternary"
+          className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-content-quaternary"
           aria-hidden
         />
         <input
@@ -2602,7 +2602,7 @@ function StepModuleConfig({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('onboarding.modpick_search', { defaultValue: 'Search modules' })}
           aria-label={t('onboarding.modpick_search', { defaultValue: 'Search modules' })}
-          className="w-full rounded-xl border border-border-light bg-surface-primary py-2 pl-9 pr-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none"
+          className="w-full rounded-xl border border-border-light bg-surface-primary py-2 ps-9 pe-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none"
         />
       </div>
 
@@ -4174,12 +4174,12 @@ export function StepDataSetup({
                   placeholder={t('onboarding.api_key_placeholder', {
                     defaultValue: 'Paste API key...',
                   })}
-                  className="h-9 w-full rounded-lg border border-border bg-surface-primary px-3 pr-8 font-mono text-xs text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue transition-all"
+                  className="h-9 w-full rounded-lg border border-border bg-surface-primary px-3 pe-8 font-mono text-xs text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute inset-y-0 right-0 flex items-center px-2 text-content-tertiary hover:text-content-primary transition-colors"
+                  className="absolute inset-y-0 end-0 flex items-center px-2 text-content-tertiary hover:text-content-primary transition-colors"
                   tabIndex={-1}
                 >
                   {showKey ? <EyeOff size={14} /> : <Eye size={14} />}

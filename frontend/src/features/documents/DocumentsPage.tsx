@@ -1084,7 +1084,7 @@ export function DocumentsPage() {
               setFileTypeFilter(e.target.value as 'all' | 'pdf' | 'dwg' | 'ifc' | 'rvt' | 'other')
             }
             aria-label={t('documents.filter_file_type', { defaultValue: 'Filter by file type' })}
-            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
+            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
           >
             <option value="all">{t('documents.type_all', { defaultValue: 'All types' })}</option>
             <option value="pdf">{t('documents.type_pdf', { defaultValue: 'PDF' })}</option>
@@ -1093,7 +1093,7 @@ export function DocumentsPage() {
             <option value="rvt">{t('documents.type_rvt', { defaultValue: 'RVT' })}</option>
             <option value="other">{t('documents.type_other', { defaultValue: 'Other' })}</option>
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
             <ChevronDown size={14} />
           </div>
         </div>
@@ -1103,7 +1103,7 @@ export function DocumentsPage() {
             value={revisionFilter}
             onChange={(e) => setRevisionFilter(e.target.value as 'all' | 'latest' | 'versioned')}
             aria-label={t('documents.filter_revision', { defaultValue: 'Filter by revision' })}
-            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary pl-3 pr-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
+            className="h-10 appearance-none rounded-lg border border-border bg-surface-primary ps-3 pe-9 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
           >
             <option value="all">{t('documents.rev_all', { defaultValue: 'All revisions' })}</option>
             <option value="latest">{t('documents.rev_latest', { defaultValue: 'Latest only' })}</option>
@@ -1111,7 +1111,7 @@ export function DocumentsPage() {
               {t('documents.rev_versioned', { defaultValue: 'Has multiple versions' })}
             </option>
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-content-tertiary">
+          <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-2.5 text-content-tertiary">
             <ChevronDown size={14} />
           </div>
         </div>

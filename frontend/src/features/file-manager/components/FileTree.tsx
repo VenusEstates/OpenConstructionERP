@@ -153,7 +153,7 @@ export function FileTree({ nodes, selectedId, onSelect, isLoading, projectId }: 
                 </span>
               </button>
               {node.total_bytes > 0 && (
-                <div className="pl-8 pr-2 text-[10px] text-content-quaternary tabular-nums">
+                <div className="ps-8 pe-2 text-[10px] text-content-quaternary tabular-nums">
                   {fmtBytes(node.total_bytes)}
                 </div>
               )}

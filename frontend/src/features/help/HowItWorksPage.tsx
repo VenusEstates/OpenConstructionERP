@@ -438,7 +438,7 @@ export function HowItWorksPage() {
           <div className="relative flex-1">
             <Search
               size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary"
+              className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-content-tertiary"
               aria-hidden="true"
             />
             <input
@@ -450,7 +450,7 @@ export function HowItWorksPage() {
                 defaultValue: 'Search modules - e.g. "cost", "schedule", "clash"...',
               })}
               aria-label={t('howto.search_placeholder', { defaultValue: 'Search modules' })}
-              className="w-full rounded-xl border border-border-light bg-surface-elevated py-2.5 pl-9 pr-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-oe-blue/40 focus:outline-none focus:ring-2 focus:ring-oe-blue/20"
+              className="w-full rounded-xl border border-border-light bg-surface-elevated py-2.5 ps-9 pe-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-oe-blue/40 focus:outline-none focus:ring-2 focus:ring-oe-blue/20"
             />
           </div>
 

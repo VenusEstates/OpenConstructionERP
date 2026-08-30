@@ -198,7 +198,7 @@ function CommentItem({
       <div
         className={clsx(
           'flex items-start gap-2.5 py-2',
-          isReply && 'ml-8 pl-3 border-l-2 border-border-light',
+          isReply && 'ms-8 ps-3 border-s-2 border-border-light',
         )}
       >
         <p className="text-xs text-content-quaternary italic">
@@ -212,7 +212,7 @@ function CommentItem({
     <div
       className={clsx(
         'group flex items-start gap-2.5 py-2.5',
-        isReply && 'ml-8 pl-3 border-l-2 border-border-light',
+        isReply && 'ms-8 ps-3 border-s-2 border-border-light',
         isNew && 'bg-oe-blue-subtle/30 rounded-lg px-2 -mx-2',
       )}
     >

@@ -902,7 +902,7 @@ export function AdvisorPage() {
                 })}
                 rows={1}
                 className="w-full resize-none rounded-[22px] border border-border bg-surface-primary
-                  px-4 py-[10px] pr-10 text-[15px] leading-[1.35]
+                  px-4 py-[10px] pe-10 text-[15px] leading-[1.35]
                   placeholder:text-content-tertiary/60
                   focus:outline-none focus:ring-2 focus:ring-oe-blue/20 focus:border-oe-blue/40
                   transition-all duration-150"

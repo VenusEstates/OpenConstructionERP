@@ -1120,7 +1120,7 @@ export function ProjectSettingsPage() {
               {customUnits.map((unit) => (
                 <span
                   key={unit}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border-light bg-surface-secondary/40 pl-3 pr-1 py-1 text-sm text-content-primary"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border-light bg-surface-secondary/40 ps-3 pe-1 py-1 text-sm text-content-primary"
                 >
                   <Ruler size={12} className="text-content-tertiary" />
                   <span className="tabular-nums">{unit}</span>

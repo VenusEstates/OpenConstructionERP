@@ -384,7 +384,7 @@ export function ProjectFilePicker(props: ProjectFilePickerProps) {
         <div className="relative">
           <Search
             size={14}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-content-quaternary"
+            className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-content-quaternary"
           />
           <input
             type="search"
@@ -396,7 +396,7 @@ export function ProjectFilePicker(props: ProjectFilePickerProps) {
             placeholder={t('project_files.picker_search_placeholder', {
               defaultValue: 'Search by file name...',
             })}
-            className="w-full rounded-lg border border-border-medium bg-surface-primary py-2 pl-9 pr-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/20"
+            className="w-full rounded-lg border border-border-medium bg-surface-primary py-2 ps-9 pe-3 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/20"
           />
         </div>
 

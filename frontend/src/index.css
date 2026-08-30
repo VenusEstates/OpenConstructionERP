@@ -435,7 +435,26 @@ body {
 [dir='rtl'] .border-l-2 { border-left: none; border-right-width: 2px; }
 [dir='rtl'] .border-r-2 { border-right: none; border-left-width: 2px; }
 
-/* Padding side swaps for common Tailwind utilities used in the codebase */
+/* Padding side swaps for common Tailwind utilities used in the codebase.
+ *
+ * PREFER THE LOGICAL UTILITY. Tailwind 3.3+ ships ps-/pe-, ms-/me-, start-/end-,
+ * border-s/-e, rounded-s/-e and text-start/-end natively, they need no plugin
+ * and no config, and they carry the direction themselves. The rules below stay
+ * only because a great many elements still use the physical utility.
+ *
+ * Why a new element must not join them: each rule here writes BOTH sides, so
+ * two of them on one element do not swap, they fight. `pl-10 pr-3` is a search
+ * field with an icon at one end and a clear button at the other; under RTL the
+ * later rule wins outright and the pair resolves to 0 / 37.5px instead of the
+ * mirrored 11.25 / 37.5. The loser is not mirrored, it is erased. Specificity
+ * (0,2,0) also means one of these rules outranks the plain (0,1,0) utility of
+ * the OTHER side, so pairing a mirrored class with an unmirrored one (`pl-8
+ * pr-2.5`) collapses exactly the same way.
+ *
+ * Both halves of a pair therefore have to move to logical utilities in one
+ * edit, together with any absolutely positioned overlay of the same control -
+ * padding that flips while its icon does not is worse than the collapse.
+ */
 [dir='rtl'] .pl-4 { padding-left: 0; padding-right: 1rem; }
 [dir='rtl'] .pr-4 { padding-right: 0; padding-left: 1rem; }
 [dir='rtl'] .pl-3 { padding-left: 0; padding-right: 0.75rem; }

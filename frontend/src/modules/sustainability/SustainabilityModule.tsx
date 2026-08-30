@@ -201,18 +201,18 @@ export default function SustainabilityModule() {
 
           {/* Search */}
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-content-quaternary" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-content-quaternary" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('common.search', { defaultValue: 'Search materials...' })}
-              className="w-full rounded-lg border border-border bg-surface-secondary py-2 pl-9 pr-8 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none"
+              className="w-full rounded-lg border border-border bg-surface-secondary py-2 ps-9 pe-8 text-sm text-content-primary placeholder:text-content-quaternary focus:border-oe-blue focus:outline-none"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2"
+                className="absolute end-2 top-1/2 -translate-y-1/2"
                 aria-label={t('common.clear_search', { defaultValue: 'Clear search' })}
               >
                 <X className="h-4 w-4 text-content-quaternary hover:text-content-secondary" />

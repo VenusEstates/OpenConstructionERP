@@ -148,7 +148,7 @@ export function RegisterPage() {
       <AuthBackground />
 
       {/* Language — top right */}
-      <div className="absolute top-3 right-3 z-30" ref={langRef}>
+      <div className="absolute top-3 end-3 z-30" ref={langRef}>
         <button
           onClick={() => setLangOpen(!langOpen)}
           className="flex items-center gap-1.5 rounded-lg border border-border-light bg-surface-elevated/80 backdrop-blur-sm px-2.5 py-1 text-xs text-content-secondary hover:bg-surface-elevated transition-colors shadow-sm"
@@ -159,7 +159,7 @@ export function RegisterPage() {
           <ChevronDown size={11} className={`text-content-tertiary transition-transform ${langOpen ? 'rotate-180' : ''}`} />
         </button>
         {langOpen && (
-          <div className="absolute right-0 mt-1 w-44 max-h-72 overflow-y-auto rounded-xl border border-border-light bg-surface-elevated shadow-xl py-0.5 animate-stagger-in">
+          <div className="absolute end-0 mt-1 w-44 max-h-72 overflow-y-auto rounded-xl border border-border-light bg-surface-elevated shadow-xl py-0.5 animate-stagger-in">
             {SUPPORTED_LANGUAGES.map((lang) => {
               const isActive = i18n.language === lang.code;
               return (
@@ -178,7 +178,7 @@ export function RegisterPage() {
       </div>
 
       {/* ── Left: benefits (desktop) ── */}
-      <div className="hidden lg:flex lg:w-[460px] xl:w-[500px] shrink-0 relative z-10 flex-col justify-center pl-14 xl:pl-20 pr-8 xl:pr-10 py-6">
+      <div className="hidden lg:flex lg:w-[460px] xl:w-[500px] shrink-0 relative z-10 flex-col justify-center ps-14 xl:ps-20 pe-8 xl:pe-10 py-6">
         <div className="mb-4 animate-stagger-in" style={{ animationDelay: '0ms' }}>
           <h2 className="text-xl font-bold text-content-primary leading-snug">
             {t('login.hero_title', 'Construction cost estimation,')}{' '}
@@ -316,7 +316,7 @@ export function RegisterPage() {
                     {t('auth.how_found_us', 'How did you find us?')}
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+                    <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-content-tertiary">
                       <Search size={15} />
                     </div>
                     <select
@@ -324,7 +324,7 @@ export function RegisterPage() {
                       name="how_found_us"
                       value={howFoundUs}
                       onChange={(e) => setHowFoundUs(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-9 pr-3 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary appearance-none cursor-pointer"
+                      className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-9 pe-3 text-sm text-content-primary transition-all duration-fast ease-oe focus:outline-none focus:ring-2 focus:ring-oe-blue focus:border-transparent hover:border-content-tertiary appearance-none cursor-pointer"
                     >
                       <option value="">{t('auth.how_found_select', '- Select -')}</option>
                       <option value="google">{t('auth.how_found_google', 'Google Search')}</option>
@@ -345,7 +345,7 @@ export function RegisterPage() {
                   {t('auth.password', 'Password')}
                 </label>
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-tertiary">
+                  <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-content-tertiary">
                     <Lock size={15} />
                   </div>
                   <input
@@ -364,7 +364,7 @@ export function RegisterPage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? t('auth.hide_password', 'Hide password') : t('auth.show_password', 'Show password')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-content-tertiary hover:text-content-secondary transition-colors"
+                    className="absolute inset-y-0 end-0 flex items-center pe-3 text-content-tertiary hover:text-content-secondary transition-colors"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}

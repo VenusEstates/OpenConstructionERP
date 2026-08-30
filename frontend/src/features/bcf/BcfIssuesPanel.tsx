@@ -1117,14 +1117,14 @@ export function BcfIssuesPanel({
           <div className="relative max-w-sm flex-1">
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary"
+              className="absolute start-3 top-1/2 -translate-y-1/2 text-content-tertiary"
             />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('bcf.search', { defaultValue: 'Search title, labels, assignee...' })}
               aria-label={t('bcf.search', { defaultValue: 'Search title, labels, assignee...' })}
-              className="h-9 w-full rounded-lg border border-border bg-surface-primary pl-9 pr-3 text-sm focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
+              className="h-9 w-full rounded-lg border border-border bg-surface-primary ps-9 pe-3 text-sm focus:border-oe-blue focus:outline-none focus:ring-2 focus:ring-oe-blue/30"
             />
           </div>
           <select
