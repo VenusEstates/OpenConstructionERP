@@ -169,6 +169,10 @@ import {
   type InstalmentStatus,
 } from './api';
 import {
+  ROLES_WITH_OWNER_SCOPED_DELETE,
+  ROLES_WITH_LEAD_DELETE,
+} from './permissions';
+import {
   PhasesTab,
   BlocksTab,
   BrokersTab,
@@ -1701,10 +1705,14 @@ function LeadDetailDrawer({
       normalized,
     );
   }, [userRole]);
+  // Lead deletion is NOT owner scoped: the route keeps
+  // property_dev.lead.delete at MANAGER, so role is the only wall and the
+  // set stays short. Do not fold this into the owner-scoped constant used
+  // by the plot and buyer drawers, which is longer on purpose.
   const canDelete = useMemo(() => {
     if (!userRole) return false;
     const normalized = userRole.toLowerCase();
-    return ['admin', 'superuser', 'owner', 'manager'].includes(normalized);
+    return ROLES_WITH_LEAD_DELETE.includes(normalized);
   }, [userRole]);
 
   const leadFromList = leads.find((l) => l.id === leadId);
@@ -5331,7 +5339,7 @@ function PlotDetailDrawer({
   const canDelete = useMemo(() => {
     if (!userRole) return false;
     const n = userRole.toLowerCase();
-    return ['admin', 'superuser', 'owner', 'manager'].includes(n);
+    return ROLES_WITH_OWNER_SCOPED_DELETE.includes(n);
   }, [userRole]);
 
   const dq = useDisplayQuantity();
@@ -5852,7 +5860,10 @@ function ReserveBlock({ plotId, onSuccess }: { plotId: string; onSuccess: () => 
 
 /* ─── Buyer detail drawer with stage progression ─── */
 
-function BuyerDetailDrawer({
+// Exported for the delete-affordance test, which mounts this drawer rather
+// than asserting on the role constant it reads. It stays out of the feature
+// barrel: the page is the only thing that renders it.
+export function BuyerDetailDrawer({
   buyerId,
   buyers,
   plots,
@@ -5882,7 +5893,7 @@ function BuyerDetailDrawer({
   const canDelete = useMemo(() => {
     if (!userRole) return false;
     const normalized = userRole.toLowerCase();
-    return ['admin', 'superuser', 'owner', 'manager'].includes(normalized);
+    return ROLES_WITH_OWNER_SCOPED_DELETE.includes(normalized);
   }, [userRole]);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
