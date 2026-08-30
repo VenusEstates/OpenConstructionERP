@@ -1389,6 +1389,17 @@ jobs:
         # step consumes. Both already have their own step in the CI workflow.
         # Running them here would add minutes and cover nothing new.
         #
+        # "Produces no file" is only half of what that drops, and the other half
+        # should be written down rather than discovered. tsc -b is also a gate:
+        # today a type error stops the build before vite build is reached. Here
+        # it will not, because esbuild strips types instead of checking them, so
+        # this step will build code that does not type-check. That is the
+        # intended trade, not an oversight. What this job claims is that the PWA
+        # artifacts have the right shape, and the type verdict has its own step
+        # in the CI workflow. Anyone who later asks why this job stays green on
+        # a type error should find the answer here instead of reading it as a
+        # bug in the list above.
+        #
         # The budget, written down because the number is not obvious from the
         # step. This job is not on the critical path of this workflow, so the
         # step spends slack rather than merge time. Measured 2026-08-30 on run
