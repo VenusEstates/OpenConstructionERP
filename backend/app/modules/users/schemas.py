@@ -94,6 +94,24 @@ class TokenResponse(BaseModel):
     expires_in: int  # seconds
 
 
+class SessionResponse(BaseModel):
+    """One of the caller's own login sessions.
+
+    Carries no user agent, IP address or location. Those would make the list
+    easier to recognise yourself in, and each is personal data with its own
+    retention question, so none is collected until somebody decides that
+    deliberately. Revoking a session does not need them.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    sid: str
+    created_at: datetime
+    expires_at: datetime
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+
 class RefreshRequest(BaseModel):
     """Refresh token request."""
 

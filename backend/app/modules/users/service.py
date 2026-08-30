@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 import bcrypt
 from fastapi import HTTPException, status
 from jose import jwt
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
@@ -38,7 +38,7 @@ async def _safe_publish(name: str, data: dict, source_module: str = "") -> None:
         _logger_ev.debug("Event publish skipped: %s", name)
 
 
-from app.modules.users.models import APIKey, User
+from app.modules.users.models import APIKey, User, UserSession
 from app.modules.users.repository import (
     LOCAL_DESKTOP_OWNER_EMAIL,
     APIKeyRepository,
@@ -113,8 +113,28 @@ def create_access_token(
     user: User,
     settings: Settings,
     extra_claims: dict | None = None,
+    *,
+    sid: str | None = None,
 ) -> str:
     """Create a JWT access token for a user.
+
+    ``sid`` names the session this token belongs to, and a token that carries
+    one can be revoked on its own. It is optional here on purpose, which is
+    worth spelling out because the neighbouring ``issued_at`` argument in
+    ``app.dependencies`` is deliberately the opposite. There the callers are
+    doors, four of them, and a door that has not decided must fail to start.
+    Here most callers are unit tests of this encoder that legitimately mint a
+    bare token, and a token without a ``sid`` has to keep validating anyway -
+    every session issued before the claim existed carries none. Requiring it
+    would therefore buy nothing at the doors and cost twenty-three mechanical
+    edits in tests that are not doors.
+
+    What actually stops a session-less pair reaching a user is not this
+    signature but :meth:`UserService._issue_token_pair`, the one place in the
+    service that mints a pair, together with the test that walks every
+    endpoint returning ``TokenResponse`` and resolves the ``sid`` it hands
+    back. A signature can only be checked where somebody remembered to look;
+    that test fails on any new endpoint that forgets.
 
     The token deliberately carries only identity claims (``sub``, ``email``,
     ``role``) - NOT the resolved permission list. Permissions are re-hydrated
@@ -136,13 +156,20 @@ def create_access_token(
         "type": "access",
         "jti": _new_jti(),
     }
+    if sid:
+        payload["sid"] = sid
     if extra_claims:
         payload.update(extra_claims)
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def create_refresh_token(user: User, settings: Settings) -> str:
-    """Create a JWT refresh token for a user."""
+def create_refresh_token(user: User, settings: Settings, *, sid: str | None = None) -> str:
+    """Create a JWT refresh token for a user.
+
+    Carries the same ``sid`` as the access token minted beside it, so revoking
+    the session refuses both. See :func:`create_access_token` for why the
+    argument is optional.
+    """
     now = datetime.now(UTC)
     payload = {
         "iss": "openconstructionerp",
@@ -152,6 +179,8 @@ def create_refresh_token(user: User, settings: Settings) -> str:
         "type": "refresh",
         "jti": _new_jti(),
     }
+    if sid:
+        payload["sid"] = sid
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
@@ -227,6 +256,148 @@ class UserService:
         self.settings = settings
         self.user_repo = UserRepository(session)
         self.api_key_repo = APIKeyRepository(session)
+
+    # ── Sessions ───────────────────────────────────────────────────────
+
+    async def _issue_token_pair(self, user: User, *, sid: str | None = None) -> TokenResponse:
+        """Mint an access/refresh pair belonging to one revocable session.
+
+        The single place in this service that mints a pair. Every endpoint
+        that hands tokens to a caller goes through here, so a session row and
+        the tokens naming it are created together and cannot come apart. That
+        matters more than it looks: a pair issued without its row is a session
+        nobody can ever revoke, and it is invisible, because such a token
+        works perfectly.
+
+        Passing ``sid`` rotates an existing session instead of opening a new
+        one. That is what refresh does, and it is why refreshing does not
+        multiply rows or escape a revocation: the new pair carries the same
+        name as the old, so the row that refuses one refuses the other.
+        """
+        sid = await self._open_session(user) if sid is None else await self._extend_session(sid, user)
+        return TokenResponse(
+            access_token=create_access_token(user, self.settings, sid=sid),
+            refresh_token=create_refresh_token(user, self.settings, sid=sid),
+            expires_in=self.settings.jwt_expire_minutes * 60,
+        )
+
+    async def _open_session(self, user: User) -> str:
+        """Record a new session and return the ``sid`` its tokens will carry.
+
+        Flushed rather than left pending so the insert is ordered before the
+        tokens exist. If the row cannot be written this raises, and the caller
+        never receives a pair: refusing a login is recoverable, whereas
+        handing back a credential no future revocation can name is not, and it
+        would be the one way a live token could exist with no row behind it
+        that is nobody's fault downstream.
+        """
+        # uuid4 for the same reason ``jti`` uses it: unguessable, and unique
+        # without asking the database for a number.
+        sid = uuid.uuid4().hex
+        self.session.add(
+            UserSession(
+                sid=sid,
+                user_id=user.id,
+                # The refresh horizon, matching the refresh token minted with
+                # it. Also the pruning boundary, so it must never be shorter
+                # than the credential that points at it.
+                expires_at=datetime.now(UTC) + timedelta(days=self.settings.jwt_refresh_expire_days),
+                last_used_at=datetime.now(UTC),
+            )
+        )
+        await self.session.flush()
+        return sid
+
+    async def _extend_session(self, sid: str, user: User) -> str:
+        """Push a rotated session's horizon out, and adopt an orphan if need be.
+
+        Returns the ``sid`` the new pair should carry, which is the one passed
+        in whenever the row is really there.
+
+        Extending is not cosmetic. ``expires_at`` is what pruning is allowed
+        to delete past, so leaving it at the original horizon would let a
+        cleanup remove the row while a refresh token minted moments ago still
+        names it. The session would then be unrevocable rather than merely
+        forgotten.
+
+        The zero-rows branch is the one worth reading. A token can name a
+        session that has no row - that is the restore-from-backup case
+        ``reject_revoked_session`` deliberately lets through - and without
+        this branch the update would quietly change nothing, the new pair
+        would carry the same orphan name, and every refresh after it would do
+        the same. The session would be non-revocable forever, which is a
+        worse position than the one fail-open was chosen to avoid. Opening a
+        fresh session instead makes the choice self-healing: after a restore,
+        every live user becomes revocable again at their next refresh rather
+        than never.
+
+        Scoped by ``user_id`` as well as ``sid`` so a session name can only
+        ever extend its own owner's session.
+        """
+        now = datetime.now(UTC)
+        result = await self.session.execute(
+            update(UserSession)
+            .where(UserSession.sid == sid, UserSession.user_id == user.id)
+            .values(
+                last_used_at=now,
+                expires_at=now + timedelta(days=self.settings.jwt_refresh_expire_days),
+            )
+        )
+        if result.rowcount == 0:
+            return await self._open_session(user)
+        return sid
+
+    async def list_sessions(self, user_id: uuid.UUID) -> list[UserSession]:
+        """This user's sessions that have not expired, newest first.
+
+        Revoked ones are included: a person who has just ended a session
+        should see that it ended rather than watch it vanish and wonder
+        whether the click worked.
+        """
+        stmt = (
+            select(UserSession)
+            .where(UserSession.user_id == user_id, UserSession.expires_at > datetime.now(UTC))
+            .order_by(UserSession.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def revoke_session(self, user_id: uuid.UUID, sid: str) -> None:
+        """End one session, leaving every other session of this user alive.
+
+        Scoped by ``user_id`` as well as ``sid``, so possessing somebody
+        else's session name is not enough to end their session. The caller's
+        identity comes from their own verified token, never from the request
+        body.
+
+        Sets ``revoked_at`` rather than deleting the row, because a missing
+        row is honoured; deleting would undo the revocation. Idempotent: the
+        timestamp is only written once, so revoking twice does not move the
+        moment the session actually ended.
+        """
+        result = await self.session.execute(
+            update(UserSession)
+            .where(
+                UserSession.sid == sid,
+                UserSession.user_id == user_id,
+                UserSession.revoked_at.is_(None),
+            )
+            .values(revoked_at=datetime.now(UTC))
+        )
+        if result.rowcount == 0:
+            # Either no such session, or it belongs to somebody else, or it
+            # was already revoked. The three are not distinguished in the
+            # response on purpose: telling a caller that a sid they guessed
+            # exists but is not theirs answers a question they should not be
+            # able to ask.
+            exists = await self.session.execute(
+                select(UserSession.id).where(UserSession.sid == sid, UserSession.user_id == user_id)
+            )
+            if exists.scalar_one_or_none() is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Session not found",
+                )
 
     # ── Registration ───────────────────────────────────────────────────
 
@@ -506,8 +677,7 @@ class UserService:
             # latency is unaffected on either backend.
             await self.session.execute(update(User).where(User.id == user_id).values(last_login_at=now))
 
-        access_token = create_access_token(user, self.settings)
-        refresh_token = create_refresh_token(user, self.settings)
+        tokens = await self._issue_token_pair(user)
 
         # Audit trail - security-critical event: successful login.
         try:
@@ -531,11 +701,7 @@ class UserService:
             source_module="oe_users",
         )
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_in=self.settings.jwt_expire_minutes * 60,
-        )
+        return tokens
 
     async def demo_login(self, email: str) -> TokenResponse:
         """Issue tokens for a seeded demo account without a password check.
@@ -593,8 +759,7 @@ class UserService:
         if not skip_write:
             await self.session.execute(update(User).where(User.id == user_id).values(last_login_at=now))
 
-        access_token = create_access_token(user, self.settings)
-        refresh_token = create_refresh_token(user, self.settings)
+        tokens = await self._issue_token_pair(user)
 
         await _safe_publish(
             "users.user.logged_in",
@@ -602,11 +767,7 @@ class UserService:
             source_module="oe_users",
         )
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_in=self.settings.jwt_expire_minutes * 60,
-        )
+        return tokens
 
     # ── Desktop first-run / bootstrap ──────────────────────────────────
 
@@ -712,8 +873,7 @@ class UserService:
                 detail="The local owner account is not available for desktop bootstrap.",
             )
 
-        access_token = create_access_token(owner, self.settings)
-        refresh_token = create_refresh_token(owner, self.settings)
+        tokens = await self._issue_token_pair(owner)
 
         await _safe_publish(
             "users.user.logged_in",
@@ -721,11 +881,7 @@ class UserService:
             source_module="oe_users",
         )
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_in=self.settings.jwt_expire_minutes * 60,
-        )
+        return tokens
 
     async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         """Issue new token pair from a valid refresh token.
@@ -779,14 +935,26 @@ class UserService:
 
         reject_token_issued_before_password_change(payload.get("iat"), user.password_changed_at)
 
-        new_access = create_access_token(user, self.settings)
-        new_refresh = create_refresh_token(user, self.settings)
+        # A refresh token whose session was revoked must not mint anything
+        # either, and for the same reason the watermark is checked above: this
+        # endpoint is the one that can turn an old credential into a fresh
+        # one. Checked here rather than only at the access-token doors because
+        # a revoked session that could still refresh would re-issue itself
+        # every hour forever.
+        from app.dependencies import reject_revoked_session
 
-        return TokenResponse(
-            access_token=new_access,
-            refresh_token=new_refresh,
-            expires_in=self.settings.jwt_expire_minutes * 60,
-        )
+        sid = payload.get("sid")
+        await reject_revoked_session(self.session, sid, user.id)
+
+        # Rotate in place: the new pair carries the same session name, so the
+        # session keeps its identity across refreshes and one revocation still
+        # reaches it. Two kinds of token cannot be rotated in place, and both
+        # are healed here rather than refused. ``sid`` is None for a token
+        # minted before sessions existed, and a ``sid`` can name a row that is
+        # gone after a restore from backup. Either way a fresh session is
+        # opened, so nobody is logged out by a deploy or a restore, and the
+        # next refresh is the moment they become revocable again.
+        return await self._issue_token_pair(user, sid=sid)
 
     # ── Password reset ──────────────────────────────────────────────────
 
@@ -1030,14 +1198,14 @@ class UserService:
         # Re-fetch user to pick up the updated password_changed_at timestamp
         user = await self.user_repo.get_by_id(user_id)
 
-        access_token = create_access_token(user, self.settings)
-        refresh_token = create_refresh_token(user, self.settings)
-
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_in=self.settings.jwt_expire_minutes * 60,
-        )
+        # A new session, not a continuation of the one that changed the
+        # password. This pair is the caller's replacement for the credentials
+        # the watermark above has just invalidated, so it belongs to a session
+        # that begins now. Routed through the same helper as login for the
+        # reason written there: a pair issued outside it would be a session
+        # nobody could revoke, and this endpoint is exactly where somebody
+        # locking an intruder out would expect revocation to work.
+        return await self._issue_token_pair(user)
 
     async def list_users(
         self,

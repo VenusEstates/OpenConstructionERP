@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import HTTPConnection
 
@@ -195,6 +196,80 @@ def reject_token_issued_before_password_change(
         )
 
 
+async def reject_revoked_session(
+    session: AsyncSession,
+    sid: str | None,
+    user_id: _uuid.UUID,
+) -> None:
+    """Refuse a credential whose session has been revoked.
+
+    The fine-grained counterpart to
+    :func:`reject_token_issued_before_password_change`. The watermark can only
+    say "everything older than this moment", which ends every session the
+    person has; this asks whether one named session is still alive, so ending
+    the laptop left in a hotel does not sign them out of their phone.
+
+    Takes the caller's already-open session rather than opening one. Every
+    door that calls this has just loaded the user row through a session it
+    holds, and opening a second one here would double connection churn on the
+    hot authentication path.
+
+    Two cases deliberately pass rather than raise, and both are load-bearing.
+
+    A token with no ``sid`` is honoured. Every credential issued before the
+    session table existed carries none, and refusing them would sign out every
+    live user the moment this deploys. Such a token is not revocable
+    individually; it lives until it expires, at most the refresh horizon, and
+    the lever over it in the meantime is ``password_changed_at`` through the
+    watermark check above. Its first refresh opens a session and it becomes
+    revocable from then on.
+
+    A ``sid`` with no row is also honoured, which is a fail-open check and is
+    worth justifying rather than assuming. The question is not "open or
+    closed" in the abstract but whether a live token can exist without its
+    row. There are three ways for the row to be missing. A failed insert at
+    login cannot produce one, because
+    :meth:`UserService._open_session` flushes before any token is minted and a
+    failure there refuses the login. Pruning cannot reach one, because it is
+    only ever allowed to delete rows already past ``expires_at`` and that
+    column is kept at or beyond the horizon of the refresh token naming it.
+    That leaves restoring the database from a backup taken before the session
+    began, and failing closed there would sign out every user on the platform
+    at the moment of a restore, which is when they can least afford it. So the
+    remaining case is one where fail-open is the choice we would make on
+    purpose, not a hole nobody noticed. If that stops being true - a fourth
+    way for a row to go missing - this is the comment to come back to, and the
+    fix is to close the new hole, not to flip this.
+
+    Args:
+        session: an open database session belonging to the caller.
+        sid: the credential's ``sid`` claim, or ``None``.
+        user_id: the owner the credential claims, already verified against the
+            database. The lookup is scoped by it so that a ``sid`` belonging
+            to somebody else cannot be used to probe another account.
+
+    Raises:
+        HTTPException 401 if the named session has been revoked.
+    """
+    if not sid:
+        return
+    from app.modules.users.models import UserSession
+
+    revoked_at = (
+        await session.execute(
+            select(UserSession.revoked_at).where(
+                UserSession.sid == sid,
+                UserSession.user_id == user_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if revoked_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This session has been signed out. Please log in again.",
+        )
+
+
 async def get_current_user_payload(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     settings: SettingsDep,
@@ -245,6 +320,7 @@ async def get_current_user_payload(
                 payload["permissions"] = permission_registry.get_role_permissions(user.role)
 
                 reject_token_issued_before_password_change(iat, user.password_changed_at)
+                await reject_revoked_session(session, payload.get("sid"), user.id)
         except HTTPException:
             raise
         except Exception:
@@ -270,7 +346,12 @@ async def get_current_user_id(
 # ── Optional auth (for public + authenticated endpoints) ───────────────────
 
 
-async def verify_user_exists_and_active(user_sub: str, *, issued_at: float | int | None) -> "User":
+async def verify_user_exists_and_active(
+    user_sub: str,
+    *,
+    issued_at: float | int | None,
+    session_id: str | None,
+) -> "User":
     """Load a User row by subject UUID, raising 401 if absent/inactive/stale.
 
     Shared across all JWT entry points (HTTP bearer, WS token, optional
@@ -287,9 +368,19 @@ async def verify_user_exists_and_active(user_sub: str, *, issued_at: float | int
     never into this shared helper. Without a default, a caller that has not
     decided fails to start rather than failing to protect somebody.
 
+    ``session_id`` is the token's ``sid`` and is keyword-only with no default
+    for the same reason. Note what that buys and what it does not: it makes
+    forgetting the argument a build failure, and it does nothing at all unless
+    the body below calls the rule. Both were briefly true of ``issued_at`` at
+    once - required at every call site, read by none - and every caller looked
+    correct throughout, which is the same way the sockets came to outlive a
+    password change. The enforcement is not this signature, it is the two
+    lines at the end of this function.
+
     Raises:
-        HTTPException 401 if the user does not exist, is inactive, or the
-        credential predates the user's last password change.
+        HTTPException 401 if the user does not exist, is inactive, the
+        credential predates the user's last password change, or the session
+        the credential names has been revoked.
     """
     from uuid import UUID
 
@@ -311,6 +402,7 @@ async def verify_user_exists_and_active(user_sub: str, *, issued_at: float | int
                 detail="User not found or inactive",
             )
         reject_token_issued_before_password_change(issued_at, user.password_changed_at)
+        await reject_revoked_session(session, session_id, user.id)
         return user
 
 
@@ -351,7 +443,11 @@ async def get_optional_user_payload(
         return None
     try:
         payload = decode_access_token(token, settings)
-        await verify_user_exists_and_active(payload["sub"], issued_at=payload.get("iat"))
+        await verify_user_exists_and_active(
+            payload["sub"],
+            issued_at=payload.get("iat"),
+            session_id=payload.get("sid"),
+        )
         return payload
     except HTTPException:
         return None
