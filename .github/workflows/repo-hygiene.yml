@@ -1,6 +1,6 @@
 # Repo hygiene gate.
 #
-# Guards: 59. They run on every push and pull request, grouped into three
+# Guards: 60. They run on every push and pull request, grouped into three
 # jobs. A guard is a named step that is not a tooling install, and that rule is
 # not a matter of taste: it is the one that reproduces both counts this header
 # carried when it was written on 2026-08-24 - twenty-one guards, over jobs of
@@ -866,6 +866,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_i18n_placeholder_parity.py
 
+      - name: Check a UI role list still equals the permission it mirrors
+        if: ${{ !cancelled() }}
+        run: python scripts/check_property_dev_role_gate_parity.py
+
       - name: Check for keys written beside the translation object
         if: ${{ !cancelled() }}
         run: python scripts/check_i18n_key_nesting.py
@@ -997,10 +1001,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_commit_trailers.py
 
-      # Not a duplicate of the trailers step above. These two scripts are
-      # the pair the local .git/hooks/commit-msg shim runs, and until this
-      # step existed only one of them had a second home:
-      # check_commit_trailers.py ran here,
+      # Not a duplicate of the step above. These two scripts are the pair the
+      # local .git/hooks/commit-msg shim runs, and until this step existed only
+      # one of them had a second home: check_commit_trailers.py ran here,
       # check_commit_subject.py ran in none of the twenty workflows. Measured
       # 2026-08-30, it was the only one of the twenty-five scripts named in
       # .pre-commit-config.yaml with no executor anywhere.
