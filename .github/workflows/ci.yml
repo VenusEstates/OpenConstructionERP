@@ -501,8 +501,42 @@ jobs:
         run: npm run test
 
       - name: Run tests (no build output on this runner)
+        # Red before this change, run 33282669278: every test passed - 678
+        # files, 7818 tests, zero failures - and the step still exited 1,
+        # because one vitest fork died. The job log names the cause on line
+        # 3661, "FATAL ERROR: Reached heap limit Allocation failed - JavaScript
+        # heap out of memory", with the last GC at 2063 MB, and vitest surfaced
+        # it as an unhandled "Worker exited unexpectedly" rather than as a test
+        # result. A step that is red while nothing failed is the worst kind of
+        # red: it was standing across three runs, and for two of them it was
+        # carrying real failures at the same time.
+        #
+        # 2063 MB is not a limit anyone here chose. It is V8's default
+        # old-space, which scales with machine memory: about 4 GB on the 16 GB
+        # x64 runners and about 2 GB on this 7 GB arm64 one. So leaving
+        # NODE_OPTIONS unset is not one setting shared by three runners, it is a
+        # different ceiling on each, and that is the whole reason ubuntu and
+        # windows run this identical command green. Both factors of the peak
+        # were left to the machine: the fork count follows the core count and
+        # the heap follows the RAM.
+        #
+        # Pin both, so the worst case is arithmetic instead of discovered: at
+        # most 2 workers times 3072 MB is 6 GB, inside the 7 GB this runner has.
+        # 3072 and not 4096 for that reason exactly - two forks at 4096 is 8 GB
+        # and would put the ceiling back above the machine - and it still hands
+        # the fork that died half again as much as the 2063 MB it died at.
+        # Honest gap: the runner's core count is not printed in the job log, so
+        # whether maxWorkers=2 lowers the fork count or merely fixes it where it
+        # already sat is untested. What it does either way is bound the product.
+        #
+        # Do not answer a future failure here by deleting the step. macOS skips
+        # Type check and Build deliberately, for reasons on those steps, but it
+        # still runs lint and the unit tests to keep the OS-specific path, CRLF
+        # and runtime signal. That signal is why this step exists at all.
         if: matrix.os == 'macos-latest'
-        run: npm run test -- --exclude "tests/pwa/**"
+        env:
+          NODE_OPTIONS: --max-old-space-size=3072
+        run: npm run test -- --exclude "tests/pwa/**" --maxWorkers=2
 
       - name: Verify every Playwright project still selects tests
         # A project whose grep matches no spec is the one kind of dead test
