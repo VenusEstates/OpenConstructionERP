@@ -62,6 +62,22 @@ const INTENTIONAL = [
     // the value the fade starts from. That is the intended shape of the idiom.
     reason: 'static opacity is the start value of the ping fade',
   },
+  {
+    animation: 'pulseGlow',
+    property: 'box-shadow',
+    // Not a start value - a second state. index.css does not switch animations
+    // off under prefers-reduced-motion; it sets animation-duration to 0.01ms
+    // and iteration-count to 1. With no fill-mode the element then reverts to
+    // its base style, so shadow-md is the only shadow a reduced-motion reader
+    // ever sees. Checked by screenshot rather than computed style, which would
+    // not settle: with and without shadow-md paint differently under reduced
+    // motion (the button keeps its shadow, the stripped one has none).
+    //
+    // The general form is worth stating, because it applies to every entry a
+    // future reader might add here: a static utility under an infinite
+    // animation has TWO states, and it is dead in only one of them.
+    reason: 'shadow-md is the shadow a reduced-motion reader sees once the 0.01ms animation ends',
+  },
 ];
 
 // ---------------------------------------------------------------- stylesheet
