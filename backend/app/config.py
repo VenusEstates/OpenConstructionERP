@@ -325,12 +325,29 @@ class Settings(BaseSettings):
     # are unaffected; only a transaction whose owner stopped talking is. The
     # default is well above any legitimate gap between two statements of one
     # request and far below "forever". Applied as an asyncpg startup parameter
-    # on every connection the engine factory builds - see ``app.database``,
-    # which also names the one engine that bypasses it. Set to 0 to disable and leave
-    # whatever the server or database default is. Env:
+    # on every connection the engine factory builds - see ``app.database``.
+    # Background job dispatch builds its own engine and carries its own, much
+    # larger budget: see ``database_jobs_idle_in_transaction_timeout``. Set to 0
+    # to disable and leave whatever the server or database default is. Env:
     # ``OE_DATABASE_IDLE_IN_TRANSACTION_TIMEOUT`` /
     # ``DATABASE_IDLE_IN_TRANSACTION_TIMEOUT``.
     database_idle_in_transaction_timeout: int = 300
+    # The same bound for background job dispatch, which needs a far bigger one.
+    # A job handler legitimately holds a transaction open while doing work that
+    # is not database work - parsing a large file, running a clash pass, calling
+    # an external service - and the server counts every second of that as "idle
+    # in transaction", because from its side the client has simply stopped
+    # talking. The request-side budget above would be an unmeasured deadline on
+    # that work rather than a fuse.
+    #
+    # 3600 is NOT a measured number. It is an order of magnitude picked so that a
+    # legitimate handler is not cut while a wedged worker does not sit on its
+    # locks for a day. We have no measurement of how long real background
+    # handlers actually spend idle inside a transaction; when we have one, this
+    # number should be revisited against it. Set to 0 to disable. Env:
+    # ``OE_DATABASE_JOBS_IDLE_IN_TRANSACTION_TIMEOUT`` /
+    # ``DATABASE_JOBS_IDLE_IN_TRANSACTION_TIMEOUT``.
+    database_jobs_idle_in_transaction_timeout: int = 3600
     max_batch_size: int = 1000
     # Slow-query threshold (milliseconds). Statements exceeding this elapsed
     # wall time are logged at WARNING level via SQLAlchemy ``before_cursor_execute``

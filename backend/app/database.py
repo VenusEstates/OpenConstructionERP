@@ -272,13 +272,18 @@ def create_engine_from_settings():
     # ``lock_timeout`` only makes each victim give up faster while the culprit
     # stays open and waits for the next one.
     # ``idle_in_transaction_session_timeout`` is the setting that removes the
-    # culprit, so it goes on every connection this factory builds. That is not
-    # yet every connection in the process: ``app.core.jobs_tasks`` builds its
-    # own per-dispatch engine (NullPool, to survive one event loop per job) and
-    # does not come through here, so a background job's connection is still
-    # unbounded. Whether it should carry the same bound depends on how long a
-    # job handler legitimately sits inside a transaction doing non-database
-    # work, which nobody has measured.
+    # culprit, so it goes on every connection this factory builds.
+    #
+    # One engine deliberately does not come through here: ``app.core.jobs_tasks``
+    # builds a per-dispatch NullPool engine, because a pooled connection opened
+    # on one dispatch's event loop and reused from the next one's breaks asyncpg.
+    # It sets the same parameter itself, from
+    # ``Settings.database_jobs_idle_in_transaction_timeout``, on a much larger
+    # budget - a job handler is legitimately idle inside its transaction while
+    # it parses a file or calls an external service, and this value would cut
+    # that work. Two configuration paths, on purpose; do not "fix" the
+    # duplication by routing jobs through this factory, which would replace
+    # their NullPool with a sized pool.
     #
     # As an asyncpg *startup parameter* rather than a per-checkout ``SET``: it
     # travels in the connection packet, so it costs no round-trip, it cannot be

@@ -93,7 +93,35 @@ async def _dispatch_job_via_dedicated_engine(
     # URL as base_engine, so this is always the same database, just with a
     # pool that cannot go stale across event loops.
     host = (base_engine.url.host or "").lower()
-    connect_args = {"ssl": False} if host in ("", "localhost", "127.0.0.1", "::1") else {}
+    connect_args: dict = {"ssl": False} if host in ("", "localhost", "127.0.0.1", "::1") else {}
+
+    # Bound abandoned transactions here too, but on a budget of this path's own.
+    #
+    # A worker killed mid-dispatch leaves its transaction open and holding every
+    # lock it took until the connection closes, and nothing on the waiting side
+    # ends that. ``idle_in_transaction_session_timeout`` is what removes it. This
+    # engine cannot simply come through ``create_engine_from_settings`` to get
+    # the parameter: that factory returns a sized pool (measured:
+    # AsyncAdaptedQueuePool, 24 + 10 overflow, pre-ping, recycle), and NullPool
+    # is the whole point of building an engine here - a pooled connection opened
+    # on one dispatch's event loop and reused from the next one's makes asyncpg
+    # raise "attached to a different loop". The factory also reads
+    # ``settings.database_url`` rather than ``base_engine.url``, which would
+    # silently move a dispatch off the database ``base_factory`` chose. So the
+    # parameter is passed here instead, and the duplication is deliberate.
+    #
+    # The budget is the jobs one, not the request one: a handler that parses a
+    # large file or calls an external service is legitimately idle in its
+    # transaction for that whole time, and the request-side value would cut it.
+    # See ``Settings.database_jobs_idle_in_transaction_timeout`` for why the
+    # number is an order of magnitude rather than a measurement. 0 disables it.
+    from app.config import get_settings
+
+    idle_ms = max(0, get_settings().database_jobs_idle_in_transaction_timeout) * 1000
+    if idle_ms:
+        # asyncpg requires string values here; PostgreSQL reads a bare number as
+        # milliseconds.
+        connect_args["server_settings"] = {"idle_in_transaction_session_timeout": str(idle_ms)}
 
     dedicated_engine = create_async_engine(
         base_engine.url,

@@ -14,8 +14,13 @@ DATABASE and therefore says nothing about production.
 These tests are built so that only the new mechanism can make them pass. The
 test database already carries a 300s database-level default, so a connection
 reporting "some non-zero value" would prove nothing. Every assertion here is
-made against a budget no database default supplies (2 seconds), which can only
-have arrived as the startup parameter ``create_engine_from_settings`` now sends.
+made against a budget no database default supplies, which can only have arrived
+as the startup parameter the engine now sends.
+
+There are two engines and therefore two halves: connections from
+``create_engine_from_settings`` (2 seconds here), and the per-dispatch engine
+background jobs build for themselves (7 seconds here), which cannot come through
+that factory because it needs NullPool and carries a far larger budget.
 """
 
 from __future__ import annotations
@@ -168,4 +173,121 @@ def test_the_shipped_default_is_not_zero() -> None:
     assert isinstance(default, int) and default > 0, (
         f"database_idle_in_transaction_timeout defaults to {default!r}; a default of 0 "
         "leaves every abandoned transaction holding its locks until the connection closes"
+    )
+
+
+# ── Background job dispatch ──────────────────────────────────────────────
+# Job dispatch builds its own engine instead of coming through the factory,
+# because it needs NullPool: a pooled connection opened on one dispatch's event
+# loop and reused from the next one's makes asyncpg raise "attached to a
+# different loop". So it carries the bound itself, on its own budget - a handler
+# parsing a large file or calling an external service is legitimately idle
+# inside its transaction for that whole time.
+
+# A value no default anywhere supplies: not the request-side 300s, not the 300s
+# this test database carries, not the shipped jobs default. Only the jobs path
+# reading its own setting can produce it.
+_JOBS_BUDGET_S = 7
+
+
+async def _build_dispatch_engine(budget_s: int):
+    """Return the engine one job dispatch builds, with this jobs budget.
+
+    Drives the real ``_dispatch_job_via_dedicated_engine`` and intercepts the
+    engine it constructs, so what is asserted below is the engine background
+    jobs actually get - not a re-creation of it in the test.
+    """
+    import uuid
+    from unittest.mock import patch
+
+    import sqlalchemy.ext.asyncio as sa_asyncio
+
+    import app.config as config_module
+    import app.core.job_runner as job_runner_module
+    from app.core.jobs_tasks import _dispatch_job_via_dedicated_engine
+    from app.database import async_session_factory
+
+    settings = config_module.get_settings().model_copy(update={"database_jobs_idle_in_transaction_timeout": budget_s})
+    captured = {}
+    real_create = sa_asyncio.create_async_engine
+
+    def _capture(*args, **kwargs):
+        engine = real_create(*args, **kwargs)
+        captured["engine"] = engine
+        return engine
+
+    async def _no_dispatch(*_args, **_kwargs):
+        """The dispatch itself is not what is under test here."""
+
+    with (
+        patch.object(config_module, "get_settings", lambda: settings),
+        patch.object(sa_asyncio, "create_async_engine", _capture),
+        patch.object(job_runner_module, "_dispatch_job_sync", _no_dispatch),
+    ):
+        await _dispatch_job_via_dedicated_engine(uuid.uuid4(), async_session_factory)
+
+    assert "engine" in captured, "the dispatch did not build an engine to inspect"
+    return captured["engine"]
+
+
+@pytest.mark.asyncio
+async def test_a_job_dispatch_connection_carries_the_jobs_budget() -> None:
+    """Ask the server what the dispatch's connection got, not the settings.
+
+    The engine is disposed by the dispatch's own ``finally``; under NullPool
+    that pools nothing, so connecting again here opens a fresh connection
+    through the very ``connect_args`` the dispatch built.
+    """
+    await _skip_unless_postgres()
+
+    engine = await _build_dispatch_engine(_JOBS_BUDGET_S)
+    try:
+        async with engine.connect() as conn:
+            observed = (await conn.exec_driver_sql("SHOW idle_in_transaction_session_timeout")).scalar()
+    finally:
+        await engine.dispose()
+
+    assert observed in ("7s", "7000ms"), (
+        f"a background job's connection reports idle_in_transaction_session_timeout={observed!r}; "
+        "it did not get the jobs budget"
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_jobs_engine_still_pools_nothing() -> None:
+    """The bound must not have arrived by routing dispatch through the factory.
+
+    ``create_engine_from_settings`` returns a sized pool, and a pooled
+    connection cannot survive one event loop per dispatch. This asserts the
+    thing that would silently break if someone consolidated the two paths.
+    """
+    from sqlalchemy.pool import NullPool
+
+    engine = await _build_dispatch_engine(_JOBS_BUDGET_S)
+    try:
+        assert isinstance(engine.pool, NullPool), (
+            f"a job dispatch got a {type(engine.pool).__name__}; it needs NullPool, because a "
+            "connection opened on one dispatch's event loop cannot be reused from the next one's"
+        )
+    finally:
+        await engine.dispose()
+
+
+def test_the_jobs_budget_is_far_larger_than_the_request_one() -> None:
+    """A handler doing non-database work inside a transaction is legitimately
+    idle for far longer than any gap between two statements of one request. If
+    these two ever converge, the jobs budget has become a deadline on that work
+    rather than a fuse against an abandoned one."""
+    from app.config import Settings
+
+    jobs = Settings.model_fields["database_jobs_idle_in_transaction_timeout"].default
+    request = Settings.model_fields["database_idle_in_transaction_timeout"].default
+
+    assert isinstance(jobs, int) and jobs > 0, (
+        f"database_jobs_idle_in_transaction_timeout defaults to {jobs!r}; 0 leaves a wedged "
+        "worker holding its locks until the connection closes"
+    )
+    assert jobs >= request * 4, (
+        f"the jobs budget ({jobs}s) is not meaningfully larger than the request one ({request}s); "
+        "it would cut legitimate handler work instead of only abandoned transactions"
     )
