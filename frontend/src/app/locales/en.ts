@@ -35937,7 +35937,8 @@ const resource = {
     "dashboard.regional_pack_modules": "Modules switched on",
     "dashboard.regional_pack_none": "No regional pack is active",
     "dashboard.regional_pack_none_body": "A regional pack sets up one market's prices, tax rules and standards for you, so you do not have to enter them by hand.",
-    "dashboard.regional_pack_choose": "Choose your market",
+    "dashboard.regional_pack_choose": "Install a country pack",
+    "dashboard.regional_pack_manage": "Change or add a country pack",
     "cases.regional_pack_for_market": "Regional pack: {{names}}",
   }
 } as { translation: Record<string, string> };

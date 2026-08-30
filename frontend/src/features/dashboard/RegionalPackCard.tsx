@@ -30,6 +30,10 @@ import { CountryFlag } from '@/shared/ui';
 import { usePartnerPack } from '@/shared/hooks/usePartnerPack';
 import { packCountryCode, packNameSlug } from '@/shared/lib/regionalPack';
 
+/** Where a reader with no pack goes to pick one. Same destination the
+ *  co-brand badge uses (see `@/shared/ui/PartnerLogoBadge`). */
+const PACKS_ROUTE = '/modules?tab=partner-packs';
+
 /** One "what it set up" line: a label an estimator uses, and the fact behind it. */
 function PackFactRow({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -77,12 +81,23 @@ export function RegionalPackCard() {
               "A regional pack sets up one market's prices, tax rules and standards for you, so you do not have to enter them by hand.",
           })}
         </p>
+        {/* The Packs tab, NOT the onboarding wizard. The wizard is guarded on
+            the same `oe_onboarding_completed` flag the dashboard first-run
+            redirect writes, and it bounces a completed user back to `/` with
+            `replace`, so this button did nothing at all for every reader who
+            can see a dashboard - the guard is total, not intermittent. Only
+            Settings' "restart onboarding" may route there, because it removes
+            the flag first, and this card must not: silently restarting a
+            finished user's setup is worse than the dead button was. The Packs
+            tab asks the same question the button does, one pack card per
+            market with Activate and the apply dialog behind it, and no guard
+            sits in front of it. */}
         <button
           type="button"
-          onClick={() => navigate('/onboarding')}
+          onClick={() => navigate(PACKS_ROUTE)}
           className="inline-flex items-center gap-1.5 rounded-lg bg-oe-blue px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-oe-blue/90"
         >
-          {t('dashboard.regional_pack_choose', { defaultValue: 'Choose your market' })}
+          {t('dashboard.regional_pack_choose', { defaultValue: 'Install a country pack' })}
           <ArrowRight size={13} aria-hidden="true" />
         </button>
       </div>
@@ -194,6 +209,25 @@ export function RegionalPackCard() {
           />
         )}
       </div>
+
+      {/* The way to a different market, in the state that had no way at all.
+          A reader with a pack could see which one was on and nothing about how
+          to change it or add another, so the card answered "which pack" for
+          everyone and "where do I get one" only for the reader who had none.
+          It sits after the facts in both states, so the card reads the same way
+          down: which pack is on, what it set up, how to change it. Quiet rather
+          than a second primary button, because for a reader who is already set
+          up this is a way out, not the next step. */}
+      <button
+        type="button"
+        onClick={() => navigate(PACKS_ROUTE)}
+        className="mt-3 inline-flex items-center gap-1.5 rounded-md text-xs font-semibold text-oe-blue transition-colors hover:text-oe-blue-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-oe-blue/40"
+      >
+        {t('dashboard.regional_pack_manage', {
+          defaultValue: 'Change or add a country pack',
+        })}
+        <ArrowRight size={13} aria-hidden="true" />
+      </button>
     </div>
   );
 }
