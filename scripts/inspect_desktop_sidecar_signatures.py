@@ -199,12 +199,21 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if sys.platform != "darwin":
-        print("codesign only exists on macOS, nothing to measure here")
-        return 0
+    # Existence is checked before the platform, and the order is the point.
+    # The other way round, a call on a non-macOS runner returned 0 without
+    # opening anything, so "the artifact is absent" and "the artifact is clean"
+    # left through the same exit code. Both call sites in desktop-release.yml
+    # are closed by runner.os == 'macOS', so that was latent rather than live,
+    # but a third call site added without that condition would have reported a
+    # clean census over a file that was never there. This way "not macOS" still
+    # means "nothing to measure here" and "no such file" means refusal on every
+    # platform.
     if not args.executable.is_file():
         print(f"no such file: {args.executable}")
         return 1
+    if sys.platform != "darwin":
+        print("codesign only exists on macOS, nothing to measure here")
+        return 0
 
     wrapper = describe(args.executable)
     print(f"wrapper: Signature={wrapper['signature']} TeamIdentifier={wrapper['team']} flags={wrapper['flags']}")
@@ -343,6 +352,13 @@ def main() -> int:
         # unmeasured required member are each failures in their own right: the
         # gate's whole claim is that nothing in there disagrees with the process,
         # and that claim is only as wide as what was opened.
+        # The denominator, printed next to the verdict rather than left to the
+        # reader. A census that opened nothing and a census that opened every
+        # member otherwise reach the summary as the same word, and "clean" over
+        # zero objects is a different statement from "clean" over many.
+        print()
+        print(f"census: {len(inspected_names)} member(s) inspected")
+
         if args.fail_on_foreign_team_id and (foreign or inconclusive or missing_required):
             return 1
     finally:

@@ -1049,15 +1049,29 @@ jobs:
           pip install "pyinstaller==6.21.0"
 
           echo "=== what the bundled sidecar will unpack and map at launch ==="
-          if python scripts/inspect_desktop_sidecar_signatures.py \
+          # The output goes to a file rather than through a pipe, so the
+          # status read below is the script's own. A pipeline reports its
+          # last command, and a census whose exit code came from tee is not
+          # a verdict at all.
+          census_rc=0
+          python scripts/inspect_desktop_sidecar_signatures.py \
               --fail-on-foreign-team-id \
               --require-member Python.framework \
-              "$SIDECAR"; then
+              "$SIDECAR" > "$RUNNER_TEMP/census.log" 2>&1 || census_rc=$?
+          cat "$RUNNER_TEMP/census.log"
+          # The summary line has to carry the denominator. "clean" over zero
+          # members inspected and "clean" over all of them are different
+          # claims, and the count is the only thing that separates them. If
+          # the script exits before printing one, this reads 0, which is the
+          # honest answer rather than a flattering one.
+          census_n="$(sed -n 's/^census: \([0-9][0-9]*\) member.*/\1/p' "$RUNNER_TEMP/census.log" | tail -1)"
+          census_n="${census_n:-0}"
+          if [ "$census_rc" -eq 0 ]; then
             echo "OK: inside the shipped bundle, nothing the sidecar unpacks disagrees with it about a Team ID."
-            echo "Bundled sidecar census: clean." >> "$GITHUB_STEP_SUMMARY"
+            echo "Bundled sidecar census: clean over $census_n member(s) inspected." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "::error title=The shipped sidecar disagrees with its own payload about a Team ID::The census above found inside the .app the shape that stops the app at 'Starting the application server' on a user's machine, or could not measure enough of it to rule that out. Compare it against the pre-bundle census in the Build Sidecar job: if that one was clean, bundling is what changed it."
-            echo "Bundled sidecar census: MISMATCH or inconclusive, see the Build Desktop (macos-latest) log." >> "$GITHUB_STEP_SUMMARY"
+            echo "Bundled sidecar census: MISMATCH or inconclusive over $census_n member(s) inspected, see the Build Desktop (macos-latest) log." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
