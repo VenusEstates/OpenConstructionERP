@@ -1292,7 +1292,7 @@ jobs:
       run:
         working-directory: frontend
     env:
-      # Twelve of the thirty-seven files below are jsdom component tests, which
+      # Twelve of the thirty-nine files below are jsdom component tests, which
       # are the expensive kind, and this runner has four cores rather than the
       # twelve the local measurement was taken on. Both figures are counted by
       # parsing this list, never by adding one to what the comment said: it read
@@ -1346,6 +1346,8 @@ jobs:
         src/shared/lib/apiHelpers.fetchAllPages.test.ts
         src/shared/lib/i18nInterpolatedKeys.test.ts
         src/shared/lib/projectFileFormats.test.ts
+        tests/pwa/manifest.test.ts
+        tests/pwa/service-worker.test.ts
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
@@ -1373,6 +1375,36 @@ jobs:
             fi
           done
           exit $missing
+      - name: Build the frontend so the artifact tests have something to read
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        # The last two names above assert things about the built output rather
+        # than about source, and without this step they do not go quietly
+        # green: they throw "No build output to inspect", which is why they are
+        # safe to gate on. This step is what makes them answerable at all, and
+        # it is the only reason they belong in this file.
+        #
+        # vite build, not npm run build. That script is
+        # "tsc -b && npm run typecheck:e2e && vite build", and tsconfig.json
+        # sets noEmit, so neither type-checking pass produces a file the bundle
+        # step consumes. Both already have their own step in the CI workflow.
+        # Running them here would add minutes and cover nothing new.
+        #
+        # The budget, written down because the number is not obvious from the
+        # step. This job is not on the critical path of this workflow, so the
+        # step spends slack rather than merge time. Measured 2026-08-30 on run
+        # 33282669232: no job here declares needs, all four start together, and
+        # they take 17.2m (backend-postgres), 17.1m (object ownership), 4.2m
+        # (upgrade) and 1.4m (this one). The run is ~17m with or without this
+        # step. Headroom was 15.7m; a full npm run build, the worst case, is
+        # 11m, which would leave about 4.7m.
+        #
+        # Re-measure rather than trust those figures, because they go stale in
+        # both directions: compare this job's own duration against the whole
+        # run's, which is visible on any run of this workflow, or read them out
+        # of "gh run view <id> --json jobs". The day this job's duration
+        # approaches the run's it has become the critical path, and this step
+        # is the first thing to question.
+        run: npx vite build
       - name: Run the named frontend tests
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # The positional arguments are FILTERS, not paths. A file that no
