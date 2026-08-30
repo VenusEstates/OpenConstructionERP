@@ -1069,6 +1069,17 @@ jobs:
           if [ "$census_rc" -eq 0 ]; then
             echo "OK: inside the shipped bundle, nothing the sidecar unpacks disagrees with it about a Team ID."
             echo "Bundled sidecar census: clean over $census_n member(s) inspected." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$census_rc" -eq 2 ]; then
+            # Exit 2 is the script saying it read nothing: no codesign on this
+            # runner, or no PyInstaller to open the archive with. Sending that
+            # down the branch below would accuse members nobody opened, and the
+            # next reader would go looking for a signing bug no run has evidence
+            # of. It is still red. A gate that could not measure the artifact
+            # has not cleared it either, and the two reasons to be red are worth
+            # telling apart in the summary rather than in the log.
+            echo "::error title=The bundled sidecar census could not run::The census exited 2, which means it opened nothing at all - the log above names the instrument that was missing. This is not a finding about the sidecar, it is the absence of one, so nothing here says the payload mismatch is present and nothing says it is absent. The macOS installer on this release is unmeasured."
+            echo "Bundled sidecar census: COULD NOT MEASURE, nothing was read, see the Build Desktop (macos-latest) log." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           else
             echo "::error title=The shipped sidecar disagrees with its own payload about a Team ID::The census above found inside the .app the shape that stops the app at 'Starting the application server' on a user's machine, or could not measure enough of it to rule that out. Compare it against the pre-bundle census in the Build Sidecar job: if that one was clean, bundling is what changed it."
             echo "Bundled sidecar census: MISMATCH or inconclusive over $census_n member(s) inspected, see the Build Desktop (macos-latest) log." >> "$GITHUB_STEP_SUMMARY"

@@ -72,8 +72,24 @@ treats a bundle specially: the member census reads the archive appended to the f
 codesign reports the file's own signature, both of which are the same questions wherever
 the file lives.
 
-Exit code is 0 unless --fail-on-foreign-team-id is passed, so it can also run as plain
-evidence without deciding anything by itself.
+Exit codes
+----------
+    0   the archive was read and there is a verdict. Either nothing disagrees with the
+        wrapper, or --fail-on-foreign-team-id was not passed and this ran as plain
+        evidence without deciding anything by itself.
+    1   the archive was read and the answer is bad: a member disagrees with the wrapper,
+        the census was too narrow to support a claim about the whole archive, a
+        --require-member name was never opened, or the path given is not a file.
+    2   nothing was read and there is no verdict of any kind. This is not macOS, so there
+        is no codesign to ask, or PyInstaller is not importable, so the archive cannot be
+        opened. Never 0.
+
+The line between 1 and 2 is what this file exists to hold, and it is not decided by any
+flag: --fail-on-foreign-team-id turns the gate on, and a flag that turns a gate on cannot
+also be what decides whether an unmeasured run looks measured. "I could not look" reported
+as 0 is a success message about zero objects, and the step summary downstream turns it
+into the word "clean". 2 is unreachable by any run that opened the archive, so a
+misconfigured runner cannot produce a green one.
 """
 
 from __future__ import annotations
@@ -96,23 +112,36 @@ MACHO_MAGIC = (
     b"\xbe\xba\xfe\xca",  # universal, swapped
 )
 
+# Exit codes, named after what they say rather than after pass and fail. 0 and 1 both
+# belong to a run that opened the archive; 2 belongs to a run that did not, and it exists
+# because 0 and 2 used to be the same number. See the exit code table in the docstring.
+EXIT_CLEAN = 0
+EXIT_ALARM = 1
+EXIT_UNKNOWN = 2
+
 TEAM_ID = re.compile(r"^TeamIdentifier=(.+)$", re.MULTILINE)
 SIGNATURE = re.compile(r"^Signature=(.+)$", re.MULTILINE)
 FLAGS = re.compile(r"^CodeDirectory .*?flags=(\S+)", re.MULTILINE)
 
 
 def open_archive(path: Path):
-    """Return a CArchiveReader over the onefile executable, or None with a reason printed."""
+    """Return a CArchiveReader over the onefile executable, or None and the exit code to use.
+
+    The two ways this fails are different answers and used to share one. No PyInstaller
+    on this machine means no instrument: nothing about the file was read, so the caller
+    exits 2. A reader that refuses the file is a fact about the file, so the caller exits
+    1. Reported as one number, the first would have accused the artifact of the second.
+    """
     try:
         from PyInstaller.archive.readers import CArchiveReader
     except ImportError as exc:
-        print(f"PyInstaller is not importable here, cannot read the archive: {exc}")
-        return None
+        print(f"UNKNOWN: PyInstaller is not importable here, so the archive was never opened: {exc}")
+        return None, EXIT_UNKNOWN
     try:
-        return CArchiveReader(str(path))
+        return CArchiveReader(str(path)), EXIT_CLEAN
     except Exception as exc:  # noqa: BLE001 - any reader failure is equally uninformative
         print(f"could not open {path} as a PyInstaller archive: {exc!r}")
-        return None
+        return None, EXIT_ALARM
 
 
 def member_names(reader) -> list[str]:
@@ -199,29 +228,38 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Existence is checked before the platform, and the order is the point.
-    # The other way round, a call on a non-macOS runner returned 0 without
-    # opening anything, so "the artifact is absent" and "the artifact is clean"
-    # left through the same exit code. Both call sites in desktop-release.yml
-    # are closed by runner.os == 'macOS', so that was latent rather than live,
-    # but a third call site added without that condition would have reported a
-    # clean census over a file that was never there. This way "not macOS" still
-    # means "nothing to measure here" and "no such file" means refusal on every
-    # platform.
+    # Existence is checked before the platform, and each answer leaves through
+    # its own exit code. The order came first: the other way round, a call on a
+    # non-macOS runner returned without opening anything, so "the artifact is
+    # absent" and "the artifact is clean" were the same result.
+    #
+    # The order alone was not enough. "Not macOS" still returned 0, and 0 is
+    # the number the workflow prints the word "clean" on, so a run with no
+    # codesign to ask still reached the step summary as a cleared census - over
+    # nothing. Those are the two claims this pair of branches has to keep
+    # apart, and neither is a matter of degree: a run that asked no question
+    # has no answer to report, and it exits 2 so that no reader downstream has
+    # to infer that from a count.
+    #
+    # Absence keeps exit 1 rather than joining it. A file that is not there is
+    # a fact about this build - the artifact that was supposed to be produced
+    # was not - while the wrong platform is a fact about the runner. Folding
+    # them together would rebuild the same collapse one level up.
     if not args.executable.is_file():
         print(f"no such file: {args.executable}")
-        return 1
+        return EXIT_ALARM
     if sys.platform != "darwin":
-        print("codesign only exists on macOS, nothing to measure here")
-        return 0
+        print(f"UNKNOWN: codesign only exists on macOS, so nothing here read {args.executable}")
+        print("This run has no opinion about the archive. It is not a clean census, it is no census.")
+        return EXIT_UNKNOWN
 
     wrapper = describe(args.executable)
     print(f"wrapper: Signature={wrapper['signature']} TeamIdentifier={wrapper['team']} flags={wrapper['flags']}")
     print()
 
-    reader = open_archive(args.executable)
+    reader, reader_rc = open_archive(args.executable)
     if reader is None:
-        return 1
+        return reader_rc
 
     names = member_names(reader)
     print(f"archive members: {len(names)}")
@@ -359,12 +397,18 @@ def main() -> int:
         print()
         print(f"census: {len(inspected_names)} member(s) inspected")
 
+        # A partial census is an alarm, not an unknown. Exit 2 is reserved for
+        # a run that read nothing at all, and this one did: it opened the
+        # archive, measured some members and can name the ones it could not.
+        # The claim the gate makes is about the whole archive, so a census
+        # narrower than the archive fails it - but the run still has facts to
+        # report, which is exactly what separates it from the branches above.
         if args.fail_on_foreign_team_id and (foreign or inconclusive or missing_required):
-            return 1
+            return EXIT_ALARM
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
-    return 0
+    return EXIT_CLEAN
 
 
 if __name__ == "__main__":
