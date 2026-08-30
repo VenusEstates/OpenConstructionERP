@@ -316,6 +316,29 @@ function alwaysPresent(node) {
   return always;
 }
 
+// Keyframes a component defines in its own inline <style> element. They are
+// real at runtime and structurally invisible to this gate's other input: no
+// stylesheet, generated or built, can contain them, because they live in a JS
+// chunk and are injected when the component mounts. Without this the gate calls
+// a working animation dead - CataloguesPanelCard.tsx declares
+// `@keyframes catalogues-progress` on the line directly below the
+// `animate-[catalogues-progress_...]` that uses it.
+//
+// Collected across the whole tree rather than per file, deliberately. The claim
+// being tested is "nobody defined this keyframe", and a definition anywhere in
+// source refutes it. Scoping to the using file would swap this false positive
+// for a subtler one the day a shared component injects the style for children.
+function collectInlineKeyframes() {
+  const names = new Set();
+  for (const file of walk(SRC, [])) {
+    const re = /@keyframes\s+([A-Za-z0-9_-]+)/g;
+    const text = fs.readFileSync(file, 'utf8');
+    let m;
+    while ((m = re.exec(text))) names.add(m[1]);
+  }
+  return names;
+}
+
 function collectSites() {
   const sites = [];
   let total = 0;
@@ -469,11 +492,27 @@ function main() {
   // that drift into a red lane on a tree with nothing wrong with it, which is a
   // worse failure than the one it guards against, because it teaches people to
   // ignore the gate.
-  if (generated && coverage < 0.05) {
+  // Applies to a supplied sheet as much as a generated one, and if anything more.
+  // A generated sheet already has a deterministic check upstream, the config that
+  // carries no theme. A supplied one has nothing: the caller points --css at a
+  // file, and every way of picking the wrong file ends in the same place. The
+  // build writes assets/[name]-[hash].css with cssCodeSplit on, so dist holds
+  // several sheets and only the entry one carries the utilities; a glob that
+  // matches a vendor sheet, or a dist left over from an older build, parses
+  // perfectly and resolves almost nothing. That reads as "no conflicts" and goes
+  // green, which is the loudest possible way to be wrong in a blocking lane.
+  if (coverage < 0.05) {
     console.error('Tailwind conflict gate: only ' + resolved + ' of ' + used.size +
       ' classes (' + Math.round(coverage * 100) + '%) resolved to a rule.');
-    console.error('The generator produced a sheet that does not cover the tree, so every');
-    console.error('class would read as unresolved and every conflict as absent.');
+    if (generated) {
+      console.error('The generator produced a sheet that does not cover the tree, so every');
+      console.error('class would read as unresolved and every conflict as absent.');
+    } else {
+      console.error('The supplied sheet does not cover the tree, so every class would read');
+      console.error('as unresolved and every conflict as absent. This is what pointing --css');
+      console.error('at the wrong one of several built stylesheets looks like: check that the');
+      console.error('path below is the entry sheet and that the build that wrote it is current.');
+    }
     console.error(cssPath);
     process.exit(2);
   }
@@ -487,10 +526,22 @@ function main() {
   // installed and the config declares no plugins), or an arbitrary value names
   // a keyframe nobody defined. A stale sheet would also land here, which is
   // why the message names both possibilities instead of guessing.
+  // An arbitrary animation spells its shorthand with underscores for spaces, so
+  // `animate-[catalogues-progress_1.2s_ease-in-out_infinite]` carries the
+  // keyframe name in its first underscore-separated token. Test every token
+  // rather than only the first: the name's position in the shorthand is not
+  // fixed, and `animation: 1.2s foo` is as legal as `animation: foo 1.2s`.
+  const inlineKeyframes = collectInlineKeyframes();
+  const definedInline = (cls) => {
+    const m = /^animate-\[(.+)\]$/.exec(cls);
+    return m ? m[1].split('_').some((t) => inlineKeyframes.has(t)) : false;
+  };
+
   const unresolved = new Map();
   for (const site of sites) {
     for (const cls of site.classes) {
       if (!cls.startsWith('animate-') || animations.has(cls)) continue;
+      if (definedInline(cls)) continue;
       if (!unresolved.has(cls)) unresolved.set(cls, []);
       unresolved.get(cls).push(site.file + ':' + site.line);
     }
@@ -581,6 +632,11 @@ function main() {
     console.log('of them resolved to a rule   : ' + resolved + ' (' + Math.round(coverage * 100) + '%)');
     console.log('utility rules in stylesheet  : ' + utilities.size);
     console.log('animations resolved          : ' + animations.size);
+    // Reported for the same reason as the coverage line above. This scan is
+    // what stops a component's own @keyframes from being called undefined, so
+    // if it silently matched nothing the gate would go back to inventing dead
+    // animations, and a count of zero here says so at a glance.
+    console.log('inline @keyframes in source  : ' + inlineKeyframes.size);
     console.log('stylesheet                   : ' + cssPath + (generated ? ' (generated here)' : ' (provided)'));
     console.log('');
   }
