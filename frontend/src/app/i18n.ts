@@ -97,16 +97,17 @@ export const SUPPORTED_LANGUAGES = [
   // figures are ceilings, because a real French or Dutch word this corpus
   // never wrote elsewhere survives the filter.
   //
-  // 529 of the 942 are *.insights.* keys and 149 are cases.* keys; every other
-  // locale has 0 or 1 in those two families. The English copy for both landed
-  // in feature commits, and the waves that translate afterwards iterate the
-  // offered languages - 29d22f3ae wrote 29 locale files and not uz.ts. Uzbek
-  // is unoffered because it is incomplete and incomplete because the sweeps
-  // that finish every other language read this list, so nothing closes it
-  // without a uz-specific pass: 942 keys, 734 distinct English values, about
-  // 2000 words. The locale file stays on disk and the batch work continues;
-  // uncomment this line when it is done, and keep the U+02BB modifier letters
-  // when you do.
+  // 529 of the 942 are *.insights.* keys and 149 are cases.* keys, and every
+  // other locale has 0 or 1 in those two families. That is a birth defect of
+  // the file and not an exclusion since: 927 of the 942 were already English
+  // on 2026-08-17, when 9ac55ac74 took uz.ts into the repository, and only 15
+  // arrived after. The batch run that produced the file translated en.ts
+  // either side of two bands and left the bands themselves in English, and
+  // the batches have closed about nineteen thousand strings since without
+  // reaching back into them. What is left is 942 keys, 734 distinct English
+  // values, about 2000 words. The locale file stays on disk and the batch work
+  // continues; uncomment this line when it is done, and keep the U+02BB
+  // modifier letters when you do.
   // { code: 'uz', name: 'Oʻzbekcha', english: 'Uzbek', flag: '🇺🇿', country: 'uz' },
 ];
 
