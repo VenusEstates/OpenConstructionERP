@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import importlib.util
 
 import pytest
 from sqlalchemy import text
@@ -189,6 +190,23 @@ def test_the_shipped_default_is_not_zero() -> None:
 # reading its own setting can produce it.
 _JOBS_BUDGET_S = 7
 
+# The dispatch helper these two tests drive lives in the Celery worker module,
+# which imports ``celery`` at module scope because that is what it is for.
+# Celery is the optional ``server`` extra, so on a base install the import
+# fails and both tests error out rather than reporting anything about the
+# engine. They are not skipped everywhere: ci-postgres installs
+# ``.[dev,server]`` and runs them for real, which is the lane that gates a
+# release. What this guard removes is a base install reporting a missing
+# optional dependency as a failure of the thing under test.
+#
+# Named on the extra rather than on the module so the reason a reader sees is
+# the one they can act on: install the extra, or read the result in the lane
+# that has it.
+_requires_the_server_extra = pytest.mark.skipif(
+    importlib.util.find_spec("celery") is None,
+    reason="needs the optional 'server' extra (celery); ci-postgres installs .[dev,server] and runs these",
+)
+
 
 async def _build_dispatch_engine(budget_s: int):
     """Return the engine one job dispatch builds, with this jobs budget.
@@ -230,6 +248,7 @@ async def _build_dispatch_engine(budget_s: int):
     return captured["engine"]
 
 
+@_requires_the_server_extra
 @pytest.mark.asyncio
 async def test_a_job_dispatch_connection_carries_the_jobs_budget() -> None:
     """Ask the server what the dispatch's connection got, not the settings.
@@ -253,6 +272,7 @@ async def test_a_job_dispatch_connection_carries_the_jobs_budget() -> None:
     )
 
 
+@_requires_the_server_extra
 @pytest.mark.asyncio
 async def test_the_jobs_engine_still_pools_nothing() -> None:
     """The bound must not have arrived by routing dispatch through the factory.
