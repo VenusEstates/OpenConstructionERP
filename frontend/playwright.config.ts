@@ -56,10 +56,10 @@ const MOBILE_ONLY = /@mobile/;
 
 export default defineConfig({
   testDir: './tests/e2e',
-  // Only run specs under named module folders (smoke/, boq/, etc.).
-  // Root-level legacy specs in tests/e2e/*.spec.ts have their own
-  // dedicated configs (playwright.boq-tour.config.ts, ...) and are
-  // intentionally ignored by this harness.
+  // Sweeps tests/e2e/ whole: the named module folders (smoke/, boq/, ...) and
+  // the specs sitting directly under it alike. The six root-level specs that a
+  // dedicated config at the repo root really does name are listed in
+  // testIgnore below; everything else here belongs to this harness.
   testMatch: ['**/*.spec.ts'],
   // Every pattern here is anchored with `tests/e2e/`, and that prefix is
   // load-bearing rather than decorative. Playwright matches testIgnore against
@@ -78,9 +78,24 @@ export default defineConfig({
     '**/tests/e2e/runner/**',
     '**/tests/e2e/reporters/**',
     '**/node_modules/**',
-    // Legacy specs sitting directly under tests/e2e/ (one-level deep)
-    // are invoked via their dedicated configs at the repo root.
-    'tests/e2e/*.spec.ts',
+    // The specs directly under tests/e2e/ that a dedicated config at the repo
+    // root actually names, one line each instead of the glob `tests/e2e/*.spec.ts`
+    // that used to stand here. That glob excluded eleven files while only these
+    // six had a config to be excluded in favour of, so compliance,
+    // folder-permissions, markup-persistence, share-link and team-strip were
+    // selected by no configuration at all - and never had been: no revision of
+    // any playwright config in this repository's history mentions them. A spec
+    // nothing selects cannot fail, and the empty green summary it leaves reads
+    // as coverage. They are swept in by this harness now.
+    // Listing the six also makes the default the safe one. A spec added here
+    // from now on runs unless somebody writes it a config AND adds it below,
+    // whereas the glob silently swallowed every new arrival.
+    '**/tests/e2e/boq-tour.spec.ts',               // playwright.boq-tour.config.ts
+    '**/tests/e2e/capture-homepage-loops.spec.ts', // playwright.homepage-loops.config.ts
+    '**/tests/e2e/capture-module-videos.spec.ts',  // playwright.captures.config.ts
+    '**/tests/e2e/floating-chat.spec.ts',          // playwright-floating-chat.config.ts
+    '**/tests/e2e/photos-tab.spec.ts',             // playwright.photos.config.ts
+    '**/tests/e2e/smoke-all-modules.spec.ts',      // playwright.smoke-all.config.ts
   ],
 
   fullyParallel: true,
