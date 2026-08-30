@@ -4037,7 +4037,7 @@ Single head at `v3098`.
 
 ### Removed
 
-- **Unused exports:** `FloatingChatButton` (only referenced in a stale comment).
+- **Unused exports:** `FloatingChatButton`, the one exported from `frontend/src/app/layout/Sidebar.tsx` and referenced only by a stale comment in `AppLayout.tsx`. Not to be confused with `frontend/src/features/erp-chat/FloatingChatButton.tsx`, an unrelated component of the same name added three days after this release, which `AppLayout.tsx` has imported and rendered ever since. That file is present and live, and this entry has never been about it.
 - **Unused frontend dep:** `react-is` (zero direct imports; still pulled transitively by recharts / ag-grid / testing-library where actually needed).
 - **Dev scratch artefacts:** `frontend/_capture_v4_news.mjs`, `frontend/_capture_v4_v2.mjs`, `frontend/_verify_cards_layout.mjs`, `tmp/check_full.py`, `tmp/check_vi.py`. These were one-off v4.0 marketing capture / i18n-build scripts that didn't belong in the shipped tree.
 
