@@ -30,6 +30,17 @@ import i18next from 'i18next';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { fmtList } from '../formatters';
+// Imported here rather than awaited inside the last case, and the placement is
+// the point. Reaching `@/app/i18n` pulls the module registry and the English
+// bundle through the transform, which measured about nine seconds on this
+// machine against a fifteen second per-test budget. Inside the case that cost
+// counted against the case: it passed with a couple of seconds to spare on an
+// idle machine and blew through the budget whenever the machine was busy,
+// failing as a timeout that reads like a broken assertion and sends the next
+// reader looking for a defect in the formatter. At module scope the same work
+// is collection cost, which no per-test timeout bounds, and the case is left
+// measuring what it is about.
+import { SUPPORTED_LANGUAGES } from '@/app/i18n';
 
 void i18next.init({ lng: 'en', resources: {}, initImmediate: false });
 const original = i18next.language;
@@ -80,7 +91,6 @@ describe('fmtList', () => {
     // complete list. Checked across every language rather than a sample,
     // because the engine's data differs per locale and a sample is a claim
     // about the ones sampled.
-    const { SUPPORTED_LANGUAGES } = await import('@/app/i18n');
     for (const { code } of SUPPORTED_LANGUAGES) {
       const text = await listIn(code);
       for (const item of ITEMS) {
