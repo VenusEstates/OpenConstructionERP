@@ -72,7 +72,12 @@ export function RequiresProject({ children, emptyHint, emptyTitle }: RequiresPro
               resolves to a pure translate and the arrow points straight up -
               past the header, not at the picker. That is invisible to review
               because both classes are present and spelled correctly. Bounce on
-              the wrapper, rotate on the icon, and each keeps its own axis. */}
+              the wrapper, rotate on the icon, and each keeps its own axis.
+
+              This split is the ONE correct fix for the whole class, not a local
+              workaround: any `animate-*` whose keyframes write a property is
+              incompatible with a utility declaring that same property on the
+              same element. Do not re-solve it per site - reuse this shape. */}
           <span className="flex animate-bounce motion-reduce:animate-none">
             <ArrowUp
               size={30}

@@ -192,11 +192,17 @@ export function BatchActionBar({
     <>
       {/* Floating batch action bar */}
       <div
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-slide-up"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40"
         role="toolbar"
         aria-label={t('boq.batch_actions', { defaultValue: 'Batch actions' })}
       >
-        <div className="flex items-center gap-3 rounded-2xl border border-border-light bg-surface-elevated shadow-xl px-5 py-3">
+        {/* The slide and the centring offset have to live on DIFFERENT nodes;
+            see RequiresProject.tsx for the canonical form. slideUp declares
+            `transform` on its `from` frame, so on a single node it replaces
+            -translate-x-1/2 outright: the bar rises half its own width to the
+            right of centre and snaps into place when the animation ends.
+            Offset on the wrapper, slide on the bar. */}
+        <div className="flex items-center gap-3 rounded-2xl border border-border-light bg-surface-elevated shadow-xl px-5 py-3 animate-slide-up">
           {/* Selection count */}
           <span className="text-sm font-medium text-content-primary tabular-nums whitespace-nowrap">
             {t('boq.n_selected', {

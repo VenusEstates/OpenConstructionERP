@@ -397,11 +397,20 @@ export function AddressAutocomplete({
           data-testid="geo-address-autocomplete-input"
         />
         {showInlineLoader && (
-          <Loader2
-            size={14}
-            className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-content-tertiary"
+          // The spin and the centring offset have to live on DIFFERENT nodes;
+          // see RequiresProject.tsx for the canonical form. `spin` has no
+          // `from` frame, so its implicit 0% adopts whatever transform the
+          // element already declares and interpolates it away towards a 360deg
+          // that decomposes to zero. On one node this icon does not rotate by a
+          // single degree - it just slides 20px down and jumps back, forever,
+          // because the animation is infinite. Offset on the wrapper, spin on
+          // the icon, and each keeps its own axis.
+          <span
+            className="absolute right-3 top-1/2 flex -translate-y-1/2 text-content-tertiary"
             aria-hidden
-          />
+          >
+            <Loader2 size={14} className="animate-spin" />
+          </span>
         )}
       </div>
       {dropdownVisible && (
