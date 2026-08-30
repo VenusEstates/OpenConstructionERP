@@ -516,8 +516,13 @@ jobs:
         # runs by default for them.
         #
         # Placed last on purpose, and it earned the position. It sat between
-        # Lint and Type check, and it is currently failing for a real reason:
-        # every configured project selects zero tests. Because a failing step
+        # Lint and Type check, and at the time it was failing for a real reason:
+        # every configured project selected zero tests. That is fixed - remeasured
+        # 2026-08-30, this step exits 0 and the default config selects twelve
+        # specs - and the sentence is in the past tense now because a present
+        # tense claim in a comment that nobody rechecks goes on describing a
+        # state that ended. The ordering argument below does not depend on it
+        # being red today. Because a failing step
         # aborts the job, Type check, Build and the unit tests were all reported
         # as skipped on all three runners, which meant `npm run build` - the one
         # gate the frontend actually answers to - had not executed in CI at all
@@ -537,6 +542,40 @@ jobs:
         env:
           OE_E2E_VERIFY_CONFIG_ONLY: "1"
         run: npm run test:e2e:verify-projects
+
+      - name: Verify every Playwright config selects committed specs
+        # The step above is the same question asked of ONE config. `playwright
+        # test --list` with no --config reads playwright.config.ts and nothing
+        # else, so fifteen of the sixteen configs in this directory have never
+        # been asked whether they select anything. It also asks the disk, and
+        # the disk is not what CI checks out.
+        #
+        # This asks all sixteen, and asks the repository. The population comes
+        # from `git ls-files`, so a spec that exists locally and is ignored by
+        # git counts as absent - which is the state of every fresh clone and of
+        # this runner. That is not hypothetical: playwright.assets-audit.config.ts
+        # selects two specs that sit under .gitignore line 70, so it selects two
+        # here and zero in CI, and a run of it is a green empty summary.
+        #
+        # It also asks each config the same question from three synthetic
+        # checkout roots. That is the class of defect fixed in c497946ce, where
+        # testIgnore '**/runner/**' meant tests/e2e/runner/ to the author and
+        # every file in the checkout to a GitHub Linux or macOS runner, whose
+        # working directory is under /home/runner or /Users/runner. It was green
+        # on Windows, fatal elsewhere, and could not be found by reading the
+        # config. A config that answers differently under two roots is red here.
+        #
+        # No browsers, no server, no run: it loads the configs with playwright's
+        # own loader and filters with playwright's own createFileMatcher, so the
+        # rule it applies is playwright's rather than an imitation, and it
+        # checks that claim on every run by recomputing each project's selection
+        # through playwright itself and requiring the two to agree.
+        #
+        # Runs on all three OSes deliberately. It normalises paths, and a path
+        # bug in a path checker is worth catching on the OS that has the other
+        # separator.
+        if: ${{ !cancelled() }}
+        run: node ../scripts/check_playwright_config_selection.mjs
 
   backend-cross-os:
     name: Backend CI (${{ matrix.os }}, embedded PG, shard ${{ matrix.shard }}/3)
