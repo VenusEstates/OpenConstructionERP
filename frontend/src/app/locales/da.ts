@@ -39229,6 +39229,13 @@ const resource = {
     "modules.pp_name_us_california": "Byggepakke Californien",
     "modules.pp_name_us_costdata": "Byggepakke USA",
     "modules.pp_name_us_texas": "Byggepakke Texas",
+    "modules.pack_chip_none": "Ingen regional pakke",
+    "modules.pack_chip_none_hint": "Der er ikke anvendt nogen regional pakke. En pakke fastsætter valuta, skabelon til skat og valideringsstandarder for dette arbejdsområde.",
+    "modules.pack_chip_applied_hint": "Regional pakke i brug. Åbner pakkelisten.",
+    "cases.regional_pack_in_use": "Regional pakke i brug: {{name}}",
+    "cases.regional_pack_needed": "Kræver {{name}}",
+    "cases.regional_pack_set_up": "Opsæt",
+    "cases.regional_pack_setup_hint": "Denne case følger standarderne for sit marked. Åbner pakken, der indeholder dem, hvor du kan slå den til.",
   }
 } as { translation: Record<string, string> };
 

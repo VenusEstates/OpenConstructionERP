@@ -39171,6 +39171,13 @@ const resource = {
     "modules.pp_name_us_california": "California ehituspakett",
     "modules.pp_name_us_costdata": "USA ehituspakett",
     "modules.pp_name_us_texas": "Texase ehituspakett",
+    "modules.pack_chip_none": "Regionaalpaketti ei ole",
+    "modules.pack_chip_none_hint": "Regionaalpaketti ei ole rakendatud. Pakett määrab selle tööruumi valuuta, maksumalli ja valideerimisstandardid.",
+    "modules.pack_chip_applied_hint": "Regionaalpakett kasutusel. Avab paketiloendi.",
+    "cases.regional_pack_in_use": "Regionaalpakett kasutusel: {{name}}",
+    "cases.regional_pack_needed": "Vajab paketti {{name}}",
+    "cases.regional_pack_set_up": "Seadista",
+    "cases.regional_pack_setup_hint": "See juhtum järgib oma turu standardeid. Avab paketi, mis need kannab, kus saad selle sisse lülitada.",
   }
 } as { translation: Record<string, string> };
 

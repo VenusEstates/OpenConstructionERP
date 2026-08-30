@@ -39342,6 +39342,13 @@ const resource = {
     "modules.pp_name_us_california": "Калифорния курулуш пакети",
     "modules.pp_name_us_costdata": "АКШ курулуш пакети",
     "modules.pp_name_us_texas": "Техас курулуш пакети",
+    "modules.pack_chip_none": "Аймактык пакет жок",
+    "modules.pack_chip_none_hint": "Аймактык пакет колдонулган эмес. Пакет бул жумуш мейкиндиги үчүн валютаны, салык шаблонун жана валидация стандарттарын белгилейт.",
+    "modules.pack_chip_applied_hint": "Аймактык пакет колдонулууда. Пакеттер тизмесин ачат.",
+    "cases.regional_pack_in_use": "Аймактык пакет колдонулууда: {{name}}",
+    "cases.regional_pack_needed": "{{name}} керек",
+    "cases.regional_pack_set_up": "Жөндөө",
+    "cases.regional_pack_setup_hint": "Бул кейс өз рыногунун стандарттарын карманат. Аларды алып жүргөн пакетти ачат, ошол жерден аны күйгүзсө болот.",
   }
 } as { translation: Record<string, string> };
 

@@ -39233,6 +39233,13 @@ const resource = {
     "modules.pp_name_us_california": "Строителен пакет Калифорния",
     "modules.pp_name_us_costdata": "Строителен пакет САЩ",
     "modules.pp_name_us_texas": "Строителен пакет Тексас",
+    "modules.pack_chip_none": "Няма регионален пакет",
+    "modules.pack_chip_none_hint": "Не е приложен регионален пакет. Пакетът задава валутата, данъчния шаблон и стандартите за валидация за това работно пространство.",
+    "modules.pack_chip_applied_hint": "Използва се регионален пакет. Отваря списъка с пакети.",
+    "cases.regional_pack_in_use": "Използва се регионален пакет: {{name}}",
+    "cases.regional_pack_needed": "Изисква {{name}}",
+    "cases.regional_pack_set_up": "Настройка",
+    "cases.regional_pack_setup_hint": "Този казус следва стандартите на своя пазар. Отваря пакета, който ги носи, откъдето можете да го включите.",
   }
 } as { translation: Record<string, string> };
 

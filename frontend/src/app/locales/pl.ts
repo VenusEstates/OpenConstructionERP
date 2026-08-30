@@ -40277,6 +40277,13 @@ const resource = {
     "modules.pp_name_us_california": "Pakiet budowlany Kalifornia",
     "modules.pp_name_us_costdata": "Pakiet budowlany USA",
     "modules.pp_name_us_texas": "Pakiet budowlany Teksas",
+    "modules.pack_chip_none": "Brak pakietu regionalnego",
+    "modules.pack_chip_none_hint": "Nie zastosowano żadnego pakietu regionalnego. Pakiet ustala walutę, szablon podatku i standardy walidacji dla tej przestrzeni roboczej.",
+    "modules.pack_chip_applied_hint": "Używany pakiet regionalny. Otwiera listę pakietów.",
+    "cases.regional_pack_in_use": "Używany pakiet regionalny: {{name}}",
+    "cases.regional_pack_needed": "Wymaga {{name}}",
+    "cases.regional_pack_set_up": "Skonfiguruj",
+    "cases.regional_pack_setup_hint": "Ten scenariusz stosuje się do standardów swojego rynku. Otwiera pakiet, który je zawiera, gdzie można go włączyć.",
   }
 } as { translation: Record<string, string> };
 

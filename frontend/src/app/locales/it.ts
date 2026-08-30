@@ -40189,6 +40189,13 @@ const resource = {
     "modules.pp_name_us_california": "Pacchetto Costruzioni California",
     "modules.pp_name_us_costdata": "Pacchetto Costruzioni USA",
     "modules.pp_name_us_texas": "Pacchetto Costruzioni Texas",
+    "modules.pack_chip_none": "Nessun pacchetto regionale",
+    "modules.pack_chip_none_hint": "Nessun pacchetto regionale applicato. Un pacchetto imposta la valuta, il modello fiscale e gli standard di validazione per questo spazio di lavoro.",
+    "modules.pack_chip_applied_hint": "Pacchetto regionale in uso. Apre l'elenco dei pacchetti.",
+    "cases.regional_pack_in_use": "Pacchetto regionale in uso: {{name}}",
+    "cases.regional_pack_needed": "Richiede {{name}}",
+    "cases.regional_pack_set_up": "Configura",
+    "cases.regional_pack_setup_hint": "Questo caso segue gli standard del suo mercato. Apre il pacchetto che li porta, dove puoi attivarlo.",
   }
 } as { translation: Record<string, string> };
 

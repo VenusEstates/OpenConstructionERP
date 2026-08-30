@@ -39180,6 +39180,13 @@ const resource = {
     "modules.pp_name_us_california": "แพ็กก่อสร้างแคลิฟอร์เนีย",
     "modules.pp_name_us_costdata": "แพ็กก่อสร้างสหรัฐอเมริกา",
     "modules.pp_name_us_texas": "แพ็กก่อสร้างเท็กซัส",
+    "modules.pack_chip_none": "ไม่มีแพ็กภูมิภาค",
+    "modules.pack_chip_none_hint": "ไม่มีการใช้งานแพ็กภูมิภาค แพ็กจะกำหนดสกุลเงิน แม่แบบภาษี และมาตรฐานการตรวจสอบสำหรับพื้นที่ทำงานนี้",
+    "modules.pack_chip_applied_hint": "กำลังใช้งานแพ็กภูมิภาค เปิดรายการแพ็ก",
+    "cases.regional_pack_in_use": "กำลังใช้งานแพ็กภูมิภาค: {{name}}",
+    "cases.regional_pack_needed": "ต้องใช้ {{name}}",
+    "cases.regional_pack_set_up": "ตั้งค่า",
+    "cases.regional_pack_setup_hint": "กรณีนี้เป็นไปตามมาตรฐานของตลาดของมัน เปิดแพ็กที่มีมาตรฐานเหล่านั้น ซึ่งคุณสามารถเปิดใช้งานได้ที่นั่น",
   }
 } as { translation: Record<string, string> };
 

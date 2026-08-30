@@ -39317,6 +39317,13 @@ const resource = {
     "modules.pp_name_us_california": "Pachet de construcții California",
     "modules.pp_name_us_costdata": "Pachet de construcții SUA",
     "modules.pp_name_us_texas": "Pachet de construcții Texas",
+    "modules.pack_chip_none": "Niciun pachet regional",
+    "modules.pack_chip_none_hint": "Nu este aplicat niciun pachet regional. Un pachet stabilește moneda, șablonul fiscal și standardele de validare pentru acest spațiu de lucru.",
+    "modules.pack_chip_applied_hint": "Pachet regional în uz. Deschide lista de pachete.",
+    "cases.regional_pack_in_use": "Pachet regional în uz: {{name}}",
+    "cases.regional_pack_needed": "Necesită {{name}}",
+    "cases.regional_pack_set_up": "Configurează",
+    "cases.regional_pack_setup_hint": "Acest caz respectă standardele pieței sale. Deschide pachetul care le conține, unde îl poți activa.",
   }
 } as { translation: Record<string, string> };
 

@@ -39178,6 +39178,13 @@ const resource = {
     "modules.pp_name_us_california": "Paket Konstruksi California",
     "modules.pp_name_us_costdata": "Paket Konstruksi AS",
     "modules.pp_name_us_texas": "Paket Konstruksi Texas",
+    "modules.pack_chip_none": "Tidak ada paket regional",
+    "modules.pack_chip_none_hint": "Tidak ada paket regional yang diterapkan. Paket menentukan mata uang, templat pajak, dan standar validasi untuk workspace ini.",
+    "modules.pack_chip_applied_hint": "Paket regional sedang digunakan. Membuka daftar paket.",
+    "cases.regional_pack_in_use": "Paket regional sedang digunakan: {{name}}",
+    "cases.regional_pack_needed": "Membutuhkan {{name}}",
+    "cases.regional_pack_set_up": "Siapkan",
+    "cases.regional_pack_setup_hint": "Kasus ini mengikuti standar pasarnya. Membuka paket yang membawa standar tersebut, tempat Anda dapat mengaktifkannya.",
   }
 } as { translation: Record<string, string> };
 

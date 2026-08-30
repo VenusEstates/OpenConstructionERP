@@ -39289,6 +39289,13 @@ const resource = {
     "modules.pp_name_us_california": "חבילת בנייה לקליפורניה",
     "modules.pp_name_us_costdata": "חבילת בנייה לארה\"ב",
     "modules.pp_name_us_texas": "חבילת בנייה לטקסס",
+    "modules.pack_chip_none": "אין חבילת אזור",
+    "modules.pack_chip_none_hint": "לא הוחלה חבילת אזור. חבילה קובעת את המטבע, תבנית המס ותקני האימות עבור סביבת עבודה זו.",
+    "modules.pack_chip_applied_hint": "חבילת אזור בשימוש. פותח את רשימת החבילות.",
+    "cases.regional_pack_in_use": "חבילת אזור בשימוש: {{name}}",
+    "cases.regional_pack_needed": "דורש את {{name}}",
+    "cases.regional_pack_set_up": "הגדרה",
+    "cases.regional_pack_setup_hint": "תרחיש זה עוקב אחר התקנים של השוק שלו. פותח את החבילה שמביאה אותם, שם ניתן להפעיל אותה.",
   }
 } as { translation: Record<string, string> };
 

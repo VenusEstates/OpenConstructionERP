@@ -40013,6 +40013,13 @@ const resource = {
     "modules.pp_name_us_california": "Stavební balíček Kalifornie",
     "modules.pp_name_us_costdata": "Stavební balíček USA",
     "modules.pp_name_us_texas": "Stavební balíček Texas",
+    "modules.pack_chip_none": "Žádný regionální balíček",
+    "modules.pack_chip_none_hint": "Není použit žádný regionální balíček. Balíček nastavuje měnu, šablonu daně a standardy ověřování pro tento pracovní prostor.",
+    "modules.pack_chip_applied_hint": "Používá se regionální balíček. Otevře seznam balíčků.",
+    "cases.regional_pack_in_use": "Používá se regionální balíček: {{name}}",
+    "cases.regional_pack_needed": "Vyžaduje {{name}}",
+    "cases.regional_pack_set_up": "Nastavit",
+    "cases.regional_pack_setup_hint": "Tento případ se řídí standardy svého trhu. Otevře balíček, který je přináší, kde jej můžete zapnout.",
   }
 } as { translation: Record<string, string> };
 

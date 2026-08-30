@@ -39844,6 +39844,13 @@ const resource = {
     "modules.pp_name_us_california": "Byggpaket Kalifornien",
     "modules.pp_name_us_costdata": "Byggpaket USA",
     "modules.pp_name_us_texas": "Byggpaket Texas",
+    "modules.pack_chip_none": "Inget regionpaket",
+    "modules.pack_chip_none_hint": "Inget regionpaket är tillämpat. Ett paket anger valuta, skattmall och valideringsstandarder för detta arbetsområde.",
+    "modules.pack_chip_applied_hint": "Regionpaket används. Öppnar paketlistan.",
+    "cases.regional_pack_in_use": "Regionpaket används: {{name}}",
+    "cases.regional_pack_needed": "Kräver {{name}}",
+    "cases.regional_pack_set_up": "Konfigurera",
+    "cases.regional_pack_setup_hint": "Det här fallet följer standarderna för sin marknad. Öppnar paketet som innehåller dem, där du kan slå på det.",
   }
 } as { translation: Record<string, string> };
 

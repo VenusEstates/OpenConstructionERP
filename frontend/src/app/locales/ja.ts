@@ -40711,6 +40711,13 @@ const resource = {
     "modules.pp_name_us_california": "カリフォルニア建設パック",
     "modules.pp_name_us_costdata": "米国建設パック",
     "modules.pp_name_us_texas": "テキサス建設パック",
+    "modules.pack_chip_none": "地域パックなし",
+    "modules.pack_chip_none_hint": "地域パックは適用されていません。パックはこのワークスペースの通貨、税務テンプレート、検証基準を設定します。",
+    "modules.pack_chip_applied_hint": "地域パック使用中。パック一覧を開きます。",
+    "cases.regional_pack_in_use": "地域パック使用中: {{name}}",
+    "cases.regional_pack_needed": "{{name}}が必要です",
+    "cases.regional_pack_set_up": "設定する",
+    "cases.regional_pack_setup_hint": "このケースはその市場の基準に従います。それらを含むパックを開き、そこで有効化できます。",
   }
 } as { translation: Record<string, string> };
 

@@ -39208,6 +39208,13 @@ const resource = {
     "modules.pp_name_us_california": "کیلیفورنیا تعمیراتی پیکج",
     "modules.pp_name_us_costdata": "امریکہ تعمیراتی پیکج",
     "modules.pp_name_us_texas": "ٹیکساس تعمیراتی پیکج",
+    "modules.pack_chip_none": "کوئی علاقائی پیکج نہیں",
+    "modules.pack_chip_none_hint": "کوئی علاقائی پیکج لاگو نہیں ہے۔ پیکج اس ورک اسپیس کے لیے کرنسی، ٹیکس ٹیمپلیٹ اور تصدیق معیارات طے کرتا ہے۔",
+    "modules.pack_chip_applied_hint": "علاقائی پیکج زیرِ استعمال ہے۔ پیکج کی فہرست کھولتا ہے۔",
+    "cases.regional_pack_in_use": "علاقائی پیکج زیرِ استعمال ہے: {{name}}",
+    "cases.regional_pack_needed": "{{name}} درکار ہے",
+    "cases.regional_pack_set_up": "سیٹ اپ کریں",
+    "cases.regional_pack_setup_hint": "یہ کیس اپنی مارکیٹ کے معیارات کی پیروی کرتا ہے۔ وہ پیکج کھولتا ہے جو انہیں لاتا ہے، جہاں آپ اسے فعال کر سکتے ہیں۔",
   }
 } as { translation: Record<string, string> };
 

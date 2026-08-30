@@ -41576,6 +41576,13 @@ const resource = {
     "modules.pp_name_us_california": "Paquete de Construcción de California",
     "modules.pp_name_us_costdata": "Paquete de Construcción de EE. UU.",
     "modules.pp_name_us_texas": "Paquete de Construcción de Texas",
+    "modules.pack_chip_none": "Sin paquete regional",
+    "modules.pack_chip_none_hint": "No hay ningún paquete regional aplicado. Un paquete define la moneda, la plantilla de impuestos y los estándares de validación de este espacio de trabajo.",
+    "modules.pack_chip_applied_hint": "Paquete regional en uso. Abre la lista de paquetes.",
+    "cases.regional_pack_in_use": "Paquete regional en uso: {{name}}",
+    "cases.regional_pack_needed": "Requiere {{name}}",
+    "cases.regional_pack_set_up": "Configurar",
+    "cases.regional_pack_setup_hint": "Este caso sigue los estándares de su mercado. Abre el paquete que los aporta, donde puede activarlo.",
   }
 } as { translation: Record<string, string> };
 

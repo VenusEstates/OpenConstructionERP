@@ -39797,6 +39797,13 @@ const resource = {
     "modules.pp_name_us_california": "캘리포니아 건설 팩",
     "modules.pp_name_us_costdata": "미국 건설 팩",
     "modules.pp_name_us_texas": "텍사스 건설 팩",
+    "modules.pack_chip_none": "지역 팩 없음",
+    "modules.pack_chip_none_hint": "적용된 지역 팩이 없습니다. 팩은 이 워크스페이스의 통화, 세금 서식, 검증 표준을 설정합니다.",
+    "modules.pack_chip_applied_hint": "지역 팩 사용 중. 팩 목록을 엽니다.",
+    "cases.regional_pack_in_use": "지역 팩 사용 중: {{name}}",
+    "cases.regional_pack_needed": "{{name}} 필요",
+    "cases.regional_pack_set_up": "설정하기",
+    "cases.regional_pack_setup_hint": "이 사례는 해당 시장의 표준을 따릅니다. 그 표준을 담은 팩을 열며, 여기서 활성화할 수 있습니다.",
   }
 } as { translation: Record<string, string> };
 

@@ -41577,6 +41577,13 @@ const resource = {
     "modules.pp_name_us_california": "Pack Construction Californie",
     "modules.pp_name_us_costdata": "Pack Construction États-Unis",
     "modules.pp_name_us_texas": "Pack Construction Texas",
+    "modules.pack_chip_none": "Aucun pack régional",
+    "modules.pack_chip_none_hint": "Aucun pack régional n'est appliqué. Un pack définit la devise, le modèle fiscal et les normes de validation de cet espace de travail.",
+    "modules.pack_chip_applied_hint": "Pack régional en cours d'utilisation. Ouvre la liste des packs.",
+    "cases.regional_pack_in_use": "Pack régional en cours d'utilisation : {{name}}",
+    "cases.regional_pack_needed": "Nécessite {{name}}",
+    "cases.regional_pack_set_up": "Configurer",
+    "cases.regional_pack_setup_hint": "Ce cas suit les normes de son marché. Ouvre le pack qui les porte, où vous pouvez l'activer.",
   }
 } as { translation: Record<string, string> };
 

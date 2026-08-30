@@ -39232,6 +39232,13 @@ const resource = {
     "modules.pp_name_us_california": "कैलिफ़ोर्निया निर्माण पैक",
     "modules.pp_name_us_costdata": "यूएस निर्माण पैक",
     "modules.pp_name_us_texas": "टेक्सास निर्माण पैक",
+    "modules.pack_chip_none": "कोई क्षेत्रीय पैक नहीं",
+    "modules.pack_chip_none_hint": "कोई क्षेत्रीय पैक लागू नहीं है। एक पैक इस वर्कस्पेस के लिए मुद्रा, कर टेम्पलेट और सत्यापन मानक तय करता है।",
+    "modules.pack_chip_applied_hint": "क्षेत्रीय पैक उपयोग में है। पैक सूची खोलता है।",
+    "cases.regional_pack_in_use": "क्षेत्रीय पैक उपयोग में है: {{name}}",
+    "cases.regional_pack_needed": "{{name}} की आवश्यकता है",
+    "cases.regional_pack_set_up": "सेट अप करें",
+    "cases.regional_pack_setup_hint": "यह केस अपने बाज़ार के मानकों का पालन करता है। वह पैक खोलता है जो इन्हें लाता है, जहाँ आप इसे चालू कर सकते हैं।",
   }
 } as { translation: Record<string, string> };
 

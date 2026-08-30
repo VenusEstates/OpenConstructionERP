@@ -40842,6 +40842,13 @@ const resource = {
     "modules.pp_name_us_california": "Будівельний пакет Каліфорнія",
     "modules.pp_name_us_costdata": "Будівельний пакет США",
     "modules.pp_name_us_texas": "Будівельний пакет Техас",
+    "modules.pack_chip_none": "Немає регіонального пакета",
+    "modules.pack_chip_none_hint": "Регіональний пакет не застосовано. Пакет визначає валюту, шаблон податків і стандарти валідації для цього робочого простору.",
+    "modules.pack_chip_applied_hint": "Використовується регіональний пакет. Відкриває список пакетів.",
+    "cases.regional_pack_in_use": "Використовується регіональний пакет: {{name}}",
+    "cases.regional_pack_needed": "Потребує {{name}}",
+    "cases.regional_pack_set_up": "Налаштувати",
+    "cases.regional_pack_setup_hint": "Цей кейс дотримується стандартів свого ринку. Відкриває пакет, який їх містить, де його можна увімкнути.",
   }
 } as { translation: Record<string, string> };
 

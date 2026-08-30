@@ -39241,6 +39241,13 @@ const resource = {
     "modules.pp_name_us_california": "Калифорнийн барилгын багц",
     "modules.pp_name_us_costdata": "АНУ-ын барилгын багц",
     "modules.pp_name_us_texas": "Техасын барилгын багц",
+    "modules.pack_chip_none": "Бүсийн багц алга",
+    "modules.pack_chip_none_hint": "Бүсийн багц ашиглагдаагүй байна. Багц энэ ажлын орчны валют, татварын загвар, баталгаажуулалтын стандартыг тодорхойлдог.",
+    "modules.pack_chip_applied_hint": "Бүсийн багц ашиглагдаж байна. Багцын жагсаалтыг нээнэ.",
+    "cases.regional_pack_in_use": "Бүсийн багц ашиглагдаж байна: {{name}}",
+    "cases.regional_pack_needed": "{{name}} шаардлагатай",
+    "cases.regional_pack_set_up": "Тохируулах",
+    "cases.regional_pack_setup_hint": "Энэ тохиолдол өөрийн зах зээлийн стандартыг дагадаг. Тэдгээрийг агуулсан багцыг нээж, тэндээс идэвхжүүлэх боломжтой.",
   }
 } as { translation: Record<string, string> };
 

@@ -40109,6 +40109,13 @@ const resource = {
     "modules.pp_name_us_california": "Bouwpakket Californië",
     "modules.pp_name_us_costdata": "Bouwpakket VS",
     "modules.pp_name_us_texas": "Bouwpakket Texas",
+    "modules.pack_chip_none": "Geen regiopakket",
+    "modules.pack_chip_none_hint": "Er is geen regiopakket toegepast. Een pakket bepaalt de valuta, het belastingsjabloon en de validatienormen voor deze werkruimte.",
+    "modules.pack_chip_applied_hint": "Regiopakket in gebruik. Opent de pakkettenlijst.",
+    "cases.regional_pack_in_use": "Regiopakket in gebruik: {{name}}",
+    "cases.regional_pack_needed": "Vereist {{name}}",
+    "cases.regional_pack_set_up": "Instellen",
+    "cases.regional_pack_setup_hint": "Deze case volgt de normen van zijn markt. Opent het pakket dat deze bevat, waar u het kunt inschakelen.",
   }
 } as { translation: Record<string, string> };
 

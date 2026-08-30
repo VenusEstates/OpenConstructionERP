@@ -40458,6 +40458,13 @@ const resource = {
     "modules.pp_name_us_california": "Kaliforniya qurilish paketi",
     "modules.pp_name_us_costdata": "AQSH qurilish paketi",
     "modules.pp_name_us_texas": "Texas qurilish paketi",
+    "modules.pack_chip_none": "Mintaqaviy paket yoʻq",
+    "modules.pack_chip_none_hint": "Hech qanday mintaqaviy paket qoʻllanilmagan. Paket ushbu ish maydoni uchun valyuta, soliq shabloni va tekshiruv standartlarini belgilaydi.",
+    "modules.pack_chip_applied_hint": "Mintaqaviy paket ishlatilmoqda. Paketlar roʻyxatini ochadi.",
+    "cases.regional_pack_in_use": "Mintaqaviy paket ishlatilmoqda: {{name}}",
+    "cases.regional_pack_needed": "{{name}} talab qilinadi",
+    "cases.regional_pack_set_up": "Sozlash",
+    "cases.regional_pack_setup_hint": "Bu holat oʻz bozorining standartlariga amal qiladi. Ularni olib yuruvchi paketni ochadi, u yerda uni yoqishingiz mumkin.",
   }
 } as { translation: Record<string, string> };
 

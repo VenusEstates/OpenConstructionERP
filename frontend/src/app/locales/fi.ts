@@ -39233,6 +39233,13 @@ const resource = {
     "modules.pp_name_us_california": "Kalifornian rakennuspaketti",
     "modules.pp_name_us_costdata": "Yhdysvaltain rakennuspaketti",
     "modules.pp_name_us_texas": "Texasin rakennuspaketti",
+    "modules.pack_chip_none": "Ei alueellista pakettia",
+    "modules.pack_chip_none_hint": "Alueellista pakettia ei ole otettu käyttöön. Paketti määrittää tämän työtilan valuutan, veromallin ja validointistandardit.",
+    "modules.pack_chip_applied_hint": "Alueellinen paketti käytössä. Avaa pakettiluettelon.",
+    "cases.regional_pack_in_use": "Alueellinen paketti käytössä: {{name}}",
+    "cases.regional_pack_needed": "Vaatii paketin {{name}}",
+    "cases.regional_pack_set_up": "Määritä",
+    "cases.regional_pack_setup_hint": "Tämä tapaus noudattaa markkina-alueensa standardeja. Avaa paketin, joka sisältää ne ja jossa voit ottaa sen käyttöön.",
   }
 } as { translation: Record<string, string> };
 

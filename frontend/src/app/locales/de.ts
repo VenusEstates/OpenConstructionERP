@@ -41559,6 +41559,13 @@ const resource = {
     "modules.pp_name_us_california": "Kalifornien-Baupaket",
     "modules.pp_name_us_costdata": "USA-Baupaket",
     "modules.pp_name_us_texas": "Texas-Baupaket",
+    "modules.pack_chip_none": "Kein regionales Paket",
+    "modules.pack_chip_none_hint": "Es ist kein regionales Paket angewendet. Ein Paket legt Währung, Steuermuster und Validierungsnormen für diesen Arbeitsbereich fest.",
+    "modules.pack_chip_applied_hint": "Regionales Paket im Einsatz. Öffnet die Paketliste.",
+    "cases.regional_pack_in_use": "Regionales Paket im Einsatz: {{name}}",
+    "cases.regional_pack_needed": "Benötigt {{name}}",
+    "cases.regional_pack_set_up": "Einrichten",
+    "cases.regional_pack_setup_hint": "Dieses Fallbeispiel folgt den Standards seines Marktes. Öffnet das Paket, das sie enthält, wo Sie es aktivieren können.",
   }
 } as { translation: Record<string, string> };
 

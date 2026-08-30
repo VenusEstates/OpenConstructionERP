@@ -35940,6 +35940,13 @@ const resource = {
     "dashboard.regional_pack_choose": "Install a country pack",
     "dashboard.regional_pack_manage": "Change or add a country pack",
     "cases.regional_pack_for_market": "Regional pack: {{names}}",
+    "modules.pack_chip_none": "No regional pack",
+    "modules.pack_chip_none_hint": "No regional pack is applied. A pack sets the currency, tax template and validation standards for this workspace.",
+    "modules.pack_chip_applied_hint": "Regional pack in use. Opens the pack list.",
+    "cases.regional_pack_in_use": "Regional pack in use: {{name}}",
+    "cases.regional_pack_needed": "Needs {{name}}",
+    "cases.regional_pack_set_up": "Set up",
+    "cases.regional_pack_setup_hint": "This case follows the standards of its market. Opens the pack that carries them, where you can switch it on.",
   }
 } as { translation: Record<string, string> };
 

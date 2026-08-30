@@ -39208,6 +39208,13 @@ const resource = {
     "modules.pp_name_us_california": "بسته ساخت‌وساز کالیفرنیا",
     "modules.pp_name_us_costdata": "بسته ساخت‌وساز ایالات متحده",
     "modules.pp_name_us_texas": "بسته ساخت‌وساز تگزاس",
+    "modules.pack_chip_none": "بدون بسته منطقه‌ای",
+    "modules.pack_chip_none_hint": "هیچ بسته منطقه‌ای اعمال نشده است. یک بسته واحد پول، الگوی مالیات و استانداردهای اعتبارسنجی این فضای کاری را تعیین می‌کند.",
+    "modules.pack_chip_applied_hint": "بسته منطقه‌ای در حال استفاده است. فهرست بسته‌ها را باز می‌کند.",
+    "cases.regional_pack_in_use": "بسته منطقه‌ای در حال استفاده: {{name}}",
+    "cases.regional_pack_needed": "به {{name}} نیاز دارد",
+    "cases.regional_pack_set_up": "راه‌اندازی",
+    "cases.regional_pack_setup_hint": "این سناریو از استانداردهای بازار خود پیروی می‌کند. بسته‌ای را که آن‌ها را دارد باز می‌کند، جایی که می‌توانید آن را فعال کنید.",
   }
 } as { translation: Record<string, string> };
 

@@ -39188,6 +39188,13 @@ const resource = {
     "modules.pp_name_us_california": "Gói Xây dựng California",
     "modules.pp_name_us_costdata": "Gói Xây dựng Hoa Kỳ",
     "modules.pp_name_us_texas": "Gói Xây dựng Texas",
+    "modules.pack_chip_none": "Không có gói khu vực",
+    "modules.pack_chip_none_hint": "Chưa áp dụng gói khu vực nào. Gói sẽ thiết lập tiền tệ, mẫu thuế và tiêu chuẩn xác thực cho không gian làm việc này.",
+    "modules.pack_chip_applied_hint": "Đang dùng gói khu vực. Mở danh sách gói.",
+    "cases.regional_pack_in_use": "Đang dùng gói khu vực: {{name}}",
+    "cases.regional_pack_needed": "Cần {{name}}",
+    "cases.regional_pack_set_up": "Thiết lập",
+    "cases.regional_pack_setup_hint": "Trường hợp này tuân theo tiêu chuẩn của thị trường của nó. Mở gói mang các tiêu chuẩn đó, nơi bạn có thể bật nó lên.",
   }
 } as { translation: Record<string, string> };
 

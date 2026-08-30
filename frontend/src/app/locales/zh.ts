@@ -40711,6 +40711,13 @@ const resource = {
     "modules.pp_name_us_california": "加利福尼亚建筑数据包",
     "modules.pp_name_us_costdata": "美国建筑数据包",
     "modules.pp_name_us_texas": "得克萨斯建筑数据包",
+    "modules.pack_chip_none": "无区域数据包",
+    "modules.pack_chip_none_hint": "未应用区域数据包。数据包会为此工作区设置货币、税务模板和验证标准。",
+    "modules.pack_chip_applied_hint": "正在使用区域数据包。打开数据包列表。",
+    "cases.regional_pack_in_use": "正在使用区域数据包：{{name}}",
+    "cases.regional_pack_needed": "需要 {{name}}",
+    "cases.regional_pack_set_up": "设置",
+    "cases.regional_pack_setup_hint": "此案例遵循其市场的标准。打开携带这些标准的数据包，您可以在其中启用它。",
   }
 } as { translation: Record<string, string> };
 

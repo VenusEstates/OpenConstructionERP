@@ -40999,6 +40999,13 @@ const resource = {
     "modules.pp_name_us_california": "Строительный пакет: Калифорния",
     "modules.pp_name_us_costdata": "Строительный пакет: США",
     "modules.pp_name_us_texas": "Строительный пакет: Техас",
+    "modules.pack_chip_none": "Нет регионального пакета",
+    "modules.pack_chip_none_hint": "Региональный пакет не применён. Пакет задаёт валюту, налоговый шаблон и стандарты валидации для этого рабочего пространства.",
+    "modules.pack_chip_applied_hint": "Используется региональный пакет. Открывает список пакетов.",
+    "cases.regional_pack_in_use": "Используется региональный пакет: {{name}}",
+    "cases.regional_pack_needed": "Требуется {{name}}",
+    "cases.regional_pack_set_up": "Настроить",
+    "cases.regional_pack_setup_hint": "Этот кейс следует стандартам своего рынка. Открывает пакет, который их несёт, где его можно включить.",
   }
 } as { translation: Record<string, string> };
 

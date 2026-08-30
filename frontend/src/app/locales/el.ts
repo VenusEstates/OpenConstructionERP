@@ -39208,6 +39208,13 @@ const resource = {
     "modules.pp_name_us_california": "Πακέτο Κατασκευών Καλιφόρνιας",
     "modules.pp_name_us_costdata": "Πακέτο Κατασκευών ΗΠΑ",
     "modules.pp_name_us_texas": "Πακέτο Κατασκευών Τέξας",
+    "modules.pack_chip_none": "Κανένα περιφερειακό πακέτο",
+    "modules.pack_chip_none_hint": "Δεν έχει εφαρμοστεί περιφερειακό πακέτο. Ένα πακέτο ορίζει το νόμισμα, το πρότυπο φόρου και τα πρότυπα επικύρωσης για αυτόν τον χώρο εργασίας.",
+    "modules.pack_chip_applied_hint": "Περιφερειακό πακέτο σε χρήση. Ανοίγει τη λίστα πακέτων.",
+    "cases.regional_pack_in_use": "Περιφερειακό πακέτο σε χρήση: {{name}}",
+    "cases.regional_pack_needed": "Απαιτεί {{name}}",
+    "cases.regional_pack_set_up": "Ρύθμιση",
+    "cases.regional_pack_setup_hint": "Αυτή η περίπτωση ακολουθεί τα πρότυπα της αγοράς της. Ανοίγει το πακέτο που τα περιέχει, όπου μπορείτε να το ενεργοποιήσετε.",
   }
 } as { translation: Record<string, string> };
 

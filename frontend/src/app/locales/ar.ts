@@ -41095,6 +41095,13 @@ const resource = {
     "modules.pp_name_us_california": "حزمة إنشاءات كاليفورنيا",
     "modules.pp_name_us_costdata": "حزمة إنشاءات الولايات المتحدة",
     "modules.pp_name_us_texas": "حزمة إنشاءات تكساس",
+    "modules.pack_chip_none": "لا توجد حزمة إقليمية",
+    "modules.pack_chip_none_hint": "لا توجد حزمة إقليمية مطبَّقة. تحدد الحزمة العملة وقالب الضريبة ومعايير التحقق لمساحة العمل هذه.",
+    "modules.pack_chip_applied_hint": "الحزمة الإقليمية قيد الاستخدام. يفتح قائمة الحزم.",
+    "cases.regional_pack_in_use": "الحزمة الإقليمية قيد الاستخدام: {{name}}",
+    "cases.regional_pack_needed": "يتطلب {{name}}",
+    "cases.regional_pack_set_up": "إعداد",
+    "cases.regional_pack_setup_hint": "تتبع هذه الحالة معايير سوقها. يفتح الحزمة التي تحملها، حيث يمكنك تفعيلها.",
   }
 } as { translation: Record<string, string> };
 

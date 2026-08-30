@@ -39208,6 +39208,13 @@ const resource = {
     "modules.pp_name_us_california": "Construction Pack ng California",
     "modules.pp_name_us_costdata": "Construction Pack ng US",
     "modules.pp_name_us_texas": "Construction Pack ng Texas",
+    "modules.pack_chip_none": "Walang regional pack",
+    "modules.pack_chip_none_hint": "Walang na-apply na regional pack. Itinatakda ng pack ang currency, tax template, at validation standards para sa workspace na ito.",
+    "modules.pack_chip_applied_hint": "Ginagamit ang regional pack. Binubuksan ang listahan ng pack.",
+    "cases.regional_pack_in_use": "Ginagamit ang regional pack: {{name}}",
+    "cases.regional_pack_needed": "Kailangan ang {{name}}",
+    "cases.regional_pack_set_up": "I-set up",
+    "cases.regional_pack_setup_hint": "Sinusunod ng case na ito ang mga pamantayan ng kanyang market. Binubuksan ang pack na nagdadala ng mga ito, kung saan puwede mo itong i-on.",
   }
 } as { translation: Record<string, string> };
 

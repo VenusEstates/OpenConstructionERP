@@ -40108,6 +40108,13 @@ const resource = {
     "modules.pp_name_us_california": "Kaliforniya İnşaat Paketi",
     "modules.pp_name_us_costdata": "ABD İnşaat Paketi",
     "modules.pp_name_us_texas": "Teksas İnşaat Paketi",
+    "modules.pack_chip_none": "Bölgesel paket yok",
+    "modules.pack_chip_none_hint": "Uygulanan bölgesel paket yok. Bir paket, bu çalışma alanı için para birimini, vergi şablonunu ve doğrulama standartlarını belirler.",
+    "modules.pack_chip_applied_hint": "Bölgesel paket kullanımda. Paket listesini açar.",
+    "cases.regional_pack_in_use": "Bölgesel paket kullanımda: {{name}}",
+    "cases.regional_pack_needed": "{{name}} gerektirir",
+    "cases.regional_pack_set_up": "Ayarla",
+    "cases.regional_pack_setup_hint": "Bu vaka, kendi pazarının standartlarını izler. Bunları taşıyan paketi açar; buradan etkinleştirebilirsiniz.",
   }
 } as { translation: Record<string, string> };
 

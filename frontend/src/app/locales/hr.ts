@@ -39327,6 +39327,13 @@ const resource = {
     "modules.pp_name_us_california": "Građevinski paket Kalifornija",
     "modules.pp_name_us_costdata": "Građevinski paket SAD",
     "modules.pp_name_us_texas": "Građevinski paket Texas",
+    "modules.pack_chip_none": "Nema regionalnog paketa",
+    "modules.pack_chip_none_hint": "Nije primijenjen nijedan regionalni paket. Paket postavlja valutu, predložak poreza i standarde validacije za ovaj radni prostor.",
+    "modules.pack_chip_applied_hint": "Regionalni paket u upotrebi. Otvara popis paketa.",
+    "cases.regional_pack_in_use": "Regionalni paket u upotrebi: {{name}}",
+    "cases.regional_pack_needed": "Zahtijeva {{name}}",
+    "cases.regional_pack_set_up": "Postavi",
+    "cases.regional_pack_setup_hint": "Ovaj slučaj slijedi standarde svog tržišta. Otvara paket koji ih nosi, gdje ga možete uključiti.",
   }
 } as { translation: Record<string, string> };
 

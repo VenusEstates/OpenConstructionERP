@@ -39208,6 +39208,13 @@ const resource = {
     "modules.pp_name_us_california": "ক্যালিফোর্নিয়া নির্মাণ প্যাক",
     "modules.pp_name_us_costdata": "যুক্তরাষ্ট্র নির্মাণ প্যাক",
     "modules.pp_name_us_texas": "টেক্সাস নির্মাণ প্যাক",
+    "modules.pack_chip_none": "কোনো আঞ্চলিক প্যাক নেই",
+    "modules.pack_chip_none_hint": "কোনো আঞ্চলিক প্যাক প্রয়োগ করা হয়নি। একটি প্যাক এই ওয়ার্কস্পেসের মুদ্রা, কর টেমপ্লেট ও ভ্যালিডেশন স্ট্যান্ডার্ড নির্ধারণ করে।",
+    "modules.pack_chip_applied_hint": "আঞ্চলিক প্যাক ব্যবহৃত হচ্ছে। প্যাক তালিকা খোলে।",
+    "cases.regional_pack_in_use": "আঞ্চলিক প্যাক ব্যবহৃত হচ্ছে: {{name}}",
+    "cases.regional_pack_needed": "{{name}} প্রয়োজন",
+    "cases.regional_pack_set_up": "সেট আপ করুন",
+    "cases.regional_pack_setup_hint": "এই কেসটি তার বাজারের মানদণ্ড অনুসরণ করে। যে প্যাক এগুলো বহন করে সেটি খোলে, যেখানে আপনি এটি চালু করতে পারেন।",
   }
 } as { translation: Record<string, string> };
 
