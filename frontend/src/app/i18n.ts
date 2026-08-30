@@ -97,17 +97,19 @@ export const SUPPORTED_LANGUAGES = [
   // figures are ceilings, because a real French or Dutch word this corpus
   // never wrote elsewhere survives the filter.
   //
-  // 529 of the 942 are *.insights.* keys and 149 are cases.* keys, and every
-  // other locale has 0 or 1 in those two families. That is a birth defect of the
-  // file rather than something a later wave passed over: 927 of the 942 were
-  // already English on 2026-08-17, when 9ac55ac74 took uz.ts into the
-  // repository, and only 15 arrived after. The batch run that produced the file
-  // translated en.ts either side of two bands and left the bands themselves in
-  // English, and the batches have closed about nineteen thousand strings since
-  // without reaching back into them. What is left is 942 keys, 734 distinct
-  // English values, about 2000 words. The locale file stays on disk and the
-  // batch work continues; uncomment this line when it is done, and keep the
-  // U+02BB modifier letters when you do.
+  // 529 of the 942 are *.insights.* keys, and no other locale has more than one
+  // there. Another 149 are cases.* keys, where Uzbek is not alone: several
+  // offered locales are missing 150 to 270 of that family outright and answer it
+  // from en.ts, so cases.* is a sweep that has not finished rather than an Uzbek
+  // defect. The Uzbek part was born with the file rather than passed over by a
+  // later wave: 927 of the 942 were already English on 2026-08-17, when
+  // 9ac55ac74 took uz.ts into the repository, and only 15 arrived after. The
+  // batch run that produced the file translated en.ts either side of two bands
+  // and left the bands themselves in English, and the batches have closed about
+  // nineteen thousand strings since without reaching back into them. What is
+  // left is 942 keys, 734 distinct English values, about 2000 words. The locale
+  // file stays on disk and the batch work continues; uncomment this line when it
+  // is done, and keep the U+02BB modifier letters when you do.
   // { code: 'uz', name: 'Oʻzbekcha', english: 'Uzbek', flag: '🇺🇿', country: 'uz' },
 ];
 
