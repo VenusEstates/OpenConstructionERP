@@ -55,8 +55,31 @@ async function openFilesForFirstProject(page: Page): Promise<void> {
   const card = page.locator('h3').first();
   await card.waitFor({ state: 'visible', timeout: 15_000 });
   await card.click();
-  // Navigate to /files for the active project. The Files link in the sidebar
-  // uses an i18n label so we hit the route directly.
+  // Clicking a card only navigates. Nothing on the project LIST has ever set
+  // the active project: `git log -S setActiveProject` over ProjectsPage.tsx is
+  // empty for the whole life of the file. A project becomes active on the
+  // DETAIL page, in an effect that runs once that page's own query resolves and
+  // writes the context to localStorage under `oe_active_project`. Leaving for
+  // /files before that lands is a race this spec always lost on a loaded
+  // machine, and it lost it silently: the file manager rendered its "No active
+  // project" empty state and the wait for a folder card timed out, which reads
+  // like a dead selector and is not one - folder-card-<kind> is alive in
+  // FolderCardGrid.tsx. So wait for the two things a person's dwell time gives
+  // away for free, the detail route and then the recorded context.
+  await page.waitForURL(/\/projects\/[^/?#]+/, { timeout: 30_000 });
+  await page.waitForFunction(
+    () => {
+      try {
+        const raw = localStorage.getItem('oe_active_project');
+        return Boolean(raw && (JSON.parse(raw) as { id?: string }).id);
+      } catch {
+        return false;
+      }
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
+  // The Files link in the sidebar uses an i18n label so we hit the route directly.
   await page.goto('/files');
   await page
     .locator('[data-testid^="folder-card-"]')
