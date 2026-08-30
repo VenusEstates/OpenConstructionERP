@@ -1472,7 +1472,7 @@ const RFIRow = React.memo(function RFIRow({
         {/* Days Open + overdue pill */}
         <span
           className={clsx(
-            'flex items-center justify-end gap-1 w-20 shrink-0 tabular-nums hidden sm:flex text-xs',
+            'items-center justify-end gap-1 w-20 shrink-0 tabular-nums hidden sm:flex text-xs',
             isOverdue ? 'text-semantic-error font-semibold' : 'text-content-tertiary',
           )}
         >

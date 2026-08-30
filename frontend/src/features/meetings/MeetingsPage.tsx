@@ -1833,7 +1833,7 @@ const MeetingRow = React.memo(function MeetingRow({
                         </span>
                       )}
                       {item.duration_minutes > 0 && (
-                        <span className="text-xs text-content-tertiary ml-2 flex items-center gap-0.5 inline-flex">
+                        <span className="text-xs text-content-tertiary ml-2 items-center gap-0.5 inline-flex">
                           <Clock size={10} />
                           {/* #174: this printed the stored minutes with a fixed
                               "min" suffix at any size, so a half-day workshop

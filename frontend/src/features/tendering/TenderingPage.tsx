@@ -1748,7 +1748,7 @@ function PackageDetail({
                     {bid.company_name}
                   </span>
                   {bid.contact_email && (
-                    <span className="ml-2 text-xs text-content-tertiary flex items-center gap-1 inline-flex">
+                    <span className="ml-2 text-xs text-content-tertiary items-center gap-1 inline-flex">
                       <Mail size={10} />
                       {bid.contact_email}
                     </span>

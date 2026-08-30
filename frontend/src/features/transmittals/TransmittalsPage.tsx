@@ -561,7 +561,7 @@ const TransmittalRow = React.memo(function TransmittalRow({
         </span>
 
         {/* Recipients count */}
-        <span className="flex items-center gap-1 text-xs text-content-tertiary w-12 shrink-0 hidden sm:flex">
+        <span className="items-center gap-1 text-xs text-content-tertiary w-12 shrink-0 hidden sm:flex">
           <Users size={12} />
           {transmittal.recipients.length}
         </span>
