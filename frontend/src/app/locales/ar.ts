@@ -30303,6 +30303,7 @@ const resource = {
     "projects.health_validation_run": "تشغيل التحقق",
     "projects.map_locating": "جاري البحث…",
     "projects.map_no_location": "لم يتم تعيين موقع",
+    "projects.map_no_location_hint": "لم يتم تحديد عنوان الموقع أو إحداثياته لهذا المشروع بعد، لذا لا يوجد ما يمكن وضعه على الخريطة.",
     "projects.network_error_desc": "الخادم لا يستجيب الآن. هذا لا يعني حذف المشروع - حاول مرة أخرى بعد قليل.",
     "projects.network_error_title": "لا يمكن الوصول إلى الخادم",
     "projects.none": "لا توجد مشاريع حتى الآن",

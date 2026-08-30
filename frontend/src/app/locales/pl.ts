@@ -30200,6 +30200,7 @@ const resource = {
     "projects.health_validation_run": "Uruchomienie walidacji",
     "projects.map_locating": "Lokalizowanie…",
     "projects.map_no_location": "Brak ustalonej lokalizacji",
+    "projects.map_no_location_hint": "Ten projekt nie ma jeszcze adresu placu budowy ani współrzędnych, więc nie ma czego wyświetlić na mapie.",
     "projects.network_error_desc": "Serwer nie odpowiada w tej chwili. Nie oznacza to, że projekt został usunięty - spróbuj ponownie za chwilę.",
     "projects.network_error_title": "Nie można osiągnąć serwera",
     "projects.none": "Brak projektów",

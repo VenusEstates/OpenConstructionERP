@@ -32870,6 +32870,7 @@ const resource = {
     "tour.confirm_skip_cancel": "Keep going",
     "projects.map_locating": "Locating…",
     "projects.map_no_location": "No location set",
+    "projects.map_no_location_hint": "This project has no site address or coordinates yet, so there is nothing to place on the map.",
     "weather.clear": "Clear",
     "weather.partly_cloudy": "Partly cloudy",
     "weather.overcast": "Overcast",

@@ -31884,6 +31884,7 @@ const resource = {
     "tour.confirm_skip_cancel": "Улантуу",
     "projects.map_locating": "Жайгашуу…",
     "projects.map_no_location": "Жайгашкан жер коюлган эмес",
+    "projects.map_no_location_hint": "Бул долбоордо курулуш аянтчасынын дареги же координаттары азырынча жок, ошондуктан картада көрсөтүлчү эч нерсе жок.",
     "weather.clear": "Ачык",
     "weather.partly_cloudy": "Жартылай булуттуу",
     "weather.overcast": "Булуттуу",

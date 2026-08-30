@@ -30074,6 +30074,7 @@ const resource = {
     "projects.health_validation_run": "Validering körd",
     "projects.map_locating": "Lokaliserar...",
     "projects.map_no_location": "Ingen plats angiven",
+    "projects.map_no_location_hint": "Det här projektet har ännu ingen adress till byggarbetsplatsen eller koordinater, så det finns inget att visa på kartan.",
     "projects.network_error_desc": "Servern svarar inte just nu. Det betyder inte att projektet är borttaget - försök igen om en stund.",
     "projects.network_error_title": "Kan inte nå servern",
     "projects.none": "Inga projekt ännu",

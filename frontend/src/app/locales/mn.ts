@@ -29641,6 +29641,7 @@ const resource = {
     "projects.health_validation_run": "Баталгаа дамжуулалт",
     "projects.map_locating": "Байршил олж байгаа…",
     "projects.map_no_location": "Байршил тохируулаагүй",
+    "projects.map_no_location_hint": "Энэ төсөлд одоогоор ажлын талбайн хаяг, координат байхгүй тул газрын зураг дээр харуулах зүйл алга байна.",
     "projects.network_error_desc": "Сервер одоо хариу өгөөгүй байна. Энэ төсэл устгасан гэсэн үг биш - дөрвөлжин оролдоод үзээрэй.",
     "projects.network_error_title": "Сервер уруу хүрч чадахгүй",
     "projects.none": "Төсэл байхгүй байна",

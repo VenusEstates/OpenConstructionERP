@@ -30066,6 +30066,7 @@ const resource = {
     "projects.health_validation_run": "验证运行",
     "projects.map_locating": "正在定位…",
     "projects.map_no_location": "未设置位置",
+    "projects.map_no_location_hint": "该项目尚未设置工地地址或坐标，因此地图上没有可显示的内容。",
     "projects.network_error_desc": "服务器现在没有响应。这并不意味着项目已被删除 - 请稍后重试。",
     "projects.network_error_title": "无法连接到服务器",
     "projects.none": "还没有项目",

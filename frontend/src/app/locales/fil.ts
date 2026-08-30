@@ -29341,6 +29341,7 @@ const resource = {
     "projects.health_validation_run": "Pagpapatakbo ng validation",
     "projects.map_locating": "Hinahanap ang lokasyon…",
     "projects.map_no_location": "Walang itinakdang lokasyon",
+    "projects.map_no_location_hint": "Wala pang address ng site o coordinates ang proyektong ito, kaya walang ilalagay sa mapa.",
     "projects.network_error_desc": "Hindi tumutugon ang server sa ngayon. Hindi ibig sabihin nito na nabura ang proyekto - subukan ulit mamaya.",
     "projects.network_error_title": "Hindi maabot ang server",
     "projects.none": "Wala pang proyekto",

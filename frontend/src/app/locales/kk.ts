@@ -29341,6 +29341,7 @@ const resource = {
     "projects.health_validation_run": "Тексеру өткізілді",
     "projects.map_locating": "Орналасу анықталуда…",
     "projects.map_no_location": "Орналасу орнатылмаған",
+    "projects.map_no_location_hint": "Бұл жобада әлі құрылыс алаңының мекенжайы да, координаттары да жоқ, сондықтан картада көрсетуге ештеңе жоқ.",
     "projects.network_error_desc": "Сервер қазір жауап бермей тұр. Бұл жобаның жойылғанын білдірмейді - сәл кейін қайта көріңіз.",
     "projects.network_error_title": "Серверге қол жеткізу мүмкін емес",
     "projects.none": "Әлі жоба жоқ",

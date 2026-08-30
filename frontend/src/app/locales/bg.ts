@@ -30194,6 +30194,7 @@ const resource = {
     "projects.health_validation_run": "Стартирана проверка",
     "projects.map_locating": "Намиране на местоположение…",
     "projects.map_no_location": "Няма зададено местоположение",
+    "projects.map_no_location_hint": "Този проект все още няма адрес на обекта или координати, така че няма какво да се постави на картата.",
     "projects.network_error_desc": "Сървърът не отговаря в момента. Това не означава, че проектът е изтрит - опитайте отново след момент.",
     "projects.network_error_title": "Не може да се достигне сървърът",
     "projects.none": "Все още няма проекти",

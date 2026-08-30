@@ -29932,6 +29932,7 @@ const resource = {
     "projects.health_validation_run": "Ejecución de validación",
     "projects.map_locating": "Localizando…",
     "projects.map_no_location": "Sin ubicación establecida",
+    "projects.map_no_location_hint": "Este proyecto todavía no tiene una dirección de la obra ni coordenadas, por lo que no hay nada para mostrar en el mapa.",
     "projects.network_error_desc": "El servidor no responde en este momento. Esto no significa que el proyecto esté eliminado - intenta de nuevo en un momento.",
     "projects.network_error_title": "No se puede alcanzar el servidor",
     "projects.none": "Sin proyectos aún",

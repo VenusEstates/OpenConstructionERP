@@ -30803,6 +30803,7 @@ const resource = {
     "projects.health_validation_run": "Validierungslauf",
     "projects.map_locating": "Lokalisierung…",
     "projects.map_no_location": "Keine Position festgelegt",
+    "projects.map_no_location_hint": "Für dieses Projekt sind noch keine Standortadresse oder Koordinaten hinterlegt, daher gibt es nichts, was auf der Karte angezeigt werden könnte.",
     "projects.network_error_desc": "Der Server antwortet im Moment nicht. Das bedeutet nicht, dass das Projekt gelöscht wurde - versuchen Sie es in einem Moment erneut.",
     "projects.network_error_title": "Server nicht erreichbar",
     "projects.none": "Noch keine Projekte",

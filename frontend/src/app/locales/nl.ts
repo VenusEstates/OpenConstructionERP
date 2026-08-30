@@ -30096,6 +30096,7 @@ const resource = {
     "projects.health_validation_run": "Validatierun",
     "projects.map_locating": "Locatie bepalen...",
     "projects.map_no_location": "Geen locatie ingesteld",
+    "projects.map_no_location_hint": "Dit project heeft nog geen locatieadres of coördinaten, dus er is niets om op de kaart te plaatsen.",
     "projects.network_error_desc": "De server reageert momenteel niet. Dit betekent niet dat het project is verwijderd - probeer het over een moment opnieuw.",
     "projects.network_error_title": "Kan server niet bereiken",
     "projects.none": "Nog geen projecten",

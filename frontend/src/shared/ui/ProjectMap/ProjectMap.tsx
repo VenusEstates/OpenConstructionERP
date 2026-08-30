@@ -17,10 +17,18 @@
  *
  * Engine: the detail variant uses MapLibre GL JS (open-source, no Leaflet
  * branding) with OpenFreeMap vector tiles served through our backend (see
- * ./basemap). The card variant cannot run a renderer, so it paints a single
- * raster tile as a flat <img>; the backend draws that PNG from the same
- * vector tile the detail map streams. Routing every tile through our own
- * origin keeps maps working even when a browser blocks public tile CDNs.
+ * ./basemap), so it shows real street cartography - named roads, junctions,
+ * building footprints. The card variant cannot run a renderer, so it paints
+ * a single raster tile as a flat <img>, and the only keyless raster source
+ * we have is public-domain shaded relief capped at z6. The card therefore
+ * shows a regional TERRAIN patch, not streets. That is a known downgrade,
+ * not an oversight: the backend does no rendering, it proxies the relief PNG
+ * verbatim, and turning that tile into streets needs a server-side raster
+ * renderer we deliberately have not taken on. This paragraph previously
+ * claimed the backend drew the card PNG from the vector tile, which is
+ * false and would convince a reader the card already had streets.
+ * Routing every tile through our own origin keeps maps working even when a
+ * browser blocks public tile CDNs.
  *
  * The geocoding pipeline:
  *   1. Accept lat/lng directly (fastest path — stored in project metadata).

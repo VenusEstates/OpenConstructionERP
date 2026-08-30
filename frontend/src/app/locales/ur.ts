@@ -29341,6 +29341,7 @@ const resource = {
     "projects.health_validation_run": "تصدیق چلی",
     "projects.map_locating": "مقام تلاش ہو رہا ہے…",
     "projects.map_no_location": "کوئی مقام سیٹ نہیں",
+    "projects.map_no_location_hint": "اس پروجیکٹ کے پاس ابھی تک سائٹ کا پتہ یا کوآرڈینیٹس نہیں ہیں، اس لیے نقشے پر دکھانے کے لیے کچھ نہیں ہے۔",
     "projects.network_error_desc": "سرور ابھی جواب نہیں دے رہا۔ اس کا مطلب یہ نہیں کہ پروجیکٹ حذف ہو گیا - تھوڑی دیر میں دوبارہ کوشش کریں۔",
     "projects.network_error_title": "سرور تک نہیں پہنچ سکے",
     "projects.none": "ابھی تک کوئی پروجیکٹس نہیں",

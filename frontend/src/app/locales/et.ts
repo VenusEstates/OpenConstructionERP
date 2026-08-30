@@ -30065,6 +30065,7 @@ const resource = {
     "projects.health_validation_run": "Valideerimine käivitatud",
     "projects.map_locating": "Asukoha määramine…",
     "projects.map_no_location": "Asukoht määramata",
+    "projects.map_no_location_hint": "Sellel projektil pole veel objekti aadressi ega koordinaate, seega pole kaardil midagi näidata.",
     "projects.network_error_desc": "Server ei vasta praegu. See ei tähenda, et projekt oleks kustutatud - proovige veidi hiljem uuesti.",
     "projects.network_error_title": "Serverit ei õnnestu ühendada",
     "projects.none": "Projekte pole veel",

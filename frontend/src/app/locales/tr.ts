@@ -30116,6 +30116,7 @@ const resource = {
     "projects.health_validation_run": "Doğrulama çalışması",
     "projects.map_locating": "Konum Belirleniyor…",
     "projects.map_no_location": "Konum belirlenmedi",
+    "projects.map_no_location_hint": "Bu projenin henüz şantiye adresi veya koordinatları yok, bu yüzden haritada gösterilecek bir şey yok.",
     "projects.network_error_desc": "Sunucu şu anda yanıt vermiyor. Bu, projenin silindiği anlamına gelmez - biraz sonra tekrar deneyin.",
     "projects.network_error_title": "Sunucuya erişilemiyor",
     "projects.none": "Henüz proje yok",

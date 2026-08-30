@@ -29341,6 +29341,7 @@ const resource = {
     "projects.health_validation_run": "ভ্যালিডেশন রান",
     "projects.map_locating": "অবস্থান খুঁজছে…",
     "projects.map_no_location": "কোনো অবস্থান সেট করা নেই",
+    "projects.map_no_location_hint": "এই প্রকল্পের এখনও কোনো সাইট ঠিকানা বা স্থানাঙ্ক নেই, তাই মানচিত্রে স্থাপন করার মতো কিছু নেই।",
     "projects.network_error_desc": "সার্ভার এখন সাড়া দিচ্ছে না। এর মানে এই নয় যে প্রজেক্টটি মুছে ফেলা হয়েছে - একটু পরে আবার চেষ্টা করুন।",
     "projects.network_error_title": "সার্ভারে পৌঁছানো যাচ্ছে না",
     "projects.none": "এখনো কোনো প্রজেক্ট নেই",

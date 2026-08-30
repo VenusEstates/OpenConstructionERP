@@ -30539,6 +30539,7 @@ const resource = {
     "projects.health_validation_run": "Validatsiya ishga tushirildi",
     "projects.map_locating": "Joylashuv aniqlanmoqda…",
     "projects.map_no_location": "Joylashuv belgilanmagan",
+    "projects.map_no_location_hint": "Bu loyihada hali qurilish maydonchasi manzili yoki koordinatalar yo'q, shuning uchun xaritada ko'rsatadigan hech narsa yo'q.",
     "projects.network_error_desc": "Server hozir javob bermayapti. Bu loyiha oʻchirilgan degani emas - biroz vaqtdan soʻng qayta urinib koʻring.",
     "projects.network_error_title": "Serverga ulanib boʻlmayapti",
     "projects.none": "Hali loyihalar yoʻq",

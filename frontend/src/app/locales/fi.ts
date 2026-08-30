@@ -30092,6 +30092,7 @@ const resource = {
     "projects.health_validation_run": "Validointiajon",
     "projects.map_locating": "Etsintä käynnissä…",
     "projects.map_no_location": "Sijaintia ei asetettu",
+    "projects.map_no_location_hint": "Tällä projektilla ei ole vielä työmaan osoitetta tai koordinaatteja, joten kartalla ei ole mitään näytettävää.",
     "projects.network_error_desc": "Palvelin ei vastaa juuri nyt. Tämä ei tarkoita, että projekti on poistettu - yritä uudelleen hetken kuluttua.",
     "projects.network_error_title": "Palvelimeen ei pääse",
     "projects.none": "Ei projekteja vielä",

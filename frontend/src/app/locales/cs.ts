@@ -30189,6 +30189,7 @@ const resource = {
     "projects.health_validation_run": "Ověření spuštěno",
     "projects.map_locating": "Hledání…",
     "projects.map_no_location": "Umístění není nastaveno",
+    "projects.map_no_location_hint": "Tento projekt zatím nemá adresu staveniště ani souřadnice, takže na mapě není co zobrazit.",
     "projects.network_error_desc": "Server právě nereaguje. To neznamená, že byl projekt smazán - zkuste to za chvíli.",
     "projects.network_error_title": "Nelze dosáhnout serveru",
     "projects.none": "Zatím žádné projekty",

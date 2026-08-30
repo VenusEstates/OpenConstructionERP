@@ -30593,6 +30593,7 @@ const resource = {
     "projects.health_validation_run": "Валідацію запущено",
     "projects.map_locating": "Визначення розташування…",
     "projects.map_no_location": "Розташування не встановлено",
+    "projects.map_no_location_hint": "У цього проєкту ще немає ані адреси майданчика, ані координат, тож на карті нічого показувати.",
     "projects.network_error_desc": "Сервер зараз не відповідає. Це не означає, що проєкт видалено - спробуйте ще раз за мить.",
     "projects.network_error_title": "Не вдається зв'язатися з сервером",
     "projects.none": "Ще немає проєктів",

@@ -29341,6 +29341,7 @@ const resource = {
     "projects.health_validation_run": "اجرای اعتبارسنجی",
     "projects.map_locating": "در حال یافتن مکان…",
     "projects.map_no_location": "مکانی تنظیم نشده",
+    "projects.map_no_location_hint": "این پروژه هنوز آدرس محل کار یا مختصاتی ندارد، بنابراین چیزی برای نمایش روی نقشه وجود ندارد.",
     "projects.network_error_desc": "سرور اکنون پاسخ نمی‌دهد. این به معنای حذف پروژه نیست - کمی بعد دوباره تلاش کنید.",
     "projects.network_error_title": "دسترسی به سرور ممکن نیست",
     "projects.none": "هنوز پروژه‌ای نیست",

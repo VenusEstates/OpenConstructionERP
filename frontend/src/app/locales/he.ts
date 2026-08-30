@@ -29366,6 +29366,7 @@ const resource = {
     "projects.health_validation_run": "האימות רץ",
     "projects.map_locating": "מאתר…",
     "projects.map_no_location": "לא הוגדר מיקום",
+    "projects.map_no_location_hint": "לפרויקט הזה עדיין אין כתובת אתר או קואורדינטות, ולכן אין מה להציג על המפה.",
     "projects.network_error_desc": "השרת אינו מגיב כרגע. זה לא אומר שהפרויקט נמחק - נסה שוב בעוד רגע.",
     "projects.network_error_title": "לא ניתן להגיע לשרת",
     "projects.none": "אין עדיין פרויקטים",

@@ -30063,6 +30063,7 @@ const resource = {
     "projects.health_validation_run": "검증 실행",
     "projects.map_locating": "위치 파악 중…",
     "projects.map_no_location": "위치가 설정되지 않음",
+    "projects.map_no_location_hint": "이 프로젝트에는 아직 현장 주소나 좌표가 없어 지도에 표시할 내용이 없습니다.",
     "projects.network_error_desc": "서버가 응답하지 않습니다. 이는 프로젝트가 삭제되었다는 의미가 아닙니다 - 잠시 후 다시 시도하세요.",
     "projects.network_error_title": "서버에 연결할 수 없습니다",
     "projects.none": "아직 프로젝트 없음",

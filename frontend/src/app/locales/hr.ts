@@ -30140,6 +30140,7 @@ const resource = {
     "projects.health_validation_run": "Pokretanje validacije",
     "projects.map_locating": "Lociranje…",
     "projects.map_no_location": "Lokacija nije postavljena",
+    "projects.map_no_location_hint": "Ovaj projekt još nema adresu gradilišta ni koordinate, pa nema ništa za prikaz na karti.",
     "projects.network_error_desc": "Server se trenutno ne odziva. To ne znači da je projekt obrisan - pokušajte za trenutak.",
     "projects.network_error_title": "Ne mogu dosegnuti server",
     "projects.none": "Nema projekata",

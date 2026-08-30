@@ -30130,6 +30130,7 @@ const resource = {
     "projects.health_validation_run": "Execuție de validare",
     "projects.map_locating": "Localizare...",
     "projects.map_no_location": "Nicio locație setată",
+    "projects.map_no_location_hint": "Acest proiect nu are încă adresa șantierului sau coordonate, așa că nu este nimic de afișat pe hartă.",
     "projects.network_error_desc": "Serverul nu răspunde acum. Aceasta nu înseamnă că proiectul a fost șters - încercați din nou peste câteva momente.",
     "projects.network_error_title": "Nu se poate contacta serverul",
     "projects.none": "Niciun proiect încă",

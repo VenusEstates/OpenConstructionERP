@@ -30264,6 +30264,7 @@ const resource = {
     "projects.health_validation_run": "Проверка запущена",
     "projects.map_locating": "Поиск местоположения…",
     "projects.map_no_location": "Местоположение не установлено",
+    "projects.map_no_location_hint": "У этого проекта пока нет ни адреса площадки, ни координат, поэтому на карте нечего показывать.",
     "projects.network_error_desc": "Сервер не отвечает в данный момент. Это не означает, что проект удален - попробуйте снова через некоторое время.",
     "projects.network_error_title": "Не удается достичь сервер",
     "projects.none": "Нет проектов",

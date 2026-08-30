@@ -29785,6 +29785,7 @@ const resource = {
     "projects.health_validation_run": "सत्यापन चलाएँ",
     "projects.map_locating": "स्थान खोज रहे हैं...",
     "projects.map_no_location": "कोई स्थान निर्धारित नहीं",
+    "projects.map_no_location_hint": "इस प्रोजेक्ट के लिए अभी तक साइट का पता या निर्देशांक नहीं है, इसलिए मानचित्र पर दिखाने के लिए कुछ नहीं है।",
     "projects.network_error_desc": "सर्वर अभी प्रतिक्रिया नहीं दे रहा है। इसका मतलब यह नहीं है कि प्रोजेक्ट हटा दिया गया है - थोड़ी देर बाद फिर से कोशिश करें।",
     "projects.network_error_title": "सर्वर तक नहीं पहुँच सकते",
     "projects.none": "अभी तक कोई प्रोजेक्ट नहीं",

@@ -30160,6 +30160,7 @@ const resource = {
     "projects.health_validation_run": "Exécution de la validation",
     "projects.map_locating": "Localisation en cours…",
     "projects.map_no_location": "Aucun emplacement défini",
+    "projects.map_no_location_hint": "Ce projet n'a pas encore d'adresse de chantier ni de coordonnées, il n'y a donc rien à afficher sur la carte.",
     "projects.network_error_desc": "Le serveur ne répond pas en ce moment. Cela ne signifie pas que le projet est supprimé - réessayez dans un instant.",
     "projects.network_error_title": "Impossible de joindre le serveur",
     "projects.none": "Aucun projet pour le moment",

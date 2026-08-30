@@ -30060,6 +30060,7 @@ const resource = {
     "projects.health_validation_run": "Validasi dijalankan",
     "projects.map_locating": "Melokasi…",
     "projects.map_no_location": "Tidak ada lokasi yang diatur",
+    "projects.map_no_location_hint": "Proyek ini belum memiliki alamat lokasi atau koordinat, jadi tidak ada yang dapat ditampilkan di peta.",
     "projects.network_error_desc": "Server tidak merespons sekarang. Ini tidak berarti proyek dihapus - coba lagi nanti.",
     "projects.network_error_title": "Tidak dapat menjangkau server",
     "projects.none": "Belum ada proyek",

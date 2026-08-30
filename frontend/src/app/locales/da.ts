@@ -30120,6 +30120,7 @@ const resource = {
     "projects.health_validation_run": "Validering kørt",
     "projects.map_locating": "Placerer...",
     "projects.map_no_location": "Ingen placering indstillet",
+    "projects.map_no_location_hint": "Dette projekt har endnu ikke en byggepladsadresse eller koordinater, så der er intet at placere på kortet.",
     "projects.network_error_desc": "Serveren svarer ikke i øjeblikket. Det betyder ikke, at projektet er slettet - prøv igen om lidt.",
     "projects.network_error_title": "Kan ikke nå serveren",
     "projects.none": "Ingen projekter endnu",

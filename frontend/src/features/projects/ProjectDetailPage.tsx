@@ -41,6 +41,7 @@ import {
   Receipt,
   ChevronDown,
   MessagesSquare,
+  MapPin,
 } from 'lucide-react';
 import {
   Button, Card, CardHeader, CardContent, Badge, Skeleton, EmptyState, Breadcrumb,
@@ -485,29 +486,50 @@ function ProjectPhaseRibbon({ phase }: { phase: string | null }) {
 }
 
 /**
- * ProjectLocationPanel — full-width panel combining an interactive OSM
+ * ProjectLocationPanel — full-width panel combining an interactive street
  * map (left, 60%) with an 18-day weather forecast (right, 40%).  Each
- * half is independently toggleable via widget settings, and the panel
- * collapses entirely if the project has no address and both widgets
- * are off.
+ * half is independently toggleable via widget settings.
+ *
+ * WHAT COUNTS AS "LOCATED". Either a text address (street / city / country,
+ * which the map geocodes) or stored ``lat``/``lng``. Both are checked
+ * because they arrive independently: the create form writes text plus
+ * coordinates together, but a bundle import or a plain API write can set
+ * coordinates with no text at all, and gating the panel on the text alone
+ * hid the map for projects that were perfectly well located.
+ *
+ * A project with neither gets the "no location set" state rather than no
+ * panel. The panel used to disappear, which reads as "this build has no
+ * project map" instead of "this project has no location yet" - the first is
+ * false and unfixable-looking, the second is true. The map is never centred
+ * on a stand-in default: a map pointing at 0,0 or at some capital city is a
+ * wrong answer wearing a right answer's face.
  */
 function ProjectLocationPanel({ project }: { project: Project }) {
+  const { t } = useTranslation();
   const mapEnabled = useWidgetSettingsStore((s) => s.projectMapEnabled);
   const weatherEnabled = useWidgetSettingsStore((s) => s.projectWeatherEnabled);
   const queryClient = useQueryClient();
-  const [resolved, setResolved] = useState<{ lat: number; lng: number } | null>(
-    project.address?.lat && project.address?.lng
-      ? { lat: project.address.lat, lng: project.address.lng }
-      : null,
-  );
+  // A stored coordinate counts only when it is a real number. Zero is a valid
+  // longitude (Greenwich) and a valid latitude (the equator), so a truthiness
+  // test drops sites that sit on either line, and it drops them halfway: the
+  // map still plots the point while the weather half sees no location at all.
+  const storedLat = project.address?.lat;
+  const storedLng = project.address?.lng;
+  const storedPoint =
+    typeof storedLat === 'number' &&
+    Number.isFinite(storedLat) &&
+    typeof storedLng === 'number' &&
+    Number.isFinite(storedLng)
+      ? { lat: storedLat, lng: storedLng }
+      : null;
+
+  const [resolved, setResolved] = useState<{ lat: number; lng: number } | null>(storedPoint);
 
   // Persist the resolved lat/lng back to the project so subsequent
   // renders (and other users of the same project) don't re-hit
   // Nominatim.  Only fires when we have an address but no stored
   // coords yet, and stops after the first successful write.
-  const [persisted, setPersisted] = useState(
-    !!(project.address?.lat && project.address?.lng),
-  );
+  const [persisted, setPersisted] = useState(storedPoint !== null);
   const persistCoords = useMutation({
     mutationFn: (coords: { lat: number; lng: number }) =>
       apiPatch(`/v1/projects/${project.id}`, {
@@ -528,8 +550,27 @@ function ProjectLocationPanel({ project }: { project: Project }) {
     project.address &&
     (project.address.street || project.address.city || project.address.country)
   );
+  const hasCoords = storedPoint !== null;
 
-  if (!hasAddress || (!mapEnabled && !weatherEnabled)) return null;
+  if (!mapEnabled && !weatherEnabled) return null;
+
+  if (!hasAddress && !hasCoords) {
+    // Weather needs a point, so it stays hidden here; the empty state is the
+    // map's alone, and with the map widget off there is nothing left to show.
+    if (!mapEnabled) return null;
+    return (
+      <Card padding="lg">
+        <EmptyState
+          icon={<MapPin size={28} strokeWidth={1.5} />}
+          title={t('projects.map_no_location', { defaultValue: 'No location set' })}
+          description={t('projects.map_no_location_hint', {
+            defaultValue:
+              'This project has no site address or coordinates yet, so there is nothing to place on the map.',
+          })}
+        />
+      </Card>
+    );
+  }
 
   const addressLabel = [
     project.address?.street,

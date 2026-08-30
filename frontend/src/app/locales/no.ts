@@ -29943,6 +29943,7 @@ const resource = {
     "projects.health_validation_run": "Validering kjørt",
     "projects.map_locating": "Lokaliserer…",
     "projects.map_no_location": "Ingen plassering angitt",
+    "projects.map_no_location_hint": "Dette prosjektet har ennå ikke en byggeplassadresse eller koordinater, så det er ingenting å plassere på kartet.",
     "projects.network_error_desc": "Serveren svarer ikke nå. Det betyr ikke at prosjektet er slettet - prøv igjen om litt.",
     "projects.network_error_title": "Kan ikke nå serveren",
     "projects.none": "Ingen prosjekter ennå",

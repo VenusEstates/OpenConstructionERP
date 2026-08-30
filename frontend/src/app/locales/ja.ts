@@ -30064,6 +30064,7 @@ const resource = {
     "projects.health_validation_run": "検証実行",
     "projects.map_locating": "位置特定中…",
     "projects.map_no_location": "位置が設定されていません",
+    "projects.map_no_location_hint": "このプロジェクトにはまだ現場住所も座標も設定されていないため、地図に表示するものがありません。",
     "projects.network_error_desc": "サーバーが応答していません。これはプロジェクトが削除されたことを意味しません。しばらく待ってからもう一度お試しください。",
     "projects.network_error_title": "サーバーに到達できません",
     "projects.none": "プロジェクトがまだありません",

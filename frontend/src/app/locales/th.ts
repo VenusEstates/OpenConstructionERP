@@ -30045,6 +30045,7 @@ const resource = {
     "projects.health_validation_run": "การตรวจสอบ",
     "projects.map_locating": "กำลังหาตำแหน่ง…",
     "projects.map_no_location": "ไม่มีการตั้งค่าตำแหน่ง",
+    "projects.map_no_location_hint": "โปรเจกต์นี้ยังไม่มีที่อยู่ไซต์งานหรือพิกัด จึงไม่มีอะไรให้แสดงบนแผนที่",
     "projects.network_error_desc": "เซิร์ฟเวอร์ไม่ตอบสนองในขณะนี้ สิ่งนี้ไม่ได้หมายความว่าโครงการถูกลบ - ลองอีกครั้งในอีกสักครู่",
     "projects.network_error_title": "ไม่สามารถเข้าถึงเซิร์ฟเวอร์ได้",
     "projects.none": "ยังไม่มีโครงการ",

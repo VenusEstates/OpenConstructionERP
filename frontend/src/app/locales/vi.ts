@@ -30079,6 +30079,7 @@ const resource = {
     "projects.health_validation_run": "Lần chạy xác thực",
     "projects.map_locating": "Đang định vị…",
     "projects.map_no_location": "Chưa đặt vị trí",
+    "projects.map_no_location_hint": "Dự án này chưa có địa chỉ công trường hoặc tọa độ, vì vậy không có gì để hiển thị trên bản đồ.",
     "projects.network_error_desc": "Máy chủ không phản hồi ngay bây giờ. Điều này không có nghĩa là dự án đã bị xóa - hãy thử lại sau.",
     "projects.network_error_title": "Không thể kết nối với máy chủ",
     "projects.none": "Chưa có dự án nào",
