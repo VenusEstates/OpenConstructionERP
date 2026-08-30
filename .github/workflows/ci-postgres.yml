@@ -1376,6 +1376,7 @@ jobs:
           done
           exit $missing
       - name: Build the frontend so the artifact tests have something to read
+        id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # The last two names above assert things about the built output rather
         # than about source, and without this step they do not go quietly
@@ -1416,6 +1417,44 @@ jobs:
         # approaches the run's it has become the critical path, and this step
         # is the first thing to question.
         run: npx vite build
+      - name: Check Tailwind class conflicts in the stylesheet the build produced
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.build.outcome == 'success' }}
+        # Reads the sheet vite just wrote rather than generating its own, so what
+        # is checked is what ships. Three things this step must not get wrong,
+        # because each of them fails by going GREEN rather than by complaining.
+        #
+        # The path is a glob. Vite writes assets/[name]-[hash].css and
+        # cssCodeSplit is left on, so the name changes with every build and there
+        # is more than one file. A fixed path would go stale in silence.
+        #
+        # Every sheet is concatenated instead of one being chosen. Only the entry
+        # sheet carries the utilities, and a glob that happened to resolve to a
+        # vendor sheet parses perfectly while resolving almost nothing - which
+        # reads as "no conflicts" and passes. Feeding all of them removes the
+        # choice. The coverage line the gate prints beside its verdict is what
+        # proves the input was whole: a good sheet resolves about 80% of the
+        # classes the tree uses, a wrong one measured 1%, and the gate refuses
+        # anything under 5% rather than reporting a clean run from it.
+        #
+        # An absent stylesheet is a failure here, not a skip. The backend jobs in
+        # this same file create an empty frontend/dist deliberately, for
+        # hatchling's force-include, so "the directory is there" says nothing
+        # about whether it holds a stylesheet.
+        #
+        # There is no condition here on a workflow or job name, deliberately. The
+        # step already lives in the job it belongs to; a name comparison written
+        # at this level is the kind that cannot be satisfied and does not say so.
+        run: |
+          set -o pipefail
+          shopt -s nullglob
+          sheets=(dist/assets/*.css)
+          if [ ${#sheets[@]} -eq 0 ]; then
+            echo "::error::vite build wrote no stylesheet under frontend/dist/assets, so this gate would have nothing to read. A conflict gate pointed at an absent sheet finds no conflicts and passes, which is why this is an error rather than a skip."
+            exit 1
+          fi
+          echo "stylesheets fed to the gate: ${#sheets[@]}"
+          cat "${sheets[@]}" > "$RUNNER_TEMP/tw-built.css"
+          node scripts/check_tailwind_conflicts.cjs --css "$RUNNER_TEMP/tw-built.css"
       - name: Run the named frontend tests
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # The positional arguments are FILTERS, not paths. A file that no
