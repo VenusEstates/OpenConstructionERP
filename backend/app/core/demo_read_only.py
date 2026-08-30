@@ -140,10 +140,27 @@ class WriteScope(Enum):
 #: sign-in.
 _ALWAYS_WRITABLE = frozenset({"oe_activity_log"})
 
-#: Sign-in additionally stamps ``last_login_at`` on the account row
-#: (``app.modules.users.service.UserService.login``). UPDATE only - an INSERT
+#: What sign-in may write, and which statements it may write with. Keyed by
+#: table so that the permitted kinds travel next to the reason, because the
+#: reason differs per table and a single "authentication may write these"
+#: set would have to be widened to the loosest member.
+#:
+#: ``oe_users_user`` - sign-in stamps ``last_login_at`` on the account row
+#: (``app.modules.users.service.UserService.login``). UPDATE only: an INSERT
 #: into this table is account creation, which the demo must keep refusing.
-_AUTHENTICATION_WRITABLE = frozenset({"oe_users_user"})
+#:
+#: ``oe_users_session`` - every pair of tokens is minted together with the row
+#: that names it (``UserService._issue_token_pair``), so signing in INSERTs one
+#: and refreshing UPDATEs it. Both are needed: a login that cannot write its
+#: row does not fall back to a session nobody can revoke, it raises, which is
+#: the right trade and is why leaving this table out refused sign-in outright
+#: rather than degrading it. DELETE is not here - pruning expired rows is a
+#: background job, which runs with no request in scope and never reaches this
+#: check at all.
+_AUTHENTICATION_WRITABLE: dict[str, frozenset[str]] = {
+    "oe_users_user": frozenset({"UPDATE"}),
+    "oe_users_session": frozenset({"INSERT", "UPDATE"}),
+}
 
 
 # ── The allowlist ───────────────────────────────────────────────────────────
@@ -439,7 +456,7 @@ def _permitted(scope: WriteScope, kind: str, table: str | None) -> bool:
         return False
     if table in _ALWAYS_WRITABLE:
         return True
-    if scope is WriteScope.AUTHENTICATION and kind == "UPDATE" and table in _AUTHENTICATION_WRITABLE:
+    if scope is WriteScope.AUTHENTICATION and kind in _AUTHENTICATION_WRITABLE.get(table, frozenset()):
         return True
     return False
 

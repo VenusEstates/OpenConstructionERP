@@ -927,3 +927,45 @@ def test_statement_classifier(statement, expected):
     from app.core.demo_read_only import classify_statement
 
     assert classify_statement(statement) == expected
+
+
+@pytest.mark.parametrize(
+    ("scope_name", "kind", "table", "permitted"),
+    [
+        # Sign-in mints a session row alongside the tokens that name it, and
+        # refreshing pushes that row's horizon out. Both have to be writable
+        # or signing in is refused outright: the mint raises rather than
+        # falling back to a session nobody could revoke.
+        ("AUTHENTICATION", "INSERT", "oe_users_session", True),
+        ("AUTHENTICATION", "UPDATE", "oe_users_session", True),
+        # And no further. Removing a session is pruning, which is a background
+        # job with no request in scope, so it never asks this question and
+        # does not need an answer of yes.
+        ("AUTHENTICATION", "DELETE", "oe_users_session", False),
+        # The account row keeps the narrower permission it was given: a
+        # sign-in stamps last_login_at, and an INSERT here is account
+        # creation, which is the thing a read-only demo exists to refuse.
+        ("AUTHENTICATION", "UPDATE", "oe_users_user", True),
+        ("AUTHENTICATION", "INSERT", "oe_users_user", False),
+        # Scope still decides. Every route that is not sign-in holds NONE, and
+        # none of the above is writable from there.
+        ("NONE", "INSERT", "oe_users_session", False),
+        ("NONE", "UPDATE", "oe_users_user", False),
+        # The audit trail is writable from either scope, being the trace of a
+        # visit rather than anything a visitor chose to change.
+        ("NONE", "INSERT", "oe_activity_log", True),
+        # Demo content, from the scope that gets closest to writing it.
+        ("AUTHENTICATION", "INSERT", "oe_projects_project", False),
+    ],
+)
+def test_what_a_signed_in_visitor_may_write(scope_name, kind, table, permitted):
+    """The permission matrix layer 2 enforces, stated per table and per kind.
+
+    Worth pinning separately from the end to end proof above, because the two
+    fail differently. The end to end test says sign-in was refused; this one
+    says which statement on which table was the reason, which is the thing a
+    reader needs when a later feature adds a write to the sign-in path.
+    """
+    from app.core.demo_read_only import WriteScope, _permitted
+
+    assert _permitted(WriteScope[scope_name], kind, table) is permitted
