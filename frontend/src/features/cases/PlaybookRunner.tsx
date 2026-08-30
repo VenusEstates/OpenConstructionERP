@@ -35,7 +35,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowDown,
-  Boxes,
   Check,
   Clock,
   ListChecks,
@@ -45,7 +44,7 @@ import {
   LogIn,
   LogOut,
 } from "lucide-react";
-import { Button, Badge, CountryFlag } from "@/shared/ui";
+import { Button, Badge, CountryFlag, MarketPackNotice } from "@/shared/ui";
 import { useNearViewport } from "@/shared/hooks/useNearViewport";
 import { projectsApi, type Project } from "@/features/projects/api";
 import { useProjectContextStore } from "@/stores/useProjectContextStore";
@@ -73,9 +72,6 @@ import { dealCaseFaces, type CaseFace } from "./caseFaces";
 import { CaseFacePhoto } from "./CaseFacePhoto";
 import { CaseArt } from "./CaseArt";
 import { regionDisplayName } from "./regions";
-import { useInstalledPacks } from "@/shared/hooks/usePartnerPack";
-import { packCountryCode, packNameSlug } from "@/shared/lib/regionalPack";
-import { fmtList } from "@/shared/lib/formatters";
 import { CaseConstellation } from "./CaseConstellation";
 import { modulesForPlaybook } from "./playbookModules";
 import { CaseCompanyHive } from "./CompanyHive";
@@ -688,36 +684,6 @@ export function PlaybookRunner({ playbook, onBack }: PlaybookRunnerProps) {
   // render itself to nothing first.
   const heroModules = useMemo(() => modulesForPlaybook(playbook), [playbook]);
 
-  // The regional pack behind this case's market.
-  //
-  // 62 of the 202 shipped cases carry a `region`, and a reader who opens one
-  // of them is reading about a country's standards - GAEB and VOB/B, or
-  // XRechnung, or FIEBDC-3. Which pack supplies those was something they had
-  // to already know. This says it.
-  //
-  // Installed packs rather than every pack that exists, because naming a pack
-  // this deployment does not have and, for bimhessen-de and batimatech-ca,
-  // never will under their partnership terms, would be an invitation to a
-  // door that does not open. That means CN, GB and US cases show a pack on a
-  // stock install and CA, DE and ES cases show nothing, which is the truth
-  // about those markets rather than a gap in this code.
-  //
-  // Several packs can serve one market - us-california, us-costdata and
-  // us-texas all declare US - so this is a list, joined by the locale's own
-  // list formatter rather than by a hardcoded comma.
-  const { data: installedPacks } = useInstalledPacks();
-  const marketPackNames = useMemo(() => {
-    const region = playbook.region?.toLowerCase();
-    if (!region) return [];
-    return (installedPacks?.installed ?? [])
-      .filter((p) => packCountryCode(p) === region)
-      // The name is read through the same computed key the pack picker and
-      // the dashboard card read, written inline so the i18n gate can see it.
-      .map((p) =>
-        t(`modules.pp_name_${packNameSlug(p.slug)}`, { defaultValue: p.partner_name }),
-      );
-  }, [playbook.region, installedPacks, t]);
-
   const toggleStepDone = useCasesStore((s) => s.toggleStepDone);
   const setCurrentStep = useCasesStore((s) => s.setCurrentStep);
   const reset = useCasesStore((s) => s.reset);
@@ -1048,25 +1014,17 @@ export function PlaybookRunner({ playbook, onBack }: PlaybookRunnerProps) {
                     {regionDisplayName(playbook.region, i18n.language)}
                   </span>
                 )}
-                {/* The pack that serves this case's market, when this
-                    deployment has one. Absent, not empty, otherwise: most
-                    cases carry no market at all, and a chip that shrugs on
-                    140 of 202 pages would teach the reader to stop reading
-                    the row. */}
-                {marketPackNames.length > 0 && (
-                  // bg-oe-blue/10 rather than bg-oe-blue-subtle/60: the subtle
-                  // token carries no alpha support, so Tailwind emits nothing
-                  // at all for an alpha-modified form of it and the chip would
-                  // have rendered with no fill. tailwind.config.js names this
-                  // exact substitution beside the token.
-                  <span className="inline-flex items-center gap-1.5 rounded-md bg-oe-blue/10 px-2 py-0.5 text-2xs font-medium text-content-secondary ring-1 ring-inset ring-oe-blue/20">
-                    <Boxes size={11} strokeWidth={2} aria-hidden="true" />
-                    {t("cases.regional_pack_for_market", {
-                      defaultValue: "Regional pack: {{names}}",
-                      names: fmtList(marketPackNames),
-                    })}
-                  </span>
-                )}
+                {/* The pack that serves this case's market. This used to be a
+                    sentence naming the pack and nothing else, which left the
+                    reader with a requirement and no door: on a stock install
+                    eighteen packs sit on disk and none is applied, so the name
+                    was true and unreachable. The notice now says whether the
+                    pack is switched on here and links straight at it. It is
+                    absent, not empty, where no pack serves the market - most
+                    cases carry no market at all, and a chip that shrugs on 140
+                    of 202 pages would teach the reader to stop reading the
+                    row. */}
+                <MarketPackNotice region={playbook.region} />
                 {/* The kinds of company this case is written for used to be
                     repeated here as chips and again as a comb below. Two
                     lists of the same eight nouns, a screen apart, with the
