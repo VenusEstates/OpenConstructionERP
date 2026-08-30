@@ -64,7 +64,18 @@ export interface SigningSession {
   project_id: string;
   document_ref: string;
   document_content_hash: string;
+  /** The capability the session REQUIRES of the signature. */
   provider_capability: SigningCapability;
+  /**
+   * What the resolved provider actually delivers, taken from the provider's
+   * own capability. Never defaulted to `provider_capability`: core ships one
+   * provider, which performs no cryptography and delivers `simple_electronic`,
+   * so the two differ for every stronger tier. `null` means no derivation has
+   * recorded one yet, and must render as that rather than as the requirement.
+   * Typed wider than `SigningCapability` because an adapter pack may introduce
+   * a capability this build's vocabulary does not know.
+   */
+  delivered_capability: string | null;
   signatory_map: SignatoryEntry[];
   status: SigningSessionStatus;
   expires_at: string | null;

@@ -644,6 +644,30 @@ const SessionRow = React.memo(function SessionRow({
   const hasStale = session.signatures.some((s) => s.stale);
   const progressLabel = `${session.signed_count}/${session.required_count || session.signatory_map.length}`;
 
+  // A session names the capability it REQUIRES and, separately, the one the
+  // resolved provider actually DELIVERED. Core ships a single provider, which
+  // performs no cryptography and delivers simple_electronic, and the registry
+  // falls back to it for any capability no adapter has claimed. So a session
+  // requiring a qualified signature gets less than it asked for, and a row
+  // that showed the requirement alone read as a claim it had been met.
+  const capabilityLabel = (code: string) =>
+    t(`signing.capability_${code}`, {
+      defaultValue: CAPABILITY_LABELS[code as SigningCapability] ?? code,
+    });
+  const requiredCapabilityLabel = capabilityLabel(session.provider_capability);
+  // Never `delivered ?? required`: null means no derivation recorded one, and
+  // borrowing the requirement to fill the gap manufactures exactly the claim
+  // this field exists to stop making.
+  const deliveredCapabilityLabel = session.delivered_capability
+    ? capabilityLabel(session.delivered_capability)
+    : t('signing.capability_not_recorded', { defaultValue: 'Not recorded' });
+  // Null counts as a shortfall too: unrecorded is not "as required".
+  const capabilityShortfall = session.delivered_capability !== session.provider_capability;
+  const requiredFieldLabel = t('signing.field_capability', { defaultValue: 'Required capability' });
+  const deliveredFieldLabel = t('signing.field_delivered_capability', {
+    defaultValue: 'Delivered capability',
+  });
+
   return (
     <div className="border-b border-border-light last:border-b-0">
       <div
@@ -680,11 +704,29 @@ const SessionRow = React.memo(function SessionRow({
           <ExternalLink size={11} className="shrink-0 opacity-60" aria-hidden="true" />
         </Link>
 
-        <Badge variant="neutral" size="sm" className="hidden md:inline-flex">
-          {t(`signing.capability_${session.provider_capability}`, {
-            defaultValue: CAPABILITY_LABELS[session.provider_capability],
-          })}
-        </Badge>
+        {/* The requirement, and beside it what was actually delivered whenever
+            that is something else. The shortfall badge follows the same idiom
+            as the stale one below it: a field is stated, a discrepancy is
+            flagged. The title carries the pair labelled, so two capability
+            names sitting side by side are never ambiguous. */}
+        <span
+          className="hidden md:inline-flex items-center gap-1 shrink-0"
+          title={
+            capabilityShortfall
+              ? `${requiredFieldLabel}: ${requiredCapabilityLabel}\n${deliveredFieldLabel}: ${deliveredCapabilityLabel}`
+              : `${requiredFieldLabel}: ${requiredCapabilityLabel}`
+          }
+        >
+          <Badge variant="neutral" size="sm">
+            {requiredCapabilityLabel}
+          </Badge>
+          {capabilityShortfall && (
+            <Badge variant="warning" size="sm">
+              <AlertTriangle size={11} className="mr-1" />
+              {deliveredCapabilityLabel}
+            </Badge>
+          )}
+        </span>
 
         <Badge variant={statusVariant(session.status)} size="sm" className="shrink-0">
           {t(`signing.status_${session.status}`, { defaultValue: STATUS_LABELS[session.status] })}
@@ -709,6 +751,23 @@ const SessionRow = React.memo(function SessionRow({
 
       {expanded && (
         <div className="px-4 pb-4 pl-12 space-y-3 animate-fade-in">
+          {/* Both values, always, whether or not they agree. The requirement is
+              what was asked for; the delivered capability is what the platform
+              could actually produce, and it is the one a reader needs to see
+              before treating this session as legal evidence. */}
+          <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <dt className="text-content-tertiary">{requiredFieldLabel}</dt>
+              <dd className="text-content-secondary">{requiredCapabilityLabel}</dd>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <dt className="text-content-tertiary">{deliveredFieldLabel}</dt>
+              <dd className={capabilityShortfall ? 'text-semantic-warning' : 'text-content-secondary'}>
+                {deliveredCapabilityLabel}
+              </dd>
+            </div>
+          </dl>
+
           <div className="rounded-lg bg-surface-secondary p-3 space-y-1.5">
             <p className="text-2xs font-medium uppercase tracking-wide text-content-tertiary">
               {t('signing.label_content_hash', { defaultValue: 'Content hash' })}
