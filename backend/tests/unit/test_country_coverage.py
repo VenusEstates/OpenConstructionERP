@@ -1038,14 +1038,23 @@ def test_a_country_with_no_iban_regime_is_not_reported_as_a_gap() -> None:
 
 _DEMO_PROJECTS = "app.core.demo_projects"
 
-#: Dimension, a country the registry holds, and one it does not. The second is
-#: what stops these passing on a probe that answers COVERED for anything.
+#: A country in none of these five tables, used as the control that stops the
+#: probes passing on an answer of COVERED for anything.
+#:
+#: It was RU until the Russian pack shipped and put RU in all five, at which
+#: point every one of these went red for the right reason: the control had
+#: become covered. That is the expected way this constant dies, so when it
+#: goes red again, repick it rather than reaching for the probe.
+_A_COUNTRY_NO_TABLE_HOLDS = "PL"
+
+#: Dimension and a country the registry holds. The control above is the other
+#: half of each case.
 _NEW_DIMENSIONS = (
-    ("estimate.markup_region", "DE", "RU"),
-    ("demo.notice_authority", "DE", "RU"),
-    ("demo.address_country_names", "DE", "RU"),
-    ("demo.notice_clause", "GB", "RU"),
-    ("demo.catalogue_projects", "DE", "RU"),
+    ("estimate.markup_region", "DE"),
+    ("demo.notice_authority", "DE"),
+    ("demo.address_country_names", "DE"),
+    ("demo.notice_clause", "GB"),
+    ("demo.catalogue_projects", "DE"),
 )
 
 #: The demo dimensions that keep answering off a cluster, through the source
@@ -1061,16 +1070,18 @@ _NEW_DEMO_DIMENSIONS = (
 )
 
 
-@pytest.mark.parametrize(("dimension", "held", "absent"), _NEW_DIMENSIONS)
-def test_the_new_registries_answer_in_both_directions(dimension, held, absent):
+@pytest.mark.parametrize(("dimension", "held"), _NEW_DIMENSIONS)
+def test_the_new_registries_answer_in_both_directions(dimension, held):
     """Green on the real registry is half the evidence; this is the other half."""
+    absent = _A_COUNTRY_NO_TABLE_HOLDS
     covered = _one(held, dimension)
     assert covered.verdict == cc.COVERED, f"{dimension} does not see {held}: {covered.detail}"
 
     missing = _one(absent, dimension)
     assert missing.verdict == cc.MISSING, (
-        f"{dimension} reports {missing.verdict} for {absent}, which is in none of these tables; "
-        "a probe that cannot go red will never catch the regression it exists for"
+        f"{dimension} reports {missing.verdict} for the control country {absent}. Either a pack now covers it, "
+        "in which case repick _A_COUNTRY_NO_TABLE_HOLDS, or the probe cannot go red and will never catch the "
+        "regression it exists for"
     )
     assert missing.population, "the probe reported a gap without naming the population it read"
 
@@ -1258,8 +1269,11 @@ def test_the_catalogue_answers_off_a_cluster_out_of_the_packs_and_not_the_seeds(
     assert got.verdict == cc.COVERED, f"the rebuild did not reach a pack-supplied country: {got.detail}"
     assert got.method.startswith("source"), f"a read of the files on disk must not be labelled {got.method!r}"
 
-    absent = _one("RU", "demo.catalogue_projects")
-    assert absent.verdict == cc.MISSING, f"the rebuild reports {absent.verdict} for a country no pack covers"
+    absent = _one(_A_COUNTRY_NO_TABLE_HOLDS, "demo.catalogue_projects")
+    assert absent.verdict == cc.MISSING, (
+        f"the rebuild reports {absent.verdict} for the control country {_A_COUNTRY_NO_TABLE_HOLDS}; "
+        "repick it if a pack now covers it"
+    )
 
 
 def test_the_catalogue_literal_really_is_narrower_than_the_assembled_list():

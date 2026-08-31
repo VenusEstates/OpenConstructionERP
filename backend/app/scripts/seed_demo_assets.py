@@ -338,11 +338,14 @@ BUNDLE_MAP: dict[str, str] = {
     "mixed-use-riyadh": "commercial_rvt",
     "mixed-use-sydney": "commercial_rvt",
     "modular-housing": "residential_ifc",
+    "office-debrecen": "commercial_rvt",
     "office-frankfurt": "commercial_rvt",
     "office-montreal": "commercial_rvt",
     "office-rio": "commercial_rvt",
     "rc-structure-formwork": "commercial_rvt",
+    "residential-budapest": "residential_ifc",
     "residential-monterrey": "residential_ifc",
+    "residential-moscow": "residential_ifc",
     "residential-saopaulo": "residential_ifc",
     "residential-shenzhen": "residential_ifc",
     # Heidelberg and Karlsruhe are Heilbronn's siblings, but they take the
@@ -358,6 +361,7 @@ BUNDLE_MAP: dict[str, str] = {
     "retail-market-heilbronn": "retail_heilbronn",
     "retail-market-karlsruhe": "commercial_rvt",
     "school-christchurch": "commercial_rvt",
+    "school-stpetersburg": "commercial_rvt",
     "solar-bess-epc": "commercial_rvt",
     "tower-abudhabi": "commercial_rvt",
 }
