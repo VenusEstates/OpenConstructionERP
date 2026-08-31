@@ -9810,7 +9810,7 @@ const resource = {
     "requirements.notes_placeholder": "Catatan atau konteks tambahan...",
     "requirements.import_text": "Impor dari Teks",
     "requirements.import_text_desc": "Tempel spesifikasi persyaratan. Setiap baris harus mengikuti format: entitas | atribut | tipe_batasan | nilai | satuan | kategori | prioritas",
-    "requirements.import_placeholder": "dinding | ketebalan | min | 200 | mm | struktural | harus\natap | nilai_u | maks | 0.20 | W/m²K | termal | harus",
+    "requirements.import_placeholder": "dinding | ketebalan | min | 200 | mm | struktural | must\natap | nilai_u | max | 0.20 | W/m²K | termal | must",
     "requirements.set_created": "Set persyaratan dibuat",
     "requirements.new_set": "Set Persyaratan Baru",
     "requirements.set_name_placeholder": "mis. Persyaratan Struktural Fase 1",

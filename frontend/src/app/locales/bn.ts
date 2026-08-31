@@ -12664,7 +12664,7 @@ const resource = {
     "requirements.import_count": "{{count}}টি প্রয়োজনীয়তা ইম্পোর্ট করা হচ্ছে...",
     "requirements.import_csv_desc": "কলামসহ একটি CSV ফাইল আপলোড করুন: entity, attribute, constraint_value",
     "requirements.import_json_desc": "প্রয়োজনীয়তা অবজেক্টের একটি JSON অ্যারে আপলোড করুন",
-    "requirements.import_placeholder": "দেয়াল | পুরুত্ব | সর্বনিম্ন | 200 | mm | কাঠামোগত | আবশ্যক\nছাদ | u_value | সর্বোচ্চ | 0.20 | W/m²K | তাপীয় | আবশ্যক",
+    "requirements.import_placeholder": "দেয়াল | পুরুত্ব | min | 200 | mm | কাঠামোগত | must\nছাদ | u_value | max | 0.20 | W/m²K | তাপীয় | must",
     "requirements.import_requirements": "প্রয়োজনীয়তা ইম্পোর্ট করুন",
     "requirements.import_text": "টেক্সট থেকে ইম্পোর্ট করুন",
     "requirements.import_text_desc": "প্রয়োজনীয়তা স্পেসিফিকেশন পেস্ট করুন। প্রতিটি লাইন এই ফরম্যাট অনুসরণ করা উচিত: entity | attribute | constraint_type | value | unit | category | priority",

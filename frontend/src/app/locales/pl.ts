@@ -9645,7 +9645,7 @@ const resource = {
     "requirements.notes_placeholder": "Dodatkowe uwagi lub kontekst...",
     "requirements.import_text": "Importuj z Tekstu",
     "requirements.import_text_desc": "Wklej specyfikacje wymagań. Każdy wiersz w formacie: obiekt | atrybut | typ_ograniczenia | wartość | jednostka | kategoria | priorytet",
-    "requirements.import_placeholder": "ściana | grubość | min | 200 | mm | konstrukcyjny | musi\ndach | wartość_u | max | 0,20 | W/m²K | termiczny | musi",
+    "requirements.import_placeholder": "ściana | grubość | min | 200 | mm | konstrukcyjny | must\ndach | wartość_u | max | 0,20 | W/m²K | termiczny | must",
     "requirements.set_created": "Zestaw wymagań utworzony",
     "requirements.new_set": "Nowy Zestaw Wymagań",
     "requirements.set_name_placeholder": "np. Wymagania Konstrukcyjne Faza 1",

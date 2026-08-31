@@ -12701,7 +12701,7 @@ const resource = {
     "requirements.import_count": "Εισαγωγή {{count}} απαιτήσεων...",
     "requirements.import_csv_desc": "Ανεβάστε ένα αρχείο CSV με στήλες: entity, attribute, constraint_value",
     "requirements.import_json_desc": "Ανεβάστε έναν πίνακα JSON με αντικείμενα απαιτήσεων",
-    "requirements.import_placeholder": "τοίχος | πάχος | ελάχ | 200 | mm | φέρον | υποχρεωτικό\nστέγη | u_value | μέγ | 0.20 | W/m²K | θερμομόνωση | υποχρεωτικό",
+    "requirements.import_placeholder": "τοίχος | πάχος | min | 200 | mm | φέρον | must\nστέγη | u_value | max | 0.20 | W/m²K | θερμομόνωση | must",
     "requirements.import_requirements": "Εισαγωγή Απαιτήσεων",
     "requirements.import_text": "Εισαγωγή από Κείμενο",
     "requirements.import_text_desc": "Επικολλήστε προδιαγραφές απαιτήσεων. Κάθε γραμμή πρέπει να ακολουθεί τη μορφή: entity | attribute | constraint_type | value | unit | category | priority",

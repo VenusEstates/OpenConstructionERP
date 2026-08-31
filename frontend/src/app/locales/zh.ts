@@ -9452,7 +9452,7 @@ const resource = {
     "requirements.notes_placeholder": "附加说明或上下文...",
     "requirements.import_text": "从文本导入",
     "requirements.import_text_desc": "粘贴需求规格。每行格式：实体 | 属性 | 约束类型 | 值 | 单位 | 类别 | 优先级",
-    "requirements.import_placeholder": "墙 | 厚度 | min | 200 | mm | 结构 | 必须\n屋顶 | U值 | max | 0.20 | W/m²K | 热工 | 必须",
+    "requirements.import_placeholder": "墙 | 厚度 | min | 200 | mm | 结构 | must\n屋顶 | U值 | max | 0.20 | W/m²K | 热工 | must",
     "requirements.set_created": "需求集已创建",
     "requirements.new_set": "新建需求集",
     "requirements.set_name_placeholder": "例如：结构需求第一阶段",

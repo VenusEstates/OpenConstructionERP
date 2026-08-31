@@ -13503,7 +13503,7 @@ const resource = {
     "requirements.import_count": "جاري استيراد {{count}} متطلب...",
     "requirements.import_csv_desc": "قم بتحميل ملف CSV بأعمدة: entity، attribute، constraint_value",
     "requirements.import_json_desc": "قم بتحميل مصفوفة JSON لكائنات المتطلبات",
-    "requirements.import_placeholder": "جدار | سُمك | min | 200 | mm | إنشائي | يجب\nسقف | قيمة_u | max | 0.20 | W/m²K | حراري | يجب",
+    "requirements.import_placeholder": "جدار | سُمك | min | 200 | mm | إنشائي | must\nسقف | قيمة_u | max | 0.20 | W/m²K | حراري | must",
     "requirements.import_requirements": "استيراد المتطلبات",
     "requirements.import_text": "استيراد من نص",
     "requirements.import_text_desc": "الصق مواصفات المتطلبات. يجب أن يتبع كل سطر التنسيق: كيان | سمة | نوع_القيد | قيمة | وحدة | فئة | أولوية",

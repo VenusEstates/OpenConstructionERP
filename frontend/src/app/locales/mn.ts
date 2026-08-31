@@ -13052,7 +13052,7 @@ const resource = {
     "requirements.import_count": "Импортолж байна {{count}} шаардлага...",
     "requirements.import_csv_desc": "Байршуулах CSV файл -тай баганууд: entity, attribute, constraint_value",
     "requirements.import_json_desc": "Байршуулах JSON array -н шаардлага объектууд",
-    "requirements.import_placeholder": "хана | зузаан | доод | 200 | mm | бүтцийн | ёстой\nдээвэр | u_value | дээд | 0.20 | W/m²K | дулааны | ёстой",
+    "requirements.import_placeholder": "хана | зузаан | min | 200 | mm | бүтцийн | must\nдээвэр | u_value | max | 0.20 | W/m²K | дулааны | must",
     "requirements.import_requirements": "Импортлох Шаардлага",
     "requirements.import_text": "Импортлох -аас Текст",
     "requirements.import_text_desc": "Шаардлагын тодорхойлолтыг буулгана уу. Мөр бүр дараах форматтай байх ёстой: entity | attribute | constraint_type | value | unit | category | priority",

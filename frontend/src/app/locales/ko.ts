@@ -9603,7 +9603,7 @@ const resource = {
     "requirements.notes_placeholder": "추가 메모 또는 문맥...",
     "requirements.import_text": "텍스트에서 가져오기",
     "requirements.import_text_desc": "요구사항 사양을 붙여넣으세요. 각 행 형식: 객체 | 속성 | 제약_유형 | 값 | 단위 | 카테고리 | 우선순위",
-    "requirements.import_placeholder": "벽 | 두께 | min | 200 | mm | 구조 | 필수\n지붕 | U값 | max | 0.20 | W/m²K | 단열 | 필수",
+    "requirements.import_placeholder": "벽 | 두께 | min | 200 | mm | 구조 | must\n지붕 | U값 | max | 0.20 | W/m²K | 단열 | must",
     "requirements.set_created": "요구사항 세트가 생성되었습니다",
     "requirements.new_set": "새 요구사항 세트",
     "requirements.set_name_placeholder": "예: 구조 요구사항 1단계",

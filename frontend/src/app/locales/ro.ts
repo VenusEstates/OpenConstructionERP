@@ -9810,7 +9810,7 @@ const resource = {
     "requirements.notes_placeholder": "Note sau context suplimentar...",
     "requirements.import_text": "Importați din Text",
     "requirements.import_text_desc": "Lipiți specificații de cerințe. Fiecare linie trebuie să respecte formatul: entitate | atribut | tip_constrângere | valoare | unitate | categorie | prioritate",
-    "requirements.import_placeholder": "perete | grosime | min | 200 | mm | structural | obligatoriu\nacoperiș | valoare_u | max | 0.20 | W/m²K | termic | obligatoriu",
+    "requirements.import_placeholder": "perete | grosime | min | 200 | mm | structural | must\nacoperiș | valoare_u | max | 0.20 | W/m²K | termic | must",
     "requirements.set_created": "Set de cerințe creat",
     "requirements.new_set": "Set Nou de Cerințe",
     "requirements.set_name_placeholder": "ex.: Cerințe Structurale Faza 1",

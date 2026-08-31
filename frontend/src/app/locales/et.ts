@@ -13389,7 +13389,7 @@ const resource = {
     "requirements.import_count": "Imporditakse {{count}} nõuet...",
     "requirements.import_csv_desc": "Laadige üles CSV-fail veergudega: entity, attribute, constraint_value",
     "requirements.import_json_desc": "Laadige üles nõuete objektide JSON-massiiv",
-    "requirements.import_placeholder": "sein | paksus | min | 200 | mm | kandekonstruktsioon | kohustuslik\nkatus | u_väärtus | max | 0.20 | W/m²K | soojuslik | kohustuslik",
+    "requirements.import_placeholder": "sein | paksus | min | 200 | mm | kandekonstruktsioon | must\nkatus | u_väärtus | max | 0.20 | W/m²K | soojuslik | must",
     "requirements.import_requirements": "Impordi nõuded",
     "requirements.import_text": "Impordi tekstist",
     "requirements.import_text_desc": "Kleepige nõuete kirjeldused. Iga rida peab järgima vormingut: entity | attribute | constraint_type | value | unit | category | priority",

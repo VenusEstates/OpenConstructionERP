@@ -8269,7 +8269,7 @@ const resource = {
     "requirements.notes_placeholder": "Notes ou contexte supplémentaires...",
     "requirements.import_text": "Importer depuis le texte",
     "requirements.import_text_desc": "Collez les spécifications des exigences. Chaque ligne doit suivre le format : entité | attribut | type_contrainte | valeur | unité | catégorie | priorité",
-    "requirements.import_placeholder": "mur | épaisseur | min | 200 | mm | structure | obligatoire\ntoiture | u_value | max | 0,20 | W/m²K | thermique | obligatoire",
+    "requirements.import_placeholder": "mur | épaisseur | min | 200 | mm | structure | must\ntoiture | u_value | max | 0,20 | W/m²K | thermique | must",
     "requirements.set_created": "Jeu d'exigences créé",
     "requirements.new_set": "Nouveau jeu d'exigences",
     "requirements.set_name_placeholder": "ex. Exigences structurelles Phase 1",

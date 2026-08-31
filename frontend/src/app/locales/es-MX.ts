@@ -8204,7 +8204,7 @@ const resource = {
     "requirements.notes_placeholder": "Notas adicionales o contexto...",
     "requirements.import_text": "Importar desde texto",
     "requirements.import_text_desc": "Pegue las especificaciones de requisitos. Cada línea debe seguir el formato: entidad | atributo | tipo_restricción | valor | unidad | categoría | prioridad",
-    "requirements.import_placeholder": "muro | espesor | min | 200 | mm | estructural | obligatorio\ncubierta | u_value | max | 0,20 | W/m²K | térmico | obligatorio",
+    "requirements.import_placeholder": "muro | espesor | min | 200 | mm | estructural | must\ncubierta | u_value | max | 0,20 | W/m²K | térmico | must",
     "requirements.set_created": "Conjunto de requisitos creado",
     "requirements.new_set": "Nuevo conjunto de requisitos",
     "requirements.set_name_placeholder": "ej. Requisitos estructurales Fase 1",

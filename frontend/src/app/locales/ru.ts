@@ -9761,7 +9761,7 @@ const resource = {
     "requirements.notes_placeholder": "Дополнительные замечания или контекст...",
     "requirements.import_text": "Импорт из текста",
     "requirements.import_text_desc": "Вставьте спецификации требований. Каждая строка в формате: объект | свойство | тип_ограничения | значение | единица | категория | приоритет",
-    "requirements.import_placeholder": "стена | толщина | мин | 200 | мм | несущие | обязательно\nкровля | u_value | макс | 0,20 | Вт/м²К | теплозащита | обязательно",
+    "requirements.import_placeholder": "стена | толщина | min | 200 | мм | несущие | must\nкровля | u_value | max | 0,20 | Вт/м²К | теплозащита | must",
     "requirements.set_created": "Набор требований создан",
     "requirements.new_set": "Новый набор требований",
     "requirements.set_name_placeholder": "напр. Конструктивные требования Фаза 1",

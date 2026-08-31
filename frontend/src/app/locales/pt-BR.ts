@@ -8160,7 +8160,7 @@ const resource = {
     "requirements.notes_placeholder": "Notas adicionais ou contexto...",
     "requirements.import_text": "Importar de Texto",
     "requirements.import_text_desc": "Cole especificações de requisitos. Cada linha deve seguir o formato: entidade | atributo | tipo_restrição | valor | unidade | categoria | prioridade",
-    "requirements.import_placeholder": "parede | espessura | min | 200 | mm | estrutural | deve\ntelhado | valor_u | max | 0,20 | W/m²K | térmico | deve",
+    "requirements.import_placeholder": "parede | espessura | min | 200 | mm | estrutural | must\ntelhado | valor_u | max | 0,20 | W/m²K | térmico | must",
     "requirements.set_created": "Conjunto de requisitos criado",
     "requirements.new_set": "Novo Conjunto de Requisitos",
     "requirements.set_name_placeholder": "ex.: Requisitos Estruturais Fase 1",

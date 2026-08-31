@@ -9459,7 +9459,7 @@ const resource = {
     "requirements.notes_placeholder": "अतिरिक्त नोट्स या संदर्भ...",
     "requirements.import_text": "टेक्स्ट से आयात करें",
     "requirements.import_text_desc": "आवश्यकता विनिर्देश चिपकाएँ। प्रत्येक पंक्ति इस प्रारूप में होनी चाहिए: इकाई | गुण | बाधा_प्रकार | मान | इकाई | श्रेणी | प्राथमिकता",
-    "requirements.import_placeholder": "दीवार | मोटाई | min | 200 | mm | संरचनात्मक | अनिवार्य\nछत | u_मान | max | 0.20 | W/m²K | ऊष्मीय | अनिवार्य",
+    "requirements.import_placeholder": "दीवार | मोटाई | min | 200 | mm | संरचनात्मक | must\nछत | u_मान | max | 0.20 | W/m²K | ऊष्मीय | must",
     "requirements.set_created": "आवश्यकता सेट बनाया गया",
     "requirements.new_set": "नया आवश्यकता सेट",
     "requirements.set_name_placeholder": "उदा.: संरचनात्मक आवश्यकताएँ चरण 1",

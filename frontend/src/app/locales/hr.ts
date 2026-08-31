@@ -9776,7 +9776,7 @@ const resource = {
     "requirements.notes_placeholder": "Dodatne bilješke ili kontekst...",
     "requirements.import_text": "Uvezi iz teksta",
     "requirements.import_text_desc": "Zalijepite specifikacije zahtjeva. Svaki redak treba slijediti format: entitet | atribut | vrsta_ograničenja | vrijednost | jedinica | kategorija | prioritet",
-    "requirements.import_placeholder": "zid | debljina | min | 200 | mm | konstrukcija | mora\nkrov | u_vrijednost | max | 0.20 | W/m²K | toplinska | mora",
+    "requirements.import_placeholder": "zid | debljina | min | 200 | mm | konstrukcija | must\nkrov | u_vrijednost | max | 0.20 | W/m²K | toplinska | must",
     "requirements.set_created": "Skup zahtjeva kreiran",
     "requirements.new_set": "Novi skup zahtjeva",
     "requirements.set_name_placeholder": "npr. Konstrukcijski zahtjevi Faza 1",

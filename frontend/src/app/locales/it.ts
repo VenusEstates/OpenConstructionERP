@@ -8552,7 +8552,7 @@ const resource = {
     "requirements.notes_placeholder": "Note aggiuntive o contesto...",
     "requirements.import_text": "Importa da Testo",
     "requirements.import_text_desc": "Incolla le specifiche dei requisiti. Ogni riga nel formato: entità | attributo | tipo_vincolo | valore | unità | categoria | priorità",
-    "requirements.import_placeholder": "muro | spessore | min | 200 | mm | strutturale | deve\ntetto | valore_u | max | 0,20 | W/m²K | termico | deve",
+    "requirements.import_placeholder": "muro | spessore | min | 200 | mm | strutturale | must\ntetto | valore_u | max | 0,20 | W/m²K | termico | must",
     "requirements.set_created": "Set di requisiti creato",
     "requirements.new_set": "Nuovo Set di Requisiti",
     "requirements.set_name_placeholder": "es.: Requisiti Strutturali Fase 1",

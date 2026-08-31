@@ -11378,7 +11378,7 @@ const resource = {
     "requirements.notes_placeholder": "Ytterligare anteckningar eller kontext...",
     "requirements.import_text": "Importera från text",
     "requirements.import_text_desc": "Klistra in kravspecifikationer. Varje rad i formatet: entitet | egenskap | villkorstyp | värde | enhet | kategori | prioritet",
-    "requirements.import_placeholder": "vägg | tjocklek | min | 200 | mm | konstruktion | måste\ntak | u_värde | max | 0,20 | W/m²K | termisk | måste",
+    "requirements.import_placeholder": "vägg | tjocklek | min | 200 | mm | konstruktion | must\ntak | u_värde | max | 0,20 | W/m²K | termisk | must",
     "requirements.set_created": "Kravuppsättning skapad",
     "requirements.new_set": "Ny kravuppsättning",
     "requirements.set_name_placeholder": "t.ex. Konstruktionskrav Fas 1",

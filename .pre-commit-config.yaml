@@ -286,6 +286,19 @@ repos:
         pass_filenames: false
         files: ^frontend/src/app/locales/.*\.ts$
 
+      # The requirements import panel shows a sample row, and the user copies
+      # its shape. Five of its seven fields are free text and translating them
+      # helps; constraint_type and priority are closed vocabularies the importer
+      # matches literally. 36 of 42 locales had translated the priority, which
+      # RequirementCreate rejects, and ten the operator, which is worse because
+      # the parser only warns and falls back to equals. CI runs this too.
+      - id: locale-requirement-sample-check
+        name: Block a requirements import sample the importer would reject
+        entry: python scripts/check_locale_requirement_sample.py
+        language: system
+        pass_filenames: false
+        files: ^(frontend/src/app/locales/.*\.ts|backend/app/modules/requirements/(evaluator|intl|schemas)\.py)$
+
       # Block one word built from both Cyrillic and Latin letters. Two scripts
       # in one value are fine, "Excel файл" is correct; two inside one word
       # come only from a homoglyph or a half-finished edit, and the bg value

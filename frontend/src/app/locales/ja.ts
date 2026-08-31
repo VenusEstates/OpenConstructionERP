@@ -9415,7 +9415,7 @@ const resource = {
     "requirements.notes_placeholder": "追加のメモやコンテキスト...",
     "requirements.import_text": "テキストからインポート",
     "requirements.import_text_desc": "要件仕様を貼り付けてください。各行の形式：エンティティ | 属性 | 制約タイプ | 値 | 単位 | カテゴリ | 優先度",
-    "requirements.import_placeholder": "壁 | 厚さ | min | 200 | mm | 構造 | 必須\n屋根 | U値 | max | 0.20 | W/m²K | 熱 | 必須",
+    "requirements.import_placeholder": "壁 | 厚さ | min | 200 | mm | 構造 | must\n屋根 | U値 | max | 0.20 | W/m²K | 熱 | must",
     "requirements.set_created": "要件セットが作成されました",
     "requirements.new_set": "新規要件セット",
     "requirements.set_name_placeholder": "例：構造要件 フェーズ1",

@@ -6945,7 +6945,7 @@ const resource = {
     "requirements.notes_placeholder": "Кошумча эскертүүлөр же контекст...",
     "requirements.import_text": "Тексттен импорттоо",
     "requirements.import_text_desc": "Талап спецификацияларын коюңуз. Ар бир сап мындай форматка ылайык болушу керек: объект | атрибут | чектөө_түрү | мааниси | бирдик | категория | артыкчылык",
-    "requirements.import_placeholder": "дубал | калыңдыгы | мин | 200 | мм | структуралык | милдеттүү\nчатыр | u_маанси | макс | 0.20 | W/m²K | жылуулук | милдеттүү",
+    "requirements.import_placeholder": "дубал | калыңдыгы | min | 200 | мм | структуралык | must\nчатыр | u_маанси | max | 0.20 | W/m²K | жылуулук | must",
     "requirements.set_created": "Талаптар топтому түзүлдү",
     "requirements.new_set": "Жаңы талаптар топтому",
     "requirements.set_name_placeholder": "мис. Структуралык талаптар, 1-этап",

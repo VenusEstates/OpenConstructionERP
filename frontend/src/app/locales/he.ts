@@ -12671,7 +12671,7 @@ const resource = {
     "requirements.import_count": "מייבא {{count}} דרישות...",
     "requirements.import_csv_desc": "העלו קובץ CSV עם עמודות: entity, attribute, constraint_value",
     "requirements.import_json_desc": "העלו מערך JSON של אובייקטי דרישה",
-    "requirements.import_placeholder": "קיר | עובי | מינימום | 200 | מ\"מ | קונסטרוקטיבי | חובה\nגג | מקדם מעבר חום | מקסימום | 0.20 | W/m²K | תרמי | חובה",
+    "requirements.import_placeholder": "קיר | עובי | min | 200 | מ\"מ | קונסטרוקטיבי | must\nגג | מקדם מעבר חום | max | 0.20 | W/m²K | תרמי | must",
     "requirements.import_requirements": "ייבוא דרישות",
     "requirements.import_text": "ייבוא מטקסט",
     "requirements.import_text_desc": "הדביקו מפרטי דרישות. כל שורה צריכה לעקוב אחר הפורמט: entity | attribute | constraint_type | value | unit | category | priority",

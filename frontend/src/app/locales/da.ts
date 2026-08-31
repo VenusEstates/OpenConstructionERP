@@ -11402,7 +11402,7 @@ const resource = {
     "requirements.notes_placeholder": "Yderligere noter eller kontekst...",
     "requirements.import_text": "Importér fra tekst",
     "requirements.import_text_desc": "Indsæt kravspecifikationer. Hver linje i formatet: entitet | egenskab | begrænsningstype | værdi | enhed | kategori | prioritet",
-    "requirements.import_placeholder": "væg | tykkelse | min | 200 | mm | konstruktion | skal\ntag | u_værdi | max | 0,20 | W/m²K | termisk | skal",
+    "requirements.import_placeholder": "væg | tykkelse | min | 200 | mm | konstruktion | must\ntag | u_værdi | max | 0,20 | W/m²K | termisk | must",
     "requirements.set_created": "Kravsæt oprettet",
     "requirements.new_set": "Nyt kravsæt",
     "requirements.set_name_placeholder": "f.eks. Konstruktionskrav Fase 1",

@@ -12665,7 +12665,7 @@ const resource = {
     "requirements.import_count": "در حال درون‌ریزی {{count}} الزام...",
     "requirements.import_csv_desc": "فایل CSV با ستون‌های entity، attribute، constraint_value را بارگذاری کنید",
     "requirements.import_json_desc": "آرایه JSON از اشیای الزام را بارگذاری کنید",
-    "requirements.import_placeholder": "دیوار | ضخامت | حداقل | 200 | mm | باربر | الزامی\nسقف | u_value | حداکثر | 0.20 | W/m²K | حرارتی | الزامی",
+    "requirements.import_placeholder": "دیوار | ضخامت | min | 200 | mm | باربر | must\nسقف | u_value | max | 0.20 | W/m²K | حرارتی | must",
     "requirements.import_requirements": "درون‌ریزی الزامات",
     "requirements.import_text": "درون‌ریزی از متن",
     "requirements.import_text_desc": "مشخصات الزامات را جای‌گذاری کنید. هر خط باید از این قالب پیروی کند: entity | attribute | constraint_type | value | unit | category | priority",

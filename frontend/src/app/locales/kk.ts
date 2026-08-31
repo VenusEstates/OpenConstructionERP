@@ -12665,7 +12665,7 @@ const resource = {
     "requirements.import_count": "{{count}} талап импортталуда...",
     "requirements.import_csv_desc": "Мына бағандары бар CSV файлын жүктеп салыңыз: entity, attribute, constraint_value",
     "requirements.import_json_desc": "Талап нысандарының JSON массивін жүктеп салыңыз",
-    "requirements.import_placeholder": "қабырға | қалыңдығы | мин | 200 | мм | тірек | міндетті\nшатыр | u_value | макс | 0,20 | Вт/м²К | жылу оқшаулау | міндетті",
+    "requirements.import_placeholder": "қабырға | қалыңдығы | min | 200 | мм | тірек | must\nшатыр | u_value | max | 0,20 | Вт/м²К | жылу оқшаулау | must",
     "requirements.import_requirements": "Талаптарды Импорттау",
     "requirements.import_text": "Мәтіннен Импорттау",
     "requirements.import_text_desc": "Талап сипаттамаларын қойыңыз. Әр жол мына пішімге сай болуы керек: entity | attribute | constraint_type | value | unit | category | priority",

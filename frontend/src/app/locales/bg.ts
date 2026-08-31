@@ -9717,7 +9717,7 @@ const resource = {
     "requirements.notes_placeholder": "Допълнителни бележки или контекст...",
     "requirements.import_text": "Импортиране от текст",
     "requirements.import_text_desc": "Поставете спецификации на изискванията. Всеки ред във формат: обект | атрибут | тип_ограничение | стойност | единица | категория | приоритет",
-    "requirements.import_placeholder": "стена | дебелина | min | 200 | mm | конструктивен | трябва\nпокрив | u_стойност | max | 0,20 | W/m²K | топлинен | трябва",
+    "requirements.import_placeholder": "стена | дебелина | min | 200 | mm | конструктивен | must\nпокрив | u_стойност | max | 0,20 | W/m²K | топлинен | must",
     "requirements.set_created": "Набор от изисквания е създаден",
     "requirements.new_set": "Нов набор от изисквания",
     "requirements.set_name_placeholder": "напр. Конструктивни изисквания Фаза 1",

@@ -11318,7 +11318,7 @@ const resource = {
     "requirements.notes_placeholder": "Tilleggsnotater eller kontekst...",
     "requirements.import_text": "Importer fra tekst",
     "requirements.import_text_desc": "Lim inn kravspesifikasjoner. Hver linje i formatet: entitet | egenskap | begrensningstype | verdi | enhet | kategori | prioritet",
-    "requirements.import_placeholder": "vegg | tykkelse | min | 200 | mm | konstruksjon | må\ntak | u_verdi | max | 0,20 | W/m²K | termisk | må",
+    "requirements.import_placeholder": "vegg | tykkelse | min | 200 | mm | konstruksjon | must\ntak | u_verdi | max | 0,20 | W/m²K | termisk | must",
     "requirements.set_created": "Kravsett opprettet",
     "requirements.new_set": "Nytt kravsett",
     "requirements.set_name_placeholder": "f.eks. Konstruksjonskrav Fase 1",

@@ -9569,7 +9569,7 @@ const resource = {
     "requirements.notes_placeholder": "Lisähuomautuksia tai konteksti...",
     "requirements.import_text": "Tuo tekstistä",
     "requirements.import_text_desc": "Liitä vaatimusmääritykset. Jokainen rivi muodossa: entiteetti | ominaisuus | rajoitetyyppi | arvo | yksikkö | kategoria | prioriteetti",
-    "requirements.import_placeholder": "seinä | paksuus | min | 200 | mm | rakenteellinen | täytyy\nkatto | u_arvo | max | 0,20 | W/m²K | lämpö | täytyy",
+    "requirements.import_placeholder": "seinä | paksuus | min | 200 | mm | rakenteellinen | must\nkatto | u_arvo | max | 0,20 | W/m²K | lämpö | must",
     "requirements.set_created": "Vaatimusjoukko luotu",
     "requirements.new_set": "Uusi vaatimusjoukko",
     "requirements.set_name_placeholder": "esim. Rakenteelliset vaatimukset Vaihe 1",

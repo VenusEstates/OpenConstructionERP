@@ -9415,7 +9415,7 @@ const resource = {
     "requirements.notes_placeholder": "Zusätzliche Hinweise oder Kontext...",
     "requirements.import_text": "Aus Text importieren",
     "requirements.import_text_desc": "Anforderungsspezifikationen einfügen. Jede Zeile im Format: Objekt | Eigenschaft | Bedingungstyp | Wert | Einheit | Kategorie | Priorität",
-    "requirements.import_placeholder": "wand | dicke | min | 200 | mm | tragwerk | muss\ndach | u_wert | max | 0,20 | W/m²K | wärmeschutz | muss",
+    "requirements.import_placeholder": "wand | dicke | min | 200 | mm | tragwerk | must\ndach | u_wert | max | 0,20 | W/m²K | wärmeschutz | must",
     "requirements.set_created": "Anforderungsset erstellt",
     "requirements.new_set": "Neues Anforderungsset",
     "requirements.set_name_placeholder": "z. B. Tragwerksanforderungen Phase 1",

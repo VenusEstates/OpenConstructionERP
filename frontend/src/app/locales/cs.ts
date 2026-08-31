@@ -9645,7 +9645,7 @@ const resource = {
     "requirements.notes_placeholder": "Dodatečné poznámky nebo kontext...",
     "requirements.import_text": "Importovat z textu",
     "requirements.import_text_desc": "Vložte specifikace požadavků. Každý řádek ve formátu: entita | atribut | typ_omezení | hodnota | jednotka | kategorie | priorita",
-    "requirements.import_placeholder": "stěna | tloušťka | min | 200 | mm | konstrukční | musí\nstřecha | u_hodnota | max | 0,20 | W/m²K | tepelný | musí",
+    "requirements.import_placeholder": "stěna | tloušťka | min | 200 | mm | konstrukční | must\nstřecha | u_hodnota | max | 0,20 | W/m²K | tepelný | must",
     "requirements.set_created": "Sada požadavků vytvořena",
     "requirements.new_set": "Nová sada požadavků",
     "requirements.set_name_placeholder": "např.: Konstrukční požadavky Fáze 1",

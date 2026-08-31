@@ -806,6 +806,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_locale_stripped_diacritics.py
 
+      # The requirements import sample is a row the user copies, and two of its
+      # seven fields are vocabularies the importer matches literally. 36 of 42
+      # locales had translated the priority, so RequirementCreate rejected the
+      # row outright, and ten had translated the operator too, which is quieter:
+      # the parser warns and substitutes equals, turning "at least 200" into
+      # "exactly 200". Reads both vocabularies out of the backend with ast, so
+      # adding an operator or a MoSCoW level needs no edit here.
+      - name: Check the requirements import sample would actually import
+        if: ${{ !cancelled() }}
+        run: python scripts/check_locale_requirement_sample.py
+
       # This gate is declared in .pre-commit-config.yaml and was running nowhere.
       # pre-commit is not installed in this checkout, so none of that file's hooks
       # fire, and the local commit-msg shim covers only the two commit-message

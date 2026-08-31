@@ -9650,7 +9650,7 @@ const resource = {
     "requirements.notes_placeholder": "Ek notlar veya bağlam...",
     "requirements.import_text": "Metinden İçe Aktar",
     "requirements.import_text_desc": "Gereksinim özelliklerini yapıştırın. Her satır şu formatta olmalıdır: varlık | öznitelik | kısıt_türü | değer | birim | kategori | öncelik",
-    "requirements.import_placeholder": "duvar | kalınlık | min | 200 | mm | yapısal | zorunlu\nçatı | u_değeri | max | 0,20 | W/m²K | ısıl | zorunlu",
+    "requirements.import_placeholder": "duvar | kalınlık | min | 200 | mm | yapısal | must\nçatı | u_değeri | max | 0,20 | W/m²K | ısıl | must",
     "requirements.set_created": "Gereksinim seti oluşturuldu",
     "requirements.new_set": "Yeni Gereksinim Seti",
     "requirements.set_name_placeholder": "örn.: Yapısal Gereksinimler Aşama 1",

@@ -9810,7 +9810,7 @@ const resource = {
     "requirements.notes_placeholder": "Ghi chú bổ sung hoặc ngữ cảnh...",
     "requirements.import_text": "Nhập từ văn bản",
     "requirements.import_text_desc": "Dán thuyết minh yêu cầu. Mỗi dòng nên theo định dạng: thực_thể | thuộc_tính | loại_ràng_buộc | giá_trị | đơn_vị | danh_mục | mức_ưu_tiên",
-    "requirements.import_placeholder": "tường | chiều_dày | min | 200 | mm | kết_cấu | bắt_buộc\nmái | u_value | max | 0.20 | W/m²K | nhiệt | bắt_buộc",
+    "requirements.import_placeholder": "tường | chiều_dày | min | 200 | mm | kết_cấu | must\nmái | u_value | max | 0.20 | W/m²K | nhiệt | must",
     "requirements.set_created": "Bộ yêu cầu đã được tạo",
     "requirements.new_set": "Bộ yêu cầu mới",
     "requirements.set_name_placeholder": "ví dụ: Yêu cầu kết cấu Giai đoạn 1",

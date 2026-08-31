@@ -8439,7 +8439,7 @@ const resource = {
     "requirements.notes_placeholder": "Aanvullende opmerkingen of context...",
     "requirements.import_text": "Importeren uit Tekst",
     "requirements.import_text_desc": "Plak vereistenspecificaties. Elke regel in het formaat: entiteit | eigenschap | restrictietype | waarde | eenheid | categorie | prioriteit",
-    "requirements.import_placeholder": "muur | dikte | min | 200 | mm | constructief | moet\ndak | u_waarde | max | 0,20 | W/m²K | thermisch | moet",
+    "requirements.import_placeholder": "muur | dikte | min | 200 | mm | constructief | must\ndak | u_waarde | max | 0,20 | W/m²K | thermisch | must",
     "requirements.set_created": "Vereistenset aangemaakt",
     "requirements.new_set": "Nieuwe Vereistenset",
     "requirements.set_name_placeholder": "bijv. Constructieve Vereisten Fase 1",
