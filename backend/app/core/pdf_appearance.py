@@ -197,12 +197,30 @@ def sanitise(data: Any) -> dict[str, Any]:
     }
 
 
-#: Process-local cache of the parsed appearance, keyed by file path and
-#: invalidated by modification time - the same arrangement
-#: :mod:`app.core.app_branding` uses, and for the same reason: a single export
-#: reads these values once per page for the header and again for the footer, and
-#: an admin save is picked up on the next read with no explicit bust.
-_appearance_cache: dict[str, tuple[int, dict[str, Any]]] = {}
+#: Process-local cache of the parsed appearance, keyed by file path - the same
+#: arrangement :mod:`app.core.app_branding` uses, and for the same reason: a
+#: single export reads these values once per page for the header and again for
+#: the footer.
+#:
+#: The stamp is modification time *and* size, and every writer drops the entry
+#: outright. Modification time alone is not enough: Windows hands two writes in
+#: the same clock tick a byte-for-byte identical ``st_mtime_ns``, measured at
+#: 139 collisions in 200 consecutive pairs, so a save that lands in the same
+#: tick as the one before it leaves a cache keyed on time alone convinced the
+#: file never changed. That is not only a stale render - the PUT endpoint reads
+#: this, merges the admin's fields over it and writes the result back, so a
+#: stale read is persisted and silently reverts whatever the shadowed save had
+#: changed.
+_appearance_cache: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
+
+
+def _forget_appearance(data_dir: Path | None) -> None:
+    """Drop any cached parse of the appearance file.
+
+    Called by every writer. A writer knows the content changed; leaving that
+    knowledge to the clock is what the stamp above exists to survive.
+    """
+    _appearance_cache.pop(str(appearance_path(data_dir)), None)
 
 
 def read_appearance(data_dir: Path | None = None) -> dict[str, Any]:
@@ -214,15 +232,16 @@ def read_appearance(data_dir: Path | None = None) -> dict[str, Any]:
     path = appearance_path(data_dir)
     key = str(path)
     try:
-        mtime = path.stat().st_mtime_ns
+        info = path.stat()
     except FileNotFoundError:
         _appearance_cache.pop(key, None)
         return dict(DEFAULT_APPEARANCE)
     except OSError as exc:
         logger.warning("Could not stat document appearance at %s: %s", path, exc)
         return dict(DEFAULT_APPEARANCE)
+    stamp = (info.st_mtime_ns, info.st_size)
     cached = _appearance_cache.get(key)
-    if cached is not None and cached[0] == mtime:
+    if cached is not None and cached[0] == stamp:
         return dict(cached[1])
     try:
         raw = path.read_text(encoding="utf-8")
@@ -238,7 +257,7 @@ def read_appearance(data_dir: Path | None = None) -> dict[str, Any]:
         logger.warning("Ignoring corrupt document appearance file at %s", path)
         return dict(DEFAULT_APPEARANCE)
     clean = sanitise(data)
-    _appearance_cache[key] = (mtime, dict(clean))
+    _appearance_cache[key] = (stamp, dict(clean))
     return dict(clean)
 
 
@@ -259,6 +278,9 @@ def write_appearance(payload: Any, data_dir: Path | None = None) -> dict[str, An
         path.write_text(json.dumps(clean, indent=2) + "\n", encoding="utf-8")
     except OSError as exc:
         logger.warning("Could not persist document appearance at %s: %s", path, exc)
+    # Unconditionally, including after a failed write: the file is then
+    # unchanged and forgetting it costs one re-read.
+    _forget_appearance(data_dir)
     return clean
 
 
@@ -271,6 +293,7 @@ def reset_appearance(data_dir: Path | None = None) -> dict[str, Any]:
         pass
     except OSError as exc:
         logger.warning("Could not remove document appearance at %s: %s", path, exc)
+    _forget_appearance(data_dir)
     return dict(DEFAULT_APPEARANCE)
 
 

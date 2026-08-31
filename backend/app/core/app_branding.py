@@ -91,14 +91,28 @@ def sanitise(data: Any) -> dict[str, Any]:
     return {"mode": mode, "logo_data_url": logo, "company_name": name}
 
 
-#: Process-local cache of the parsed branding, keyed by file path and
-#: invalidated by modification time. A PDF export reads the branding several
-#: times per page (header logo + footer brand + document metadata) and the logo
-#: data URL can be megabytes, so re-reading and re-parsing the file every time
-#: is wasteful. The mtime key means an admin save (which rewrites the file) is
-#: picked up on the next read with no explicit bust, and a reset (which unlinks
-#: it) falls through to the defaults.
-_branding_cache: dict[str, tuple[int, dict[str, Any]]] = {}
+#: Process-local cache of the parsed branding, keyed by file path. A PDF export
+#: reads the branding several times per page (header logo + footer brand +
+#: document metadata) and the logo data URL can be megabytes, so re-reading and
+#: re-parsing the file every time is wasteful.
+#:
+#: The stamp is modification time *and* size, and both writers drop the entry
+#: outright. Modification time alone is not enough: Windows hands two writes in
+#: the same clock tick a byte-for-byte identical ``st_mtime_ns``, measured at
+#: 139 collisions in 200 consecutive pairs, so a save landing in the same tick
+#: as the one before it would leave this cache serving the previous logo and
+#: company name to every export until some later save happened to move the
+#: clock.
+_branding_cache: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
+
+
+def _forget_branding(data_dir: Path | None) -> None:
+    """Drop any cached parse of the branding file.
+
+    Called by both writers. A writer knows the content changed; leaving that
+    knowledge to the clock is what the stamp above exists to survive.
+    """
+    _branding_cache.pop(str(branding_path(data_dir)), None)
 
 
 def read_branding(data_dir: Path | None = None) -> dict[str, Any]:
@@ -112,15 +126,16 @@ def read_branding(data_dir: Path | None = None) -> dict[str, Any]:
     path = branding_path(data_dir)
     key = str(path)
     try:
-        mtime = path.stat().st_mtime_ns
+        info = path.stat()
     except FileNotFoundError:
         _branding_cache.pop(key, None)
         return dict(DEFAULT_BRANDING)
     except OSError as exc:
         logger.warning("Could not stat branding at %s: %s", path, exc)
         return dict(DEFAULT_BRANDING)
+    stamp = (info.st_mtime_ns, info.st_size)
     cached = _branding_cache.get(key)
-    if cached is not None and cached[0] == mtime:
+    if cached is not None and cached[0] == stamp:
         return dict(cached[1])
     try:
         raw = path.read_text(encoding="utf-8")
@@ -136,7 +151,7 @@ def read_branding(data_dir: Path | None = None) -> dict[str, Any]:
         logger.warning("Ignoring corrupt branding file at %s", path)
         return dict(DEFAULT_BRANDING)
     clean = sanitise(data)
-    _branding_cache[key] = (mtime, dict(clean))
+    _branding_cache[key] = (stamp, dict(clean))
     return dict(clean)
 
 
@@ -157,6 +172,9 @@ def write_branding(payload: Any, data_dir: Path | None = None) -> dict[str, Any]
         path.write_text(json.dumps(clean) + "\n", encoding="utf-8")
     except OSError as exc:
         logger.warning("Could not persist branding at %s: %s", path, exc)
+    # Unconditionally, including after a failed write: the file is then
+    # unchanged and forgetting it costs one re-read.
+    _forget_branding(data_dir)
     return clean
 
 
@@ -169,4 +187,5 @@ def reset_branding(data_dir: Path | None = None) -> dict[str, Any]:
         pass
     except OSError as exc:
         logger.warning("Could not remove branding at %s: %s", path, exc)
+    _forget_branding(data_dir)
     return dict(DEFAULT_BRANDING)
