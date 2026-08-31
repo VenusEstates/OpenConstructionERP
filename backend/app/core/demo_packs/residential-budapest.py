@@ -56,7 +56,12 @@ TEMPLATE = DemoTemplate(
         "lat": 47.5423,
         "lng": 19.0693,
     },
-    validation_rule_sets=["tetelrend", "boq_quality", "project_completeness"],
+    # ``hungary``, not ``tetelrend``: the latter is the classification
+    # standard set above, and naming it here asked the engine for a rule
+    # set that does not exist. The engine logs that and carries on, so
+    # both Hungarian demos ran the generic quality rules and none of the
+    # country's own. The pack manifest had it right all along.
+    validation_rule_sets=["hungary", "boq_quality", "project_completeness"],
     boq_name="Költségvetés - magasépítési ágazati tételrend (Bill of Quantities)",
     boq_description=(
         "Fejezetenkénti költségvetés a magasépítési ágazati tételrend szerint. "
