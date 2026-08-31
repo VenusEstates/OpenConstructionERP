@@ -45,15 +45,15 @@ MANIFEST = PartnerPackManifest(
     validation_rule_sets=[
         "masterformat",
     ],
-    default_modules=[],   # empty = show all
+    default_modules=[],  # empty = show all
     hidden_modules=[],
     demo_template_ids=["medical-us"],
     branding=PartnerBranding(
-        primary_color="#0A3161",   # Old Glory blue
-        accent_color="#B31942",    # Old Glory red
+        primary_color="#0A3161",  # Old Glory blue
+        accent_color="#B31942",  # Old Glory red
         logo_path="logo.svg",
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
     onboarding_script_path="onboarding.yaml",
     metadata={
@@ -73,16 +73,66 @@ MANIFEST = PartnerPackManifest(
             # Top-10 US metros pre-offered in the onboarding wizard. Whichever
             # index the user subscribes to covers far more; more cities can be
             # added from the cost-database UI.
-            {"slug": "ny-new-york",     "label": "New York, NY",      "metro": "NYC",   "default": True},
-            {"slug": "ca-los-angeles",  "label": "Los Angeles, CA",   "metro": "LA",    "default": False},
-            {"slug": "il-chicago",      "label": "Chicago, IL",       "metro": "CHI",   "default": False},
-            {"slug": "tx-houston",      "label": "Houston, TX",       "metro": "HOU",   "default": False},
-            {"slug": "ma-boston",       "label": "Boston, MA",        "metro": "BOS",   "default": False},
-            {"slug": "dc-washington",   "label": "Washington, DC",    "metro": "DC",    "default": False},
-            {"slug": "ca-san-francisco","label": "San Francisco, CA", "metro": "SF",    "default": False},
-            {"slug": "ga-atlanta",      "label": "Atlanta, GA",       "metro": "ATL",   "default": False},
-            {"slug": "wa-seattle",      "label": "Seattle, WA",       "metro": "SEA",   "default": False},
-            {"slug": "co-denver",       "label": "Denver, CO",        "metro": "DEN",   "default": False},
+            {
+                "slug": "ny-new-york",
+                "label": "New York, NY",
+                "metro": "NYC",
+                "default": True,
+            },
+            {
+                "slug": "ca-los-angeles",
+                "label": "Los Angeles, CA",
+                "metro": "LA",
+                "default": False,
+            },
+            {
+                "slug": "il-chicago",
+                "label": "Chicago, IL",
+                "metro": "CHI",
+                "default": False,
+            },
+            {
+                "slug": "tx-houston",
+                "label": "Houston, TX",
+                "metro": "HOU",
+                "default": False,
+            },
+            {
+                "slug": "ma-boston",
+                "label": "Boston, MA",
+                "metro": "BOS",
+                "default": False,
+            },
+            {
+                "slug": "dc-washington",
+                "label": "Washington, DC",
+                "metro": "DC",
+                "default": False,
+            },
+            {
+                "slug": "ca-san-francisco",
+                "label": "San Francisco, CA",
+                "metro": "SF",
+                "default": False,
+            },
+            {
+                "slug": "ga-atlanta",
+                "label": "Atlanta, GA",
+                "metro": "ATL",
+                "default": False,
+            },
+            {
+                "slug": "wa-seattle",
+                "label": "Seattle, WA",
+                "metro": "SEA",
+                "default": False,
+            },
+            {
+                "slug": "co-denver",
+                "label": "Denver, CO",
+                "metro": "DEN",
+                "default": False,
+            },
         ],
         "state_license_authorities": {
             # Per-state general-contractor licensing authority — surfaced

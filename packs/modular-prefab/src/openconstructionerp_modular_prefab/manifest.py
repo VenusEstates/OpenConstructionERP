@@ -37,7 +37,7 @@ MANIFEST = PartnerPackManifest(
         "transport_logistics",
         "module_handover_protocol",
     ],
-    default_modules=[],   # empty = show all
+    default_modules=[],  # empty = show all
     hidden_modules=[],
     # Cross-region pack: no second demo shares the flagship's country, so pin
     # two EUR repeatable-housing projects. The Dutch volumetric modular-housing
@@ -45,11 +45,11 @@ MANIFEST = PartnerPackManifest(
     # repeatable, unit-based housing archetype in the same currency.
     demo_template_ids=["modular-housing", "residential-berlin"],
     branding=PartnerBranding(
-        primary_color="#1F4E79",   # industrial blue
-        accent_color="#FFB81C",    # modular yellow
+        primary_color="#1F4E79",  # industrial blue
+        accent_color="#FFB81C",  # modular yellow
         logo_path="logo.svg",
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
     onboarding_script_path="onboarding.yaml",
     metadata={

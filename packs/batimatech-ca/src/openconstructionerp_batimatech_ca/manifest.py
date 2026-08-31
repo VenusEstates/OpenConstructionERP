@@ -43,7 +43,7 @@ MANIFEST = PartnerPackManifest(
         "ontario_obc",
         "quebec_ccq",
     ],
-    default_modules=[],   # empty = show all (Shape A, no module hiding)
+    default_modules=[],  # empty = show all (Shape A, no module hiding)
     hidden_modules=[],
     demo_template_ids=["condo-toronto"],
     branding=PartnerBranding(

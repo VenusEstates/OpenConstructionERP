@@ -107,7 +107,10 @@ MANIFEST = PartnerPackManifest(
         ],
         "default_contract": "Contrato a precios unitarios",
         "social_housing_bodies": ["INFONAVIT", "FOVISSSTE", "CONAVI"],
-        "pilot_project_types": ["social housing (vivienda social)", "private residential (vivienda residencial)"],
+        "pilot_project_types": [
+            "social housing (vivienda social)",
+            "private residential (vivienda residencial)",
+        ],
         "support_email": "info@datadrivenconstruction.io",
     },
 )

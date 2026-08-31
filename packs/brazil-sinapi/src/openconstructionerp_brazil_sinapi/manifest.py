@@ -87,15 +87,15 @@ MANIFEST = PartnerPackManifest(
         "sinapi",
         "nbr",
     ],
-    default_modules=[],   # empty = show all
+    default_modules=[],  # empty = show all
     hidden_modules=[],
     demo_template_ids=["residential-saopaulo"],
     branding=PartnerBranding(
-        primary_color="#009C3B",   # Brazil green (flag)
-        accent_color="#FFDF00",    # Brazil yellow (flag)
+        primary_color="#009C3B",  # Brazil green (flag)
+        accent_color="#FFDF00",  # Brazil yellow (flag)
         logo_path="logo.svg",
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
     onboarding_script_path="onboarding.yaml",
     metadata={

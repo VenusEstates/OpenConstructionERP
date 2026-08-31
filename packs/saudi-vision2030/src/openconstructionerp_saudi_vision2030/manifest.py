@@ -74,14 +74,14 @@ MANIFEST = PartnerPackManifest(
         # Vision 2030 cross-cutting KPIs.
         "vision_2030_kpis",
     ],
-    default_modules=[],   # empty = show all modules in sidebar
+    default_modules=[],  # empty = show all modules in sidebar
     hidden_modules=[],
     branding=PartnerBranding(
-        primary_color="#006C35",   # Saudi flag green (Pantone 354 C)
-        accent_color="#FFFFFF",    # white
+        primary_color="#006C35",  # Saudi flag green (Pantone 354 C)
+        accent_color="#FFFFFF",  # white
         logo_path="logo.svg",
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
     onboarding_script_path="onboarding.yaml",
     metadata={
@@ -114,9 +114,18 @@ MANIFEST = PartnerPackManifest(
             "MoMRAH municipal projects",
         ],
         "supported_regions": [
-            "Riyadh", "Jeddah", "Makkah", "Madinah",
-            "Dammam", "Khobar", "Eastern Province",
-            "NEOM / Tabuk", "Abha / Asir", "Hail", "Qassim", "Jazan",
+            "Riyadh",
+            "Jeddah",
+            "Makkah",
+            "Madinah",
+            "Dammam",
+            "Khobar",
+            "Eastern Province",
+            "NEOM / Tabuk",
+            "Abha / Asir",
+            "Hail",
+            "Qassim",
+            "Jazan",
         ],
         "cwicr_seed_gap": (
             "Only cwicr-eng-riyadh is currently seeded in the v3 catalogue. "

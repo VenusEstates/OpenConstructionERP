@@ -42,18 +42,18 @@ MANIFEST = PartnerPackManifest(
         "as_4000_contracts",
         "rawlinsons_benchmarks",
     ],
-    default_modules=[],   # empty = show all (Shape A, no module hiding)
+    default_modules=[],  # empty = show all (Shape A, no module hiding)
     hidden_modules=[],
     # Two Australian (AUD, NCC 2022 / AS-standards) demos so the pack always
     # lands two in-market projects: the Sydney mixed-use flagship plus the
     # Melbourne hyperscale data centre (major AU industrial / infrastructure).
     demo_template_ids=["mixed-use-sydney", "data-center-melbourne"],
     branding=PartnerBranding(
-        primary_color="#00843D",   # Australian green (Wattle/Gold pair)
-        accent_color="#FFCD00",    # Australian gold
+        primary_color="#00843D",  # Australian green (Wattle/Gold pair)
+        accent_color="#FFCD00",  # Australian gold
         logo_path="logo.svg",
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
     onboarding_script_path="onboarding.yaml",
     metadata={

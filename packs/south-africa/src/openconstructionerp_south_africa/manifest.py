@@ -46,17 +46,17 @@ MANIFEST = PartnerPackManifest(
         "pppfa_preferential_procurement",
         "ipdm_procurement_gates",
     ],
-    default_modules=[],   # empty = show all
+    default_modules=[],  # empty = show all
     hidden_modules=[],
     # No bundled SA demo project yet: an empty list keeps the default
     # flagship plus country-fill behaviour rather than seeding a fabricated one.
     demo_template_ids=[],
     branding=PartnerBranding(
-        primary_color="#007749",   # South African flag green
-        accent_color="#FFB81C",    # South African gold
+        primary_color="#007749",  # South African flag green
+        accent_color="#FFB81C",  # South African gold
         logo_path="logo.svg",
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
     onboarding_script_path="onboarding.yaml",
     metadata={

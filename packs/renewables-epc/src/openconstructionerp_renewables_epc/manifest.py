@@ -37,7 +37,7 @@ MANIFEST = PartnerPackManifest(
         "mv_cable_specs",
         "renewables_grid_compliance",
     ],
-    default_modules=[],   # empty = show all
+    default_modules=[],  # empty = show all
     hidden_modules=[],
     # Cross-region pack: pin two EUR energy / heavy-civil EPC projects. The
     # solar + BESS EPC flagship plus the cast-in-place RC structure (formwork-
@@ -45,11 +45,11 @@ MANIFEST = PartnerPackManifest(
     # country-fill default (a Berlin residential complex).
     demo_template_ids=["solar-bess-epc", "rc-structure-formwork"],
     branding=PartnerBranding(
-        primary_color="#00A859",   # renewable green
-        accent_color="#0072CE",    # energy blue
+        primary_color="#00A859",  # renewable green
+        accent_color="#0072CE",  # energy blue
         logo_path="logo.svg",
         favicon_path=None,
-        powered_by_text=None,      # use default co-branding string
+        powered_by_text=None,  # use default co-branding string
     ),
     onboarding_script_path="onboarding.yaml",
     metadata={
