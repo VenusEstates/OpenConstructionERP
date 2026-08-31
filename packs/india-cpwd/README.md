@@ -46,8 +46,10 @@ rate is the most common way an Indian estimate ends up wrong.
   office block at Lodhi Road, 97 priced items across 13 sub-heads from
   earthwork to external services, on DSR rates at a Delhi price level, with
   the four markups an Indian tender carries: contractor's profit and
-  overheads, contingencies, the labour cess and GST. It passes the checks this
-  pack switches on.
+  overheads, contingencies, the labour cess and GST. It passes both `cpwd`
+  rules with nothing outstanding, and its validation dashboard opens at 97.8
+  percent with quality warnings and no errors, which is what every demo in the
+  product looks like.
 
 ## Cost data
 
