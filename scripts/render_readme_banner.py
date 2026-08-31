@@ -56,7 +56,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 REPO = Path(__file__).resolve().parent.parent
 CASES = REPO / "frontend" / "src" / "features" / "cases"
@@ -85,17 +85,29 @@ CAST_W = CONTENT * 2 // (2 * CAST_COLS + 1)
 CAST_H = round(CAST_W * 2 / 3**0.5)
 CAST_STEP = CAST_H * 3 // 4
 
-MOD_COLS = 32
+# Widened from 32 on 31.08. The tree reached 193 modules and 32 columns of 6
+# rows hold 192, so the render stopped rather than dropping a cell off the
+# bottom, which is what the guard below is for. 34 keeps the comb six rows deep
+# and leaves room for eleven more before the next widening.
+MOD_COLS = 34
 MOD_ROWS = 6
 MOD_W = CONTENT * 2 // (2 * MOD_COLS + 1)
 MOD_H = round(MOD_W * 2 / 3**0.5)
 MOD_STEP = MOD_H * 3 // 4
 
-# How far the photograph is pulled toward its accent colour, and then toward
-# white. Enough that the comb reads as one palette rather than as a contact
-# sheet, little enough that the faces stay faces.
-WASH = 0.16
-LIFT = 0.06
+# How far the photograph is pulled toward its accent colour, how much of its
+# own colour it keeps, and how far it is then lifted. Enough that the comb reads
+# as one palette rather than as a contact sheet, little enough that the faces
+# stay faces.
+#
+# The wash is heavier and the lift is gone since the ground went dark. On white
+# paper a little lift kept the tiles from sinking; on this ground it only greys
+# them, and what the tiles needed instead was less of their own colour. Twenty
+# three photographs shot on different days at different exposures are a contact
+# sheet until something makes them agree, and desaturation is that something.
+WASH = 0.26
+LIFT = 0.0
+KEEP_COLOUR = 0.62
 
 # Where the module colour ramp saturates, in number of modules wired to. Read off
 # the measured distribution: the union of the two graphs has a median around five
@@ -107,30 +119,54 @@ LIFT = 0.06
 RAMP_TOP = 20
 RAMP_GAMMA = 0.62
 
-# How far the palest cell is washed out toward the paper. This was 0.90 and the
-# least wired buckets came out close enough to white that you could not count
-# them. A banner whose subject is how many modules there are cannot afford cells
-# that disappear.
-RAMP_FLOOR = 0.74
+# How far the palest cell is washed toward the ground. This was 0.90 against
+# white paper and the least wired buckets came out close enough to white that
+# you could not count them. A banner whose subject is how many modules there are
+# cannot afford cells that disappear, and that is as true against black.
+#
+# The floor mixes toward PALE_GROUND rather than toward PAPER. A cell washed all
+# the way to the ground colour is a hole in the comb, and holes read as missing
+# modules; lifting the floor off the ground keeps the quietest cell a cell.
+# Retuned after the first dark render. At 0.74 against a (38, 43, 55) floor the
+# least wired cells of the grey and amber buckets came back close enough to the
+# ground that you could not count them, which is the same failure thewhite version
+# had at 0.90 and for the same reason: the floor was measured against the wrong
+# background. A lighter floor and a shallower wash keep the quietest cell a
+# cell without flattening the depth the ramp exists to show.
+RAMP_FLOOR = 0.62
+PALE_GROUND = (60, 67, 82)
 
-INK = (28, 25, 23)
-MUTED = (120, 113, 108)
-LABEL = (140, 133, 128)
-PAPER = (255, 255, 255)
+# The ground is a gradient rather than a fill, top lighter than bottom, so the
+# picture has somewhere to sit. PAPER stays the name the rest of the file uses
+# for "whatever is behind the cells", which is what the hairlines between them
+# are cut out of.
+PAPER = (11, 13, 18)
+GROUND_TOP = (19, 23, 32)
+GROUND_BOTTOM = (9, 10, 14)
+
+INK = (237, 240, 246)
+MUTED = (147, 155, 170)
+LABEL = (125, 182, 255)
 
 # One colour per `category` value that at least three modules claim for
 # themselves. The six categories with a single member each, and the directories
 # carrying no manifest at all, share the last swatch: inventing a colour for a
 # category of one would give six specks equal billing with a hundred and nineteen
 # modules.
+#
+# Respaced for the dark ground. The old set was picked against white and mixed a
+# 216 blue with a 148 teal and a 158 grey, three different luminances doing the
+# same job, which is why the comb read as a rainbow rather than as a sorted
+# field. These sit at one chroma and one luminance band, far enough apart in hue
+# to stay countable and close enough in weight that no bucket shouts.
 BUCKETS: list[tuple[str, str, tuple[int, int, int]]] = [
-    ("core", "Core", (29, 78, 216)),
-    ("business", "Business", (13, 148, 136)),
-    ("regional", "Regional", (217, 119, 6)),
-    ("extension", "Extension", (124, 58, 237)),
-    ("controls", "Controls", (225, 29, 72)),
-    ("enterprise", "Enterprise", (71, 85, 105)),
-    ("__other__", "Other", (168, 162, 158)),
+    ("core", "Core", (79, 140, 255)),
+    ("business", "Business", (34, 197, 176)),
+    ("regional", "Regional", (245, 166, 60)),
+    ("extension", "Extension", (167, 139, 250)),
+    ("controls", "Controls", (244, 96, 118)),
+    ("enterprise", "Enterprise", (125, 145, 175)),
+    ("__other__", "Other", (150, 160, 176)),
 ]
 
 # --------------------------------------------------------------------------- #
@@ -517,8 +553,13 @@ def _tile(cell: Cell, mask: Image.Image) -> Image.Image:
     top = round((photo.height - CAST_H) * 0.10)
     photo = photo.crop((left, top, left + CAST_W, top + CAST_H))
 
+    # Desaturate first, then wash toward the cell's accent. In the other order
+    # the desaturation eats the accent it was just given and every tile comes
+    # back the same grey.
+    photo = ImageEnhance.Color(photo).enhance(KEEP_COLOUR)
     photo = Image.blend(photo, Image.new("RGB", photo.size, cell.accent), WASH)
-    photo = Image.blend(photo, Image.new("RGB", photo.size, (255, 255, 255)), LIFT)
+    if LIFT:
+        photo = Image.blend(photo, Image.new("RGB", photo.size, (255, 255, 255)), LIFT)
 
     # The caption sits on the picture now that the rows have closed up, so the
     # bottom of the cell is darkened to carry white text. The ramp reaches most of
@@ -573,8 +614,8 @@ def _bucket_index(category: str) -> int:
 
 
 def _tint(base: tuple[int, int, int], t: float) -> tuple[int, int, int]:
-    """The bucket colour, from a pale wash at t=0 to the full colour at t=1."""
-    pale = [round(c + (255 - c) * RAMP_FLOOR) for c in base]
+    """The bucket colour, from a dark wash at t=0 to the full colour at t=1."""
+    pale = [round(c + (g - c) * RAMP_FLOOR) for c, g in zip(base, PALE_GROUND)]
     return (
         round(pale[0] + (base[0] - pale[0]) * t),
         round(pale[1] + (base[1] - pale[1]) * t),
@@ -593,7 +634,11 @@ def draw_modules(data: Survey) -> Image.Image:
     comb_w = MOD_COLS * MOD_W + MOD_W // 2
     comb_h = (MOD_ROWS - 1) * MOD_STEP + MOD_H
 
-    canvas = Image.new("RGB", (comb_w * SS, comb_h * SS), PAPER)
+    # Transparent, not filled: the ground behind this comb is a gradient, and a
+    # flat rectangle the width of the picture would show its own edges against
+    # it. The hairline between cells is now cut out of the tile rather than
+    # painted over it, which is the same wall by the other method.
+    canvas = Image.new("RGBA", (comb_w * SS, comb_h * SS), (0, 0, 0, 0))
     pen = ImageDraw.Draw(canvas)
     for index, module in enumerate(order):
         row, col = divmod(index, MOD_COLS)
@@ -608,18 +653,25 @@ def draw_modules(data: Survey) -> Image.Image:
         y = row * MOD_STEP * SS
         t = min(1.0, (data.degree[module.ident] / RAMP_TOP) ** RAMP_GAMMA)
         fill = _tint(BUCKETS[_bucket_index(module.category)][2], t)
-        pen.polygon(_hexagon(x, y, MOD_W * SS, MOD_H * SS), fill=fill, outline=PAPER, width=2 * SS)
+        pen.polygon(_hexagon(x, y, MOD_W * SS, MOD_H * SS), fill=(*fill, 255), outline=(0, 0, 0, 0), width=2 * SS)
     return canvas.resize((comb_w, comb_h), Image.Resampling.LANCZOS)
 
 
 def draw_label(pen: ImageDraw.ImageDraw, text: str, top: int) -> int:
-    """A small letter spaced label over a comb, so the reader knows what it is."""
-    font = _font(19, 600)
-    x = float(MARGIN)
+    """A letter spaced label over a comb, so the reader knows what it is.
+
+    A small filled hexagon leads it. The picture is two honeycombs and its
+    labels were two lines of grey type that could have belonged to anything; one
+    cell of the same shape, at text size, ties the label to what it names.
+    """
+    font = _font(21, 650)
+    bullet = 13
+    pen.polygon(_hexagon(MARGIN, top + 3, bullet, round(bullet * 2 / 3**0.5)), fill=LABEL)
+    x = float(MARGIN + bullet + 11)
     for character in text:
         pen.text((x, top), character, font=font, fill=LABEL)
-        x += pen.textlength(character, font=font) + 1.6
-    return top + 23
+        x += pen.textlength(character, font=font) + 1.9
+    return top + 25
 
 
 def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int) -> int:
@@ -628,7 +680,7 @@ def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int) -> int:
     label_font = _font(22, 600)
     count_font = _font(22, 400)
 
-    chip_w, chip_h = 20, 23
+    chip_w, chip_h = 22, 25
     entries = []
     for i, (_, label, colour) in enumerate(BUCKETS):
         count = str(counts[i])
@@ -647,6 +699,21 @@ def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int) -> int:
     return top + chip_h
 
 
+def _ground(width: int, height: int) -> Image.Image:
+    """The dark gradient everything is drawn on.
+
+    A flat fill was what made the old banner look printed. One vertical ramp is
+    enough to give the picture a top and a bottom; anything more elaborate
+    competes with the two combs, which are the subject.
+    """
+    ground = Image.new("RGB", (1, height))
+    pen = ImageDraw.Draw(ground)
+    for y in range(height):
+        t = y / max(1, height - 1)
+        pen.point((0, y), fill=tuple(round(a + (b - a) * t) for a, b in zip(GROUND_TOP, GROUND_BOTTOM)))
+    return ground.resize((width, height), Image.Resampling.BILINEAR)
+
+
 def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
     # Eight companies, then the fifteen roles as eight and seven, so each row is
     # one group rather than a group boundary landing mid row.
@@ -656,7 +723,7 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
 
     lead_font = _font(26, 500)
     note_font = _font(23, 400)
-    label_h, after_label = 23, 9
+    label_h, after_label = 25, 11
     height = (
         20
         + label_h
@@ -675,7 +742,7 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
         + 26
     )
 
-    canvas = Image.new("RGB", (WIDTH, height), PAPER)
+    canvas = _ground(WIDTH, height)
     pen = ImageDraw.Draw(canvas)
 
     modules = sum(1 for m in data.modules if m.manifest_name)
@@ -684,7 +751,7 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
     y = draw_label(pen, HEAD_CAST, 20) + after_label
     y = draw_cast(canvas, pen, cast_rows, y) + 30
     y = draw_label(pen, f"{modules} BACKEND MODULES, WIRED TO EACH OTHER", y) + after_label
-    canvas.paste(comb, (MARGIN, y))
+    canvas.paste(comb, (MARGIN, y), comb)
     y = draw_legend(pen, data, y + comb.height + 26)
 
     busiest = ", ".join(ident for ident, _ in data.degree.most_common(3))

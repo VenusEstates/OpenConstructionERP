@@ -4,7 +4,7 @@
 
 ### A leading open-source workspace for construction project management
 
-<img src="docs/screenshots/banner.png" alt="OpenConstructionERP: a honeycomb of the eight company types and fifteen professional roles the platform is built around, over a second honeycomb of its 189 backend modules, each cell coloured by the category its own manifest declares and shaded by how many of the others it is wired to" width="900" />
+<img src="docs/screenshots/banner.png" alt="OpenConstructionERP: a honeycomb of the eight company types and fifteen professional roles the platform is built around, over a second honeycomb of its 190 backend modules, each cell coloured by the category its own manifest declares and shaded by how many of the others it is wired to" width="900" />
 
 Professional BOQ, CAD and BIM takeoff, 4D scheduling, 5D cost model, and tendering - all in one self-hosted platform.
 
