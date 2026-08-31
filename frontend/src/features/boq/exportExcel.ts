@@ -16,7 +16,7 @@ import {
   isSection,
   type Position,
 } from './api';
-import { resourceAwareTotalInBase } from './boqHelpers';
+import { classificationCode, resourceAwareTotalInBase } from './boqHelpers';
 import { getIntlLocale, fmtPercent } from '@/shared/lib/formatters';
 
 /* ── Types ────────────────────────────────────────────────────────────── */
@@ -286,7 +286,9 @@ export function buildBOQSheetData(options: ExportOptions): {
       group.subtotal,
       null,
       null,
-      null,
+      // A section is a chapter and chapters are numbered too, which is what a
+      // Hungarian or Chinese cover sheet is read down.
+      neutraliseFormula(classificationCode(group.section.classification, options.classificationStandard)),
       // Sections carry their id too so a renamed section round-trips.
       positionIdCell(group.section),
     ]);
@@ -307,7 +309,11 @@ export function buildBOQSheetData(options: ExportOptions): {
           return typeof v === 'string' ? neutraliseFormula(v) : v;
         })(),
         null,
-        null,
+        // The Code column existed and every priced row wrote null into it, so
+        // an exported bill carried no item reference at all. Only the resource
+        // sub-rows below filled it, with the resource code. The project's own
+        // standard breaks the tie on a bill that carries more than one code.
+        neutraliseFormula(classificationCode(child.classification, options.classificationStandard)),
         positionIdCell(child),
       ]);
       for (const r of getResources(child)) {
@@ -362,7 +368,11 @@ export function buildBOQSheetData(options: ExportOptions): {
         return typeof v === 'string' ? neutraliseFormula(v) : v;
       })(),
       null,
-      null,
+      // A position under no section is still a priced line and still carries
+      // an item code. The export builds a position row in two places, here and
+      // under a section above, and fixing only one of them is the same shape
+      // of miss as the three-standard reader this replaced.
+      neutraliseFormula(classificationCode(pos.classification, options.classificationStandard)),
       positionIdCell(pos),
     ]);
     for (const r of getResources(pos)) {

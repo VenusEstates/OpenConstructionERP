@@ -9,7 +9,12 @@
 // producing nonsensical figures.
 
 import { describe, it, expect } from 'vitest';
-import { convertToBase, hasContributingResources, resourceAwareTotalInBase } from './boqHelpers';
+import {
+  classificationCode,
+  convertToBase,
+  hasContributingResources,
+  resourceAwareTotalInBase,
+} from './boqHelpers';
 
 describe('convertToBase - multi-currency rebase', () => {
   const fxRates = [
@@ -204,5 +209,78 @@ describe('hasContributingResources', () => {
     expect(hasContributingResources([{ quantity: 1, unit_rate: 0 }])).toBe(true);
     expect(hasContributingResources([{ quantity: '2.5', unit_rate: 30 }])).toBe(true);
     expect(hasContributingResources([{ quantity: 0 }, { quantity: 3 }])).toBe(true);
+  });
+});
+
+// classificationCode — the Code column showed three standards out of eighteen
+//
+// The grid and the Excel export both rendered a position's item code by
+// reading `din276`, `nrm` and `masterformat` and nothing else. Those are the
+// three the backend registry calls legacy. Against the shipped demos, nine of
+// thirty three had an empty Code cell on every priced line, and eleven
+// classification keys present in real demo data could never be rendered at
+// all. The country rule sets ask for exactly those codes, so a Hungarian user
+// could be told a line has no item code while the column that would show it
+// stayed blank.
+
+describe('classificationCode - every standard, not the legacy three', () => {
+  it('still reads the three it always read', () => {
+    expect(classificationCode({ din276: '331' })).toBe('331');
+    expect(classificationCode({ nrm: '2.5.1' })).toBe('2.5.1');
+    expect(classificationCode({ masterformat: '03 30 00' })).toBe('03 30 00');
+  });
+
+  it.each([
+    ['tetelrend', 'MA-04-12-01', 'Hungary'],
+    ['gesn', '08-01-003-01', 'Russia'],
+    ['gb50500', '010401001001', 'China'],
+    ['cpwd', '4.1.2', 'India'],
+    ['sinapi', '92759', 'Brazil'],
+    ['nbr', '03.02.010', 'Brazil'],
+    ['dpgf', '02.1.3', 'France'],
+    ['mexico', 'E-071', 'Mexico'],
+    ['sbc', '03 30 53', 'Saudi Arabia'],
+    ['asaqs', 'B.12', 'South Africa'],
+    ['sans1200', 'DB 3.2', 'South Africa'],
+  ])('renders a %s code (%s), which is what %s bills carry', (standard, code) => {
+    expect(classificationCode({ [standard]: code })).toBe(code);
+  });
+
+  it('prefers the project standard when a line carries more than one code', () => {
+    // A Brazilian bill carries both, and which one the reader expects is a
+    // property of the project, not of the row.
+    const brazilian = { sinapi: '92759', nbr: '03.02.010' };
+    expect(classificationCode(brazilian, 'nbr')).toBe('03.02.010');
+    expect(classificationCode(brazilian, 'sinapi')).toBe('92759');
+  });
+
+  it('falls back to the first code on the row when the preferred one is absent', () => {
+    // The Brazilian demos declare masterformat as their project standard and
+    // classify their lines under sinapi and nbr, so the preference misses and
+    // the row still has to render something.
+    expect(classificationCode({ sinapi: '92759', nbr: '03.02.010' }, 'masterformat')).toBe('92759');
+    expect(classificationCode({ tetelrend: 'MA-01-11-01' }, 'din276')).toBe('MA-01-11-01');
+  });
+
+  it('returns an empty string rather than a stray value for a row with no code', () => {
+    expect(classificationCode(undefined)).toBe('');
+    expect(classificationCode(null)).toBe('');
+    expect(classificationCode({})).toBe('');
+    expect(classificationCode({ din276: '' })).toBe('');
+    expect(classificationCode({ din276: '   ' })).toBe('');
+    expect(classificationCode('331')).toBe('');
+    // An array is an object; it is not a classification map.
+    expect(classificationCode(['331'])).toBe('');
+  });
+
+  it('does not stringify a value that is not a code', () => {
+    expect(classificationCode({ din276: true as unknown as string })).toBe('');
+    expect(classificationCode({ din276: { code: '331' } as unknown as string })).toBe('');
+    // A numeric code is still a code.
+    expect(classificationCode({ gesn: 331 as unknown as string })).toBe('331');
+  });
+
+  it('skips an empty entry and keeps looking', () => {
+    expect(classificationCode({ din276: '', tetelrend: 'MA-06-21-03' })).toBe('MA-06-21-03');
   });
 });

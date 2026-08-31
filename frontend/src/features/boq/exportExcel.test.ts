@@ -365,3 +365,88 @@ describe('buildSummarySheetData', () => {
     expect(cells.some((c) => c.includes('VAT (0%)'))).toBe(true);
   });
 });
+
+/* ── The Code column, which every priced row used to leave empty ───────── */
+
+describe('buildBOQSheetData - the item code column', () => {
+  /** The Code column sits second from the end, ahead of the Position ID. */
+  const codeCell = (row: (string | number | null)[]): string | number | null => row[row.length - 2] ?? null;
+
+  const codeRow = (rows: (string | number | null)[][]): (string | number | null)[] =>
+    rows.find((r) => r.includes('RC wall C30/37'))!;
+
+  it('labels the column in the header row', () => {
+    const { rows } = buildBOQSheetData(baseOptions({ positions: [pos()] }));
+    const headerRow = rows.find((r) => r.includes('Description'));
+    expect(codeCell(headerRow!)).toBe('Code');
+  });
+
+  it('writes the code for a standard it always knew', () => {
+    const { rows } = buildBOQSheetData(
+      baseOptions({ positions: [pos({ classification: { din276: '331' } })] }),
+    );
+    expect(codeCell(codeRow(rows))).toBe('331');
+  });
+
+  it.each([
+    ['tetelrend', 'MA-04-12-01'],
+    ['gesn', '08-01-003-01'],
+    ['gb50500', '010401001001'],
+    ['cpwd', '4.1.2'],
+    ['dpgf', '02.1.3'],
+    ['sbc', '03 30 53'],
+  ])('writes a %s code, which the export used to drop on the floor', (standard, code) => {
+    const { rows } = buildBOQSheetData(
+      baseOptions({ positions: [pos({ classification: { [standard]: code } })] }),
+    );
+    expect(codeCell(codeRow(rows))).toBe(code);
+  });
+
+  it('prefers the project standard when the line carries two codes', () => {
+    const brazilian = { sinapi: '92759', nbr: '03.02.010' };
+    const { rows } = buildBOQSheetData(
+      baseOptions({ positions: [pos({ classification: brazilian })], classificationStandard: 'nbr' }),
+    );
+    expect(codeCell(codeRow(rows))).toBe('03.02.010');
+  });
+
+  it('leaves the cell empty for a line that carries no code', () => {
+    const { rows } = buildBOQSheetData(baseOptions({ positions: [pos({ classification: {} })] }));
+    expect(codeCell(codeRow(rows))).toBe('');
+  });
+
+  // The export builds a position row in two places: under a section, and for a
+  // position that has none. The first version of this fix touched only one of
+  // them, and the cases above, whose fixture position is parentless, all ran
+  // through the other. Both paths are asserted here so a future fix to one
+  // cannot silently leave the other behind.
+  it('writes the code for a position under a section, and the chapter code on the section', () => {
+    const section = pos({
+      id: 'sec-hu',
+      ordinal: 'MA-01',
+      description: 'Altalanos koltsegek',
+      unit: '',
+      quantity: 0,
+      unit_rate: 0,
+      total: 0,
+      sort_order: 1,
+      classification: { tetelrend: 'MA-01' },
+    });
+    const child = pos({
+      id: 'c-hu',
+      parent_id: 'sec-hu',
+      ordinal: 'MA-01-11-01',
+      description: 'Felvonulasi letesitmenyek',
+      total: 5000,
+      sort_order: 2,
+      classification: { tetelrend: 'MA-01-11-01' },
+    });
+    const { rows } = buildBOQSheetData(
+      baseOptions({ positions: [section, child], netTotal: 5000, grossTotal: 5000 }),
+    );
+    const sectionRow = rows.find((r) => r[0] === 'MA-01')!;
+    const childRow = rows.find((r) => r[0] === 'MA-01-11-01')!;
+    expect(codeCell(sectionRow)).toBe('MA-01');
+    expect(codeCell(childRow)).toBe('MA-01-11-01');
+  });
+});

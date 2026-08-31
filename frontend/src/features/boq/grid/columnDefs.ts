@@ -8,6 +8,7 @@ import type {
   ValueSetterParams,
 } from 'ag-grid-community';
 import {
+  classificationCode,
   convertToBase,
   fmtWithCurrency,
   hasContributingResources,
@@ -675,9 +676,13 @@ export function getColumnDefs(context: BOQColumnContext): ColDef[] {
       editable: false,
       valueGetter: (params) => {
         if (params.data?._isSection || params.data?._isFooter) return '';
-        const cls = params.data?.classification;
-        if (!cls || typeof cls !== 'object') return '';
-        return cls.din276 || cls.nrm || cls.masterformat || '';
+        // Whichever standard classified the line, not just the legacy three.
+        // This used to read `cls.din276 || cls.nrm || cls.masterformat`, so a
+        // Hungarian, Russian, Chinese, Indian, Brazilian, French, Mexican,
+        // Saudi or South African bill showed an empty Code cell on every row
+        // while the country's own validation rules were asking for exactly
+        // that code. See `classificationCode` for the measurement.
+        return classificationCode(params.data?.classification);
       },
       cellClass: 'text-xs font-mono text-content-secondary',
     },

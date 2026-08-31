@@ -713,3 +713,54 @@ export interface Tip {
   text: string;
   condition?: 'no_sections' | 'no_markups' | 'has_empty_descriptions' | 'always';
 }
+
+/**
+ * The item code a position carries, whichever standard classified it.
+ *
+ * A position's `classification` is a map from a classification standard to
+ * the code that standard gives the line: `{ din276: '331' }` on a German
+ * bill, `{ tetelrend: 'MA-04-12-01' }` on a Hungarian one, `{ gesn: ... }`,
+ * `{ cpwd: ... }`, `{ sinapi: ..., nbr: ... }` and so on. Two counts, because
+ * they differ and quoting the wrong one is misleading: the backend can name
+ * eighteen standards and a project can be stored under thirteen of them, while
+ * the classification keys actually present on shipped demo data are fourteen.
+ *
+ * The two places that rendered this code read three keys, `din276`, `nrm` and
+ * `masterformat`, which the backend registry itself calls the legacy three.
+ * Every other standard fell through to an empty cell. Measured against the
+ * shipped demos that is nine of thirty three whose Code column was blank on
+ * every priced line, and eleven classification keys that could never appear:
+ * sbc, gb50500, mexico, cpwd, tetelrend, gesn, asaqs, nbr, dpgf, sinapi and
+ * sans1200. The validation rules meanwhile require exactly those codes, so a
+ * user could be told a line has no item code by a rule while the column that
+ * would show it stayed empty.
+ *
+ * @param classification - the position's `classification` map.
+ * @param preferred - the project's own classification standard, when known.
+ *   A line can carry more than one code (a Brazilian bill carries both
+ *   `sinapi` and `nbr`), and the project's standard is the one its reader
+ *   expects to see. Without it the first code on the row wins, which is
+ *   deterministic because object key order is insertion order.
+ * @returns the code, or an empty string when the row carries none.
+ */
+export function classificationCode(classification: unknown, preferred?: string | null): string {
+  if (!classification || typeof classification !== 'object' || Array.isArray(classification)) return '';
+  const cls = classification as Record<string, unknown>;
+  const codeAt = (key: string): string => {
+    const value = cls[key];
+    if (typeof value === 'string') return value.trim();
+    // A standard whose code is numeric still has a code. Booleans and
+    // objects are not codes and must not be stringified into the cell.
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+    return '';
+  };
+  if (preferred) {
+    const own = codeAt(preferred);
+    if (own) return own;
+  }
+  for (const key of Object.keys(cls)) {
+    const code = codeAt(key);
+    if (code) return code;
+  }
+  return '';
+}
