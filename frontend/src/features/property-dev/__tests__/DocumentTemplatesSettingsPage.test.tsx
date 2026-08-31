@@ -39,6 +39,40 @@ vi.mock('../api', () => ({
   getCustomDocumentTemplateContent: vi.fn(),
   sampleDocumentPreview: vi.fn(),
   saveTextCustomDocumentTemplate: vi.fn(),
+  // The appearance panel lives on this page and calls these on mount. A factory
+  // mock answers only what it names, so leaving them out throws at render and
+  // fails every test on the page, none of which are about appearance.
+  getDocumentAppearance: vi.fn().mockResolvedValue({
+    accent_color: '#1a1a2e',
+    footer_color: '#999999',
+    base_font_size: 10,
+    page_size: 'A4',
+    margin_mm: 25,
+    logo_align: 'left',
+    footer_text: '',
+    show_page_numbers: true,
+  }),
+  getDocumentAppearanceOptions: vi.fn().mockResolvedValue({
+    page_sizes: ['A4', 'LETTER', 'LEGAL'],
+    logo_alignments: ['left', 'center', 'right'],
+    min_font_size: 7,
+    max_font_size: 14,
+    min_margin_mm: 8,
+    max_margin_mm: 40,
+    max_footer_text: 120,
+    defaults: {
+      accent_color: '#1a1a2e',
+      footer_color: '#999999',
+      base_font_size: 10,
+      page_size: 'A4',
+      margin_mm: 25,
+      logo_align: 'left',
+      footer_text: '',
+      show_page_numbers: true,
+    },
+  }),
+  saveDocumentAppearance: vi.fn(),
+  resetDocumentAppearance: vi.fn(),
 }));
 
 import {
