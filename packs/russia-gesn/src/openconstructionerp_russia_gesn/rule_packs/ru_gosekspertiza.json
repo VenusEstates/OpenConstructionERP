@@ -1,0 +1,29 @@
+{
+  "rule_pack_id": "ru_gosekspertiza",
+  "name": "State review of estimated cost",
+  "name_ru": "Проверка достоверности определения сметной стоимости",
+  "standard": "gesn",
+  "jurisdiction": "RU",
+  "applies_to": [
+    "estimating",
+    "reporting",
+    "tendering"
+  ],
+  "review_status": "Drawn from public sources. Pending review by a Russian cost engineer before it is relied on for a state contract.",
+  "description": "A project funded from the state budget does not go to tender on the estimate its designer wrote. The estimate is reviewed, and the review is a check that the cost was determined by the prescribed method against the federal norm base, not a negotiation about whether the price is fair. What that means in practice is that the derivation is the deliverable: a line whose norm cannot be found, whose resources do not match the norm, or whose index cannot be traced to a published one is a finding, whatever the total says.",
+  "what_is_checked": [
+    "Every line cites a norm that exists in the base edition the document names",
+    "The resource quantities are the norm's, or the deviation from them is stated and justified",
+    "The price level and the conversion indices are named and are the published ones for the region and quarter",
+    "Overhead and estimated profit are normed by the correct base and coefficient for the work type",
+    "Costs are placed in the summary chapter they belong to rather than folded into the building",
+    "The reserve for unforeseen costs is within the limit for the project type"
+  ],
+  "practical_note": "The review is a document check, so anything that is true but unwritten counts as absent. This is why the pack's validation rules are about the presence and traceability of a derivation rather than about the plausibility of a price.",
+  "regulator_refs": [
+    "Градостроительный кодекс РФ, статья 8.3",
+    "Постановление Правительства РФ от 05.03.2007 № 145",
+    "Приказ Минстроя России от 04.08.2020 № 421/пр"
+  ],
+  "enables_rule_ids": []
+}

@@ -1,0 +1,39 @@
+{
+  "rule_pack_id": "ru_nakladnye_smetnaya_pribyl",
+  "name": "Overhead and estimated profit",
+  "name_ru": "Накладные расходы и сметная прибыль",
+  "standard": "gesn",
+  "jurisdiction": "RU",
+  "applies_to": [
+    "boq",
+    "reporting",
+    "tendering"
+  ],
+  "review_status": "The base and the shipped approximation are stated below exactly as the platform implements them. The norm figures themselves are drawn from public sources and are pending review by a Russian cost engineer.",
+  "description": "Overhead and estimated profit are the two markups a Russian estimate carries, and both are normed against payroll rather than against direct cost. That is the single structural difference a foreign reader gets wrong most often: a trade with little labour and expensive material carries a small markup, and a labour-heavy trade carries a large one, which is the opposite of what a percentage of direct cost would produce.",
+  "base": {
+    "name": "ФОТ",
+    "name_en": "Payroll",
+    "composition": "Оплата труда рабочих + оплата труда машинистов",
+    "note": "Worker wages plus machine operator wages. Not direct cost, and not worker wages alone."
+  },
+  "shipped_approximation": {
+    "what": "The bill-level markup lines this pack seeds apply an effective percentage of direct cost, not a percentage of payroll.",
+    "why": "A bill markup can take its base from direct cost or from the running cumulative total, and payroll is neither. Expressing the norm as the effective percentage of direct cost it works out to keeps the bill total right for a typical work mix.",
+    "consequence": "The total is right, the sensitivity is not. On a bill whose labour share is far from typical, the markup will not move the way a payroll-based norm would, and the estimate should be rebuilt on the resource decomposition rather than on the bill lines.",
+    "note": "This is stated here rather than left implicit because a reader who assumes the norm base is payroll will read the seeded percentages as wrong, and a reader who assumes it is direct cost will not notice when it matters."
+  },
+  "cascade": [
+    "Прямые затраты, direct cost: labour, plant and material",
+    "Накладные расходы (НР), overhead",
+    "Сметная прибыль (СП), estimated profit",
+    "Непредвиденные расходы, unforeseen costs, on the total of the preceding lines",
+    "НДС, VAT, on everything above"
+  ],
+  "regulator_refs": [
+    "Приказ Минстроя России от 21.12.2020 № 812/пр (нормативы накладных расходов)",
+    "Приказ Минстроя России от 11.12.2020 № 774/пр (нормативы сметной прибыли)",
+    "Приказ Минстроя России от 04.08.2020 № 421/пр (Методика определения сметной стоимости строительства)"
+  ],
+  "enables_rule_ids": []
+}

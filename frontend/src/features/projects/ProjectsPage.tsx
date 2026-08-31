@@ -1224,10 +1224,28 @@ function ProjectCard({
     },
   });
 
+  // The third mirror of the backend's classification registry. It has to name
+  // every standard the picker on CreateProjectPage can write, or the project
+  // list prints a raw identifier where the card next to it prints a name.
   const standardLabels: Record<string, string> = {
     din276: 'DIN 276',
     nrm: 'NRM',
     masterformat: 'MasterFormat',
+    uniformat: 'UniFormat',
+    uniclass: 'Uniclass',
+    omniclass: 'OmniClass',
+    gb50500: 'GB/T',
+    tetelrend: 'Tételrend',
+    gesn: 'GESN / FER',
+    bc3: 'BC3',
+    untec: 'UNTEC',
+    voci: 'VOCI',
+    onorm: 'ÖNORM',
+    gaeb: 'GAEB',
+    sinapi: 'SINAPI',
+    sekisan: 'Sekisan',
+    kbim: 'KBIM',
+    birimfiyat: 'Birim Fiyat',
   };
 
   // Currency symbol icon — falls back to neutral DollarSign for unknown codes

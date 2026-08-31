@@ -229,6 +229,18 @@
     "valid_code": {
       "fail": "El código ГЭСН '{code}' no coincide con el formato XX-XX-XXX-XX",
       "suggestion": "Use el formato: NN-NN-NNN-NN (p. ej., 06-01-001-01)"
+    },
+    "resource_breakdown": {
+      "fail": "La posición {ordinal} cita la norma {code} pero no lleva desglose de recursos",
+      "suggestion": "Importar las cantidades de mano de obra, maquinaria y material de la norma, o indicar por qué esta línea se aparta de ellas"
+    },
+    "labour_hours_present": {
+      "fail": "La posición {ordinal} ({code}) tiene desglose de recursos sin horas de mano de obra",
+      "suggestion": "Añadir las horas-hombre de la norma; los gastos generales y el beneficio se calculan sobre la nómina y sin ellas no pueden obtenerse"
+    },
+    "price_level_declared": {
+      "fail": "El presupuesto no indica a qué nivel de precios corresponden sus importes",
+      "suggestion": "Declarar el nivel de precios (una fecha) y el índice de conversión aplicado, para que un revisor llegue al mismo total"
     }
   },
   "dpgf": {

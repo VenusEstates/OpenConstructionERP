@@ -1,0 +1,84 @@
+# Russia Construction Pack - first-login onboarding wizard.
+# Streamed by /api/v1/partner-pack/onboarding-script and rendered by the
+# OnboardingWizard React component in place of the default steps.
+#
+# Labels are Russian first. The application does ship a Russian interface
+# bundle and this pack selects it, so the wizard is read in Russian and the
+# English half is there for an administrator setting the workspace up for
+# somebody else. That is the opposite arrangement to the Hungarian pack next
+# door, and the difference is what is on disk rather than a preference.
+
+version: 2
+locale: ru
+title: "OpenConstructionERP - российская редакция"
+title_en: "Welcome to OpenConstructionERP - Russia"
+subtitle: "Шесть шагов, и рабочее пространство настроено под сметную практику: нормативная база, ресурсная часть, уровень цен, НР и СП, НДС. Six steps to line the workspace up with Russian estimating practice."
+
+steps:
+  - id: company_profile
+    title: "Данные организации / Company details"
+    body: "Попадают в сметы, тендерную документацию и отчёты. Used on estimates, tender documents and reports."
+    fields:
+      - { key: company_name, label: "Наименование организации / Company name", type: text, required: true }
+      - { key: inn, label: "ИНН / Taxpayer number", type: text, required: false, placeholder: "7801234567" }
+      - { key: ogrn, label: "ОГРН / State registration number", type: text, required: false, placeholder: "1027800000000" }
+      - { key: sro_membership, label: "Членство в СРО / Self-regulatory organisation membership", type: text, required: false, help: "Оставьте пустым, если работы не требуют членства. Left blank where the work does not require it." }
+      - { key: federal_district, label: "Федеральный округ / Federal district", type: select, required: true, default: "Северо-Западный (СЗФО)", options: ["Центральный (ЦФО)", "Северо-Западный (СЗФО)", "Южный (ЮФО)", "Северо-Кавказский (СКФО)", "Приволжский (ПФО)", "Уральский (УФО)", "Сибирский (СФО)", "Дальневосточный (ДФО)"], help: "Определяет, какие индексы пересчёта предлагаются по умолчанию. Decides which conversion indices are offered first." }
+
+  - id: work_type
+    title: "Характер работ / Type of work"
+    body: "Семейства нормативной базы различаются по виду работ, а код у всех один и тот же. The norm families differ by kind of work and share one code shape."
+    fields:
+      - { key: primary_work_type, label: "Основной вид работ / Predominant work type", type: radio, required: true, default: "Строительные работы (ГЭСН)", options: ["Строительные работы (ГЭСН)", "Монтаж оборудования (ГЭСНм)", "Пусконаладочные работы (ГЭСНп)", "Ремонтно-строительные работы (ГЭСНр)"] }
+      - { key: role, label: "Роль в проектах / Your role on projects", type: radio, required: true, default: "Подрядчик / Contractor", options: ["Подрядчик / Contractor", "Субподрядчик / Subcontractor", "Проектировщик или сметчик / Designer or cost engineer", "Заказчик или технический заказчик / Client"] }
+      - { key: budget_funded, label: "Работаем по контрактам с бюджетным финансированием / We work on budget-funded contracts", type: checkbox, default: true, help: "Включает более строгие проверки прослеживаемости: смета должна проходить проверку достоверности. Switches on the stricter traceability checks a state review expects." }
+
+  - id: norm_base
+    title: "Нормативная база / Norm base"
+    body: "Смета ссылается на нормы, а не описывает работы словами. Отсюда и проверки: код, ресурсная часть, затраты труда. An estimate cites norms rather than describing works, which is what the checks are about."
+    fields:
+      - { key: norm_base_edition, label: "Редакция базы / Base edition", type: select, required: true, default: "ФСНБ-2022", options: ["ФСНБ-2022", "ФСНБ-2020", "ТСНБ субъекта РФ / Regional base"] }
+      - { key: pricing_method, label: "Метод определения стоимости / Costing method", type: radio, required: true, default: "Ресурсно-индексный", options: ["Ресурсно-индексный", "Ресурсный", "Базисно-индексный"], help: "Ресурсно-индексный требует ресурсной части в каждой позиции. The resource-index method requires a decomposition on every line." }
+      - { key: require_resource_breakdown, label: "Требовать ресурсную часть у позиций со ссылкой на норму / Require a resource breakdown on lines that cite a norm", type: checkbox, default: true }
+      - { key: keep_regional_codes, label: "Хранить территориальный код рядом с федеральным / Keep the regional code alongside the federal one", type: checkbox, default: false, help: "Полезно, когда смета сдаётся в ТЕР, а проверяется по ФЕР." }
+
+  - id: price_level
+    title: "Уровень цен и индексы / Price level and indices"
+    body: "Рублёвая сумма без даты не означает ничего. Уровень цен указывается один раз на документ. A rouble figure without its date means nothing, and the level is stated once per document."
+    fields:
+      - { key: price_level, label: "Уровень цен / Price level", type: text, required: true, default: "01.01.2022", placeholder: "01.01.2022", help: "Дата, а не год. A date, not a year." }
+      - { key: index_application, label: "Как применяются индексы / How indices are applied", type: radio, required: true, default: "По элементам затрат", options: ["По элементам затрат", "К СМР одним индексом"], help: "По элементам затрат - то, что ожидает проверка на бюджетном контракте." }
+      - { key: warn_missing_price_level, label: "Предупреждать, если в смете не указан уровень цен / Warn when an estimate does not declare its price level", type: checkbox, default: true }
+
+  - id: money
+    title: "Начисления / Markups"
+    body: "Накладные расходы и сметная прибыль нормируются от фонда оплаты труда, а не от прямых затрат. Overhead and estimated profit are normed on payroll, not on direct cost."
+    fields:
+      - { key: currency, label: "Валюта / Currency", type: select, required: true, default: "RUB (руб.) - с копейками", options: ["RUB (руб.) - с копейками"] }
+      - { key: overhead_percent, label: "Накладные расходы, % / Overhead", type: select, required: true, default: "16%", options: ["12%", "16%", "20%", "Задавать по видам работ"] }
+      - { key: profit_percent, label: "Сметная прибыль, % / Estimated profit", type: select, required: true, default: "7%", options: ["5%", "7%", "9%", "Задавать по видам работ"] }
+      - { key: contingency_percent, label: "Непредвиденные затраты, % / Unforeseen costs", type: select, required: true, default: "2%", options: ["0% (не начислять)", "2%", "3%", "Задавать по проекту"] }
+      - { key: vat_rate, label: "НДС / VAT", type: radio, required: true, default: "20% (общий режим)", options: ["20% (общий режим)", "Без НДС (УСН), с компенсацией НДС в составе затрат"] }
+
+  - id: review
+    title: "Проверка и завершение / Review and finish"
+    body: "Рабочее пространство будет настроено на рубли с копейками, включены проверки по нормативной базе и применена российская методика с вашими НР, СП и НДС. Всё это меняется позже в настройках. Everything here can be changed later in Settings."
+    action:
+      label: "Создать рабочее пространство / Create my Russian workspace"
+      apply:
+        - set_default_currency: RUB
+        - set_tax_template: ru_nds_20
+        - enable_rule_packs:
+            - ru_gesn_fer_kody
+            - ru_nakladnye_smetnaya_pribyl
+            - ru_svodnyy_smetnyy_raschet
+            - ru_nds_stroitelstvo
+        - conditionally_enable_rule_pack:
+            rule_pack: ru_resursno_indeksnyy_metod
+            when: "require_resource_breakdown == true"
+        - conditionally_enable_rule_pack:
+            rule_pack: ru_indeksy_i_uroven_cen
+            when: "warn_missing_price_level == true"
+        - conditionally_enable_rule_pack:
+            rule_pack: ru_gosekspertiza
+            when: "budget_funded == true"

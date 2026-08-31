@@ -242,11 +242,29 @@ const statusVariant: Record<string, 'neutral' | 'blue' | 'success' | 'warning' |
   archived: 'warning',
 };
 
+// The second mirror of the backend's classification registry, and the one
+// that reads a stored value back rather than offering one. It has to name
+// every standard the picker on CreateProjectPage can write, or a project
+// created there shows a blank where its standard should be.
 const standardLabels: Record<string, string> = {
   din276: 'DIN 276',
   nrm: 'NRM',
   masterformat: 'MasterFormat',
+  uniformat: 'UniFormat',
+  uniclass: 'Uniclass',
+  omniclass: 'OmniClass',
+  gb50500: 'GB/T',
   tetelrend: 'Tételrend',
+  gesn: 'GESN / FER',
+  bc3: 'BC3',
+  untec: 'UNTEC',
+  voci: 'VOCI',
+  onorm: 'ÖNORM',
+  gaeb: 'GAEB',
+  sinapi: 'SINAPI',
+  sekisan: 'Sekisan',
+  kbim: 'KBIM',
+  birimfiyat: 'Birim Fiyat',
 };
 
 // ---------------------------------------------------------------------------

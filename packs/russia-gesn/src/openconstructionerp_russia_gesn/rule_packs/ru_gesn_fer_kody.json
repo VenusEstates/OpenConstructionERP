@@ -1,0 +1,55 @@
+{
+  "rule_pack_id": "ru_gesn_fer_kody",
+  "name": "GESN and FER norm codes",
+  "name_ru": "Коды ГЭСН и ФЕР",
+  "standard": "gesn",
+  "jurisdiction": "RU",
+  "applies_to": [
+    "boq",
+    "estimating",
+    "validation"
+  ],
+  "review_status": "Derived from a published GESN base read in full: 2604 norms across ten collections, every code matching the pattern below and none deviating from it.",
+  "description": "A Russian estimate line is not described, it is cited. Each line names a norm in the federal base, and the norm carries the quantities of labour, plant and material that the work consumes. The code is therefore the load-bearing field: without it a line has a price and no derivation, and a state client will not accept a derivation it cannot follow back to a published norm.",
+  "code_format": {
+    "pattern": "CC-SS-TTT-NN",
+    "regex": "^\\d{2}-\\d{2}-\\d{3}-\\d{2}$",
+    "fields": [
+      "CC - сборник, the collection",
+      "SS - раздел, the section within the collection",
+      "TTT - таблица, the table within the section",
+      "NN - норма, the norm within the table"
+    ],
+    "examples": [
+      "08-04-001-21",
+      "10-05-001-01",
+      "11-01-034-04",
+      "63-01-005-01"
+    ],
+    "note": "The four fields are fixed width and zero padded. A code written without its leading zeros is the single most common way an imported line stops matching the base."
+  },
+  "hierarchy": {
+    "levels": [
+      "Сборник (collection)",
+      "Отдел (division)",
+      "Раздел (section)",
+      "Подраздел (subsection, where a section needs one)",
+      "Таблица (table)",
+      "Норма (norm, the priced line)"
+    ],
+    "note": "Only the collection, the section, the table and the norm appear in the code. The division and the subsection are navigation in the published base and are not addressable, which is why a four-field code can still sit six levels deep."
+  },
+  "base_families": {
+    "ГЭСН": "Строительные работы, elemental norms for building works",
+    "ГЭСНм": "Монтаж оборудования, equipment installation",
+    "ГЭСНп": "Пусконаладочные работы, commissioning",
+    "ГЭСНр": "Ремонтно-строительные работы, repair and refurbishment",
+    "ФЕР": "Федеральные единичные расценки, the same norms priced federally",
+    "ТЕР": "Территориальные единичные расценки, the same norms priced for a region",
+    "note": "The families share one code shape, so a code alone does not say which family it came from. The estimate says that once, at document level, and every line inherits it."
+  },
+  "enables_rule_ids": [
+    "gesn.code_required",
+    "gesn.valid_code"
+  ]
+}

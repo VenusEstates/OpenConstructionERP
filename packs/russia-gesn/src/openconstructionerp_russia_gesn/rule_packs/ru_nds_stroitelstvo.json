@@ -1,0 +1,23 @@
+{
+  "rule_pack_id": "ru_nds_stroitelstvo",
+  "name": "VAT on construction work",
+  "name_ru": "НДС в строительстве",
+  "standard": "gesn",
+  "jurisdiction": "RU",
+  "applies_to": [
+    "reporting",
+    "tendering"
+  ],
+  "review_status": "Drawn from public sources. Pending review by a Russian cost engineer before it is relied on for a contract.",
+  "description": "VAT sits at the very bottom of the summary estimate, applied once to everything above it including the reserve for unforeseen costs. It is the last line and never a per-item field, which matters when an estimate is imported from a jurisdiction that carries tax per line: folding the same tax into the rates and into the summary is the way a Russian bill ends up quoting a price nobody agreed to.",
+  "rates": {
+    "standard": 20,
+    "note": "The standard rate has been 20 percent since 2019. A contractor on a simplified tax regime does not charge it, and an estimate for such a contractor carries a compensation line for the VAT it pays on its own purchases rather than a VAT line."
+  },
+  "currency": {
+    "code": "RUB",
+    "decimals": 2,
+    "note": "The rouble is quoted with kopecks. Rounding is applied at the totals a document publishes rather than at each line, so a line total recomputed from a rounded rate will differ from the document by small amounts that are not errors."
+  },
+  "enables_rule_ids": []
+}

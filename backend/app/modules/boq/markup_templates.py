@@ -743,6 +743,15 @@ DEFAULT_MARKUP_TEMPLATES: dict[str, list[dict[str, object]]] = {
 # says exactly that in the template it builds. Adding a country here changes
 # the numbers a bill is seeded with for that market, so it is a data decision,
 # not a mapping tidy-up.
+#
+# Russia was the one stack in the table above that no country reached. The
+# lines were written, cited to МДС 81-35.2004 and Приказ Минстроя 812/пр, and
+# unreachable, because this map had no ``RU`` line: ``region_lines_for_country``
+# answered ``None``, so a Russian project was offered the neutral international
+# method and told, correctly, that it was the neutral international method. The
+# criterion above is whether the table states the country's national method,
+# and for Russia it does. ``test_every_stack_is_reachable_from_some_country``
+# now asserts the direction that was missing.
 REGION_BY_COUNTRY: dict[str, str] = {
     "AT": "DACH",
     "CH": "DACH",
@@ -764,6 +773,7 @@ REGION_BY_COUNTRY: dict[str, str] = {
     "SE": "NORDIC",
     "CN": "CN",
     "KR": "KR",
+    "RU": "RU",
 }
 
 # Regions whose tax lines a single country VAT rate cannot stand in for, and

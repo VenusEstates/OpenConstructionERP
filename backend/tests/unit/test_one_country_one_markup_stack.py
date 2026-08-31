@@ -189,6 +189,34 @@ def test_every_mapped_country_is_a_country_the_catalogue_ships() -> None:
     )
 
 
+def test_every_stack_is_reachable_from_some_country() -> None:
+    """The other direction, which is the one that went wrong.
+
+    The test above walks ``REGION_BY_COUNTRY`` and checks every mapping has a
+    stack behind it. Nothing walked the stacks, so a stack no country mapped to
+    was invisible: fourteen regions were defined, thirteen were reachable, and
+    the Russian one was written out in full, cited to МДС 81-35.2004, and never
+    served to anybody. ``region_lines_for_country("RU")`` answered ``None`` and
+    a Russian project was quietly given the neutral international method.
+
+    An unreachable stack is worse than a missing one. A missing stack makes the
+    catalogue say it has no convention for that market, which is true and which
+    somebody eventually acts on. An unreachable stack makes the source say the
+    convention is shipped while the product ships the neutral method, and the
+    only place the two disagree is a mapping nobody reads.
+
+    ``DEFAULT`` is exempt because it is the fall-through by definition and no
+    country may map to it; see :func:`region_lines_for_country`.
+    """
+    reachable = set(REGION_BY_COUNTRY.values())
+    orphaned = set(DEFAULT_MARKUP_TEMPLATES) - reachable - {"DEFAULT"}
+    assert not orphaned, (
+        f"regional stacks no country reaches: {sorted(orphaned)}. "
+        f"Either map a country to each in REGION_BY_COUNTRY or delete the stack; "
+        f"leaving it here reads as coverage the product does not have."
+    )
+
+
 @pytest.mark.parametrize("country", sorted(REGION_BY_COUNTRY))
 def test_the_derived_stack_matches_the_regional_table_line_for_line(country: str) -> None:
     """Same lines, same order, same rates, same bases. No tolerance here."""

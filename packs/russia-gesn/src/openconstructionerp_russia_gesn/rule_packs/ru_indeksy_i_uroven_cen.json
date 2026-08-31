@@ -1,0 +1,39 @@
+{
+  "rule_pack_id": "ru_indeksy_i_uroven_cen",
+  "name": "Price level and conversion indices",
+  "name_ru": "Уровень цен и индексы пересчёта",
+  "standard": "gesn",
+  "jurisdiction": "RU",
+  "applies_to": [
+    "boq",
+    "reporting",
+    "validation"
+  ],
+  "review_status": "The price-level field is derived from a published GESN base, which carries it once at document level (PriceLevel, 01.01.2022) and never per line. The index publication arrangements are drawn from public sources and are pending review by a Russian cost engineer.",
+  "description": "A rouble figure in a Russian estimate is meaningless without the date it is a rouble of. The norm base is published at a base price level and the current cost is reached by applying a conversion index for the region, the quarter and the kind of work. Two estimates that differ by a factor of five may be the same estimate at two price levels, and the only thing that distinguishes an out-of-date number from a wrong one is whether the document says which level it is in.",
+  "document_level_fields": [
+    {
+      "field": "Уровень цен",
+      "field_en": "Price level",
+      "note": "A date, not a year. The published base carries it as a single document attribute, so an estimate that states it once has stated it for every line."
+    },
+    {
+      "field": "Индекс пересчёта",
+      "field_en": "Conversion index",
+      "note": "Region, quarter and work type. An index applied to the wrong quarter is arithmetically invisible: the sum is still a number and nothing about it looks wrong."
+    },
+    {
+      "field": "Источник цен",
+      "field_en": "Price source",
+      "note": "Which price book or state price system the current prices came from, so a reviewer can reach the same figure."
+    }
+  ],
+  "index_application": {
+    "к СМР": "One index to the whole construction and installation cost, the coarse form.",
+    "по элементам затрат": "Separate indices to labour, plant and material, which is what the resource-index method assumes and what a reviewer expects on a state contract.",
+    "note": "The two produce different totals from the same resources, so which one was used belongs in the document rather than in the estimator's head."
+  },
+  "enables_rule_ids": [
+    "gesn.price_level_declared"
+  ]
+}

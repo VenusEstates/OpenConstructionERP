@@ -1,0 +1,49 @@
+{
+  "rule_pack_id": "ru_resursno_indeksnyy_metod",
+  "name": "Resource-index method",
+  "name_ru": "Ресурсно-индексный метод",
+  "standard": "gesn",
+  "jurisdiction": "RU",
+  "applies_to": [
+    "boq",
+    "estimating",
+    "validation"
+  ],
+  "review_status": "The decomposition below is derived from a published GESN base: 2604 norms, none with an empty resource list, four resources per norm at the median. The regulatory timeline is drawn from public sources and is pending review by a Russian cost engineer.",
+  "description": "A Russian norm does not carry a price. It carries quantities: how many man-hours at which grade, how many machine-hours of which plant, how much of which material a unit of the work consumes. The price is assembled afterwards from those quantities and a price book, which is why the same norm serves every region and every year. An estimate that carries rates without the resources behind them has thrown away the part a reviewer checks.",
+  "resource_classes": [
+    {
+      "class": "Затраты труда рабочих",
+      "class_en": "Worker labour",
+      "unit": "чел.-ч",
+      "note": "Man-hours, normally with the average grade (разряд) of the crew. This is the figure overhead and estimated profit are normed against, so a line without it cannot carry a markup at all."
+    },
+    {
+      "class": "Затраты труда машинистов",
+      "class_en": "Machine operator labour",
+      "unit": "чел.-ч",
+      "note": "Sits inside the plant cost and inside payroll at the same time. Counting it once is the point; counting it twice, or in neither place, are the two ways this goes wrong."
+    },
+    {
+      "class": "Эксплуатация машин",
+      "class_en": "Plant operation",
+      "unit": "маш.-ч",
+      "note": "Machine-hours per unit of work, by machine type."
+    },
+    {
+      "class": "Материалы, изделия и конструкции",
+      "class_en": "Materials, products and structures",
+      "unit": "натуральные единицы",
+      "note": "Quantities in physical units. A norm may leave a material unpriced and open, to be supplied by the project, in which case the estimate names it."
+    }
+  ],
+  "method_timeline": {
+    "базисно-индексный": "A base-year price multiplied by a conversion index. Long the default, still in wide use for older documentation.",
+    "ресурсный": "Current prices applied directly to the resource quantities.",
+    "ресурсно-индексный": "The current method: current prices where the state price system publishes them, indices for the rest. This is what the federal base has been maintained for since the 2022 edition."
+  },
+  "enables_rule_ids": [
+    "gesn.resource_breakdown",
+    "gesn.labour_hours_present"
+  ]
+}

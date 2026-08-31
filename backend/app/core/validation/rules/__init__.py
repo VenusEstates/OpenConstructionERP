@@ -3193,6 +3193,188 @@ class GESNValidCode(ValidationRule):
         return results
 
 
+# Units a labour resource is measured in. The Russian one is a man-hour and
+# is written three ways in the wild (with the dot, without it, and
+# transliterated), so the comparison folds all of them rather than picking a
+# spelling and calling the other two absent.
+_GESN_LABOUR_UNITS = frozenset(
+    {
+        "чел.-ч",
+        "чел-ч",
+        "чел.ч",
+        "человеко-час",
+        "man-hour",
+        "man-hours",
+        "chel.-ch",
+        "chel-ch",
+    }
+)
+
+
+def _gesn_code(pos: dict[str, Any]) -> str:
+    """The GESN/FER norm code on a position, whitespace stripped."""
+    code = (pos.get("classification") or {}).get("gesn", "")
+    return re.sub(r"\s+", "", str(code))
+
+
+def _gesn_resources(pos: dict[str, Any]) -> list[dict[str, Any]]:
+    """The resource decomposition an import left on a position.
+
+    Read from ``metadata["gesn"]["resources"]`` first and from a bare
+    ``metadata["resources"]`` second, because an import that knows it is
+    reading a Russian base namespaces the block and a generic import does not.
+    Anything that is not a list of mappings is treated as absent rather than
+    as malformed: a rule that distinguishes the two would be reporting on the
+    importer, and the reader cannot act on that.
+    """
+    meta = _position_metadata(pos)
+    block = meta.get("gesn")
+    raw = block.get("resources") if isinstance(block, dict) else meta.get("resources")
+    if not isinstance(raw, list):
+        return []
+    return [entry for entry in raw if isinstance(entry, dict)]
+
+
+def _gesn_is_russian_estimate(context: ValidationContext) -> bool:
+    """Whether this dataset is a Russian estimate at all.
+
+    The document-level rule below has nothing to attach itself to on a bill
+    that never came from the Russian base, and firing there would put a
+    finding about a price level on an estimate that has no norm codes in it.
+    """
+    return any(_gesn_code(pos) for pos in _get_positions(context))
+
+
+class GESNResourceBreakdown(ValidationRule):
+    rule_id = "gesn.resource_breakdown"
+    name = "GESN Resource Breakdown Present"
+    standard = "gesn"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "A line citing a norm should carry the labour, plant and material the norm consumes"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _get_locale(context)
+        results: list[RuleResult] = []
+        for pos in _get_leaf_positions(context):
+            code = _gesn_code(pos)
+            if not code:
+                # Not a line that cites the norm base. A Russian company still
+                # imports plenty of bills that do not, and flagging every one
+                # of them would train the reader to ignore the rule set.
+                continue
+            resources = _gesn_resources(pos)
+            passed = bool(resources)
+            if passed:
+                message = _ok(locale)
+                suggestion = None
+            else:
+                message = translate(
+                    "gesn.resource_breakdown.fail",
+                    locale=locale,
+                    code=code,
+                    ordinal=pos.get("ordinal", "?"),
+                )
+                suggestion = translate("gesn.resource_breakdown.suggestion", locale=locale)
+            results.append(
+                RuleResult(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    severity=self.severity,
+                    category=self.category,
+                    passed=passed,
+                    message=message,
+                    element_ref=pos.get("id"),
+                    details={"code": code, "resource_count": len(resources)},
+                    suggestion=suggestion,
+                )
+            )
+        return results
+
+
+class GESNLabourHoursPresent(ValidationRule):
+    rule_id = "gesn.labour_hours_present"
+    name = "GESN Labour Hours Present"
+    standard = "gesn"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "A resource decomposition must include labour hours, the base overhead and profit are normed on"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _get_locale(context)
+        results: list[RuleResult] = []
+        for pos in _get_leaf_positions(context):
+            resources = _gesn_resources(pos)
+            if not resources:
+                # Absent decomposition is the rule above. Reporting it twice
+                # would double the finding count without adding a finding.
+                continue
+            passed = any(str(entry.get("unit", "")).strip().lower() in _GESN_LABOUR_UNITS for entry in resources)
+            if passed:
+                message = _ok(locale)
+                suggestion = None
+            else:
+                message = translate(
+                    "gesn.labour_hours_present.fail",
+                    locale=locale,
+                    code=_gesn_code(pos) or "?",
+                    ordinal=pos.get("ordinal", "?"),
+                )
+                suggestion = translate("gesn.labour_hours_present.suggestion", locale=locale)
+            results.append(
+                RuleResult(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    severity=self.severity,
+                    category=self.category,
+                    passed=passed,
+                    message=message,
+                    element_ref=pos.get("id"),
+                    suggestion=suggestion,
+                )
+            )
+        return results
+
+
+class GESNPriceLevelDeclared(ValidationRule):
+    rule_id = "gesn.price_level_declared"
+    name = "GESN Price Level Declared"
+    standard = "gesn"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "An estimate against the norm base must say which price level its roubles are in"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        if not _gesn_is_russian_estimate(context):
+            return []
+        locale = _get_locale(context)
+        meta = context.metadata if isinstance(context.metadata, dict) else {}
+        block = meta.get("gesn")
+        declared = (block.get("price_level") if isinstance(block, dict) else None) or meta.get("price_level")
+        # An empty string is not a declaration. The published base carries the
+        # level as a date, and a blank field reads as a level of nothing.
+        passed = bool(str(declared or "").strip())
+        if passed:
+            message = _ok(locale)
+            suggestion = None
+        else:
+            message = translate("gesn.price_level_declared.fail", locale=locale)
+            suggestion = translate("gesn.price_level_declared.suggestion", locale=locale)
+        return [
+            RuleResult(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                severity=self.severity,
+                category=self.category,
+                passed=passed,
+                message=message,
+                element_ref=None,
+                details={"price_level": str(declared) if declared else None},
+                suggestion=suggestion,
+            )
+        ]
+
+
 # ── DPGF Rules (France) ─────────────────────────────────────────────────
 
 
@@ -8697,6 +8879,9 @@ def register_builtin_rules() -> None:
         # GESN (Russia/CIS)
         (GESNCodeRequired(), None),
         (GESNValidCode(), None),
+        (GESNResourceBreakdown(), None),
+        (GESNLabourHoursPresent(), None),
+        (GESNPriceLevelDeclared(), None),
         # DPGF (France)
         (DPGFLotRequired(), None),
         (DPGFPricingComplete(), None),

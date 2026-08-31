@@ -537,6 +537,7 @@ artifacts = ["app/scripts/flagship_assets/site_photos/*.jpg"]
 "../packs/brazil-sinapi/src" = "packs/brazil-sinapi/src"
 "../packs/china-gbt50500/src" = "packs/china-gbt50500/src"
 "../packs/hungary-hu/src" = "packs/hungary-hu/src"
+"../packs/russia-gesn/src" = "packs/russia-gesn/src"
 "../packs/india-cpwd/src" = "packs/india-cpwd/src"
 "../packs/mexico-mx/src" = "packs/mexico-mx/src"
 "../packs/modular-prefab/src" = "packs/modular-prefab/src"

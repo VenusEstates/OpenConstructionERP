@@ -297,6 +297,7 @@ _COMMUNITY_PACKS = (
     "brazil-sinapi",
     "china-gbt50500",
     "hungary-hu",
+    "russia-gesn",
     "india-cpwd",
     "mexico-mx",
     "modular-prefab",

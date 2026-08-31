@@ -229,6 +229,18 @@
     "valid_code": {
       "fail": "ГЭСН-Code '{code}' entspricht nicht dem Format XX-XX-XXX-XX",
       "suggestion": "Format verwenden: NN-NN-NNN-NN (z.B. 06-01-001-01)"
+    },
+    "resource_breakdown": {
+      "fail": "Position {ordinal} nennt die Norm {code}, enthält aber keine Ressourcenaufgliederung",
+      "suggestion": "Die Lohn-, Geräte- und Materialmengen der Norm übernehmen oder begründen, warum diese Position davon abweicht"
+    },
+    "labour_hours_present": {
+      "fail": "Position {ordinal} ({code}) hat eine Ressourcenaufgliederung ohne Lohnstunden",
+      "suggestion": "Die Lohnstunden der Norm ergänzen; Gemeinkosten und kalkulatorischer Gewinn werden auf die Lohnsumme bezogen und sind ohne sie nicht berechenbar"
+    },
+    "price_level_declared": {
+      "fail": "Die Kostenberechnung nennt kein Preisniveau für ihre Beträge",
+      "suggestion": "Preisniveau (ein Datum) und angewendeten Umrechnungsindex angeben, damit ein Prüfer dieselbe Summe erreicht"
     }
   },
   "dpgf": {

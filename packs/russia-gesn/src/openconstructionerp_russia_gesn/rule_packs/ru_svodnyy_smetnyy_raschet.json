@@ -1,0 +1,80 @@
+{
+  "rule_pack_id": "ru_svodnyy_smetnyy_raschet",
+  "name": "Summary estimate calculation, twelve chapters",
+  "name_ru": "Сводный сметный расчёт стоимости строительства",
+  "standard": "gesn",
+  "jurisdiction": "RU",
+  "applies_to": [
+    "reporting",
+    "estimating"
+  ],
+  "review_status": "The twelve chapters are the ones the platform already seeds as its cost breakdown dimension; this document states them rather than introducing them. The chapter titles are drawn from public sources and are pending review by a Russian cost engineer.",
+  "description": "A construction project's cost is presented as one document with twelve chapters in a fixed order, and the order is not a convention that a client may vary. Object estimates aggregate into chapter 2 and the chapters aggregate into the summary, so a cost that has no chapter to belong to is a cost that has not been thought about: temporary works, developer supervision and design fees each have their own chapter precisely so that nobody buries them in the building.",
+  "chapters": [
+    {
+      "code": "1",
+      "name_en": "Site preparation",
+      "name_ru": "Подготовка территории строительства"
+    },
+    {
+      "code": "2",
+      "name_en": "Main buildings and structures",
+      "name_ru": "Основные объекты строительства"
+    },
+    {
+      "code": "3",
+      "name_en": "Auxiliary buildings and structures",
+      "name_ru": "Объекты подсобного и обслуживающего назначения"
+    },
+    {
+      "code": "4",
+      "name_en": "Energy facilities",
+      "name_ru": "Объекты энергетического хозяйства"
+    },
+    {
+      "code": "5",
+      "name_en": "Transport and communications facilities",
+      "name_ru": "Объекты транспортного хозяйства и связи"
+    },
+    {
+      "code": "6",
+      "name_en": "External networks and utilities",
+      "name_ru": "Наружные сети и сооружения водоснабжения, водоотведения, теплоснабжения и газоснабжения"
+    },
+    {
+      "code": "7",
+      "name_en": "Site improvement and landscaping",
+      "name_ru": "Благоустройство и озеленение территории"
+    },
+    {
+      "code": "8",
+      "name_en": "Temporary buildings and structures",
+      "name_ru": "Временные здания и сооружения"
+    },
+    {
+      "code": "9",
+      "name_en": "Other works and costs",
+      "name_ru": "Прочие работы и затраты"
+    },
+    {
+      "code": "10",
+      "name_en": "Maintenance of the developer / client",
+      "name_ru": "Содержание службы заказчика, строительный контроль"
+    },
+    {
+      "code": "11",
+      "name_en": "Training of operating personnel",
+      "name_ru": "Подготовка эксплуатационных кадров"
+    },
+    {
+      "code": "12",
+      "name_en": "Design and survey works",
+      "name_ru": "Проектные и изыскательские работы"
+    }
+  ],
+  "after_the_chapters": [
+    "Непредвиденные затраты, a reserve on the total of the twelve chapters",
+    "НДС, VAT on the total including the reserve"
+  ],
+  "enables_rule_ids": []
+}

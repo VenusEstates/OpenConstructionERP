@@ -239,6 +239,7 @@ wheels and are independent of the core release cycle.
 | `brazil-sinapi` | Brazil | BRL | pt-BR | NBR 12721, RPS PDF, SINAPI | Latam tier-1 |
 | `india-cpwd` | India | INR | en-IN, hi | CPWD, IS standards, DSR | Indian public-works |
 | `hungary-hu` | Hungary | HUF | en | Building and infrastructure item orders, material and fee split, VAT | Runs in English: no Hungarian UI bundle ships yet |
+| `russia-gesn` | Russia | RUB | ru | GESN/FER norm base, resource decomposition, price level, overhead and profit on payroll | Ships a Russian UI; carries the `cwicr-ru-stpetersburg` cost database |
 | `saudi-vision2030` | Saudi Arabia | SAR | ar, en | SBC, MoMRAH, Aramco standards | KSA mega-projects |
 | `renewables-epc` | Cross-region | EUR | en | IEC 61400 wind, IEC 61730 PV, MV cables, LCOE, grid compliance | Renewables EPC vertical |
 
@@ -276,6 +277,7 @@ pip install -e packs/bimhessen-de
 pip install -e packs/brazil-sinapi
 pip install -e packs/doker-formwork
 pip install -e packs/hungary-hu
+pip install -e packs/russia-gesn
 pip install -e packs/india-cpwd
 pip install -e packs/renewables-epc
 pip install -e packs/saudi-vision2030

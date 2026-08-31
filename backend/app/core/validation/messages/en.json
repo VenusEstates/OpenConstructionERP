@@ -229,6 +229,18 @@
     "valid_code": {
       "fail": "ГЭСН code '{code}' doesn't match format XX-XX-XXX-XX",
       "suggestion": "Use format: NN-NN-NNN-NN (e.g., 06-01-001-01)"
+    },
+    "resource_breakdown": {
+      "fail": "Position {ordinal} cites norm {code} but carries no resource breakdown",
+      "suggestion": "Import the norm's labour, plant and material quantities, or state why this line deviates from them"
+    },
+    "labour_hours_present": {
+      "fail": "Position {ordinal} ({code}) has a resource breakdown with no labour hours",
+      "suggestion": "Add the man-hours the norm consumes; overhead and estimated profit are normed on payroll and cannot be computed without them"
+    },
+    "price_level_declared": {
+      "fail": "The estimate does not say which price level its figures are in",
+      "suggestion": "Declare the price level (a date) and the conversion index applied, so a reviewer can reach the same total"
     }
   },
   "dpgf": {
