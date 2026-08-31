@@ -186,6 +186,23 @@
     "completeness": {
       "fail": "NRM-Gruppe {group} - {group_name} fehlt im LV",
       "suggestion": "Positionen für NRM-Gruppe {group} ({group_name}) ergänzen"
+    },
+    "base_date_declared": {
+      "fail": "Die Kostenplanung nennt kein Preisbasisdatum fuer ihre Ansaetze",
+      "suggestion": "Hinterlegen Sie das Preisbasisdatum am Leistungsverzeichnis. Ohne dieses laesst sich weder beurteilen, ob ein Ansatz veraltet ist, noch welche Teuerung noch aufzuschlagen ist"
+    },
+    "cost_plan_stage_declared": {
+      "fail": "Die Kostenplanung nennt die Planungsphase nicht, fuer die sie erstellt wurde",
+      "suggestion": "Hinterlegen Sie die Phase. Die erwartbare Genauigkeit einer Kostenplanung ergibt sich aus ihrer Phase, und eine Planung ohne Phasenangabe weckt die falsche Erwartung"
+    },
+    "contractor_costs_present": {
+      "preliminaries": "Die Kostenplanung enthaelt keine Baustelleneinrichtung und Baustellengemeinkosten des Hauptunternehmers, weder als Gruppe {group} noch als Zuschlagszeile",
+      "overheads_and_profit": "Die Kostenplanung enthaelt keine Gemeinkosten und keinen Gewinn des Hauptunternehmers, weder als Gruppe {group} noch als Zuschlagszeile",
+      "suggestion": "Nehmen Sie den Posten als NRM-Gruppenelement oder als Zuschlagszeile auf die gemessenen Leistungen auf. Beides ist zulaessig; fehlt er, sind die Baukosten nicht die Baukosten"
+    },
+    "risk_allowance_present": {
+      "fail": "Die Kostenplanung enthaelt keinen Risikozuschlag",
+      "suggestion": "Nehmen Sie einen Risikozuschlag als NRM-Gruppe 13 oder als Zuschlagszeile auf. Eine Kostenplanung ohne Risikozuschlag praesentiert einen Einzelwert, als waere er sicher"
     }
   },
   "masterformat": {
@@ -651,6 +668,34 @@
     "described": {
       "fail": "Dieser Fall hat keine Zusammenfassung, sodass die Liste nur einen Titel und sonst nichts zeigt.",
       "suggestion": "Fügen Sie einen Satz hinzu, was der Leser am Ende erledigt haben wird."
+    }
+  },
+  "uk": {
+    "contract_form_declared": {
+      "fail": "Die Kalkulation nennt die Vertragsform nicht, auf die sie kalkuliert ist",
+      "suggestion": "Hinterlegen Sie die Vertragsform. Baustellengemeinkosten, Risiko und Zahlungsbedingungen werden je nach Vertragsform unterschiedlich kalkuliert; ohne diese Angabe sagt die Zahl wenig aus"
+    },
+    "payment_regime_declared": {
+      "fail": "Der Zahlungsmechanismus ist unvollstaendig: {missing} nicht hinterlegt",
+      "suggestion": "Hinterlegen Sie beide Termine. Ein Bauvertrag, der keinen von beiden festlegt, ist davon nicht befreit; das gesetzliche Zahlungsregime liefert beide, und die Parteien finden ihre Zahlungsbedingungen dann in einer Rechtsverordnung statt in ihrem Vertrag"
+    },
+    "retention_declared": {
+      "fail": "Die Kalkulation nennt keinen Sicherheitseinbehalt",
+      "suggestion": "Hinterlegen Sie Hoehe und Freigabe des Einbehalts, oder halten Sie fest, dass keiner gilt. Ein Einbehalt ist verdientes Geld, ueber das der Unternehmer nicht verfuegen kann; eine Kalkulation, die dazu schweigt, schweigt zum Betriebskapital"
+    },
+    "cdm_duty_holders_declared": {
+      "fail": "Die Verantwortlichen nach CDM 2015 sind nicht hinterlegt: {missing} fehlt",
+      "suggestion": "Hinterlegen Sie die Bestellungen. Arbeitet mehr als ein Unternehmer am Projekt, muss der Bauherr einen Principal Designer und einen Principal Contractor schriftlich bestellen; unterbleibt das, traegt der Bauherr diese Pflichten selbst"
+    },
+    "hrb_regime_declared": {
+      "fail": "Die Einstufung als Gebaeude mit erhoehtem Risiko ist offen: {reason}",
+      "unanswered": "die Kalkulation sagt nicht, ob es sich um ein Gebaeude mit erhoehtem Risiko handelt",
+      "disagrees": "die Kalkulation gibt {declared} an, die eigenen Abmessungen ergeben {derived}",
+      "suggestion": "Ein Gebaeude gilt als Gebaeude mit erhoehtem Risiko, wenn es mindestens 18 m hoch ist oder mindestens 7 Geschosse hat UND mindestens zwei Wohneinheiten enthaelt. Beide Haelften zaehlen: ein hohes Gebaeude ohne Wohnungen faellt nicht darunter, und es dennoch so zu behandeln erkauft ein Genehmigungsverfahren, das niemand brauchte"
+    },
+    "vat_treatment_declared": {
+      "fail": "Die Kalkulation sagt nicht, wie die Umsatzsteuer behandelt wird",
+      "suggestion": "Hinterlegen Sie die Behandlung: Regelsatz, ermaessigter oder Nullsatz, soweit die Leistung dafuer qualifiziert, oder das Reverse-Charge-Verfahren, soweit die Leistung darunter faellt. Das Reverse-Charge-Verfahren verlagert die Steuer auf den Leistungsempfaenger und aendert, was der Unternehmer abrechnen darf"
     }
   }
 }

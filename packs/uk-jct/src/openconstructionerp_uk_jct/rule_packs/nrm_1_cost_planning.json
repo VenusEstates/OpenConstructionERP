@@ -1,26 +1,77 @@
 {
   "rule_pack_id": "nrm_1_cost_planning",
-  "name": "RICS NRM 1 (2nd ed, 2021) — Order of Cost Estimating & Cost Planning",
-  "standard": "NRM 1 (2nd edition, 2021)",
+  "name": "NRM 1 order of cost estimating and elemental cost planning",
+  "standard": "nrm",
   "jurisdiction": "GB",
-  "description": "Enables OCERP built-in validation rules that enforce the RICS New Rules of Measurement 1 (2nd edition, 2021) cost-planning structure (group elements, elements, sub-elements) and the required completeness for RIBA stages 0-4 / OGC gateways 0-3C. Aligned with the 2021 reissue which clarified facilitating works, main contractor's preliminaries, OH&P percentages and risk allowance categories.",
+  "applies_to": [
+    "estimating",
+    "boq",
+    "validation"
+  ],
+  "review_status": "Structure written from the published NRM 1 group element list and the cost-plan build-up it prescribes. Not reviewed by a UK chartered quantity surveyor. The edition and its date are deliberately not asserted here: cite the RICS publication you are working to in the project record, because the group numbering is stable across editions and the commentary is not.",
+  "description": "An NRM 1 cost plan is an argument about a building that does not exist yet, and its structure is what makes the argument checkable. Cost is reported against group elements, so two schemes can be compared element by element rather than by a single rate per square metre. The build-up then adds, in a fixed order, the money that is never measured: the main contractor's preliminaries, its overheads and profit, the project team fees, other development costs, the risk allowances and inflation. Each of those is a decision somebody made, and each is a decision an estimate can silently omit. Reporting cost per square metre of gross internal floor area on a plan missing two of them is how a scheme is approved at a number nobody can build it for.",
+  "group_elements": {
+    "note": "The group element is the first field of the code, and everything below it is the element and the sub-element. Group 0 through 8 are the building; 9 through 14 are the money that sits on top of it.",
+    "building": {
+      "0": "Facilitating works",
+      "1": "Substructure",
+      "2": "Superstructure",
+      "3": "Internal finishes",
+      "4": "Fittings, furnishings and equipment",
+      "5": "Services",
+      "6": "Prefabricated buildings and building units",
+      "7": "Work to existing buildings",
+      "8": "External works"
+    },
+    "beyond_the_building": {
+      "9": "Main contractor's preliminaries",
+      "10": "Main contractor's overheads and profit",
+      "11": "Project and design team fees",
+      "12": "Other development and project costs",
+      "13": "Risk allowances",
+      "14": "Inflation"
+    }
+  },
+  "cost_plan_build_up": {
+    "note": "The order matters because each line compounds on what precedes it. Moving preliminaries after overheads and profit, or taking risk on a base that already carries profit, changes the total without changing any measured quantity.",
+    "sequence": [
+      "Facilitating works",
+      "Building works estimate",
+      "Main contractor's preliminaries",
+      "Subtotal, the works cost estimate before overheads and profit",
+      "Main contractor's overheads and profit",
+      "Works cost estimate",
+      "Project and design team fees",
+      "Other development and project costs",
+      "Base cost estimate",
+      "Risk allowances",
+      "Cost limit before inflation",
+      "Tender inflation and construction inflation",
+      "Cost limit",
+      "VAT assessment, stated separately and never inside a rate"
+    ]
+  },
+  "risk_allowances": {
+    "note": "NRM 1 splits risk into four allowances rather than one contingency, because they are owned by different people and are released at different times. A single round percentage hides which of the four it is meant to cover.",
+    "categories": [
+      "Design development risk, the allowance for the design not being finished",
+      "Construction risk, the allowance for what the site turns out to be",
+      "Employer change risk, the allowance for the client changing their mind",
+      "Employer other risk, everything the employer carries that the other three do not name"
+    ]
+  },
+  "measurement_basis": {
+    "gifa": "Gross internal floor area, measured to the internal face of the enclosing walls, is the denominator every cost per square metre in a UK cost plan is quoted against. A rate quoted against a different area is not comparable to a published benchmark and will not be read as if it were different.",
+    "base_date": "The date the rates are current at. Without it a reader cannot tell a stale rate from a keen one, and cannot know how much inflation is still to be added.",
+    "stage": "A cost plan is produced for a design stage, and the accuracy a reader may expect of it is set by that stage. A plan that does not say which stage it is invites the wrong expectation."
+  },
   "enables_rule_ids": [
-    "nrm1.group_element_required",
-    "nrm1.element_hierarchy_valid",
-    "nrm1.sub_element_completeness",
-    "nrm1.facilitating_works_classified",
-    "nrm1.main_contractor_preliminaries_present",
-    "nrm1.main_contractor_overheads_profit_present",
-    "nrm1.project_team_fees_present",
-    "nrm1.other_development_development_costs_present",
-    "nrm1.design_development_risk_allowance_present",
-    "nrm1.construction_risk_allowance_present",
-    "nrm1.employer_change_risk_allowance_present",
-    "nrm1.employer_other_risk_allowance_present",
-    "nrm1.inflation_allowance_tender_present",
-    "nrm1.inflation_allowance_construction_present",
-    "nrm1.location_factor_applied",
-    "nrm1.cost_per_m2_within_bcis_band",
-    "nrm1.gifa_method_consistent"
+    "nrm.classification_required",
+    "nrm.valid_element",
+    "nrm.completeness",
+    "nrm.base_date_declared",
+    "nrm.cost_plan_stage_declared",
+    "nrm.contractor_costs_present",
+    "nrm.risk_allowance_present"
   ]
 }

@@ -186,6 +186,23 @@
     "completeness": {
       "fail": "El grupo NRM {group} - {group_name} falta en el BOQ",
       "suggestion": "Añada posiciones para el grupo NRM {group} ({group_name})"
+    },
+    "base_date_declared": {
+      "fail": "El plan de costes no indica la fecha base a la que estan referidos sus precios",
+      "suggestion": "Registre la fecha base en el presupuesto. Sin ella nadie puede saber si un precio esta desfasado ni que inflacion queda por anadir"
+    },
+    "cost_plan_stage_declared": {
+      "fail": "El plan de costes no indica para que fase de proyecto se elaboro",
+      "suggestion": "Registre la fase. La precision que un lector puede esperar de un plan de costes la fija la fase en que se elaboro, y un plan que oculta su fase invita a la expectativa equivocada"
+    },
+    "contractor_costs_present": {
+      "preliminaries": "El plan de costes no recoge los costes indirectos de obra del contratista principal, ni como grupo {group} ni como linea de recargo",
+      "overheads_and_profit": "El plan de costes no recoge los gastos generales y el beneficio del contratista principal, ni como grupo {group} ni como linea de recargo",
+      "suggestion": "Anadalo como elemento de grupo NRM o como linea de recargo sobre la obra medida. Ambas formas son correctas; omitirlo significa que el coste de obra no es el coste de obra"
+    },
+    "risk_allowance_present": {
+      "fail": "El plan de costes no recoge ninguna provision para riesgos",
+      "suggestion": "Anada una provision para riesgos como grupo NRM 13 o como linea de contingencia. Un plan de costes sin provision para riesgos presenta una cifra unica como si fuera cierta"
     }
   },
   "masterformat": {
@@ -651,6 +668,34 @@
     "described": {
       "fail": "Este caso no tiene resumen, así que en la lista solo se ve el título y nada más.",
       "suggestion": "Añada una frase sobre lo que el lector habrá hecho al terminar."
+    }
+  },
+  "uk": {
+    "contract_form_declared": {
+      "fail": "El presupuesto no indica la forma de contrato sobre la que esta valorado",
+      "suggestion": "Registre la forma de contrato. Los costes indirectos, el riesgo y las condiciones de pago se valoran de forma distinta segun el contrato, de modo que la cifra dice poco sin ese dato"
+    },
+    "payment_regime_declared": {
+      "fail": "El mecanismo de pago esta incompleto: {missing} sin registrar",
+      "suggestion": "Registre ambas fechas. Un contrato de obra que no fija ninguna no queda libre de ellas; el regimen legal supletorio aporta las dos, y las partes acaban encontrando sus condiciones de pago en una norma en lugar de en lo que firmaron"
+    },
+    "retention_declared": {
+      "fail": "El presupuesto no indica que retencion se aplica",
+      "suggestion": "Registre el porcentaje de retencion y su liberacion, o registre que no se aplica ninguna. La retencion es dinero ya ganado del que el contratista no dispone, y un presupuesto que calla sobre ella calla sobre el circulante"
+    },
+    "cdm_duty_holders_declared": {
+      "fail": "Los responsables segun CDM 2015 no estan registrados: falta {missing}",
+      "suggestion": "Registre los nombramientos. Cuando trabaja mas de un contratista en la obra, la propiedad debe nombrar por escrito un principal designer y un principal contractor; si no lo hace, esas obligaciones recaen sobre la propiedad"
+    },
+    "hrb_regime_declared": {
+      "fail": "La clasificacion como edificio de riesgo elevado esta sin resolver: {reason}",
+      "unanswered": "el presupuesto no indica si se trata de un edificio de riesgo elevado",
+      "disagrees": "el presupuesto declara {declared} y sus propias dimensiones dan {derived}",
+      "suggestion": "Un edificio es de riesgo elevado cuando alcanza al menos 18 m o tiene al menos 7 plantas Y contiene al menos dos viviendas. Cuentan las dos mitades: un edificio alto sin viviendas no lo es, y tratarlo como tal compra un procedimiento que nadie necesitaba"
+    },
+    "vat_treatment_declared": {
+      "fail": "El presupuesto no indica como se trata el IVA",
+      "suggestion": "Registre el tratamiento: tipo general, tipo reducido o cero cuando la obra lo permita, o la inversion del sujeto pasivo cuando la entrega quede dentro de ella. La inversion del sujeto pasivo traslada el impuesto al cliente y cambia lo que el contratista puede facturar"
     }
   }
 }

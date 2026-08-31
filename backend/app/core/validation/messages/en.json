@@ -186,6 +186,23 @@
     "completeness": {
       "fail": "NRM group {group} - {group_name} missing from BOQ",
       "suggestion": "Add positions for NRM group {group} ({group_name})"
+    },
+    "base_date_declared": {
+      "fail": "The cost plan does not state the base date its rates are current at",
+      "suggestion": "Record the base date on the bill. Without it nobody can say whether a rate is stale or what inflation still has to be added"
+    },
+    "cost_plan_stage_declared": {
+      "fail": "The cost plan does not say which design stage it was produced for",
+      "suggestion": "Record the stage. The accuracy a reader may expect of a cost plan is set by the stage it was produced at, and a plan that hides its stage invites the wrong expectation"
+    },
+    "contractor_costs_present": {
+      "preliminaries": "The cost plan carries no main contractor's preliminaries, neither as group {group} nor as a markup line",
+      "overheads_and_profit": "The cost plan carries no main contractor's overheads and profit, neither as group {group} nor as a markup line",
+      "suggestion": "Add it as an NRM group element or as a markup line on the measured work. Either is correct; leaving it out means the works cost is not the works cost"
+    },
+    "risk_allowance_present": {
+      "fail": "The cost plan carries no risk allowance",
+      "suggestion": "Add a risk allowance as NRM group 13 or as a contingency line. A cost plan with no risk allowance is presenting a single-point figure as if it were certain"
     }
   },
   "masterformat": {
@@ -651,6 +668,34 @@
     "described": {
       "fail": "This case has no summary, so the list shows a title and nothing else.",
       "suggestion": "Add one sentence on what the reader will have done by the end."
+    }
+  },
+  "uk": {
+    "contract_form_declared": {
+      "fail": "The estimate does not name the contract form it is priced against",
+      "suggestion": "Record the contract form. Preliminaries, risk and the payment terms are all priced differently under a different form, so the figure means little without it"
+    },
+    "payment_regime_declared": {
+      "fail": "The payment mechanism is incomplete: {missing} not recorded",
+      "suggestion": "Record both dates. A construction contract that fixes neither is not free of them; the Scheme for Construction Contracts supplies both, and the parties then find their payment terms in a statutory instrument rather than in what they signed"
+    },
+    "retention_declared": {
+      "fail": "The estimate does not say what retention applies",
+      "suggestion": "Record the retention percentage and its release, or record that none applies. Retention is cash the contractor has earned and cannot draw, and an estimate silent about it is silent about working capital"
+    },
+    "cdm_duty_holders_declared": {
+      "fail": "CDM 2015 duty holders are not recorded: {missing} missing",
+      "suggestion": "Record the appointments. Where more than one contractor works on a project the client must appoint a principal designer and a principal contractor in writing, and if the client does not, the client holds those duties itself"
+    },
+    "hrb_regime_declared": {
+      "fail": "The higher-risk building question is unresolved: {reason}",
+      "unanswered": "the estimate does not say whether this is a higher-risk building",
+      "disagrees": "the estimate says higher-risk is {declared}, its own dimensions give {derived}",
+      "suggestion": "A building is higher-risk when it is at least 18 m tall or has at least 7 storeys AND contains at least two residential units. Both halves count: a tall building with no dwellings is not higher-risk, and treating it as one buys a gateway programme nobody needed"
+    },
+    "vat_treatment_declared": {
+      "fail": "The estimate does not say how VAT is treated",
+      "suggestion": "Record the treatment: the standard rate, a reduced or zero rate where the work qualifies, or the domestic reverse charge where the supply falls inside it. The reverse charge moves the VAT to the customer and changes what the contractor may invoice"
     }
   }
 }

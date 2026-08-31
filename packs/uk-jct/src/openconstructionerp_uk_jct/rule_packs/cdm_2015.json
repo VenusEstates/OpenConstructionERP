@@ -1,24 +1,34 @@
 {
   "rule_pack_id": "cdm_2015",
-  "name": "CDM 2015 — Construction (Design and Management) Regulations",
-  "standard": "CDM 2015",
+  "name": "CDM 2015 duty holders and project documents",
+  "standard": "uk_statutory",
   "jurisdiction": "GB",
-  "description": "Enables OCERP built-in validation rules that enforce the duties imposed by the Construction (Design and Management) Regulations 2015 (HSE). Covers duty-holder appointments (Client, Principal Designer, Principal Contractor, Designers, Contractors, Workers), F10 notification thresholds (>30 days with >20 workers simultaneously, OR >500 person-days), Construction Phase Plan, Pre-Construction Information and Health & Safety File obligations.",
+  "applies_to": [
+    "projects",
+    "safety",
+    "preliminaries"
+  ],
+  "review_status": "Written from the Construction (Design and Management) Regulations 2015 and the duty-holder structure they set up. Not reviewed by a health and safety practitioner. Northern Ireland has its own regulations to similar effect and is not covered by these.",
+  "description": "CDM applies to every construction project in Great Britain, including the small ones people assume it does not. Its structure is a set of named duties that attach to whoever is doing the work, so the question is never whether the regulations apply but who is carrying which duty. For an estimator the practical consequence is in the preliminaries: the construction phase plan, the welfare, the principal contractor's management time and the information the principal designer has to collect are all priced, and a project that has not made its appointments has not decided who is pricing them.",
+  "duty_holders": {
+    "client": "Everyone who has construction work done for them in the course of a business. Makes suitable arrangements for managing the project, provides pre-construction information, and ensures the other appointments are made. A commercial client who makes no appointment does not escape the duties; the client carries them.",
+    "principal_designer": "Appointed in writing where more than one contractor is involved. Plans, manages and monitors the pre-construction phase, and collects the information for the health and safety file.",
+    "principal_contractor": "Appointed in writing where more than one contractor is involved. Plans, manages and monitors the construction phase, and draws up the construction phase plan.",
+    "designer": "Anyone who prepares or modifies a design. Eliminates foreseeable risks so far as reasonably practicable and provides information about the risks that remain.",
+    "contractor": "Anyone who manages or carries out construction work. On a single-contractor project the contractor draws up the construction phase plan itself."
+  },
+  "documents": {
+    "construction_phase_plan": "Required on every project, of every size, before construction begins. Its content is proportionate to the work; its existence is not optional.",
+    "pre_construction_information": "What the client knows about the site and provides to the designers and contractors, in time for them to use it.",
+    "health_and_safety_file": "Required where more than one contractor is involved. It is the information the next person to work on the building will need, handed over at the end and kept."
+  },
+  "notification": {
+    "test": "A project is notifiable where construction work is scheduled to last longer than 30 working days and have more than 20 workers working simultaneously at any point, or where it exceeds 500 person-days.",
+    "how": "The client notifies the enforcing authority in writing before the construction phase begins, and a copy of the notice is displayed on site.",
+    "what_it_does_not_change": "Notification does not create the duties. They apply either way, and a project below the threshold has the same duty holders as one above it."
+  },
+  "what_this_pack_checks": "That the two written appointments are recorded against the estimate. It does not judge the appointees, and it cannot: competence is a judgement about people, made by the client, on evidence this platform does not hold.",
   "enables_rule_ids": [
-    "cdm.client_duties_assigned",
-    "cdm.principal_designer_appointed",
-    "cdm.principal_contractor_appointed",
-    "cdm.designer_duties_documented",
-    "cdm.contractor_duties_documented",
-    "cdm.worker_consultation_evidenced",
-    "cdm.f10_notification_threshold_evaluated",
-    "cdm.f10_notification_submitted_when_required",
-    "cdm.pre_construction_information_pack_present",
-    "cdm.construction_phase_plan_present",
-    "cdm.construction_phase_plan_proportionate_to_risk",
-    "cdm.health_and_safety_file_handed_over",
-    "cdm.welfare_facilities_provision_documented",
-    "cdm.risk_register_maintained",
-    "cdm.competence_skills_knowledge_evidence"
+    "uk.cdm_duty_holders_declared"
   ]
 }

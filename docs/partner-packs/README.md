@@ -459,6 +459,7 @@ teach identifiers that were never rule sets at all.
 | `gaeb` | GAEB LV structure and ordinals (DE) |
 | `onorm` | ÖNORM (AT) |
 | `nrm` | NRM 1 and 2 (UK) |
+| `uk_statutory` | UK statute on the estimate: contract form, Construction Act payment regime, retention, CDM 2015 duty holders, Building Safety Act higher-risk test, VAT treatment |
 | `masterformat` | MasterFormat divisions (US) |
 | `dpgf` | DPGF (FR) |
 | `bc3` | FIEBDC-3 / BC3 (ES) |

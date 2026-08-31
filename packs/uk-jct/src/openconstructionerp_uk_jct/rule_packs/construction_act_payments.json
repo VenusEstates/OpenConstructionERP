@@ -1,0 +1,38 @@
+{
+  "rule_pack_id": "construction_act_payments",
+  "name": "Construction Act payment regime and adjudication",
+  "standard": "uk_statutory",
+  "jurisdiction": "GB",
+  "applies_to": [
+    "contracts",
+    "payments",
+    "cash_flow"
+  ],
+  "review_status": "Written from the Housing Grants, Construction and Regeneration Act 1996 as amended by the Local Democracy, Economic Development and Construction Act 2009, and the Scheme for Construction Contracts that fills the gaps. Not reviewed by a construction solicitor. The section structure below is stated because it is the framework every UK construction payment argument is had in; the periods are the ones the parties fix, and only those the statute itself fixes are given as numbers.",
+  "description": "This is the legislation that decides whether a contractor gets paid, and it is the one an estimating tool most often ignores. It matters here for a reason that is easy to miss: the payment regime is a cash-flow input to the price. A contractor pricing a 45-day final date for payment is financing the job for longer than one pricing 21 days, and that financing has a cost that belongs in the estimate. Recording the regime alongside the estimate is not administration, it is a line of the build-up.",
+  "the_mechanism": {
+    "stage_payments": "A party to a construction contract is entitled to payment by instalments unless the work is specified to last less than 45 days, or the parties agree it will.",
+    "due_date": "The contract must provide an adequate mechanism for determining what payments become due and when. This is the date the obligation crystallises.",
+    "final_date_for_payment": "The contract must fix the period between the due date and the final date for payment. The final date is when the money must actually be there.",
+    "payment_notice": "The payer, or a specified person, gives notice of the sum considered due and the basis of its calculation, not later than five days after the payment due date. Notice is required even where the sum is zero.",
+    "default_payment_notice": "If the payer gives no notice, the payee's own application for payment stands as the notice, and the sum in it becomes the notified sum.",
+    "pay_less_notice": "To pay less than the notified sum the payer must give notice before the prescribed period ending with the final date for payment, stating the sum considered due and the basis. Without it the notified sum is payable in full.",
+    "suspension": "The payee may suspend performance for non-payment of a notified sum on seven days' notice, and is entitled to an extension of time and the reasonable costs of suspending and resuming.",
+    "pay_when_paid": "A provision making payment conditional on the payer being paid by a third party is ineffective, except where that third party is insolvent."
+  },
+  "adjudication": {
+    "right": "A party to a construction contract has the right to refer a dispute to adjudication at any time, and a contract term restricting that right does not survive.",
+    "timetable": "The adjudicator reaches a decision within 28 days of referral, extendable by 14 days with the consent of the referring party, or further by agreement of both.",
+    "effect": "The decision binds until the dispute is finally determined by litigation, arbitration or agreement. In practice most decisions are the end of it, which is why the timetable is the pressure it is."
+  },
+  "where_it_does_not_apply": {
+    "residential_occupier": "A contract with a residential occupier for work on their own dwelling is outside the Act, which is why domestic work is contracted differently.",
+    "excluded_operations": "Certain process and plant operations are excluded from the definition of construction operations, so a contract for them may sit outside the regime while a contract for the building around them sits inside it.",
+    "northern_ireland": "Northern Ireland has its own order to the same effect rather than being covered by this Act."
+  },
+  "the_gap_it_fills": "Where the contract does not comply, the Scheme for Construction Contracts supplies the missing terms. That is worth stating plainly: a contract that fixes no payment dates is not free of payment dates. The parties simply find their payment terms in a statutory instrument instead of in the deal they negotiated, and usually discover this at the point of the first dispute.",
+  "enables_rule_ids": [
+    "uk.payment_regime_declared",
+    "uk.retention_declared"
+  ]
+}

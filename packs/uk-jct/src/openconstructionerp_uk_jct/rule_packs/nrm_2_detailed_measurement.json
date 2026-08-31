@@ -1,20 +1,32 @@
 {
   "rule_pack_id": "nrm_2_detailed_measurement",
-  "name": "RICS NRM 2 (2nd ed, 2021) — Detailed Measurement for Building Works",
-  "standard": "NRM 2 (2nd edition, 2021)",
+  "name": "NRM 2 detailed measurement for building works",
+  "standard": "nrm",
   "jurisdiction": "GB",
-  "description": "Enables OCERP built-in validation rules that enforce the RICS New Rules of Measurement 2 (2nd edition, 2021) measurement conventions: 41 work-section structure, units of measurement, item description requirements, tabulated rules of measurement per trade, and the treatment of preliminaries, dayworks, provisional sums and contingencies.",
+  "applies_to": [
+    "boq",
+    "tendering",
+    "validation"
+  ],
+  "review_status": "Written from the published NRM 2 work section list and its rules on quantification, provisional sums and preliminaries. Not reviewed by a UK chartered quantity surveyor. Edition not asserted; cite the RICS publication in the project record.",
+  "description": "NRM 2 is the rule book that makes two tenders comparable. It fixes what a quantity means, so a bidder pricing a bill knows what is in the rate and what is not, and the employer knows the bids differ on price rather than on interpretation. The part that matters commercially is not the work sections but the treatment of what has not been designed yet: a provisional sum that is defined carries programme and preliminaries in the bidder's price, and one that is undefined does not. Getting that wrong does not show up as a measurement error. It shows up later as an extension of time.",
+  "work_sections": {
+    "note": "Numbered work sections, each with its own measurement rules, coverage rules and definitions. The numbering runs from preliminaries through to the finishing trades and external works. A bill measured to NRM 2 states its work section against every item, which is what lets a bidder price it without asking what is included.",
+    "why_it_is_not_reproduced_here": "The section list and its measurement rules are the publisher's own text and tables. This pack cites them for interoperability and does not reproduce them."
+  },
+  "provisional_sums": {
+    "defined": "Work not completely designed but for which the employer can state the nature, how and where it fits the building, the scope and quantity, and the programme constraints. A bidder is deemed to have made allowance in its programme and preliminaries.",
+    "undefined": "Work for which those particulars cannot be given. The bidder is deemed to have made no allowance in programme or preliminaries, so the work carries both when it is instructed.",
+    "consequence": "The difference is money and time, and it is decided when the bill is written rather than when the work is instructed. A bill that shows a lump sum with no statement of which kind it is has left that decision to whoever argues it best."
+  },
+  "quantification": {
+    "measured_work": "Quantified in the unit the work section prescribes, net as fixed in position unless the section says otherwise.",
+    "preliminaries": "Priced as its own section rather than spread into rates, so that the employer can see the cost of running the site and a valuation can deal with time-related and fixed elements separately.",
+    "risk": "Carried in the employer's risk allowance, not buried in the measured rates. A rate carrying somebody's private contingency is a rate nobody can benchmark."
+  },
+  "what_this_pack_checks": "The line-level checks are the shared NRM ones: every item classified, the code well formed, the major groups present. NRM 2's provisional sum treatment is not checked, because nothing in a bill records whether a lump sum was defined or undefined. That is a gap in the data model rather than a rule this pack declined to write, and it is stated here rather than being papered over with a rule that would pass on every bill.",
   "enables_rule_ids": [
-    "nrm2.work_section_code_valid",
-    "nrm2.unit_of_measurement_allowed",
-    "nrm2.item_description_complete",
-    "nrm2.preliminaries_section_a_present",
-    "nrm2.preliminaries_main_contractor_specific",
-    "nrm2.dayworks_section_present",
-    "nrm2.provisional_sums_defined_or_undefined_flagged",
-    "nrm2.contingency_sum_present",
-    "nrm2.quantity_decimal_precision",
-    "nrm2.cesmm_or_method_of_measurement_referenced",
-    "nrm2.work_section_completeness_per_trade"
+    "nrm.classification_required",
+    "nrm.valid_element"
   ]
 }

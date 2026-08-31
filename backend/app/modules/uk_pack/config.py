@@ -20,13 +20,15 @@ PACK_CONFIG: dict[str, Any] = {
         {
             "code": "NRM1",
             "name": "NRM 1 - Order of Cost Estimating and Cost Planning",
-            "description": "RICS New Rules of Measurement for cost planning (2nd ed.)",
+            "description": "RICS New Rules of Measurement for cost planning. Cite the edition you hold; the group numbering is stable across editions and the commentary is not.",
         },
         {
             "code": "NRM2",
             "name": "NRM 2 - Detailed Measurement for Building Works",
             "description": "RICS rules for detailed measurement / bills of quantities",
-            # NRM 2 Part 3 tabulated work sections 1-41 (RICS, 2nd ed.).
+            # The NRM 2 tabulated work sections. Titles only: the measurement,
+            # coverage and definition rules under each are the publisher's own
+            # text and are cited rather than reproduced.
             "measurement_groups": [
                 {"number": "1", "title": "Preliminaries"},
                 {
@@ -95,27 +97,27 @@ PACK_CONFIG: dict[str, Any] = {
         {
             "code": "JCT_SBC",
             "name": "JCT SBC/Q - Standard Building Contract with Quantities",
-            "description": "Lump-sum contract with bills of quantities (2024 ed.)",
+            "description": "Lump-sum contract with bills of quantities",
         },
         {
             "code": "JCT_DB",
             "name": "JCT DB - Design and Build Contract",
-            "description": "Design-and-build single-stage (2024 ed.)",
+            "description": "Design and build, single point of design responsibility",
         },
         {
             "code": "JCT_MC",
             "name": "JCT MC - Management Contract",
-            "description": "Management contracting route (2024 ed.)",
+            "description": "Management contracting route, works let as packages",
         },
         {
             "code": "JCT_MWD",
             "name": "JCT MWD - Minor Works with Contractor's Design",
-            "description": "Suitable for smaller projects (2024 ed.)",
+            "description": "Minor works with contractor design, for smaller projects",
         },
         {
             "code": "NEC4_ECC",
             "name": "NEC4 ECC - Engineering and Construction Contract",
-            "description": "Process-based contract with 6 main options (A–F)",
+            "description": "Process-based contract with six main options, A to F",
             "options": [
                 {"code": "A", "title": "Priced contract with activity schedule"},
                 {"code": "B", "title": "Priced contract with bill of quantities"},
@@ -156,7 +158,7 @@ PACK_CONFIG: dict[str, Any] = {
             "name": "VAT - Zero Rate",
             "type": "vat",
             "rate_pct": "0",
-            "note": "New-build residential construction and approved alterations to listed buildings",
+            "note": "New dwellings, and certain relevant residential and relevant charitable buildings. The old zero rate for approved alterations to listed buildings was withdrawn and does not apply.",
         },
         {
             "code": "UK_CIS_STANDARD",
@@ -211,12 +213,12 @@ PACK_CONFIG: dict[str, Any] = {
         {
             "code": "UK_COST_INDEX",
             "name": "UK construction cost index",
-            "description": "RICS cost data with regional tender price indices",
+            "description": "Subscription cost data with regional tender price indices, brought by the user under their own licence",
         },
         {
-            "code": "SPONS",
-            "name": "Spon's Price Books",
-            "description": "Annual UK construction price books",
+            "code": "UK_PRICE_BOOKS",
+            "name": "Annual UK construction price books",
+            "description": "Published unit-rate books, brought by the user under their own licence",
         },
     ],
     # ── Units (metric defaults) ──────────────────────────────────────────────

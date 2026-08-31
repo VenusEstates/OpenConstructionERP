@@ -1,21 +1,25 @@
 {
   "rule_pack_id": "nrm_3_maintenance",
-  "name": "RICS NRM 3 — Building Maintenance Works",
-  "standard": "NRM 3",
+  "name": "NRM 3 building maintenance cost planning",
+  "standard": "nrm",
   "jurisdiction": "GB",
-  "description": "Enables OCERP built-in validation rules for the RICS New Rules of Measurement, Part 3 — Order of Cost Estimating and Cost Planning for Building Maintenance Works (2014). Covers life-cycle cost planning (renewals + maintenance), the NRM 3 element hierarchy aligned with NRM 1, condition-survey-driven prioritisation, planned preventive maintenance schedules and end-of-life renewal allowances.",
-  "enables_rule_ids": [
-    "nrm3.element_hierarchy_aligned_with_nrm1",
-    "nrm3.maintenance_strategy_declared",
-    "nrm3.condition_survey_referenced",
-    "nrm3.renewal_cost_present_per_element",
-    "nrm3.planned_preventive_maintenance_schedule",
-    "nrm3.reactive_maintenance_allowance_present",
-    "nrm3.life_cycle_period_stated",
-    "nrm3.discount_rate_assumption_documented",
-    "nrm3.inflation_assumption_documented",
-    "nrm3.end_of_life_renewal_allowance_present",
-    "nrm3.location_factor_applied",
-    "nrm3.benchmark_against_bcis_running_costs"
-  ]
+  "applies_to": [
+    "estimating",
+    "asset_management",
+    "reference"
+  ],
+  "review_status": "Written from the published NRM 3 structure for maintenance and renewal cost planning. Not reviewed by a UK chartered quantity surveyor. Edition not asserted; cite the RICS publication in the project record.",
+  "description": "NRM 3 answers the question the capital cost plan does not: what the building costs to keep. It uses the same elemental structure as NRM 1, so a decision taken at design stage can be priced on both sides of the line, which is the point of it. A cheaper roof covering with a shorter renewal cycle is not cheaper, and the only way to show that is to hold the capital plan and the maintenance plan in the same element structure over the same period.",
+  "cost_categories": {
+    "maintenance": "Work to keep an element performing as intended, planned and reactive.",
+    "renewal": "Replacement of an element at the end of its service life, priced at the point in the period it falls due.",
+    "operation": "Cleaning, utilities and the other running costs, which are outside the maintenance plan but inside the whole-life picture."
+  },
+  "how_it_is_used": {
+    "period": "A study period stated up front, commonly matched to a lease or a funding horizon. A maintenance figure without its period is not a figure.",
+    "discounting": "Costs falling in different years are brought to a common basis before they are compared. The discount rate is the client's, not the estimator's, and stating whose it is matters more than the number.",
+    "renewal_cycles": "The service life assumed for each element. Two maintenance plans that disagree usually disagree here rather than on any rate."
+  },
+  "why_no_rules": "This document ships as reference and enables no engine rules. A maintenance cost plan is a different document from the bill this platform validates, and a rule that read a capital bill and reported on maintenance would be reporting about the wrong thing. Naming rules here that do not exist would be worse: a document that promises a check tells an estimator the platform is watching something it is not.",
+  "enables_rule_ids": []
 }

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openconstructionerp-uk-jct"
 version = "0.2.0"
-description = "Pre-configured partner pack for UK general contractors — RICS NRM 1+2+3, JCT 2024 contract suite, BCIS cost benchmarks, CDM 2015, Building Safety Act 2022."
+description = "Partner pack for UK contracting: RICS NRM measurement and cost planning, the JCT contract suite, the Construction Act payment regime, CIS and the VAT reverse charge, CDM 2015 and the Building Safety Act 2022."
 readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.11"

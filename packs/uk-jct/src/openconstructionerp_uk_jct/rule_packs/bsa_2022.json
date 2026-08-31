@@ -1,25 +1,38 @@
 {
   "rule_pack_id": "bsa_2022",
-  "name": "Building Safety Act 2022 — Higher-Risk Buildings",
-  "standard": "Building Safety Act 2022",
+  "name": "Building Safety Act 2022, the higher-risk regime and the dutyholder duties",
+  "standard": "uk_statutory",
   "jurisdiction": "GB",
-  "description": "Enables OCERP built-in validation rules for the Building Safety Act 2022 regime overseen by the Building Safety Regulator (BSR, HSE). Mandatory for Higher-Risk Buildings (HRBs) — buildings at least 18 metres in height OR containing at least 7 storeys, with at least 2 residential units. Covers the three Gateway approvals (Gateway 1 planning, Gateway 2 pre-construction, Gateway 3 pre-occupation), the Golden Thread of information, Principal Accountable Person registration, mandatory occurrence reporting and the Resident Engagement Strategy.",
+  "applies_to": [
+    "projects",
+    "compliance",
+    "programme"
+  ],
+  "review_status": "The higher-risk threshold below is the statutory test and is encoded as a check rather than described, because an estimate can be wrong about it in a way that costs a gateway programme. The description of the gateways and the dutyholder regime is written from the Act and the 2023 regulations made under it. Not reviewed by a building safety practitioner.",
+  "description": "Two regimes came out of this Act and they are constantly confused. The dutyholder and competence regime applies to all building work under the Building Regulations, and looks much like CDM with a different vocabulary. The higher-risk building regime is narrow, applies to a defined set of buildings, and puts three gateways in the programme with a regulator on the other side of each. Assuming the second applies when it does not buys months of programme nobody needed. Assuming it does not when it does stops the building being occupied.",
+  "higher_risk_test": {
+    "height": "At least 18 metres in height, or at least 7 storeys.",
+    "occupancy": "And containing at least two residential units. For the design and construction phase, care homes and hospitals meeting the height test are also in scope.",
+    "the_and_is_the_point": "Height alone does not make a higher-risk building. A ten-storey speculative office with no dwellings in it is outside the regime however tall it is, and the most common error in a UK cost plan is to budget one as if it were inside.",
+    "phases_differ": "The occupation regime covers buildings with at least two residential units. The design and construction regime additionally covers care homes and hospitals, so a building can be in scope while it is being built and out of scope once it is occupied."
+  },
+  "gateways": {
+    "gateway_1": "At planning. Fire safety considered as part of the planning application for a relevant building.",
+    "gateway_2": "Before construction starts. Building control approval from the Building Safety Regulator rather than from a local authority or an approved inspector. This is a hard stop in the programme, not a parallel workstream, and it is where a project that has not planned for it loses time.",
+    "gateway_3": "Before occupation. A completion certificate from the regulator, and registration of the building before residents move in.",
+    "programme_consequence": "Two of the three are stops rather than milestones. A programme that shows them as submissions running alongside the work is a programme that has not understood them, and the float it shows is not there."
+  },
+  "golden_thread": {
+    "what_it_is": "The information about the building and its safety, kept accurate, kept current and kept accessible, from design through construction and into occupation.",
+    "why_it_is_an_estimating_matter": "It is a deliverable with a cost. Somebody structures the information, keeps it as the design changes, and hands it over. On a project that priced it as an afterthought, the handover is where the retention gets stuck."
+  },
+  "dutyholder_regime": {
+    "scope": "All building work under the Building Regulations, not only higher-risk buildings.",
+    "roles": "Client, principal designer, principal contractor, designers and contractors, each with duties to plan, manage and monitor, and each required to be competent for what they take on.",
+    "relationship_to_cdm": "The role names are the same as CDM's and the appointments are not. A project can have a CDM principal designer and a building regulations principal designer who are not the same person, and assuming they are is a gap nobody notices until an inspection."
+  },
+  "geography": "The gateway regime and the reformed building control regime are England only. Wales, Scotland and Northern Ireland have their own building safety reforms on their own timetables, so a pack-wide assumption that this applies across the United Kingdom is wrong.",
   "enables_rule_ids": [
-    "bsa.hrb_status_evaluated",
-    "bsa.hrb_height_or_storey_threshold_documented",
-    "bsa.principal_accountable_person_identified",
-    "bsa.accountable_persons_register_complete",
-    "bsa.bsr_building_registration_submitted",
-    "bsa.gateway_1_planning_approval_present",
-    "bsa.gateway_2_pre_construction_approval_present",
-    "bsa.gateway_3_pre_occupation_approval_present",
-    "bsa.golden_thread_information_strategy_present",
-    "bsa.golden_thread_digital_format_compliant",
-    "bsa.safety_case_report_present",
-    "bsa.safety_case_report_reviewed_annually",
-    "bsa.mandatory_occurrence_reporting_process",
-    "bsa.resident_engagement_strategy_present",
-    "bsa.complaints_handling_procedure_present",
-    "bsa.competent_person_duty_holder_evidenced"
+    "uk.hrb_regime_declared"
   ]
 }

@@ -11,8 +11,13 @@ from app.core.demo_projects import DemoTemplate
 # detailed measurement for building works) and structured to the NRM 1 element
 # groups used by UK quantity surveyors for elemental cost planning. Pricing is
 # at UK cost-index / London Q1 2026 levels in GBP, VAT exclusive. Building Regulations
-# (Approved Documents A-S), the Building Safety Act 2022 (higher-risk building
-# regime, golden thread, Gateways 1-3) and CDM 2015 govern the works.
+# (Approved Documents A-S), the Building Safety Act 2022 and CDM 2015 govern
+# the works. The Act's dutyholder and competence duties and the reformed
+# building control regime apply here; its higher-risk building gateway regime
+# does not, because that regime needs at least two residential units as well
+# as the height, and a speculative office has none. Both halves of the test
+# count, and dropping the residential half is how a commercial tower ends up
+# budgeted for a gateway programme it will never go through.
 # Structural design to the Eurocodes (BS EN 1990-1998) and BS 8500 concrete.
 # Main contract JCT Design and Build 2024 with a two-stage tender. VAT (20%)
 # is carried as a separate cumulative markup and never baked into unit rates.
@@ -38,8 +43,9 @@ TEMPLATE = DemoTemplate(
         "ventilated facade to the south. All-electric servicing with air-source "
         "heat pumps, four-pipe fan coils and roof-mounted PV. Designed to the "
         "Eurocodes (BS EN 1990-1998) and the Building Regulations Approved "
-        "Documents; delivered under the Building Safety Act 2022 higher-risk "
-        "building regime (Gateways 1-3) and CDM 2015. BREEAM Outstanding and "
+        "Documents; delivered under the Building Safety Act 2022 dutyholder "
+        "and competence regime and CDM 2015, outside the higher-risk building "
+        "gateways since the building holds no dwellings. BREEAM Outstanding and "
         "NABERS UK 5-star targets, Net Zero Carbon in operation aspiration. "
         "JCT Design and Build 2024 contract, two-stage tender. Estimated "
         "construction cost circa GBP 42M (VAT exclusive)."
@@ -56,7 +62,7 @@ TEMPLATE = DemoTemplate(
         "lat": 51.5138,
         "lng": -0.0759,
     },
-    validation_rule_sets=["nrm", "boq_quality"],
+    validation_rule_sets=["nrm", "uk_statutory", "boq_quality"],
     boq_name="Elemental Cost Plan - RICS NRM (Detailed)",
     boq_description=(
         "Detailed elemental cost plan measured to RICS NRM 2 and structured to "
@@ -68,6 +74,47 @@ TEMPLATE = DemoTemplate(
         "base_date": "2026-Q1",
         "price_level": "London 2026 (GBP, VAT excl.)",
         "tender_price_index": "UK tender price index 198 (London, 2026 Q1)",
+        # What the estimate records about itself, which is where the UK
+        # statutory rule set looks. None of it is derivable from the measured
+        # lines: a bill cannot say from its quantities which contract it is
+        # priced under, when money falls due, or whether the building is one
+        # the gateway regime applies to.
+        "contract_form": "JCT Design and Build 2024, two-stage tender",
+        "payment_regime": {
+            "due_date_days": 21,
+            "final_date_for_payment_days": 35,
+            "payment_notice_days": 5,
+            "pay_less_notice_days": 5,
+            "basis": "Interim valuations monthly; notices under the Construction Act payment regime",
+        },
+        "retention": {
+            "percentage": 3.0,
+            "release_at_practical_completion": 1.5,
+            "final_release": "on the certificate of making good",
+        },
+        "cdm_2015": {
+            "principal_designer": "Halberd Whitmore Architects",
+            "principal_contractor": "to be appointed at Stage 2 with the GMP",
+            "notifiable": True,
+            "f10_submitted": True,
+        },
+        "building_safety_act": {
+            # False on purpose, and checkable. Ten storeys and 44.5 m clear the
+            # height half of the test; the residential half is zero, and both
+            # halves are required. The rule reads these three numbers back and
+            # disagrees with the declaration if it does not follow from them.
+            "higher_risk_building": False,
+            "storeys": 10,
+            "height_m": 44.5,
+            "residential_units": 0,
+            "regime": "Dutyholder and competence duties apply; the gateway regime does not",
+            "golden_thread": "Information maintained to the same standard voluntarily",
+        },
+        "vat_treatment": (
+            "Standard rate 20 percent, carried as a separate cumulative markup and never in a unit "
+            "rate. Supplies between VAT-registered businesses inside the Construction Industry Scheme "
+            "fall under the domestic reverse charge, where the customer accounts for the VAT"
+        ),
     },
     sections=[
         # -- 0. Facilitating Works -------------------------------------------
@@ -212,13 +259,13 @@ TEMPLATE = DemoTemplate(
             "4 - Fittings, Furnishings and Equipment",
             {"nrm": "4"},
             [
-                ("4.1", "Reception desk and feature joinery (Reception joinery)", "lsum", 1, 165000.00, {"nrm": "4"}),
-                ("4.2", "WC vanity units, IPS panels and cubicles (WC fit-out)", "pcs", 64, 2850.00, {"nrm": "4"}),
-                ("4.3", "Tea-point and pantry joinery to each floor (Tea-points)", "pcs", 20, 9500.00, {"nrm": "4"}),
-                ("4.4", "Signage, wayfinding and statutory notices (Signage)", "lsum", 1, 95000.00, {"nrm": "4"}),
-                ("4.5", "End-of-trip lockers, drying and changing fit-out (End-of-trip)", "lsum", 1, 185000.00, {"nrm": "4"}),
-                ("4.6", "Window blinds and solar-control internal screens (Blinds)", "m2", 8200, 42.00, {"nrm": "4"}),
-                ("4.7", "Cycle racks and Sheffield stands to basement (Cycle store)", "pcs", 180, 320.00, {"nrm": "4"}),
+                ("4.1", "Reception desk and feature joinery (Reception joinery)", "lsum", 1, 165000.00, {"nrm": "4.1.3"}),
+                ("4.2", "WC vanity units, IPS panels and cubicles (WC fit-out)", "pcs", 64, 2850.00, {"nrm": "4.1.1"}),
+                ("4.3", "Tea-point and pantry joinery to each floor (Tea-points)", "pcs", 20, 9500.00, {"nrm": "4.1.2"}),
+                ("4.4", "Signage, wayfinding and statutory notices (Signage)", "lsum", 1, 95000.00, {"nrm": "4.1.4"}),
+                ("4.5", "End-of-trip lockers, drying and changing fit-out (End-of-trip)", "lsum", 1, 185000.00, {"nrm": "4.1.3"}),
+                ("4.6", "Window blinds and solar-control internal screens (Blinds)", "m2", 8200, 42.00, {"nrm": "4.1.1"}),
+                ("4.7", "Cycle racks and Sheffield stands to basement (Cycle store)", "pcs", 180, 320.00, {"nrm": "4.1.6"}),
             ],
         ),
         # -- 5.1 Mechanical Services -----------------------------------------
@@ -293,12 +340,12 @@ TEMPLATE = DemoTemplate(
             "8 - Risk Allowances and Project / Design Fees",
             {"nrm": "8"},
             [
-                ("8.1", "Design-development risk allowance (Design risk)", "lsum", 1, 850000.00, {"nrm": "11.2"}),
-                ("8.2", "Construction risk allowance (Construction risk)", "lsum", 1, 620000.00, {"nrm": "11.3"}),
-                ("8.3", "Building Safety Act 2022 compliance and BSR Gateways (BSA compliance)", "lsum", 1, 285000.00, {"nrm": "11.2"}),
-                ("8.4", "Professional and design-team fees (Design fees)", "lsum", 1, 2950000.00, {"nrm": "12"}),
-                ("8.5", "CDM 2015 principal-designer duties (CDM duties)", "lsum", 1, 165000.00, {"nrm": "12"}),
-                ("8.6", "Statutory and local-authority fees (Statutory fees)", "lsum", 1, 220000.00, {"nrm": "13"}),
+                ("8.1", "Design-development risk allowance (Design risk)", "lsum", 1, 850000.00, {"nrm": "13.1"}),
+                ("8.2", "Construction risk allowance (Construction risk)", "lsum", 1, 620000.00, {"nrm": "13.2"}),
+                ("8.3", "Building Safety Act 2022 dutyholder and competence compliance (BSA compliance)", "lsum", 1, 285000.00, {"nrm": "11.1"}),
+                ("8.4", "Professional and design-team fees (Design fees)", "lsum", 1, 2950000.00, {"nrm": "11.1"}),
+                ("8.5", "CDM 2015 principal-designer duties (CDM duties)", "lsum", 1, 165000.00, {"nrm": "11.1"}),
+                ("8.6", "Statutory and local-authority fees (Statutory fees)", "lsum", 1, 220000.00, {"nrm": "12.1"}),
             ],
         ),
     ],
@@ -333,7 +380,7 @@ TEMPLATE = DemoTemplate(
         "cost_data": "UK construction cost index (London 2026)",
         "structural_standards": "Eurocodes BS EN 1990-1998, BS 8500 (concrete), BS 8102 (tanking)",
         "building_regulations": "Building Regulations Approved Documents A-S",
-        "building_safety": "Building Safety Act 2022 - higher-risk building, BSR Gateways 1-3, golden thread",
+        "building_safety": "Building Safety Act 2022 dutyholder and competence duties; not a higher-risk building (no dwellings)",
         "health_and_safety": "CDM 2015 (Construction Design and Management Regulations)",
         "fire_strategy": "Approved Document B; BS 9999; sprinklers to BS EN 12845",
         "contract": "JCT Design and Build 2024 (two-stage)",

@@ -746,6 +746,38 @@ class ValidationModuleService:
             "metadata": boq.metadata_ or {},
         }
 
+    async def _load_boq_markups(self, boq_id: uuid.UUID) -> list[dict[str, Any]]:
+        """Load the bill's markup stack.
+
+        Private, and called only after :meth:`_load_boq_header` has checked
+        that the bill belongs to the project this run is scoped to. Markups
+        are addressed by bill id alone, so calling this without that check
+        would read another project's margin structure.
+
+        Inactive lines are carried rather than filtered. A rule asking whether
+        an estimate prices its preliminaries must be able to tell a line that
+        was switched off from one that was never there, and the two are the
+        same fact once the filtering has happened here.
+        """
+        from app.modules.boq.models import BOQMarkup
+
+        rows = (await self.session.execute(select(BOQMarkup).where(BOQMarkup.boq_id == boq_id))).scalars().all()
+        return [
+            {
+                "id": str(markup.id),
+                "name": markup.name,
+                "markup_type": markup.markup_type,
+                "category": markup.category,
+                "percentage": markup.percentage,
+                "fixed_amount": markup.fixed_amount,
+                "apply_to": markup.apply_to,
+                "sort_order": markup.sort_order,
+                "is_active": markup.is_active,
+                "scope_position_id": (str(markup.scope_position_id) if markup.scope_position_id else None),
+            }
+            for markup in rows
+        ]
+
     async def _engine_payload(self, boq_id: uuid.UUID, project_id: uuid.UUID) -> dict[str, Any]:
         """The mapping the validation engine reads for one bill.
 
@@ -756,4 +788,9 @@ class ValidationModuleService:
         """
         positions = await self._load_boq_positions(boq_id, project_id)
         header = await self._load_boq_header(boq_id, project_id)
-        return await with_project_context(self.session, project_id, {"boq": header, "positions": positions})
+        markups = await self._load_boq_markups(boq_id)
+        return await with_project_context(
+            self.session,
+            project_id,
+            {"boq": header, "positions": positions, "markups": markups},
+        )

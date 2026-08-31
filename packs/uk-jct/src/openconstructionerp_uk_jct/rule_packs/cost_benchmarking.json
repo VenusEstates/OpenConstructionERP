@@ -1,19 +1,28 @@
 {
-  "rule_pack_id": "bcis_benchmarks",
-  "name": "BCIS Cost Benchmarks & Indices",
-  "standard": "BCIS",
+  "rule_pack_id": "cost_benchmarking",
+  "name": "Benchmarking a UK cost plan against published cost data",
+  "standard": "nrm",
   "jurisdiction": "GB",
-  "description": "Enables OCERP built-in validation rules that compare project cost-per-m2 (GIFA) and elemental cost ratios against current BCIS (Building Cost Information Service, RICS) averages and apply the BCIS Tender Price Index (TPIRC) and Location Factor for regional adjustment. Flags outliers against the 5th / 95th percentile bands.",
-  "enables_rule_ids": [
-    "bcis.cost_per_m2_within_band",
-    "bcis.element_ratio_within_band",
-    "bcis.location_factor_applied",
-    "bcis.tender_price_index_current",
-    "bcis.general_building_cost_index_applied",
-    "bcis.gifa_method_consistent",
-    "bcis.benchmark_source_referenced",
-    "bcis.outlier_flag_against_percentile_5",
-    "bcis.outlier_flag_against_percentile_95",
-    "bcis.subscription_status_verified"
-  ]
+  "applies_to": [
+    "estimating",
+    "benchmarking",
+    "reference"
+  ],
+  "review_status": "Written as method rather than data. No rates, indices or location factors are reproduced here, and none are shipped with the pack.",
+  "description": "Benchmarking is the only cheap check on a cost plan, and it is the one most often done wrong. A rate compared against a published figure without matching the base date, the location, the measurement basis and the scope of what the figure includes is not a comparison; it is two numbers next to each other. This document is about making the comparison mean something. The rates themselves are somebody else's licensed product and are not in this pack.",
+  "what_has_to_match_before_a_comparison_means_anything": {
+    "base_date": "The published figure is current at a date, and so is the plan. Comparing across a gap without indexing between them measures inflation and calls it a difference in design.",
+    "location": "A national figure is adjusted to a place by a location factor. Applying the factor to the plan and comparing against an unadjusted figure, or the reverse, is the most common way this goes wrong, and it is invisible in the result.",
+    "measurement_basis": "Cost per square metre of gross internal floor area is not cost per square metre of net internal area, and neither is cost per square metre of site. A benchmark quoted on one and used against another is out by whatever the ratio happens to be on this building.",
+    "scope": "Whether the published figure includes external works, fees, contingency and inflation. Most do not include all four, and a plan that includes them will look expensive against a figure that does not."
+  },
+  "how_to_use_a_benchmark_honestly": {
+    "state_the_source": "Which dataset, which release, which date. A benchmark whose source is not recorded cannot be re-checked and is not evidence.",
+    "state_the_adjustments": "Every index and factor applied to bring the published figure to this project, in the order applied.",
+    "expect_a_range": "A single figure hides the spread it came from. A comparison against a quartile range says something a comparison against a mean does not.",
+    "explain_the_gap": "A plan outside the range is not thereby wrong. It is a plan with something to explain, and the explanation belongs in the plan rather than in a meeting."
+  },
+  "no_cost_data_is_bundled": "The UK unit-price and benchmark datasets sold by subscription are licensed products, and redistributing one inside an AGPL pack is not something their terms allow. Bring your own rates, from your cost history, a subscription you hold or a published schedule. What this pack contributes is the structure to hold them in and the checks that say when they look wrong.",
+  "why_no_rules": "A benchmark check needs a benchmark, and this pack ships none. A rule comparing a rate against a band would have to invent the band, and a fabricated band that passes quietly is worse than no check: it tells an estimator the rate was checked. The platform's universal quality rules already flag rates that are implausible on their face, and those need no licensed source.",
+  "enables_rule_ids": []
 }

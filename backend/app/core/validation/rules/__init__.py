@@ -2790,6 +2790,464 @@ class NRMCompleteness(ValidationRule):
         return results
 
 
+# ── NRM cost-plan rules (UK) ─────────────────────────────────────────────
+#
+# The three rules above ask whether each line is classified. These ask
+# whether the cost plan is a cost plan: whether it says what date its rates
+# are current at, which stage it was produced for, and whether the money that
+# is never measured - preliminaries, overheads and profit, risk - is in it at
+# all. Those are three of the things a UK cost plan is sent back for, and
+# none of them is visible line by line.
+
+
+def _nrm_groups(context: ValidationContext) -> set[str]:
+    """The NRM group elements the bill's lines actually carry."""
+    groups: set[str] = set()
+    for pos in _get_positions(context):
+        code = str((pos.get("classification") or {}).get("nrm", "")).strip()
+        if code:
+            groups.add(code.split(".")[0])
+    return groups
+
+
+def _is_nrm_bill(context: ValidationContext) -> bool:
+    """Whether this dataset is measured to NRM at all.
+
+    A document-level rule has nothing to attach itself to on a bill that was
+    never classified to NRM, and a finding about a missing base date on a
+    German bill reads as the rule set malfunctioning rather than as advice.
+    """
+    return bool(_nrm_groups(context))
+
+
+def _markup_categories(context: ValidationContext) -> set[str]:
+    """The categories of the bill's active markup lines.
+
+    A UK cost plan carries preliminaries, overheads and profit either as NRM
+    group elements or as markup lines on top of the measured work, and both
+    are correct. A rule reading only the group elements convicts every
+    estimate built the second way, which is most of them.
+    """
+    data = context.data
+    raw = data.get("markups") if isinstance(data, dict) else None
+    if not isinstance(raw, list):
+        return set()
+    return {
+        str(markup.get("category") or "").strip().lower()
+        for markup in raw
+        if isinstance(markup, dict) and markup.get("is_active", True)
+    }
+
+
+class NRMBaseDateDeclared(ValidationRule):
+    rule_id = "nrm.base_date_declared"
+    name = "NRM Cost Plan Base Date Declared"
+    standard = "nrm"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "A cost plan must state the date its rates are current at"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        if not _is_nrm_bill(context):
+            return []
+        locale = _get_locale(context)
+        document = _boq_document(context)
+        meta = _boq_document_metadata(context)
+        declared = document.get("base_date") or meta.get("base_date") or meta.get("price_level")
+        passed = bool(str(declared or "").strip())
+        return [
+            RuleResult(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                severity=self.severity,
+                category=self.category,
+                passed=passed,
+                message=(_ok(locale) if passed else translate("nrm.base_date_declared.fail", locale=locale)),
+                element_ref=None,
+                details={"base_date": str(declared) if declared else None},
+                suggestion=(None if passed else translate("nrm.base_date_declared.suggestion", locale=locale)),
+            )
+        ]
+
+
+class NRMCostPlanStageDeclared(ValidationRule):
+    rule_id = "nrm.cost_plan_stage_declared"
+    name = "NRM Cost Plan Stage Declared"
+    standard = "nrm"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "A cost plan must say which design stage it was produced for"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        if not _is_nrm_bill(context):
+            return []
+        locale = _get_locale(context)
+        meta = _boq_document_metadata(context)
+        declared = (
+            meta.get("phase")
+            or meta.get("riba_stage")
+            or meta.get("stage")
+            or _boq_document(context).get("estimate_type")
+        )
+        passed = bool(str(declared or "").strip())
+        return [
+            RuleResult(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                severity=self.severity,
+                category=self.category,
+                passed=passed,
+                message=(_ok(locale) if passed else translate("nrm.cost_plan_stage_declared.fail", locale=locale)),
+                element_ref=None,
+                details={"stage": str(declared) if declared else None},
+                suggestion=(None if passed else translate("nrm.cost_plan_stage_declared.suggestion", locale=locale)),
+            )
+        ]
+
+
+class NRMContractorCostsPresent(ValidationRule):
+    rule_id = "nrm.contractor_costs_present"
+    name = "NRM Main Contractor's Preliminaries and Overheads and Profit Present"
+    standard = "nrm"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLETENESS
+    description = "A cost plan must carry the main contractor's preliminaries and its overheads and profit"
+
+    #: The NRM 1 group element, and the markup category that carries the same
+    #: money when the estimate prices it on top of the measured work rather
+    #: than as an element of it.
+    CARRIERS = (
+        ("preliminaries", "9", "overhead"),
+        ("overheads_and_profit", "10", "profit"),
+    )
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        if not _is_nrm_bill(context):
+            return []
+        locale = _get_locale(context)
+        groups = _nrm_groups(context)
+        categories = _markup_categories(context)
+        results: list[RuleResult] = []
+        for what, group, markup_category in self.CARRIERS:
+            as_element = group in groups
+            as_markup = markup_category in categories
+            passed = as_element or as_markup
+            results.append(
+                RuleResult(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    severity=self.severity,
+                    category=self.category,
+                    passed=passed,
+                    message=(
+                        _ok(locale)
+                        if passed
+                        else translate(f"nrm.contractor_costs_present.{what}", locale=locale, group=group)
+                    ),
+                    element_ref=None,
+                    details={"carried_as_element": as_element, "carried_as_markup": as_markup, "group": group},
+                    suggestion=(
+                        None if passed else translate("nrm.contractor_costs_present.suggestion", locale=locale)
+                    ),
+                )
+            )
+        return results
+
+
+class NRMRiskAllowancePresent(ValidationRule):
+    rule_id = "nrm.risk_allowance_present"
+    name = "NRM Risk Allowance Present"
+    standard = "nrm"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLETENESS
+    description = "A cost plan must carry a risk allowance"
+
+    RISK_GROUP = "13"
+    RISK_CATEGORY = "contingency"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        if not _is_nrm_bill(context):
+            return []
+        locale = _get_locale(context)
+        as_element = self.RISK_GROUP in _nrm_groups(context)
+        as_markup = self.RISK_CATEGORY in _markup_categories(context)
+        passed = as_element or as_markup
+        return [
+            RuleResult(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                severity=self.severity,
+                category=self.category,
+                passed=passed,
+                message=(_ok(locale) if passed else translate("nrm.risk_allowance_present.fail", locale=locale)),
+                element_ref=None,
+                details={"carried_as_element": as_element, "carried_as_markup": as_markup},
+                suggestion=(None if passed else translate("nrm.risk_allowance_present.suggestion", locale=locale)),
+            )
+        ]
+
+
+# ── UK statutory rules (Construction Act, CDM 2015, Building Safety Act) ──
+#
+# These read what the estimate records about itself rather than its lines.
+# They sit in a rule set of their own because they are the law of one country
+# rather than a method of measurement, and a project elsewhere that happens
+# to measure to NRM must not be asked about a CDM appointment.
+#
+# Every one of them checks that a thing is stated, not what it says. The
+# percentages, the notice periods and the retention rate are commercial terms
+# this platform has no basis to assert. The single exception is the
+# higher-risk building test, where the threshold is statute and an estimate
+# can be wrong about it in a way that costs a gateway application.
+
+
+def _uk_answered(meta: dict[str, Any], *keys: str) -> Any:
+    """The first of ``keys`` the bill actually answers, or ``None``.
+
+    A blank string, an empty mapping and a mapping whose every value is blank
+    all read as unanswered. Accepting one would turn these rules into a check
+    that somebody had opened the dialogue, which is the failure where a
+    placeholder that passes is worse than one that does not.
+    """
+    for key in keys:
+        value = meta.get(key)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if isinstance(value, dict) and any(entry not in (None, "", {}, []) for entry in value.values()):
+            return value
+        if isinstance(value, (int, float)):
+            return value
+    return None
+
+
+def _uk_finding(
+    rule: ValidationRule,
+    context: ValidationContext,
+    *,
+    passed: bool,
+    key: str,
+    details: dict[str, Any],
+    **params: Any,
+) -> list[RuleResult]:
+    """One document-level finding, in the shape every rule below returns."""
+    locale = _get_locale(context)
+    return [
+        RuleResult(
+            rule_id=rule.rule_id,
+            rule_name=rule.name,
+            severity=rule.severity,
+            category=rule.category,
+            passed=passed,
+            message=(_ok(locale) if passed else translate(f"{key}.fail", locale=locale, **params)),
+            element_ref=None,
+            details=details,
+            suggestion=(None if passed else translate(f"{key}.suggestion", locale=locale)),
+        )
+    ]
+
+
+class UKContractFormDeclared(ValidationRule):
+    rule_id = "uk.contract_form_declared"
+    name = "UK Contract Form Declared"
+    standard = "uk_statutory"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "An estimate must name the contract form it is priced against"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        declared = _uk_answered(_boq_document_metadata(context), "contract_form", "contract", "contract_suite")
+        return _uk_finding(
+            self,
+            context,
+            passed=declared is not None,
+            key="uk.contract_form_declared",
+            details={"contract_form": declared if isinstance(declared, str) else None},
+        )
+
+
+class UKPaymentRegimeDeclared(ValidationRule):
+    rule_id = "uk.payment_regime_declared"
+    name = "UK Payment Regime Declared"
+    standard = "uk_statutory"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "The payment mechanism must fix when a payment becomes due and its final date for payment"
+
+    #: The two dates the Housing Grants, Construction and Regeneration Act
+    #: 1996, as amended, requires a construction contract to fix. A contract
+    #: that fixes neither is not thereby free of them: the Scheme for
+    #: Construction Contracts supplies both, and the parties then find their
+    #: payment terms in a statutory instrument rather than in what they signed.
+    DUE = ("due_date", "due_date_days", "payment_due")
+    FINAL = ("final_date_for_payment", "final_date_for_payment_days", "final_date")
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        meta = _boq_document_metadata(context)
+        block = _uk_answered(meta, "payment_regime", "payment_terms")
+        source = block if isinstance(block, dict) else meta
+        due = _uk_answered(source, *self.DUE)
+        final = _uk_answered(source, *self.FINAL)
+        missing = [name for name, value in (("due date", due), ("final date for payment", final)) if value is None]
+        return _uk_finding(
+            self,
+            context,
+            passed=not missing,
+            key="uk.payment_regime_declared",
+            details={"due_date": due, "final_date_for_payment": final},
+            missing=", ".join(missing) or "-",
+        )
+
+
+class UKRetentionDeclared(ValidationRule):
+    rule_id = "uk.retention_declared"
+    name = "UK Retention Declared"
+    standard = "uk_statutory"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "An estimate must say what retention applies, including that none does"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        declared = _uk_answered(_boq_document_metadata(context), "retention", "retention_terms")
+        return _uk_finding(
+            self,
+            context,
+            passed=declared is not None,
+            key="uk.retention_declared",
+            details={"retention": declared if isinstance(declared, (str, dict)) else None},
+        )
+
+
+class UKCDMDutyHoldersDeclared(ValidationRule):
+    rule_id = "uk.cdm_duty_holders_declared"
+    name = "CDM 2015 Duty Holders Declared"
+    standard = "uk_statutory"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "A project with more than one contractor must record its principal designer and principal contractor"
+
+    ROLES = ("principal_designer", "principal_contractor")
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        meta = _boq_document_metadata(context)
+        block = _uk_answered(meta, "cdm_2015", "cdm")
+        appointments = block if isinstance(block, dict) else {}
+        missing = [role for role in self.ROLES if _uk_answered(appointments, role) is None]
+        return _uk_finding(
+            self,
+            context,
+            passed=not missing,
+            key="uk.cdm_duty_holders_declared",
+            details={role: appointments.get(role) for role in self.ROLES},
+            missing=", ".join(role.replace("_", " ") for role in missing) or "-",
+        )
+
+
+class UKHigherRiskBuildingRegime(ValidationRule):
+    rule_id = "uk.hrb_regime_declared"
+    name = "Building Safety Act Higher-Risk Building Regime"
+    standard = "uk_statutory"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "An estimate must say whether the building is higher-risk, and agree with its own dimensions"
+
+    #: The statutory test: height OR storeys, AND an occupancy the regime is
+    #: about. The occupancy half is the one that gets dropped, and dropping it
+    #: puts a ten-storey speculative office into a gateway regime that has
+    #: nothing to do with it. Wrong in either direction costs real money - a
+    #: programme nobody needed, or a missed gateway that stops the building
+    #: being occupied.
+    #:
+    #: Two dwellings is the occupancy that carries through both phases. A care
+    #: home and a hospital meet it for design and construction and not for
+    #: occupation, which is why they are read as flags the estimate sets
+    #: rather than folded into the dwelling count: the count is a number the
+    #: building has, and these are a question about what the building is for.
+    HEIGHT_M = 18.0
+    STOREYS = 7
+    RESIDENTIAL_UNITS = 2
+    OCCUPANCY_FLAGS = ("care_home", "hospital")
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _get_locale(context)
+        meta = _boq_document_metadata(context)
+        block = _uk_answered(meta, "building_safety_act", "bsa_2022")
+        declaration = block if isinstance(block, dict) else {}
+        declared = declaration.get("higher_risk_building")
+        if not isinstance(declared, bool):
+            return _uk_finding(
+                self,
+                context,
+                passed=False,
+                key="uk.hrb_regime_declared",
+                details={"higher_risk_building": None, "derived": None},
+                reason=translate("uk.hrb_regime_declared.unanswered", locale=locale),
+            )
+
+        height = _to_number(declaration.get("height_m"))
+        storeys = _to_number(declaration.get("storeys"))
+        units = _to_number(declaration.get("residential_units"))
+        flagged = any(bool(declaration.get(flag)) for flag in self.OCCUPANCY_FLAGS)
+        if (units is None and not flagged) or (height is None and storeys is None):
+            # Declared but not checkable. Reported as passing rather than as
+            # a second finding: the estimate answered the question it was
+            # asked, and inventing a dimension to disagree with it would be
+            # the rule making something up.
+            return _uk_finding(
+                self,
+                context,
+                passed=True,
+                key="uk.hrb_regime_declared",
+                details={"higher_risk_building": declared, "derived": None},
+            )
+
+        tall_enough = (height is not None and height >= self.HEIGHT_M) or (
+            storeys is not None and storeys >= self.STOREYS
+        )
+        derived = tall_enough and (flagged or (units is not None and units >= self.RESIDENTIAL_UNITS))
+        return _uk_finding(
+            self,
+            context,
+            passed=declared == derived,
+            key="uk.hrb_regime_declared",
+            details={
+                "higher_risk_building": declared,
+                "derived": derived,
+                "height_m": height,
+                "storeys": storeys,
+                "residential_units": units,
+                "occupancy_flags": [flag for flag in self.OCCUPANCY_FLAGS if declaration.get(flag)],
+            },
+            reason=translate(
+                "uk.hrb_regime_declared.disagrees",
+                locale=locale,
+                declared=str(declared).lower(),
+                derived=str(derived).lower(),
+            ),
+        )
+
+
+class UKVATTreatmentDeclared(ValidationRule):
+    rule_id = "uk.vat_treatment_declared"
+    name = "UK VAT Treatment Declared"
+    standard = "uk_statutory"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "An estimate must say how VAT is treated, whether by a rate, a relief or the reverse charge"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        declared = _uk_answered(_boq_document_metadata(context), "vat_treatment", "vat")
+        as_markup = "tax" in _markup_categories(context)
+        return _uk_finding(
+            self,
+            context,
+            passed=declared is not None or as_markup,
+            key="uk.vat_treatment_declared",
+            details={"vat_treatment": declared if isinstance(declared, str) else None, "carried_as_markup": as_markup},
+        )
+
+
 # ── MasterFormat Rules (US) ──────────────────────────────────────────────
 
 
@@ -8930,6 +9388,17 @@ def register_builtin_rules() -> None:
         (NRMClassificationRequired(), None),
         (NRMValidElement(), None),
         (NRMCompleteness(), None),
+        (NRMBaseDateDeclared(), None),
+        (NRMCostPlanStageDeclared(), None),
+        (NRMContractorCostsPresent(), None),
+        (NRMRiskAllowancePresent(), None),
+        # UK statutory (Construction Act, CDM 2015, Building Safety Act)
+        (UKContractFormDeclared(), None),
+        (UKPaymentRegimeDeclared(), None),
+        (UKRetentionDeclared(), None),
+        (UKCDMDutyHoldersDeclared(), None),
+        (UKHigherRiskBuildingRegime(), None),
+        (UKVATTreatmentDeclared(), None),
         # MasterFormat (US)
         (MasterFormatClassificationRequired(), None),
         (MasterFormatValidDivision(), None),

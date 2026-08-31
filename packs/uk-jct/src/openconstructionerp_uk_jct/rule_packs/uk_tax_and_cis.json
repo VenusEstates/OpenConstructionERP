@@ -1,0 +1,47 @@
+{
+  "rule_pack_id": "uk_tax_and_cis",
+  "name": "CIS, the VAT domestic reverse charge and the CITB levy",
+  "standard": "uk_statutory",
+  "jurisdiction": "GB",
+  "applies_to": [
+    "payments",
+    "subcontracts",
+    "estimating"
+  ],
+  "review_status": "Written from the Construction Industry Scheme as it operates under Finance Act 2004 Part 3 Chapter 3, and from the VAT domestic reverse charge for building and construction services. The CIS deduction rates are given because they are set in the scheme itself and have been stable; the CITB levy rate is not given, because it is set by a Levy Order that changes and this pack has no basis to assert the current one. Not reviewed by a UK tax adviser. Confirm rates for the year you are working in.",
+  "description": "Three deductions that are not costs and are constantly mistaken for them. CIS is withholding, not tax: the money is the subcontractor's, held back and paid to HMRC on account. The reverse charge moves VAT to the customer without changing what anybody owes. The levy is a real cost but falls on the employer's payroll rather than on any job. Each of the three changes what an invoice may say, and getting one wrong shows up as a cash-flow problem rather than as an estimating error, which is why nobody looks for it in the estimate.",
+  "cis": {
+    "what_it_is": "A contractor paying a subcontractor for construction operations deducts a percentage from the payment and pays it to HMRC against the subcontractor's tax and National Insurance.",
+    "rates": {
+      "registered": "20 percent",
+      "unregistered": "30 percent",
+      "gross_payment_status": "0 percent, where the subcontractor holds gross payment status"
+    },
+    "the_part_that_is_got_wrong": "The deduction is taken from the labour element only. The cost of materials the subcontractor supplies, plant hired in without an operator, fuel other than for travelling, and the VAT itself are all excluded. A deduction taken on the gross invoice withholds money that was never the subcontractor's tax, and the subcontractor funds the difference until it is put right.",
+    "verification": "The contractor verifies each subcontractor with HMRC before the first payment. The verification decides the rate, and a subcontractor paid before verification is paid at the wrong rate more often than not.",
+    "returns": "A monthly return is filed for each tax month in which payments were made, by the nineteenth of the following month. Nil returns are still returns.",
+    "who_is_a_contractor": "Not only construction firms. A business outside construction that spends heavily enough on construction operations is a deemed contractor and has the same obligations, which is how a property owner or a retailer ends up inside the scheme without noticing."
+  },
+  "vat_domestic_reverse_charge": {
+    "what_it_is": "For supplies of construction services between VAT-registered businesses reported under CIS, the supplier does not charge VAT. The customer accounts for it on its own return and recovers it there.",
+    "when_it_applies": "The supply is standard or reduced rated, both parties are VAT registered, the supply is reported under CIS, and the customer is not an end user or an intermediary supplier.",
+    "end_user": "The customer who is not going to make an onward supply of construction services, typically the building owner or developer. An end user notifies its status in writing, and the supplier then charges VAT normally.",
+    "what_the_invoice_says": "The invoice states that the reverse charge applies and that the customer must account for the VAT. It shows the VAT rate or amount for the customer's information but does not charge it.",
+    "why_it_matters_to_cash_flow": "A subcontractor inside the reverse charge no longer collects VAT it used to hold before paying it over. That is a permanent reduction in working capital and it lands the month the charge starts applying, which is not a modelling exercise anybody enjoys doing late."
+  },
+  "citb_levy": {
+    "what_it_is": "An industry training levy assessed on employers in scope of the Construction Industry Training Board, computed on payroll: the PAYE payroll and the net payments to CIS subcontractors, at separate rates.",
+    "rate": "Set by Levy Order and reviewed periodically. This pack does not assert a rate, because a stale rate stated confidently is worse than no rate at all. Take it from the current Levy Order.",
+    "exemptions": "Employers below a wage bill threshold are exempt, and there is a reduction for those below a second, higher threshold. Both thresholds move with the Levy Order.",
+    "where_it_belongs": "It is a company overhead assessed on payroll, not a project cost, so it belongs in the overhead percentage rather than in a preliminaries line. Northern Ireland has its own board and its own levy."
+  },
+  "vat_in_construction": {
+    "standard": "The standard rate applies to most construction work.",
+    "reduced": "A reduced rate applies to certain residential conversions and to renovations of dwellings that have been empty long enough to qualify. The qualification is factual and evidenced, not a matter of description.",
+    "zero": "Construction of new dwellings, and of certain relevant residential and relevant charitable buildings, is zero rated. Zero rated is not the same as outside the scope, and a zero-rated supply is still a taxable supply.",
+    "why_the_estimate_must_say": "Zero rating, a relief and the reverse charge all look identical on a bill: no VAT line. They are three different things with three different consequences, and only the estimate can say which one this is."
+  },
+  "enables_rule_ids": [
+    "uk.vat_treatment_declared"
+  ]
+}

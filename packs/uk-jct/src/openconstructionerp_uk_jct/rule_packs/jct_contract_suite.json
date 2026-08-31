@@ -1,0 +1,32 @@
+{
+  "rule_pack_id": "jct_contract_suite",
+  "name": "JCT contract suite, choosing the form and pricing to it",
+  "standard": "jct",
+  "jurisdiction": "GB",
+  "applies_to": [
+    "contracts",
+    "estimating",
+    "tendering"
+  ],
+  "review_status": "Written from the structure of the JCT standard forms and the way risk is allocated between them. Not reviewed by a construction solicitor, and no clause numbers are asserted: they move between editions and a wrong number is worse than none. Confirm the form, the edition and the Contract Particulars against the executed contract.",
+  "description": "The contract form is not paperwork that follows the estimate; it is an input to it. Under a design and build form the contractor prices design risk, and under a traditional form it does not. Under a management form the preliminaries are the contractor's fee and the works are somebody else's contracts. The same building, honestly priced against two different forms, gives two different numbers, and an estimate that does not say which form it assumed cannot be checked by anyone.",
+  "forms": {
+    "note": "The families, by what they do to risk rather than by their clause numbering.",
+    "standard_building_contract": "Traditional procurement. The employer's team designs, the contractor builds to that design, and quantities may be with or without a bill. Design risk stays with the employer.",
+    "design_and_build": "The contractor takes the employer's requirements and carries the design. Single point of responsibility, and the contractor's price carries the design risk that the employer keeps under a traditional form.",
+    "intermediate": "For works of simple content where a full standard form is heavier than the job needs, with provision for a named subcontractor.",
+    "minor_works": "Short form for small, straightforward work. Not for work needing detailed control of variations or a complex payment regime.",
+    "management_and_construction_management": "The works are split into packages. Under management contracting the packages are the management contractor's subcontracts; under construction management they are the employer's own trade contracts and the construction manager is a consultant.",
+    "measured_term": "A term contract for a stream of small orders priced off a schedule of rates, which is how a maintenance or repairs programme is bought."
+  },
+  "what_the_estimate_has_to_record": {
+    "form_and_edition": "Which form, which edition, and whether it is amended. A schedule of amendments changes the risk the contractor is pricing, and pricing a heavily amended form as if it were the standard one is the most expensive mistake in this list.",
+    "contract_particulars": "The commercial variables the form leaves to the parties: the dates, the liquidated damages rate, the retention percentage, the insurance option, the fluctuation option. All of them are priced, and the form itself fixes none of them.",
+    "supplemental_provisions": "The optional provisions the parties switch on. Whether they apply changes what the contractor is being asked to do, so the estimate has to say which are in."
+  },
+  "why_the_checks_are_about_presence": "This platform holds an estimate, not the contract. It cannot read a clause, so it does not claim to check one. What it can do is refuse to let an estimate stay silent about the form it was priced against, about when money falls due under it and about what is retained, because each of those is a number in the estimate that only makes sense once the form is named.",
+  "enables_rule_ids": [
+    "uk.contract_form_declared",
+    "uk.retention_declared"
+  ]
+}

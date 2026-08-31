@@ -1,71 +1,95 @@
-# UK Construction Pack — first-login onboarding wizard.
-# Streamed by /api/v1/partner-pack/onboarding-script and rendered by
-# the OnboardingWizard React component in place of the default steps.
+# UK Construction Pack, first-login onboarding wizard.
+# Streamed by /api/v1/partner-pack/onboarding-script and rendered by the
+# OnboardingWizard React component in place of the default steps.
+#
+# What the wizard collects is what the uk_statutory rule set later reads back:
+# the contract form, the payment regime, retention, the CDM appointments, the
+# higher-risk answer and the VAT treatment. Asking for it once, here, is the
+# difference between those rules being clearable and being noise.
 
 version: 1
 locale: en-GB
-title: "Welcome to OpenConstructionERP — UK Edition"
-subtitle: "Six quick steps to align your workspace with UK practice (NRM, JCT 2024, BCIS, CDM 2015, Building Safety Act 2022)."
+title: "Set up OpenConstructionERP for UK work"
+subtitle: "Six steps. What you record here is what the UK checks read back, so an estimate can pass them instead of carrying warnings nobody can clear."
 
 steps:
   - id: company_profile
     title: "Company profile"
-    body: "Tell us about your firm so reports and tender documents are correctly attributed."
+    body: "Your firm as it appears on tender documents and reports."
     fields:
       - { key: company_name, label: "Company name", type: text, required: true }
       - { key: company_number, label: "Companies House number", type: text, required: false }
       - { key: vat_number, label: "VAT registration number", type: text, required: false }
-      - { key: head_office_region, label: "Head-office region", type: select, options: ["London", "South East", "South West", "Midlands", "North West", "North East", "Yorkshire & Humber", "East of England", "Wales", "Scotland", "Northern Ireland"], required: true }
-      - { key: rics_membership, label: "RICS regulated firm", type: checkbox, default: false }
+      - { key: jurisdiction, label: "Where most of your work is", type: select, options: ["England", "Wales", "Scotland", "Northern Ireland"], required: true, default: "England" }
+      - { key: head_office_region, label: "Head office region", type: select, options: ["London", "South East", "South West", "East of England", "East Midlands", "West Midlands", "North West", "North East", "Yorkshire and the Humber", "Wales", "Scotland", "Northern Ireland"], required: true }
+      - { key: rics_regulated, label: "RICS regulated firm", type: checkbox, default: false }
 
   - id: measurement_standard
-    title: "Measurement standard (RICS NRM)"
-    body: "Choose which RICS New Rules of Measurement (2nd edition, 2021) you typically work to. The BOQ editor will validate against this standard."
+    title: "Measurement and cost planning"
+    body: "Which RICS New Rules of Measurement you work to. Cite the edition you hold in your project records; the group numbering the validator uses is stable across editions."
     fields:
-      - { key: primary_nrm, label: "Primary standard", type: radio, options: ["NRM 1 — Order of cost estimating & cost planning", "NRM 2 — Detailed measurement for building works", "Both (choose per project)"], required: true, default: "Both (choose per project)" }
-      - { key: enable_nrm3, label: "Also enable NRM 3 (maintenance & life-cycle cost planning)", type: checkbox, default: false }
-      - { key: enable_bcis_benchmarks, label: "Enable BCIS cost-per-m² benchmarks on the dashboard", type: checkbox, default: true }
+      - { key: primary_nrm, label: "Primary standard", type: radio, options: ["NRM 1, order of cost estimating and cost planning", "NRM 2, detailed measurement for building works", "Both, chosen per project"], required: true, default: "Both, chosen per project" }
+      - { key: enable_nrm3, label: "Also load NRM 3, maintenance and life-cycle cost planning", type: checkbox, default: false }
+      - { key: default_stage, label: "Stage most of your cost plans are produced at", type: select, options: ["RIBA Stage 1, preparation and briefing", "RIBA Stage 2, concept design", "RIBA Stage 3, spatial coordination", "RIBA Stage 4, technical design", "RIBA Stage 5, manufacturing and construction"], default: "RIBA Stage 3, spatial coordination", required: true }
 
-  - id: contract_suite
-    title: "Default contract suite (JCT 2024)"
-    body: "Pre-select your usual JCT 2024 contract type. You can override on every project. JCT 2024 replaced JCT 2016 in late 2023 and introduces BIM/CDE, sustainability, Building Safety Act alignment, modern slavery and updated dispute resolution provisions."
+  - id: contract_and_payment
+    title: "Contract form and payment"
+    body: "The contract form is an input to the price, not paperwork that follows it, and the payment dates are a cash-flow cost you are carrying. Both are recorded against every estimate."
     fields:
-      - { key: default_jct_contract, label: "Default JCT 2024 contract", type: select, options: ["JCT Standard Building Contract 2024 (SBC)", "JCT Intermediate Building Contract 2024 (IC)", "JCT Minor Works Building Contract 2024 (MW)", "JCT Design and Build Contract 2024 (DB)", "JCT Construction Management 2024 (CM)", "JCT Management Building Contract 2024 (MC)"], required: true, default: "JCT Standard Building Contract 2024 (SBC)" }
-      - { key: include_legacy_jct_2016, label: "Also keep JCT 2016 templates available for in-flight projects", type: checkbox, default: false }
+      - { key: default_contract_form, label: "Contract form you use most", type: select, options: ["JCT Standard Building Contract", "JCT Intermediate Building Contract", "JCT Minor Works Building Contract", "JCT Design and Build Contract", "JCT Management Building Contract", "JCT Construction Management", "JCT Measured Term Contract", "NEC4 Engineering and Construction Contract", "Bespoke or amended form"], required: true, default: "JCT Design and Build Contract" }
+      - { key: contract_amended, label: "Your contracts normally carry a schedule of amendments", type: checkbox, default: false }
+      - { key: due_date_days, label: "Days from valuation to the payment due date", type: number, default: 21, required: true }
+      - { key: final_date_for_payment_days, label: "Days from the due date to the final date for payment", type: number, default: 14, required: true }
+      - { key: retention_percentage, label: "Retention percentage, or 0 where none applies", type: number, default: 3, required: true }
+      - { key: retention_release, label: "How retention is released", type: text, required: false, placeholder: "Half at practical completion, the balance on making good" }
+
+  - id: tax_and_cis
+    title: "CIS and VAT"
+    body: "Withholding and the reverse charge are not costs, but both change what an invoice may say and what your working capital looks like. Getting them wrong surfaces as a cash problem rather than an estimating one."
+    fields:
+      - { key: cis_role, label: "Your position in the Construction Industry Scheme", type: select, options: ["Contractor, we pay subcontractors", "Subcontractor, we are paid under CIS", "Both", "Outside the scheme"], required: true, default: "Both" }
+      - { key: cis_status, label: "Your own CIS payment status", type: select, options: ["Gross payment status", "Registered, 20 percent deduction", "Not registered, 30 percent deduction", "Not applicable"], default: "Registered, 20 percent deduction" }
+      - { key: reverse_charge_applies, label: "Your supplies normally fall inside the VAT domestic reverse charge", type: checkbox, default: true }
+      - { key: default_vat_treatment, label: "VAT treatment on a typical job", type: select, options: ["Standard rate", "Reduced rate, qualifying conversion or renovation", "Zero rated, new dwellings or relevant residential or charitable", "Domestic reverse charge, customer accounts for the VAT"], required: true, default: "Standard rate" }
+      - { key: citb_levy_registered, label: "Registered with the industry training board for the levy", type: checkbox, default: true }
 
   - id: safety_regime
-    title: "Safety & compliance regime (CDM 2015 + Building Safety Act)"
-    body: "All UK construction is governed by CDM 2015. Higher-Risk Buildings (HRBs — ≥18 m, ≥7 storeys, with ≥2 residential units) are additionally governed by the Building Safety Act 2022 (BSA)."
+    title: "CDM 2015 and building safety"
+    body: "CDM applies to every project in Great Britain. The higher-risk building regime does not: it needs the height or the storeys and at least two residential units, and care homes and hospitals during design and construction. The check reads your answer back against the building's own dimensions."
     fields:
-      - { key: cdm_principal_designer, label: "Default Principal Designer (CDM 2015)", type: text, required: false, placeholder: "Firm / individual normally appointed Principal Designer" }
-      - { key: cdm_principal_contractor, label: "Default Principal Contractor (CDM 2015)", type: text, required: false, placeholder: "Firm normally appointed Principal Contractor" }
-      - { key: f10_threshold_warning, label: "Auto-warn when F10 notification thresholds are likely (>30 days with >20 workers, or >500 person-days)", type: checkbox, default: true }
-      - { key: handles_hrb, label: "We deliver Higher-Risk Buildings (≥18 m or ≥7 storeys with ≥2 residential units)", type: checkbox, default: false }
-      - { key: bsa_principal_accountable_person, label: "Default Principal Accountable Person (BSA 2022, HRB only)", type: text, required: false }
-      - { key: bsa_golden_thread_format, label: "Golden Thread information format", type: select, options: ["Native OCERP (recommended)", "IFC + spreadsheet", "External CDE link"], default: "Native OCERP (recommended)" }
+      - { key: cdm_principal_designer, label: "Principal designer you normally appoint", type: text, required: false, placeholder: "Firm or individual" }
+      - { key: cdm_principal_contractor, label: "Principal contractor you normally appoint", type: text, required: false, placeholder: "Firm" }
+      - { key: f10_threshold_warning, label: "Warn me when a project looks notifiable, over 30 working days with more than 20 workers at once, or over 500 person days", type: checkbox, default: true }
+      - { key: handles_hrb, label: "We deliver higher-risk buildings", type: checkbox, default: false }
+      - { key: bsa_principal_accountable_person, label: "Principal accountable person, where you carry that role", type: text, required: false }
+      - { key: golden_thread_format, label: "How you keep the golden thread", type: select, options: ["In this platform", "Structured model plus register", "External common data environment"], default: "In this platform" }
 
   - id: cost_data
-    title: "Cost data sources"
-    body: "Confirm which UK cost regions and indices should be loaded into your cost database. The current marketplace ships a single UK-wide CWICR catalogue (cwicr-uk-gbp); regional adjustment is applied via the BCIS Location Factor."
+    title: "Cost data"
+    body: "No commercial cost database ships with this pack. What loads is the open UK catalogue; your own rates and any subscription you hold sit alongside it."
     fields:
-      - { key: cwicr_preload, label: "Preload UK CWICR catalogue (55,719 items in GBP, NRM-aligned)", type: checkbox, default: true }
-      - { key: primary_region_factor, label: "Primary region for BCIS Location Factor", type: select, options: ["London", "South East", "South West", "East of England", "East Midlands", "West Midlands", "North West", "North East", "Yorkshire & Humber", "Wales", "Scotland", "Northern Ireland"], default: "London", required: true }
-      - { key: bcis_subscription, label: "I have an active BCIS subscription (enables live TPI / Location Factor pulls)", type: checkbox, default: false }
+      - { key: cwicr_preload, label: "Load the UK cost catalogue in GBP", type: checkbox, default: true }
+      - { key: location_factor, label: "Location factor you apply to national figures", type: number, required: false, placeholder: "1.00 for a national base" }
+      - { key: base_date, label: "Base date your current rates are at", type: text, required: true, placeholder: "2026 Q1" }
+      - { key: own_cost_history, label: "We will import our own cost history", type: checkbox, default: true }
 
   - id: review
     title: "Review and finish"
-    body: "We will create your first UK project workspace with NRM 1+2 (and optionally NRM 3) validation, the JCT 2024 contract template you chose, BCIS benchmarks on the dashboard, CDM 2015 document templates and Building Safety Act 2022 flags where applicable. You can change everything later in Settings."
+    body: "This creates your first UK workspace: NRM validation on the bill, the UK statutory checks reading what you recorded above, the contract form and payment terms on every new estimate, and the cost catalogue if you asked for it. Everything here can be changed later in Settings."
     action:
       label: "Create my UK workspace"
       apply:
         - set_default_currency: GBP
         - set_default_locale: en-GB
         - set_tax_template: uk_vat_20
+        - set_default_methodology: united_kingdom
         - enable_rule_packs:
             - nrm_1_cost_planning
             - nrm_2_detailed_measurement
-            - jct_2024_contract_clauses
-            - bcis_benchmarks
+            - jct_contract_suite
+            - construction_act_payments
+            - uk_tax_and_cis
+            - cost_benchmarking
             - cdm_2015
             - bsa_2022
         - conditionally_enable_rule_packs:
