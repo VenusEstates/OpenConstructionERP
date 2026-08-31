@@ -802,6 +802,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_locale_umlaut_folding.py
 
+      - name: Check no new locale string ships with its diacritics stripped
+        if: ${{ !cancelled() }}
+        run: python scripts/check_locale_stripped_diacritics.py
+
       # This gate is declared in .pre-commit-config.yaml and was running nowhere.
       # pre-commit is not installed in this checkout, so none of that file's hooks
       # fire, and the local commit-msg shim covers only the two commit-message

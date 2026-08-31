@@ -273,6 +273,19 @@ repos:
         pass_filenames: false
         files: ^(frontend/src/app/locales/.*\.ts|backend/app/core/validation/messages/.*\.json)$
 
+      # Ten locales ship prose with every diacritic deleted: the right words in
+      # the right order, unreadable to a native speaker, and invisible to every
+      # other gate because the key is present and the file parses. The 2176 that
+      # already ship are declared debt in the baseline beside this script; this
+      # hook only stops a 2177th. A green run means no new string crossed the
+      # detector's bar, not that none was stripped - see the script docstring.
+      - id: locale-stripped-diacritics-ratchet
+        name: Block a new locale string with its diacritics stripped
+        entry: python scripts/check_locale_stripped_diacritics.py
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/app/locales/.*\.ts$
+
       # Block one word built from both Cyrillic and Latin letters. Two scripts
       # in one value are fine, "Excel файл" is correct; two inside one word
       # come only from a homoglyph or a half-finished edit, and the bg value
