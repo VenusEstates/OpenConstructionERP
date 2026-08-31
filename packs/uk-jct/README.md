@@ -54,6 +54,43 @@ because an absent check at least does not claim otherwise. Every id declared
 today resolves to a rule in the engine, and the documents that enable nothing
 say so and say why.
 
+## Which modules a UK contractor needs
+
+The pack hides nothing, so every module is visible. These are the ones that
+carry UK-specific behaviour, and it is worth naming them because two of them
+already do the work this pack was previously describing in prose.
+
+- **Payment Clock** (`oe_payment_clock`) holds the statutory payment regime.
+  It carries the UK entry with the Construction Act dates, computes the due
+  date, the notice deadlines and the final date for payment, records the
+  notices actually served, and reports the consequence when a deadline passes
+  unanswered. This is the module a UK contractor gets the most out of and the
+  pack never used to mention it.
+- **Withholding Tax** (`oe_tax_withholding`) carries the CIS scheme and the
+  VAT domestic reverse charge rule for construction. Deduction rates,
+  verification and the materials exclusion live here rather than in the
+  estimate.
+- **Cost-Value Reconciliation** (`oe_cvr`) is the monthly reconciliation a UK
+  commercial team runs, and the concept is close to universal in British
+  practice and rare elsewhere.
+- **Preliminaries** (`oe_preliminaries`) prices the site as its own section,
+  which is what NRM 2 asks for and what a bill that spreads preliminaries into
+  rates cannot be checked against.
+- **Variations**, **Defects Liability** and **Closeout** carry the rest of the
+  contract lifecycle a JCT job runs through.
+
+What is not there yet, stated rather than implied:
+
+- No construction phase plan or health and safety file document type. CDM 2015
+  requires the first on every project and the second wherever more than one
+  contractor works, and this pack checks that the appointments are recorded
+  but has nowhere to keep the documents themselves.
+- No golden thread register. The Building Safety Act expects the information
+  about a higher-risk building to be kept accurate, current and accessible
+  through handover, and that is a deliverable with a cost and an owner.
+- No CITB levy assessment. It falls on payroll rather than on a project, so it
+  belongs in the company overhead, and nothing computes it.
+
 ## Cost data
 
 **No commercial cost database is bundled.** The UK unit-price and benchmark
