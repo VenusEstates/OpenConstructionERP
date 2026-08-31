@@ -1,0 +1,26 @@
+{
+  "rule_pack_id": "hu_kivitelezes_naplo",
+  "name": "Construction execution and the electronic construction log",
+  "name_hu": "Építőipari kivitelezési tevékenység és az e-építési napló",
+  "standard": "tetelrend",
+  "jurisdiction": "HU",
+  "applies_to": [
+    "projects",
+    "schedule",
+    "reporting"
+  ],
+  "review_status": "Drawn from public statutory sources. Pending review by a Hungarian quantity surveyor before it is relied on for a tender.",
+  "references": [
+    "191/2009. Korm. rendelet az építőipari kivitelezési tevékenységről",
+    "e-építési napló, the state-operated electronic construction log"
+  ],
+  "description": "Execution is logged in a state-operated electronic construction log rather than a book on site, and the log is keyed to the itemised bill: progress is recorded against the bill's own lines. A bill whose lines do not survive from tender to execution therefore costs more than tidiness, because the progress record has nothing stable to attach to.",
+  "practice_notes": [
+    "The itemised bill is a required attachment of the execution documentation",
+    "Progress claims are made against bill lines, which is the second reason line identity has to hold",
+    "The handover chapter of the item order exists because handover documentation is itself a priced deliverable"
+  ],
+  "enables_rule_ids": [
+    "hungary.item_number_unique"
+  ]
+}

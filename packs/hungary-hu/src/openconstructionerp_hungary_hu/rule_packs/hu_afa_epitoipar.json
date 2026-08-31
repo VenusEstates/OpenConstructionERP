@@ -1,0 +1,40 @@
+{
+  "rule_pack_id": "hu_afa_epitoipar",
+  "name": "VAT on construction work",
+  "name_hu": "Az építőipari munka általános forgalmi adója",
+  "standard": "tetelrend",
+  "jurisdiction": "HU",
+  "applies_to": [
+    "boq",
+    "invoicing",
+    "reporting"
+  ],
+  "review_status": "Drawn from public statutory sources. Pending review by a Hungarian quantity surveyor before it is relied on for a tender.",
+  "references": [
+    "2007. évi CXXVII. törvény az általános forgalmi adóról"
+  ],
+  "description": "The standard rate is 27 percent, the highest in the European Union, which makes the gross line on a Hungarian summary sheet a very different number from the net one and makes getting the rate right worth more than usual. A reduced rate applies to specified new residential property. Construction and installation services between taxable persons fall under the domestic reverse charge, where the customer accounts for the tax and the invoice carries no VAT at all.",
+  "rates": [
+    {
+      "rate": 27,
+      "name_hu": "általános adómérték",
+      "applies_to": "construction work in general"
+    },
+    {
+      "rate": 5,
+      "name_hu": "kedvezményes adómérték",
+      "applies_to": "specified new residential property, subject to the conditions in force"
+    },
+    {
+      "rate": 0,
+      "name_hu": "fordított adózás",
+      "applies_to": "reverse charge: the customer accounts for the tax, the invoice shows none"
+    }
+  ],
+  "practice_notes": [
+    "The reduced rate has moved more than once and carries conditions and end dates; confirm it against the rate in force for the project",
+    "Reverse charge is a rule about who accounts for the tax, not a rule about the work being untaxed",
+    "The summary sheet applies VAT after the contingency, not before"
+  ],
+  "enables_rule_ids": []
+}

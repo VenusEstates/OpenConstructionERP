@@ -296,6 +296,7 @@ _COMMUNITY_PACKS = (
     "aus",
     "brazil-sinapi",
     "china-gbt50500",
+    "hungary-hu",
     "india-cpwd",
     "mexico-mx",
     "modular-prefab",

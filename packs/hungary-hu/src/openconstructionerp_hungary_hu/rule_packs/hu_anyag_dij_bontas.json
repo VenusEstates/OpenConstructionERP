@@ -1,0 +1,38 @@
+{
+  "rule_pack_id": "hu_anyag_dij_bontas",
+  "name": "Material and fee split, contingency and VAT on the summary sheet",
+  "name_hu": "Anyag és díj bontás, tartalékkeret és ÁFA a főösszesítőn",
+  "standard": "tetelrend",
+  "jurisdiction": "HU",
+  "applies_to": [
+    "boq",
+    "reporting",
+    "tendering",
+    "validation"
+  ],
+  "review_status": "Derived from Hungarian workbooks in production use. The structure below states what those files state.",
+  "description": "What makes a Hungarian bill Hungarian is that every priced line is quoted twice: once as material and once as fee, meaning labour and plant. The two are totalled separately per sub-chapter, per chapter and on the cover, and the client compares tenderers on both columns rather than on the sum alone. A bill whose split does not reconcile with its own rates is not a formatting problem: it is two different answers to the question the client asked.",
+  "line_level": {
+    "material_unit_price": "Anyag egységár",
+    "fee_unit_price": "Díj egységár",
+    "invariant": "material unit price + fee unit price = the line's unit rate",
+    "note": "Not every line carries both halves. Design fees, permits and site management are fee only and a supply-only line is material only, so the invariant is about the sum, never about both being present."
+  },
+  "summary_cascade": [
+    "Nettó anyag összesen and Nettó díj összesen, per chapter",
+    "Anyag + díj összesen",
+    "Tartalékkeret, a contingency percentage on that subtotal",
+    "Összesen tartalékkerettel",
+    "Mindösszesen nettó",
+    "ÁFA, at the rate the statute prescribes for the work",
+    "Mindösszesen bruttó"
+  ],
+  "currency": {
+    "code": "HUF",
+    "decimals": 0,
+    "note": "The forint is quoted in whole units. Two decimals on a Hungarian bill are a conversion artefact, not a price."
+  },
+  "enables_rule_ids": [
+    "hungary.material_fee_split"
+  ]
+}

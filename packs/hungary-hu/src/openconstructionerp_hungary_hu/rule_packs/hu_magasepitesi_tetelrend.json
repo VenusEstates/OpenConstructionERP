@@ -1,0 +1,136 @@
+{
+  "rule_pack_id": "hu_magasepitesi_tetelrend",
+  "name": "Building sectoral item order (magasépítési ágazati tételrend)",
+  "name_hu": "Egységes magasépítési ágazati tételrend",
+  "standard": "tetelrend",
+  "jurisdiction": "HU",
+  "applies_to": [
+    "projects",
+    "boq",
+    "tendering",
+    "validation"
+  ],
+  "review_status": "Derived from Hungarian workbooks in production use. The structure below states what those files state.",
+  "description": "The item order Hungarian building bills are written against. A bill is one workbook per chapter plus two summary sheets: a chapter summary that totals each sub-chapter, and a cover summary that totals the seventeen chapters, adds the contingency and then VAT. Every line carries a code, a quantity, a unit, a material unit price and a fee unit price.",
+  "code_format": {
+    "shape": "MA-CC[-SSS]*",
+    "segments": 9,
+    "separator": "-",
+    "segment_1": "sector, MA for building works (magasépítési munkák)",
+    "segment_2": "chapter (fejezet), two digits, 01 to 17",
+    "segment_3": "sub-chapter (alfejezet), two or three digits; 99 and 199 are the chapter's EGYÉB catch-all",
+    "segments_4_to_9": "further levels, two or three digits, used as deep as the bill needs",
+    "examples": [
+      "MA-01",
+      "MA-01-11",
+      "MA-01-11-01",
+      "MA-09-95-01-02"
+    ],
+    "regex": "^MA-(0[1-9]|1[0-7])(?:-\\d{2,3}){0,7}$"
+  },
+  "chapters": [
+    {
+      "code": "01",
+      "name_hu": "ÁLTALÁNOS, JÁRULÉKOS KÖLTSÉGEK",
+      "name_en": "General and ancillary costs"
+    },
+    {
+      "code": "02",
+      "name_hu": "ELŐKÉSZÍTŐ MUNKÁK",
+      "name_en": "Preparatory works"
+    },
+    {
+      "code": "03",
+      "name_hu": "FÖLDMUNKA, ALAPOZÁS",
+      "name_en": "Earthworks and foundations"
+    },
+    {
+      "code": "04",
+      "name_hu": "SZERKEZETÉPÍTÉSI MUNKÁK",
+      "name_en": "Structural works"
+    },
+    {
+      "code": "05",
+      "name_hu": "KÜLSŐ SZAKIPARI MUNKÁK, ÉPÜLET ZÁRÁS",
+      "name_en": "Envelope and external trades"
+    },
+    {
+      "code": "06",
+      "name_hu": "ÉPÍTÉSZETI, SZAKIPARI MUNKÁK",
+      "name_en": "Architectural and finishing trades"
+    },
+    {
+      "code": "07",
+      "name_hu": "BELSŐÉPÍTÉSZETI MUNKÁK",
+      "name_en": "Interior fit-out"
+    },
+    {
+      "code": "08",
+      "name_hu": "MŰEMLÉKI, RESTAURÁTORI MUNKÁK",
+      "name_en": "Heritage and restoration works"
+    },
+    {
+      "code": "09",
+      "name_hu": "ÉPÜLETGÉPÉSZET",
+      "name_en": "Mechanical services"
+    },
+    {
+      "code": "10",
+      "name_hu": "TŰZVÉDELMI RENDSZEREK, OLTÓRENDSZER",
+      "name_en": "Fire protection and suppression"
+    },
+    {
+      "code": "11",
+      "name_hu": "ERŐSÁRAMÚ MUNKÁK",
+      "name_en": "Electrical power"
+    },
+    {
+      "code": "12",
+      "name_hu": "GYENGEÁRAMÚ MUNKÁK",
+      "name_en": "Extra-low voltage and communications"
+    },
+    {
+      "code": "13",
+      "name_hu": "AUTOMATIKA",
+      "name_en": "Building automation"
+    },
+    {
+      "code": "14",
+      "name_hu": "SPECIÁLIS TECHNOLÓGIA",
+      "name_en": "Specialist technology"
+    },
+    {
+      "code": "15",
+      "name_hu": "FELVONÓK, EMELŐSZERKEZETEK",
+      "name_en": "Lifts and lifting equipment"
+    },
+    {
+      "code": "16",
+      "name_hu": "KÜLSŐ MUNKÁK",
+      "name_en": "External works"
+    },
+    {
+      "code": "17",
+      "name_hu": "ÁTADÁS",
+      "name_en": "Handover"
+    }
+  ],
+  "columns": {
+    "code": "nine columns, one per segment, with the separator between them",
+    "catalogue_reference": "an optional item number from an external cost catalogue",
+    "description": "Tétel szövege",
+    "quantity": "Mennyiség",
+    "unit": "Egység",
+    "material_unit_price": "Anyag egységár",
+    "fee_unit_price": "Díj egységár",
+    "material_total": "Nettó anyag összesen (Ft)",
+    "fee_total": "Nettó díj összesen (Ft)",
+    "combined_total": "Nettó A+D összesen",
+    "note": "Megjegyzés"
+  },
+  "enables_rule_ids": [
+    "hungary.item_code_required",
+    "hungary.chapter_recognised",
+    "hungary.material_fee_split"
+  ]
+}

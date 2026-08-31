@@ -160,6 +160,7 @@ const STANDARD_GROUPS: OptionGroup[] = [
       { value: 'uniclass', label: 'Uniclass (UK)' },
       { value: 'omniclass', label: 'OmniClass (International)' },
       { value: 'gbt', label: 'GB/T (China)' },
+      { value: 'tetelrend', label: 'Tételrend (Hungary)' },
     ],
   },
   {

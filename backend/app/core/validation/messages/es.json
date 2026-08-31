@@ -270,6 +270,24 @@
       "suggestion": "Use unidades estándar IS 1200: m, m2, m3, kg, nos, rm, etc."
     }
   },
+  "hungary": {
+    "item_code_required": {
+      "fail": "La posición {ordinal} no lleva código de partida húngaro",
+      "invalid": "El código '{code}' de la posición {ordinal} no corresponde a ninguno de los dos órdenes",
+      "suggestion": "La edificación usa MA-CC-SS-II (capítulos 01 a 17); la obra civil usa el número de partida de seis o siete dígitos del diccionario de códigos del proyecto"
+    },
+    "chapter_recognised": {
+      "fail": "El capítulo {chapter} de la posición {ordinal} no es uno de los diecisiete del orden"
+    },
+    "material_fee_split": {
+      "fail": "Posición {ordinal}: material {material} más mano de obra {fee} no suma el precio unitario {rate}",
+      "suggestion": "Corrija los precios de material y mano de obra, o el precio unitario, hasta que cuadren"
+    },
+    "item_number_unique": {
+      "fail": "El número de partida {number} aparece en {count} posiciones y debe identificar una",
+      "suggestion": "Asigne a cada posición su propio número de partida antes de enviar el presupuesto"
+    }
+  },
   "birimfiyat": {
     "code_required": {
       "fail": "A la posición {ordinal} le falta el número de poz de birim fiyat",

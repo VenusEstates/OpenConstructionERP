@@ -270,6 +270,24 @@
       "suggestion": "Standard-IS-1200-Einheiten verwenden: m, m2, m3, kg, nos, rm usw."
     }
   },
+  "hungary": {
+    "item_code_required": {
+      "fail": "Position {ordinal} trägt keine ungarische Positionsnummer",
+      "invalid": "Positionsnummer '{code}' bei Position {ordinal} passt zu keiner der beiden Ordnungen",
+      "suggestion": "Hochbau verwendet MA-CC-SS-II (Kapitel 01 bis 17), Infrastruktur die sechs- oder siebenstellige Positionsnummer aus dem Codeverzeichnis des Projekts"
+    },
+    "chapter_recognised": {
+      "fail": "Kapitel {chapter} bei Position {ordinal} gehört nicht zu den siebzehn der Ordnung"
+    },
+    "material_fee_split": {
+      "fail": "Position {ordinal}: Material {material} plus Lohn {fee} ergibt nicht den Einheitspreis {rate}",
+      "suggestion": "Material- und Lohnanteil oder den Einheitspreis korrigieren, bis die Aufteilung stimmt"
+    },
+    "item_number_unique": {
+      "fail": "Positionsnummer {number} steht auf {count} Positionen und muss genau eine bezeichnen",
+      "suggestion": "Jeder Position eine eigene Projekt-Positionsnummer geben, bevor das LV herausgeht"
+    }
+  },
   "birimfiyat": {
     "code_required": {
       "fail": "Position {ordinal} hat keine birim-fiyat-Positionsnummer",

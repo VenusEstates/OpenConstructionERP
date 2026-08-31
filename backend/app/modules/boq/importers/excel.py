@@ -38,6 +38,7 @@ from app.modules.boq.importers._encoding import (
     parse_numeric_cell,
     safe_float,
 )
+from app.modules.boq.importers.hungary_workbook import parse_hungarian_workbook
 from app.modules.boq.roundtrip import ID_COLUMN_ALIASES, normalise_id
 
 logger = logging.getLogger(__name__)
@@ -580,6 +581,19 @@ class ExcelImporter:
             raise ImporterParseError("Spreadsheet upload is empty")
 
         fmt = _detect_file_format(content[:4096])
+
+        # Hungarian bills are not tables with a header row, so the alias mapper
+        # below reads nothing out of them: the building shape spreads its item
+        # code across nine columns on seventeen sheets, and both shapes carry
+        # two unit prices per line rather than one. The profile answers only for
+        # a workbook it recognises and hands everything else straight back, and
+        # it has to be asked here rather than in ``detect`` because an xlsx is a
+        # zip whose first four kilobytes say nothing about its contents.
+        if fmt == "xlsx":
+            hungarian = parse_hungarian_workbook(content)
+            if hungarian is not None and hungarian.positions:
+                return hungarian
+
         import_meta: dict[str, Any] = {}
         try:
             if fmt == "xlsx":

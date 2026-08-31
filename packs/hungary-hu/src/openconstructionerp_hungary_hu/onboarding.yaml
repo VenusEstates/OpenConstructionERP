@@ -1,0 +1,77 @@
+# Hungary Construction Pack - first-login onboarding wizard.
+# Streamed by /api/v1/partner-pack/onboarding-script and rendered by the
+# OnboardingWizard React component in place of the default steps.
+#
+# Labels are bilingual. The application ships no Hungarian interface bundle,
+# so this script is where a Hungarian estimator meets their own vocabulary,
+# and every label that names a domain term carries the Hungarian word next to
+# the English one rather than a translation of the English sentence.
+
+version: 2
+locale: en
+title: "Welcome to OpenConstructionERP - Hungary"
+title_hu: "Üdvözöljük az OpenConstructionERP magyar kiadásában"
+subtitle: "Six steps to line the workspace up with Hungarian practice: item order, material and fee split, contingency, VAT. Hat lépés, és a munkaterület a magyar gyakorlat szerint áll be."
+
+steps:
+  - id: company_profile
+    title: "Company details / Cégadatok"
+    body: "Used on bills, tender documents and reports. A költségvetéseken, ajánlati dokumentumokon és riportokon jelenik meg."
+    fields:
+      - { key: company_name, label: "Company name / Cégnév", type: text, required: true }
+      - { key: tax_number, label: "Tax number / Adószám", type: text, required: false, placeholder: "12345678-2-42" }
+      - { key: company_registration_number, label: "Company registration number / Cégjegyzékszám", type: text, required: false, placeholder: "01-09-123456" }
+      - { key: contractor_register_id, label: "Contractor register identifier / Kivitelezői nyilvántartási szám", type: text, required: false, help: "Left blank if the firm is a designer or a client rather than a contractor." }
+      - { key: seat_county, label: "Registered seat, county / Székhely, megye", type: select, required: true, default: "Budapest", options: ["Budapest", "Pest", "Bács-Kiskun", "Baranya", "Békés", "Borsod-Abaúj-Zemplén", "Csongrád-Csanád", "Fejér", "Győr-Moson-Sopron", "Hajdú-Bihar", "Heves", "Jász-Nagykun-Szolnok", "Komárom-Esztergom", "Nógrád", "Somogy", "Szabolcs-Szatmár-Bereg", "Tolna", "Vas", "Veszprém", "Zala"] }
+
+  - id: work_type
+    title: "Type of work / A munka jellege"
+    body: "Building works and infrastructure works follow two different item orders. Pick the one most of your turnover sits in; you can use either on any project. A magasépítés és a mélyépítés két külön tételrendet követ."
+    fields:
+      - { key: primary_work_type, label: "Predominant work type / Túlnyomó munkatípus", type: radio, required: true, default: "Building works (magasépítés)", options: ["Building works (magasépítés)", "Infrastructure works, rail and road (mélyépítés)", "Both, in roughly equal measure"] }
+      - { key: role, label: "Your role on projects / Szerep a projektekben", type: radio, required: true, default: "Main contractor (fővállalkozó)", options: ["Main contractor (fővállalkozó)", "Subcontractor (alvállalkozó)", "Designer or cost consultant (tervező, költségvetés-készítő)", "Client or investor (megrendelő, beruházó)"] }
+
+  - id: item_order
+    title: "Item order / Tételrend"
+    body: "The item order decides how codes are read and what the validation engine checks. A tételrend határozza meg a kódolást és az ellenőrzést."
+    fields:
+      - { key: building_item_order, label: "Use the seventeen-chapter building item order (MA-CC-SS-II) / Egységes magasépítési ágazati tételrend", type: checkbox, default: true, help: "Chapters 01 general costs through 17 handover. Fejezetek 01-től 17-ig." }
+      - { key: infrastructure_item_order, label: "Use the infrastructure item order with per-project item numbers / Infrastruktúra tételrend projektszintű tételszámokkal", type: checkbox, default: false, help: "Structure code, row number and a unique item number per line, plus the tag dictionaries the client's monitoring system reads." }
+      - { key: external_catalogue_column, label: "Keep a column for an external cost-catalogue item number / Külső árkatalógus tételszám oszlop", type: checkbox, default: true, help: "A secondary reference alongside the item order's own code. Useful when the bill is priced from a purchased catalogue." }
+      - { key: chapter_totals, label: "Produce a chapter summary and a cover summary / Fejezet összesítő és főösszesítő készítése", type: checkbox, default: true }
+
+  - id: money
+    title: "Money / Pénzügyi beállítások"
+    body: "The forint is quoted in whole units, and every priced line is quoted twice: material and fee. A forint egész egységben, minden tétel anyag és díj bontásban."
+    fields:
+      - { key: currency, label: "Currency / Pénznem", type: select, required: true, default: "HUF (Ft) - whole units", options: ["HUF (Ft) - whole units", "EUR (€) - for cross-border contracts"] }
+      - { key: material_fee_split, label: "Quote every line as material and fee / Minden tétel anyag és díj bontásban", type: checkbox, default: true, help: "Turning this off gives a single unit rate per line, which is not how a Hungarian bill is compared." }
+      - { key: contingency_percent, label: "Contingency on the cover summary / Tartalékkeret a főösszesítőn", type: select, required: true, default: "5%", options: ["0% (none)", "3%", "5%", "10%", "Set per project"] }
+      - { key: vat_rate, label: "Default VAT rate / Alap ÁFA kulcs", type: radio, required: true, default: "27% (általános adómérték)", options: ["27% (általános adómérték)", "5% (kedvezményes, meghatározott új lakóingatlan)", "Reverse charge, no VAT on the invoice (fordított adózás)"] }
+      - { key: reverse_charge_default, label: "Most of my construction invoices fall under reverse charge / Számláim többsége fordított adózás alá esik", type: checkbox, default: false, help: "Between taxable persons the customer accounts for the tax. This sets the default only; it is decided per invoice." }
+
+  - id: procurement
+    title: "Procurement / Közbeszerzés"
+    body: "Public contracts are evaluated line by line against the other tenders, which is why the item order is a requirement there rather than a habit. A közbeszerzésben a tételrend követelmény."
+    fields:
+      - { key: works_in_public_procurement, label: "We tender for public construction contracts / Közbeszerzési eljárásokban indulunk", type: checkbox, default: true }
+      - { key: lock_line_identity, label: "Warn when a returned bill has added, merged or renumbered lines / Figyelmeztetés, ha a visszaérkezett költségvetés tételei megváltoztak", type: checkbox, default: true, show_if: "works_in_public_procurement == true" }
+      - { key: electronic_site_log, label: "Progress is recorded in the electronic construction log / Az előrehaladást e-építési naplóban vezetjük", type: checkbox, default: true, help: "Progress is claimed against the bill's own lines, which is the second reason line identity has to hold." }
+
+  - id: review
+    title: "Review and finish / Áttekintés és befejezés"
+    body: "We will set the workspace to forint at whole units, switch on the Hungarian validation rules, and apply the Hungarian estimating method with your contingency and VAT. Everything here can be changed later in Settings. Minden beállítás később módosítható."
+    action:
+      label: "Create my Hungarian workspace / Munkaterület létrehozása"
+      apply:
+        - set_default_currency: HUF
+        - set_tax_template: hu_afa_27
+        - enable_rule_packs:
+            - hu_magasepitesi_tetelrend
+            - hu_anyag_dij_bontas
+            - hu_kozbeszerzes
+            - hu_kivitelezes_naplo
+            - hu_afa_epitoipar
+        - conditionally_enable_rule_pack:
+            rule_pack: hu_infrastruktura_tetelrend
+            when: "infrastructure_item_order == true"

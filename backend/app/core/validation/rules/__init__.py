@@ -3575,6 +3575,317 @@ class CPWDMeasurementUnits(ValidationRule):
         return results
 
 
+# ── Hungarian Rules (magasépítési és infrastruktúra tételrend) ──────────
+#
+# Hungarian bills of quantities are written against a sectoral item order
+# (tételrend) rather than a cost-group hierarchy. Two of them are in use and
+# both are represented here, because a Hungarian contractor meets both:
+#
+#   building       a nine segment code, ``MA`` for building works followed by
+#                  a two digit chapter (fejezet) and up to seven further
+#                  numeric levels, written with hyphens: ``MA-01-11-01``. The
+#                  seventeen chapters are fixed and are listed below.
+#   infrastructure a six or seven digit item number (tételszám) drawn from a
+#                  per project code dictionary, plus a row number that makes
+#                  the pairing unique inside one project.
+#
+# The other thing that makes a Hungarian bill Hungarian is the split of every
+# priced line into anyag (material) and díj (labour and plant fee). They are
+# quoted, summed and reported separately all the way up to the cover sheet,
+# and the two together are the line's rate. A bill whose split does not
+# reconcile with its own totals is not a formatting problem there: the two
+# columns are what the client compares between tenderers.
+#
+# The chapter names are the standard's own, in Hungarian. They are data, not
+# prose, and an English gloss sits beside each so a reader outside Hungary can
+# follow the tree.
+HU_BUILDING_SECTOR = "MA"
+
+HU_BUILDING_CHAPTERS: dict[str, str] = {
+    "01": "ÁLTALÁNOS, JÁRULÉKOS KÖLTSÉGEK",  # general and ancillary costs
+    "02": "ELŐKÉSZÍTŐ MUNKÁK",  # preparatory works
+    "03": "FÖLDMUNKA, ALAPOZÁS",  # earthworks and foundations
+    "04": "SZERKEZETÉPÍTÉSI MUNKÁK",  # structural works
+    "05": "KÜLSŐ SZAKIPARI MUNKÁK, ÉPÜLET ZÁRÁS",  # envelope and external trades
+    "06": "ÉPÍTÉSZETI, SZAKIPARI MUNKÁK",  # architectural and finishing trades
+    "07": "BELSŐÉPÍTÉSZETI MUNKÁK",  # interior fit out
+    "08": "MŰEMLÉKI, RESTAURÁTORI MUNKÁK",  # heritage and restoration works
+    "09": "ÉPÜLETGÉPÉSZET",  # mechanical services
+    "10": "TŰZVÉDELMI RENDSZEREK, OLTÓRENDSZER",  # fire protection and suppression
+    "11": "ERŐSÁRAMÚ MUNKÁK",  # electrical power
+    "12": "GYENGEÁRAMÚ MUNKÁK",  # extra low voltage and communications
+    "13": "AUTOMATIKA",  # building automation
+    "14": "SPECIÁLIS TECHNOLÓGIA",  # specialist technology
+    "15": "FELVONÓK, EMELŐSZERKEZETEK",  # lifts and lifting equipment
+    "16": "KÜLSŐ MUNKÁK",  # external works
+    "17": "ÁTADÁS",  # handover
+}
+
+# ``MA`` plus a chapter, then up to seven further levels. Sub chapter numbers
+# run to three digits (a chapter that overflows its two digit range continues
+# at 101, 199 and so on), which is why the segment length is a range and not a
+# constant.
+_HU_BUILDING_CODE_RE = re.compile(r"^MA-(0[1-9]|1[0-7])(?:-\d{2,3}){0,7}$")
+
+# The infrastructure item number is written either closed up or with a single
+# space after the third digit, so the space is removed before the shape is
+# judged rather than being admitted into the pattern.
+#
+# The length is a range because the delivered files say so, not because a
+# range is safer. Six or seven digits covers 335 of the 350 lines in the file
+# this was measured on; the rest are a five digit number, a single digit on
+# the top line of the project, and two lines carrying a letter suffix after an
+# underscore. A pattern written from the common case alone would have called
+# fifteen correct lines invalid.
+_HU_INFRA_CODE_RE = re.compile(r"^\d{1,7}(?:_[A-Za-z0-9]{1,4})?$")
+
+
+def _hu_block(pos: dict[str, Any]) -> dict[str, Any]:
+    """The Hungarian payload an import left on a position, or an empty dict.
+
+    Positions that never came from a Hungarian bill carry nothing here, and
+    every rule below treats that as "not my row" rather than as a failure.
+    A pack switched on for a Hungarian company still sees plenty of BOQs
+    imported from elsewhere, and flagging all of them would train the reader
+    to ignore the whole rule set.
+    """
+    block = _position_metadata(pos).get("hu")
+    return block if isinstance(block, dict) else {}
+
+
+def _hu_code(pos: dict[str, Any]) -> str:
+    """The Hungarian item code on a position, whitespace normalised."""
+    code = (pos.get("classification") or {}).get("tetelrend", "")
+    return re.sub(r"\s+", "", str(code)).upper()
+
+
+class HungarianItemCodeRequired(ValidationRule):
+    rule_id = "hungary.item_code_required"
+    name = "Hungarian Item Code Required"
+    standard = "hungary"
+    severity = Severity.ERROR
+    category = RuleCategory.COMPLIANCE
+    description = "Priced lines must carry an item code from one of the Hungarian sectoral item orders"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _get_locale(context)
+        results: list[RuleResult] = []
+        for pos in _get_leaf_positions(context):
+            code = _hu_code(pos)
+            passed = bool(_HU_BUILDING_CODE_RE.match(code) or _HU_INFRA_CODE_RE.match(code))
+            if passed:
+                message = _ok(locale)
+                suggestion = None
+            elif code:
+                message = translate(
+                    "hungary.item_code_required.invalid",
+                    locale=locale,
+                    code=code,
+                    ordinal=pos.get("ordinal", "?"),
+                )
+                suggestion = translate("hungary.item_code_required.suggestion", locale=locale)
+            else:
+                message = translate(
+                    "hungary.item_code_required.fail",
+                    locale=locale,
+                    ordinal=pos.get("ordinal", "?"),
+                )
+                suggestion = translate("hungary.item_code_required.suggestion", locale=locale)
+            results.append(
+                RuleResult(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    severity=self.severity,
+                    category=self.category,
+                    passed=passed,
+                    message=message,
+                    element_ref=pos.get("id"),
+                    details={"given_code": code},
+                    suggestion=suggestion,
+                )
+            )
+        return results
+
+
+class HungarianChapterRecognised(ValidationRule):
+    rule_id = "hungary.chapter_recognised"
+    name = "Hungarian Chapter Is One of the Seventeen"
+    standard = "hungary"
+    severity = Severity.WARNING
+    category = RuleCategory.COMPLIANCE
+    description = "The chapter segment of a building item code must be one of the seventeen in the sectoral order"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _get_locale(context)
+        results: list[RuleResult] = []
+        for pos in _get_positions(context):
+            code = _hu_code(pos)
+            # Only the building order carries chapters. An infrastructure item
+            # number is not a failure here, it is a different order.
+            if not code.startswith(f"{HU_BUILDING_SECTOR}-"):
+                continue
+            segments = code.split("-")
+            chapter = segments[1] if len(segments) > 1 else ""
+            passed = chapter in HU_BUILDING_CHAPTERS
+            if passed:
+                message = _ok(locale)
+            else:
+                message = translate(
+                    "hungary.chapter_recognised.fail",
+                    locale=locale,
+                    chapter=chapter or "?",
+                    ordinal=pos.get("ordinal", "?"),
+                )
+            results.append(
+                RuleResult(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    severity=self.severity,
+                    category=self.category,
+                    passed=passed,
+                    message=message,
+                    element_ref=pos.get("id"),
+                    details={"chapter": chapter, "chapter_name": HU_BUILDING_CHAPTERS.get(chapter, "")},
+                )
+            )
+        return results
+
+
+class HungarianMaterialFeeSplit(ValidationRule):
+    """The anyag and díj halves of a line have to add up to the line.
+
+    Deliberately not "every line must carry both halves". Design fees, permit
+    charges and site management are quoted as díj alone and carry no material,
+    and a supply only line carries no fee; a rule that demanded both would be
+    wrong about a large and perfectly correct part of any Hungarian bill.
+    What is always true is that the two halves are the rate, which is the
+    invariant the summary sheets are built on, and it is the one a bill can
+    actually break by editing a rate without editing its split.
+    """
+
+    rule_id = "hungary.material_fee_split"
+    name = "Material and Fee Add Up to the Rate"
+    standard = "hungary"
+    severity = Severity.WARNING
+    category = RuleCategory.CONSISTENCY
+    description = "The anyag and díj unit prices of a position must sum to its unit rate"
+
+    REL_TOLERANCE = 0.01
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _get_locale(context)
+        results: list[RuleResult] = []
+        for pos in _get_leaf_positions(context):
+            block = _hu_block(pos)
+            if "material_unit_rate" not in block and "fee_unit_rate" not in block:
+                continue
+            material_p = _to_number(block.get("material_unit_rate"))
+            fee_p = _to_number(block.get("fee_unit_rate"))
+            rate_p = _to_number(pos.get("unit_rate"))
+            if rate_p is None or rate_p is _NOT_A_NUMBER:
+                continue
+            rate_val: float = rate_p  # type: ignore[assignment]
+            if rate_val <= 0:
+                continue
+            material = material_p if isinstance(material_p, float) else 0.0
+            fee = fee_p if isinstance(fee_p, float) else 0.0
+            split_total = material + fee
+            diff_ratio = abs(split_total - rate_val) / rate_val
+            passed = diff_ratio <= self.REL_TOLERANCE
+            if passed:
+                message = _ok(locale)
+                suggestion = None
+            else:
+                message = translate(
+                    "hungary.material_fee_split.fail",
+                    locale=locale,
+                    ordinal=pos.get("ordinal", "?"),
+                    material=_fmt_decimal(material),
+                    fee=_fmt_decimal(fee),
+                    rate=_fmt_decimal(rate_val),
+                )
+                suggestion = translate("hungary.material_fee_split.suggestion", locale=locale)
+            results.append(
+                RuleResult(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    severity=self.severity,
+                    category=self.category,
+                    passed=passed,
+                    message=message,
+                    element_ref=pos.get("id"),
+                    details={
+                        "material_unit_rate": material,
+                        "fee_unit_rate": fee,
+                        "unit_rate": rate_val,
+                        "difference_ratio": diff_ratio,
+                        "tolerance": self.REL_TOLERANCE,
+                    },
+                    suggestion=suggestion,
+                )
+            )
+        return results
+
+
+class HungarianItemNumberUnique(ValidationRule):
+    """The infrastructure order's per project item number has to stay unique.
+
+    The number is the row's identity for the client's monitoring system: it is
+    what the progress figures, the payment applications and the programme
+    activities are matched on. Two lines sharing one number do not fail any
+    arithmetic, they merge silently at the far end, which is why this is an
+    error and not a warning.
+    """
+
+    rule_id = "hungary.item_number_unique"
+    name = "Project Item Numbers Are Unique"
+    standard = "hungary"
+    severity = Severity.ERROR
+    category = RuleCategory.CONSISTENCY
+    description = "Each per-project item number may appear on only one position"
+
+    async def validate(self, context: ValidationContext) -> list[RuleResult]:
+        locale = _get_locale(context)
+        seen: dict[str, int] = {}
+        for pos in _get_positions(context):
+            number = str(_hu_block(pos).get("item_number", "")).strip()
+            if number:
+                seen[number] = seen.get(number, 0) + 1
+
+        results: list[RuleResult] = []
+        for pos in _get_positions(context):
+            number = str(_hu_block(pos).get("item_number", "")).strip()
+            if not number:
+                continue
+            count = seen.get(number, 0)
+            passed = count == 1
+            if passed:
+                message = _ok(locale)
+                suggestion = None
+            else:
+                message = translate(
+                    "hungary.item_number_unique.fail",
+                    locale=locale,
+                    number=number,
+                    count=count,
+                )
+                suggestion = translate("hungary.item_number_unique.suggestion", locale=locale)
+            results.append(
+                RuleResult(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    severity=self.severity,
+                    category=self.category,
+                    passed=passed,
+                    message=message,
+                    element_ref=pos.get("id"),
+                    details={"item_number": number, "occurrences": count},
+                    suggestion=suggestion,
+                )
+            )
+        return results
+
+
 # ── Birim Fiyat Rules (Turkey) ──────────────────────────────────────────
 
 
@@ -8398,6 +8709,11 @@ def register_builtin_rules() -> None:
         # CPWD (India)
         (CPWDCodeRequired(), None),
         (CPWDMeasurementUnits(), None),
+        # Hungary (magasepitesi and infrastructure item orders)
+        (HungarianItemCodeRequired(), None),
+        (HungarianChapterRecognised(), None),
+        (HungarianMaterialFeeSplit(), None),
+        (HungarianItemNumberUnique(), None),
         # Birim Fiyat (Turkey)
         (BirimFiyatCodeRequired(), None),
         (BirimFiyatValidPoz(), None),

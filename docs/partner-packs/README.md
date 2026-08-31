@@ -238,6 +238,7 @@ wheels and are independent of the core release cycle.
 | `aus-nzs` | Australia / NZ | AUD | en-AU | AS 1684, NZS 3604, Rawlinsons, AS 4000 | AU/NZ residential + commercial |
 | `brazil-sinapi` | Brazil | BRL | pt-BR | NBR 12721, RPS PDF, SINAPI | Latam tier-1 |
 | `india-cpwd` | India | INR | en-IN, hi | CPWD, IS standards, DSR | Indian public-works |
+| `hungary-hu` | Hungary | HUF | en | Building and infrastructure item orders, material and fee split, VAT | Runs in English: no Hungarian UI bundle ships yet |
 | `saudi-vision2030` | Saudi Arabia | SAR | ar, en | SBC, MoMRAH, Aramco standards | KSA mega-projects |
 | `renewables-epc` | Cross-region | EUR | en | IEC 61400 wind, IEC 61730 PV, MV cables, LCOE, grid compliance | Renewables EPC vertical |
 
@@ -274,6 +275,7 @@ pip install -e packs/batimatech-ca
 pip install -e packs/bimhessen-de
 pip install -e packs/brazil-sinapi
 pip install -e packs/doker-formwork
+pip install -e packs/hungary-hu
 pip install -e packs/india-cpwd
 pip install -e packs/renewables-epc
 pip install -e packs/saudi-vision2030
@@ -466,6 +468,7 @@ teach identifiers that were never rule sets at all.
 | `sekisan` | Sekisan (JP) |
 | `birimfiyat` | Birim Fiyat (TR) |
 | `gesn` | GESN (RU) |
+| `hungary` | Hungarian item orders, material and fee split (HU) |
 
 Modules add more. Anything with a `validators.py` registers its own sets when it
 loads, `formwork` and `carbon_6d` and `project_completeness` among them, and

@@ -270,6 +270,24 @@
       "suggestion": "Use standard IS 1200 units: m, m2, m3, kg, nos, rm, etc."
     }
   },
+  "hungary": {
+    "item_code_required": {
+      "fail": "Position {ordinal} carries no Hungarian item code",
+      "invalid": "Item code '{code}' on position {ordinal} matches neither item order",
+      "suggestion": "Building works use MA-CC-SS-II (chapter 01 to 17), infrastructure works use the six or seven digit item number from the project code dictionary"
+    },
+    "chapter_recognised": {
+      "fail": "Chapter {chapter} on position {ordinal} is not one of the seventeen in the item order"
+    },
+    "material_fee_split": {
+      "fail": "Position {ordinal}: material {material} plus fee {fee} does not add up to the rate {rate}",
+      "suggestion": "Correct the material and fee unit prices, or the rate, so the split reconciles"
+    },
+    "item_number_unique": {
+      "fail": "Item number {number} is used on {count} positions and has to identify one",
+      "suggestion": "Give each position its own project item number before the bill leaves for the client"
+    }
+  },
   "birimfiyat": {
     "code_required": {
       "fail": "Position {ordinal} missing birim fiyat poz number",

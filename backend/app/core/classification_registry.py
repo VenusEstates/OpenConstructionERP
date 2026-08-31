@@ -94,6 +94,7 @@ CLASSIFICATION_STANDARD_LABELS: Mapping[str, str] = MappingProxyType(
         "omniclass": "OmniClass",
         "uniformat": "UniFormat",
         "gaeb": "GAEB",
+        "tetelrend": "Tételrend",
     }
 )
 
@@ -129,7 +130,6 @@ COUNTRY_TO_STANDARD: Mapping[str, str] = MappingProxyType(
         "PL": "din276",
         "CZ": "din276",
         "SK": "din276",
-        "HU": "din276",
         "RO": "din276",
         "BG": "din276",
         "HR": "din276",
@@ -207,6 +207,12 @@ COUNTRY_TO_STANDARD: Mapping[str, str] = MappingProxyType(
         "JP": "sekisan",
         "KR": "kbim",
         "TR": "birimfiyat",
+        # Hungary. Hungarian bills are written against a sectoral item
+        # order rather than a cost-group hierarchy: a chapter-and-item code
+        # for building works, a per-project item number for infrastructure.
+        # This read din276 until 2026-08, which was the Central European
+        # default rather than a statement about Hungary.
+        "HU": "tetelrend",
         # GESN family. Mongolia is here because its construction norms
         # descend from the same lineage as the CIS states around it,
         # not because a catalogue declares it.

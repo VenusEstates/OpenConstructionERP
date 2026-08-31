@@ -246,6 +246,7 @@ const standardLabels: Record<string, string> = {
   din276: 'DIN 276',
   nrm: 'NRM',
   masterformat: 'MasterFormat',
+  tetelrend: 'Tételrend',
 };
 
 // ---------------------------------------------------------------------------

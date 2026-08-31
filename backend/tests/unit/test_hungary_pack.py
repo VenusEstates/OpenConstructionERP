@@ -1,0 +1,219 @@
+# DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
+# Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
+"""The Hungarian pack, and the three places its facts are written down twice.
+
+A country pack states the same thing in several files by necessity: the engine
+holds the chapter list because rules run on it, the manifest holds it because
+the onboarding wizard renders it, and the reference document holds it because
+a person reads it. Copies drift, and the drift is silent, so each pair is
+compared here rather than trusted.
+
+The one that matters most is the chapter list. A rule that accepts a chapter
+the pack does not offer, or a pack that offers one the rule rejects, produces
+a warning on a correctly written bill, which is the fastest way to teach a user
+to ignore a rule set.
+
+No database and no application settings: the manifest is imported directly and
+everything else is filesystem and JSON.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+import pytest
+
+from app.core.classification_registry import (
+    CLASSIFICATION_STANDARD_LABELS,
+    KNOWN_CLASSIFICATION_STANDARDS,
+    resolve_standard,
+)
+from app.core.validation.messages import is_key_present
+from app.core.validation.rules import HU_BUILDING_CHAPTERS
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PACK_DIR = REPO_ROOT / "packs" / "hungary-hu"
+PACKAGE_DIR = PACK_DIR / "src" / "openconstructionerp_hungary_hu"
+RULE_PACKS = PACKAGE_DIR / "rule_packs"
+
+
+@pytest.fixture(scope="module")
+def manifest():
+    """The manifest object the pack's own module builds."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_hungary_manifest_under_test", PACKAGE_DIR / "manifest.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.MANIFEST
+
+
+# ── The manifest ─────────────────────────────────────────────────────────
+
+
+def test_the_pack_is_a_country_pack_in_forint(manifest) -> None:
+    assert manifest.slug == "hungary-hu"
+    assert manifest.type == "country"
+    assert manifest.metadata["country"] == "HU"
+    assert manifest.default_currency == "HUF"
+    assert manifest.default_methodology == "hungary"
+
+
+def test_the_pack_does_not_promise_a_hungarian_interface(manifest) -> None:
+    """The deliberate limit, asserted so it cannot be undone by accident.
+
+    ``normalizePackLocale`` answers a locale the application does not ship with
+    English. A pack declaring ``hu`` would therefore promise a Hungarian
+    interface and deliver an English one with no signal that it had, and a
+    Hungarian file listed under ``additional_locales`` would be merged over the
+    English bundle, turning the English UI Hungarian for everyone on the
+    installation. Both stay out until a Hungarian bundle exists.
+    """
+    assert manifest.default_locale == "en"
+    assert manifest.additional_locales == {}
+
+
+def test_the_declared_methodology_is_a_template_that_exists(manifest) -> None:
+    from app.modules.methodology import templates
+
+    template = templates.TEMPLATES_BY_SLUG[manifest.default_methodology]
+    assert template["country_code"] == "HU"
+    assert template["currency"] == "HUF"
+    assert template["decimals"] == 0, "the forint is quoted in whole units"
+    assert str(template["vat_rate"]) == str(manifest.metadata["vat_standard_rate"])
+
+
+# ── The chapter list, in three places ────────────────────────────────────
+
+
+def _manifest_chapters(manifest) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for entry in manifest.metadata["building_chapters"]:
+        code, _, name = entry.partition(" ")
+        out[code] = name
+    return out
+
+
+def test_the_manifest_and_the_engine_agree_on_the_chapters(manifest) -> None:
+    assert _manifest_chapters(manifest) == dict(HU_BUILDING_CHAPTERS)
+
+
+def test_the_shipped_document_and_the_engine_agree_on_the_chapters() -> None:
+    document = json.loads((RULE_PACKS / "hu_magasepitesi_tetelrend.json").read_text(encoding="utf-8"))
+    from_document = {row["code"]: row["name_hu"] for row in document["chapters"]}
+    assert from_document == dict(HU_BUILDING_CHAPTERS)
+
+
+def test_there_are_seventeen_of_them_numbered_without_a_gap() -> None:
+    assert sorted(HU_BUILDING_CHAPTERS) == [f"{n:02d}" for n in range(1, 18)]
+
+
+def test_the_documents_code_pattern_is_the_one_the_engine_applies() -> None:
+    """A pattern written out for a reader has to be the pattern that runs."""
+    from app.core.validation.rules import _HU_BUILDING_CODE_RE
+
+    document = json.loads((RULE_PACKS / "hu_magasepitesi_tetelrend.json").read_text(encoding="utf-8"))
+    assert document["code_format"]["regex"] == _HU_BUILDING_CODE_RE.pattern
+    for example in document["code_format"]["examples"]:
+        assert _HU_BUILDING_CODE_RE.match(example), f"{example} is offered as an example and does not match"
+
+
+# ── The rule packs on disk ───────────────────────────────────────────────
+
+
+def test_every_declared_document_is_shipped_and_every_shipped_one_declared(manifest) -> None:
+    declared = set(manifest.validation_rule_packs)
+    on_disk = {path.stem for path in RULE_PACKS.glob("*.json")}
+    assert declared == on_disk, f"declared {sorted(declared)}, on disk {sorted(on_disk)}"
+
+
+def test_each_document_names_itself_by_its_own_file_stem() -> None:
+    for path in sorted(RULE_PACKS.glob("*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        assert document["rule_pack_id"] == path.stem
+
+
+def test_each_document_says_how_far_it_has_been_reviewed() -> None:
+    """A document derived from a file and one drawn from a statute are not the
+    same kind of claim, and shipping both without saying which is which is the
+    part that would mislead."""
+    for path in sorted(RULE_PACKS.glob("*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        assert document.get("review_status"), f"{path.name} does not state its review status"
+        assert document["jurisdiction"] == "HU"
+
+
+def test_every_rule_a_document_promises_is_a_rule_the_engine_registers() -> None:
+    from app.core.validation.rules import (
+        HungarianChapterRecognised,
+        HungarianItemCodeRequired,
+        HungarianItemNumberUnique,
+        HungarianMaterialFeeSplit,
+    )
+
+    implemented = {
+        rule.rule_id
+        for rule in (
+            HungarianItemCodeRequired(),
+            HungarianChapterRecognised(),
+            HungarianMaterialFeeSplit(),
+            HungarianItemNumberUnique(),
+        )
+    }
+    promised: set[str] = set()
+    for path in sorted(RULE_PACKS.glob("*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        promised.update(document.get("enables_rule_ids", []))
+    assert promised <= implemented, f"documents promise rules that do not exist: {sorted(promised - implemented)}"
+    assert promised == implemented, f"rules exist that no document mentions: {sorted(implemented - promised)}"
+
+
+# ── The engine seam ──────────────────────────────────────────────────────
+
+
+def test_the_declared_rule_set_is_the_one_the_rules_carry(manifest) -> None:
+    from app.core.validation.rules import HungarianItemCodeRequired
+
+    assert manifest.validation_rule_sets == [HungarianItemCodeRequired.standard]
+
+
+def test_a_hungarian_project_is_classified_against_the_hungarian_item_order() -> None:
+    resolved = resolve_standard(None, "HU")
+    assert resolved.standard == "tetelrend"
+    assert resolved.matched, "a region that matched must not report itself as a fall-through"
+    assert "tetelrend" in KNOWN_CLASSIFICATION_STANDARDS, (
+        "a standard absent from the known list is silently ignored when a project names it explicitly"
+    )
+    assert CLASSIFICATION_STANDARD_LABELS["tetelrend"]
+
+
+def test_the_classification_key_the_rules_read_is_the_standard_they_classify_against() -> None:
+    """The rules read ``classification['tetelrend']``, so the two have to be one name."""
+    source = (REPO_ROOT / "backend" / "app" / "core" / "validation" / "rules" / "__init__.py").read_text(
+        encoding="utf-8"
+    )
+    body = source[source.index("def _hu_code(") : source.index("class HungarianItemCodeRequired")]
+    assert re.search(r'get\(\s*"tetelrend"', body), "the Hungarian rules no longer read the tetelrend key"
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "hungary.item_code_required.fail",
+        "hungary.item_code_required.invalid",
+        "hungary.item_code_required.suggestion",
+        "hungary.chapter_recognised.fail",
+        "hungary.material_fee_split.fail",
+        "hungary.material_fee_split.suggestion",
+        "hungary.item_number_unique.fail",
+        "hungary.item_number_unique.suggestion",
+    ],
+)
+@pytest.mark.parametrize("locale", ["en", "de", "es", "ru"])
+def test_every_message_exists_in_every_validation_locale(key: str, locale: str) -> None:
+    """A missing message is not an error anywhere: the bundle prints the key at
+    the user and logs a warning nobody reads."""
+    assert is_key_present(key, locale), f"{key} is missing from {locale}.json"

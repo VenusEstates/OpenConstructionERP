@@ -1,0 +1,27 @@
+{
+  "rule_pack_id": "hu_kozbeszerzes",
+  "name": "Public procurement of construction works",
+  "name_hu": "Építési beruházások közbeszerzése",
+  "standard": "tetelrend",
+  "jurisdiction": "HU",
+  "applies_to": [
+    "tendering",
+    "projects",
+    "reporting"
+  ],
+  "review_status": "Drawn from public statutory sources. Pending review by a Hungarian quantity surveyor before it is relied on for a tender.",
+  "references": [
+    "2015. évi CXLIII. törvény a közbeszerzésekről",
+    "322/2015. Korm. rendelet on the procurement of construction works and related services"
+  ],
+  "description": "Public construction contracts above the statutory thresholds are awarded through a procurement procedure, and the itemised bill is part of the documentation rather than an internal working paper. That is why the chapter structure is a requirement and not a habit: a tender the client cannot compare line by line against the others is a tender the client cannot lawfully evaluate.",
+  "practice_notes": [
+    "The bill goes out priced at zero for the bidder to complete, and comes back with the same lines in the same order",
+    "Adding, merging or renumbering lines on return is the most common formal defect",
+    "The contingency line is the client's, not the bidder's, and is not priced by the bidder"
+  ],
+  "enables_rule_ids": [
+    "hungary.item_code_required",
+    "hungary.chapter_recognised"
+  ]
+}

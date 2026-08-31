@@ -1,0 +1,55 @@
+{
+  "rule_pack_id": "hu_infrastruktura_tetelrend",
+  "name": "Infrastructure item order with project code dictionaries",
+  "name_hu": "Infrastruktúra tételrend és projekt kódszótárak",
+  "standard": "tetelrend",
+  "jurisdiction": "HU",
+  "applies_to": [
+    "projects",
+    "boq",
+    "schedule",
+    "reporting",
+    "validation"
+  ],
+  "review_status": "Derived from Hungarian workbooks in production use. The structure below states what those files state.",
+  "description": "Rail and road bills prepared for a state developer follow a prescribed item order rather than a free structure, and the order is what the client's monitoring system reads. Each line carries a structure code that spells out its place in the work breakdown, a sequential row number, and an item number formed from the two that has to be unique inside the project. Alongside those sit tag columns, each one a code resolved against a dictionary shipped with the project, and the workbook carries its own check column per dictionary.",
+  "code_format": {
+    "structure_code": "the outline path joined with '+', for example 1+1+1+2",
+    "row_number": "sequential, three digits, unique in the project",
+    "item_number": "the row number and the catalogue item number joined with '_', for example 103_010 010",
+    "catalogue_item_number": "six or seven digits, written closed up or with one space after the third digit",
+    "regex_catalogue_item": "^\\d{6,7}$"
+  },
+  "tag_dictionaries": [
+    {
+      "role": "section or site",
+      "resolves": "which structure the line belongs to"
+    },
+    {
+      "role": "asset class",
+      "resolves": "the depreciation class of the resulting asset"
+    },
+    {
+      "role": "item catalogue",
+      "resolves": "the item number to a name and a unit"
+    },
+    {
+      "role": "work process",
+      "resolves": "the schedule activity the line is executed under"
+    },
+    {
+      "role": "asset register",
+      "resolves": "the owner of the resulting asset"
+    },
+    {
+      "role": "financing",
+      "resolves": "the funding source of the line"
+    }
+  ],
+  "schedule_link": "The work-process tag is the programme activity. Where the line carries a start and a finish, those are the activity's dates, which is what lets one export feed both the cost report and the progress report.",
+  "self_check_columns": "The workbook carries a check column beside each dictionary-backed tag, holding whether the code was found in its dictionary. A delivered file has them all true, and that is the invariant an import should preserve.",
+  "enables_rule_ids": [
+    "hungary.item_code_required",
+    "hungary.item_number_unique"
+  ]
+}
