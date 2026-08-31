@@ -798,6 +798,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_locale_escapes.py
 
+      - name: Check locale files for a word spelled two ways
+        if: ${{ !cancelled() }}
+        run: python scripts/check_locale_umlaut_folding.py
+
       # This gate is declared in .pre-commit-config.yaml and was running nowhere.
       # pre-commit is not installed in this checkout, so none of that file's hooks
       # fire, and the local commit-msg shim covers only the two commit-message

@@ -255,6 +255,24 @@ repos:
         pass_filenames: false
         files: ^frontend/src/app/locales/.*\.ts$
 
+      # A third way the same locale text gets damaged, and the only one where
+      # the damage is done by the fix. German writes an umlaut either as the
+      # letter or as an ASCII digraph, `fuer` for `für`, so a file drifts into
+      # carrying both spellings of one word. Whoever tidies that up with a
+      # find/replace on `ue` also eats the digraph where it was never a fold -
+      # Steuer, Quelle, neue, bauen, zuerst - and leaves non-words behind. 99
+      # of those shipped in the German UI (6a33a1982) with every gate green,
+      # because the key is present, the placeholders are unchanged and the file
+      # parses. This guard fails on the disagreement that invites the pass,
+      # before anyone reaches for the replace. Reads the backend validation
+      # messages too, where half the German instance lived.
+      - id: locale-umlaut-folding-check
+        name: Block a word spelled two ways in one locale file
+        entry: python scripts/check_locale_umlaut_folding.py
+        language: system
+        pass_filenames: false
+        files: ^(frontend/src/app/locales/.*\.ts|backend/app/core/validation/messages/.*\.json)$
+
       # Block one word built from both Cyrillic and Latin letters. Two scripts
       # in one value are fine, "Excel файл" is correct; two inside one word
       # come only from a homoglyph or a half-finished edit, and the bg value
