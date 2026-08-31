@@ -188,21 +188,21 @@
       "suggestion": "Positionen für NRM-Gruppe {group} ({group_name}) ergänzen"
     },
     "base_date_declared": {
-      "fail": "Die Kostenplanung nennt kein Preisbasisdatum fuer ihre Ansaetze",
-      "suggestion": "Hinterlegen Sie das Preisbasisdatum am Leistungsverzeichnis. Ohne dieses laesst sich weder beurteilen, ob ein Ansatz veraltet ist, noch welche Teuerung noch aufzuschlagen ist"
+      "fail": "Die Kostenplanung nennt kein Preisbasisdatum für ihre Ansätze",
+      "suggestion": "Hinterlegen Sie das Preisbasisdatum am Leistungsverzeichnis. Ohne dieses lässt sich weder beurteilen, ob ein Ansatz veraltet ist, noch welche Teuerung noch aufzuschlagen ist"
     },
     "cost_plan_stage_declared": {
-      "fail": "Die Kostenplanung nennt die Planungsphase nicht, fuer die sie erstellt wurde",
+      "fail": "Die Kostenplanung nennt die Planungsphase nicht, für die sie erstellt wurde",
       "suggestion": "Hinterlegen Sie die Phase. Die erwartbare Genauigkeit einer Kostenplanung ergibt sich aus ihrer Phase, und eine Planung ohne Phasenangabe weckt die falsche Erwartung"
     },
     "contractor_costs_present": {
-      "preliminaries": "Die Kostenplanung enthaelt keine Baustelleneinrichtung und Baustellengemeinkosten des Hauptunternehmers, weder als Gruppe {group} noch als Zuschlagszeile",
-      "overheads_and_profit": "Die Kostenplanung enthaelt keine Gemeinkosten und keinen Gewinn des Hauptunternehmers, weder als Gruppe {group} noch als Zuschlagszeile",
-      "suggestion": "Nehmen Sie den Posten als NRM-Gruppenelement oder als Zuschlagszeile auf die gemessenen Leistungen auf. Beides ist zulaessig; fehlt er, sind die Baukosten nicht die Baukosten"
+      "preliminaries": "Die Kostenplanung enthält keine Baustelleneinrichtung und Baustellengemeinkosten des Hauptunternehmers, weder als Gruppe {group} noch als Zuschlagszeile",
+      "overheads_and_profit": "Die Kostenplanung enthält keine Gemeinkosten und keinen Gewinn des Hauptunternehmers, weder als Gruppe {group} noch als Zuschlagszeile",
+      "suggestion": "Nehmen Sie den Posten als NRM-Gruppenelement oder als Zuschlagszeile auf die gemessenen Leistungen auf. Beides ist zulässig; fehlt er, sind die Baukosten nicht die Baukosten"
     },
     "risk_allowance_present": {
-      "fail": "Die Kostenplanung enthaelt keinen Risikozuschlag",
-      "suggestion": "Nehmen Sie einen Risikozuschlag als NRM-Gruppe 13 oder als Zuschlagszeile auf. Eine Kostenplanung ohne Risikozuschlag praesentiert einen Einzelwert, als waere er sicher"
+      "fail": "Die Kostenplanung enthält keinen Risikozuschlag",
+      "suggestion": "Nehmen Sie einen Risikozuschlag als NRM-Gruppe 13 oder als Zuschlagszeile auf. Eine Kostenplanung ohne Risikozuschlag präsentiert einen Einzelwert, als wäre er sicher"
     }
   },
   "masterformat": {
@@ -408,34 +408,34 @@
   },
   "schedule_quality": {
     "open_ends": {
-      "fail": "Vorgang '{activity}' hat keine {ends}-Verknuepfung (offenes Ende / haengender Vorgang)",
-      "both": "Vorgaenger- oder Nachfolger",
-      "predecessor": "Vorgaenger",
+      "fail": "Vorgang '{activity}' hat keine {ends}-Verknüpfung (offenes Ende / hängender Vorgang)",
+      "both": "Vorgänger- oder Nachfolger",
+      "predecessor": "Vorgänger",
       "successor": "Nachfolger",
-      "suggestion": "Den Vorgang mit Vorgaenger und Nachfolger ins Netz einbinden oder als Start-/Endmeilenstein kennzeichnen"
+      "suggestion": "Den Vorgang mit Vorgänger und Nachfolger ins Netz einbinden oder als Start-/Endmeilenstein kennzeichnen"
     },
     "negative_lag": {
       "fail": "Beziehung {predecessor} -> {successor} nutzt negative Pufferzeit ({lag} Tage), also einen Vorlauf, der den kritischen Pfad verzerrt",
       "suggestion": "Den Vorlauf durch einen eigenen Vorgang oder eine SS/FF-Beziehung ersetzen, damit die Abfolge nachvollziehbar bleibt"
     },
     "excessive_lag": {
-      "fail": "Beziehung {predecessor} -> {successor} hat eine Pufferzeit von {lag} Tagen, ueber dem Schwellwert von {threshold} Tagen",
-      "suggestion": "Die Wartezeit als eigenen Vorgang abbilden (Beschaffung, Aushaertung, Freigabe), damit sie einen Status tragen kann"
+      "fail": "Beziehung {predecessor} -> {successor} hat eine Pufferzeit von {lag} Tagen, über dem Schwellwert von {threshold} Tagen",
+      "suggestion": "Die Wartezeit als eigenen Vorgang abbilden (Beschaffung, Aushärtung, Freigabe), damit sie einen Status tragen kann"
     },
     "hard_constraints": {
-      "fail": "Vorgang '{activity}' hat eine feste Terminvorgabe ({constraint}), die die Netzplanlogik ueberschreibt",
-      "suggestion": "Eine weiche Vorgabe (Anfang-nicht-frueher-als) nutzen oder den Termin ueber Logik steuern, damit der Vorgang bei Verzug mitwandert"
+      "fail": "Vorgang '{activity}' hat eine feste Terminvorgabe ({constraint}), die die Netzplanlogik überschreibt",
+      "suggestion": "Eine weiche Vorgabe (Anfang-nicht-früher-als) nutzen oder den Termin über Logik steuern, damit der Vorgang bei Verzug mitwandert"
     },
     "negative_float": {
       "fail": "Vorgang '{activity}' hat negativen Gesamtpuffer ({float} Tage), der Terminplan ist so nicht haltbar",
-      "suggestion": "Ablauf neu ordnen, eine feste Vorgabe loesen oder einen dokumentierten Aufholplan ergaenzen, bis der Puffer wieder bei null oder darueber liegt"
+      "suggestion": "Ablauf neu ordnen, eine feste Vorgabe lösen oder einen dokumentierten Aufholplan ergänzen, bis der Puffer wieder bei null oder darüber liegt"
     },
     "high_float": {
-      "fail": "Vorgang '{activity}' hat sehr hohen Gesamtpuffer ({float} Tage), ueber dem Schwellwert von {threshold} Tagen",
-      "suggestion": "Auf einen fehlenden Nachfolger pruefen - hoher Puffer bedeutet meist, dass der Vorgang nur lose mit dem Netz verbunden ist"
+      "fail": "Vorgang '{activity}' hat sehr hohen Gesamtpuffer ({float} Tage), über dem Schwellwert von {threshold} Tagen",
+      "suggestion": "Auf einen fehlenden Nachfolger prüfen - hoher Puffer bedeutet meist, dass der Vorgang nur lose mit dem Netz verbunden ist"
     },
     "missing_duration": {
-      "fail": "Vorgang '{activity}' hat eine ungueltige Dauer ({duration} Tage) fuer einen Nicht-Meilenstein",
+      "fail": "Vorgang '{activity}' hat eine ungültige Dauer ({duration} Tage) für einen Nicht-Meilenstein",
       "suggestion": "Eine positive Arbeitstage-Dauer setzen oder die Zeile als Meilenstein kennzeichnen, falls es wirklich ein Ereignis ohne Dauer ist"
     }
   },
@@ -502,26 +502,26 @@
     },
     "package_scope_described": {
       "fail": "Arbeitspaket {package} hat einen Namen, aber keine Beschreibung der enthaltenen Leistung",
-      "suggestion": "Halten Sie fest, was das Paket umfasst, damit ein spaeterer Nachtragsstreit eine Grundlage hat"
+      "suggestion": "Halten Sie fest, was das Paket umfasst, damit ein späterer Nachtragsstreit eine Grundlage hat"
     },
     "agreement_value_positive": {
-      "fail": "Die Auftragssumme betraegt {value}, damit haben Sicherheitseinbehalt und Zahlungsplan keine Grundlage",
+      "fail": "Die Auftragssumme beträgt {value}, damit haben Sicherheitseinbehalt und Zahlungsplan keine Grundlage",
       "suggestion": "Tragen Sie die vereinbarte Auftragssumme ein, bevor Sie den Vertrag aktivieren"
     },
     "packages_within_value": {
       "fail": "Die Arbeitspakete belaufen sich auf {planned}, der Vertrag jedoch auf {total}",
-      "suggestion": "Bewerten Sie die Pakete neu oder erhoehen Sie die Auftragssumme, damit der Vertrag seinen Umfang deckt"
+      "suggestion": "Bewerten Sie die Pakete neu oder erhöhen Sie die Auftragssumme, damit der Vertrag seinen Umfang deckt"
     },
     "agreement_dates_ordered": {
       "fail": "Der Vertrag endet am {end}, also vor seinem Beginn am {start}",
-      "suggestion": "Korrigieren Sie Beginn oder Ende, damit die Vertragslaufzeit vorwaerts laeuft"
+      "suggestion": "Korrigieren Sie Beginn oder Ende, damit die Vertragslaufzeit vorwärts läuft"
     },
     "agreement_currency_set": {
-      "fail": "Dieser Vertrag hat keine Waehrung, daher koennen Zahlungen weder zusammengefuehrt noch angewiesen werden",
-      "suggestion": "Setzen Sie die Waehrung, ueblicherweise die des Projekts"
+      "fail": "Dieser Vertrag hat keine Währung, daher können Zahlungen weder zusammengeführt noch angewiesen werden",
+      "suggestion": "Setzen Sie die Währung, üblicherweise die des Projekts"
     },
     "retention_within_bounds": {
-      "fail": "Ein Sicherheitseinbehalt von {percent}% liegt ausserhalb des plausiblen Bereichs von 0 bis {max}%",
+      "fail": "Ein Sicherheitseinbehalt von {percent}% liegt außerhalb des plausiblen Bereichs von 0 bis {max}%",
       "suggestion": "Tragen Sie den Einbehalt als Prozentsatz je Zahlung ein, nicht als Betrag"
     },
     "insurance_valid_at_start": {
@@ -531,42 +531,42 @@
   },
   "submittal": {
     "reviewer_assigned": {
-      "fail": "Dieser Vorlage ist kein Pruefer zugeordnet, sie liegt damit bei niemandem",
-      "suggestion": "Weisen Sie vor dem Einreichen den Pruefer zu, der antworten soll"
+      "fail": "Dieser Vorlage ist kein Prüfer zugeordnet, sie liegt damit bei niemandem",
+      "suggestion": "Weisen Sie vor dem Einreichen den Prüfer zu, der antworten soll"
     },
     "required_date_present": {
-      "fail": "Diese Vorlage hat keinen Bedarfstermin und kann deshalb nie als ueberfaellig gemeldet werden",
-      "suggestion": "Setzen Sie den Termin, zu dem die Pruefung vorliegen muss, abgeleitet aus der abhaengigen Leistung"
+      "fail": "Diese Vorlage hat keinen Bedarfstermin und kann deshalb nie als überfällig gemeldet werden",
+      "suggestion": "Setzen Sie den Termin, zu dem die Prüfung vorliegen muss, abgeleitet aus der abhängigen Leistung"
     },
     "required_date_after_submitted": {
-      "fail": "Die Pruefung ist am {required} faellig, also vor der Einreichung am {submitted}",
+      "fail": "Die Prüfung ist am {required} fällig, also vor der Einreichung am {submitted}",
       "suggestion": "Verschieben Sie den Bedarfstermin auf einen Arbeitstag nach der Einreichung"
     },
     "review_window_sufficient": {
-      "fail": "Der Pruefer hat {days} Tage, weniger als die ueblichen {minimum} Tage",
-      "suggestion": "Gewaehren Sie die uebliche Prueffrist oder stimmen Sie die kuerzere vorher ab"
+      "fail": "Der Prüfer hat {days} Tage, weniger als die üblichen {minimum} Tage",
+      "suggestion": "Gewähren Sie die übliche Prüffrist oder stimmen Sie die kürzere vorher ab"
     },
     "spec_section_present": {
       "fail": "Diese Vorlage nennt keinen Abschnitt der Leistungsbeschreibung, das Register kann sie nicht einordnen",
       "suggestion": "Tragen Sie den Abschnitt der Leistungsbeschreibung ein, den diese Vorlage beantwortet"
     },
     "approver_distinct_from_reviewer": {
-      "fail": "Dieselbe Person ({person}) prueft und genehmigt, damit fehlt das Vier-Augen-Prinzip",
-      "suggestion": "Weisen Sie einen anderen Genehmiger als den Pruefer zu"
+      "fail": "Dieselbe Person ({person}) prüft und genehmigt, damit fehlt das Vier-Augen-Prinzip",
+      "suggestion": "Weisen Sie einen anderen Genehmiger als den Prüfer zu"
     },
     "linked_scope_present": {
-      "fail": "Diese Vorlage ist mit keiner Leistungsposition verknuepft und laeuft daher in keinem Paket auf",
-      "suggestion": "Verknuepfen Sie die LV-Positionen, die diese Vorlage betrifft"
+      "fail": "Diese Vorlage ist mit keiner Leistungsposition verknüpft und läuft daher in keinem Paket auf",
+      "suggestion": "Verknüpfen Sie die LV-Positionen, die diese Vorlage betrifft"
     }
   },
   "rfq": {
     "scope_described": {
-      "fail": "Diese Anfrage hat weder Leistungsbeschreibung noch Erlaeuterung, ein Bieter kann nichts kalkulieren",
+      "fail": "Diese Anfrage hat weder Leistungsbeschreibung noch Erläuterung, ein Bieter kann nichts kalkulieren",
       "suggestion": "Beschreiben Sie den Leistungsumfang vor dem Versand, damit die Angebote vergleichbar sind"
     },
     "deadline_present": {
       "fail": "Diese Anfrage nennt keine Abgabefrist, das Verfahren wird damit nie geschlossen",
-      "suggestion": "Setzen Sie den Termin, zu dem Angebote vorliegen muessen"
+      "suggestion": "Setzen Sie den Termin, zu dem Angebote vorliegen müssen"
     },
     "deadline_parseable": {
       "fail": "Die Abgabefrist {value} ist kein lesbares Datum, jedes Angebot wird abgewiesen",
@@ -578,15 +578,15 @@
     },
     "has_recipients": {
       "fail": "Diese Anfrage ist an keinen Bieter adressiert, der Versand erreicht niemanden",
-      "suggestion": "Ergaenzen Sie die Bieter, an die diese Anfrage geht"
+      "suggestion": "Ergänzen Sie die Bieter, an die diese Anfrage geht"
     },
     "currency_set": {
-      "fail": "Diese Anfrage nennt keine Waehrung, die Angebote lassen sich nicht gegeneinander bewerten",
-      "suggestion": "Setzen Sie die Waehrung, in der kalkuliert werden soll"
+      "fail": "Diese Anfrage nennt keine Währung, die Angebote lassen sich nicht gegeneinander bewerten",
+      "suggestion": "Setzen Sie die Währung, in der kalkuliert werden soll"
     },
     "bid_currency_matches": {
-      "fail": "Angebot {bid} ist in {bid_currency} kalkuliert, die Anfrage laeuft in {rfq_currency}",
-      "suggestion": "Lassen Sie den Bieter in der Anfragewaehrung nachreichen oder halten Sie den Umrechnungskurs fest"
+      "fail": "Angebot {bid} ist in {bid_currency} kalkuliert, die Anfrage läuft in {rfq_currency}",
+      "suggestion": "Lassen Sie den Bieter in der Anfragewährung nachreichen oder halten Sie den Umrechnungskurs fest"
     },
     "bid_amounts_parseable": {
       "fail": "Angebot {bid} hat den Betrag {value}, das ist keine bewertbare Zahl",
@@ -594,11 +594,11 @@
     },
     "bids_still_valid": {
       "fail": "Angebot {bid} ist am {expired} abgelaufen, heute ist {today}, der Preis bindet nicht mehr",
-      "suggestion": "Lassen Sie sich den Preis vor der Vergabe bestaetigen"
+      "suggestion": "Lassen Sie sich den Preis vor der Vergabe bestätigen"
     },
     "award_has_competition": {
-      "fail": "Diese Vergabe stuetzt sich auf {count} Angebote, weniger als die {minimum} eines Wettbewerbs",
-      "suggestion": "Begruenden Sie die freihaendige Vergabe schriftlich oder fordern Sie weitere Angebote an"
+      "fail": "Diese Vergabe stützt sich auf {count} Angebote, weniger als die {minimum} eines Wettbewerbs",
+      "suggestion": "Begründen Sie die freihändige Vergabe schriftlich oder fordern Sie weitere Angebote an"
     }
   },
   "errors": {
@@ -676,26 +676,26 @@
       "suggestion": "Hinterlegen Sie die Vertragsform. Baustellengemeinkosten, Risiko und Zahlungsbedingungen werden je nach Vertragsform unterschiedlich kalkuliert; ohne diese Angabe sagt die Zahl wenig aus"
     },
     "payment_regime_declared": {
-      "fail": "Der Zahlungsmechanismus ist unvollstaendig: {missing} nicht hinterlegt",
+      "fail": "Der Zahlungsmechanismus ist unvollständig: {missing} nicht hinterlegt",
       "suggestion": "Hinterlegen Sie beide Termine. Ein Bauvertrag, der keinen von beiden festlegt, ist davon nicht befreit; das gesetzliche Zahlungsregime liefert beide, und die Parteien finden ihre Zahlungsbedingungen dann in einer Rechtsverordnung statt in ihrem Vertrag"
     },
     "retention_declared": {
       "fail": "Die Kalkulation nennt keinen Sicherheitseinbehalt",
-      "suggestion": "Hinterlegen Sie Hoehe und Freigabe des Einbehalts, oder halten Sie fest, dass keiner gilt. Ein Einbehalt ist verdientes Geld, ueber das der Unternehmer nicht verfuegen kann; eine Kalkulation, die dazu schweigt, schweigt zum Betriebskapital"
+      "suggestion": "Hinterlegen Sie Höhe und Freigabe des Einbehalts, oder halten Sie fest, dass keiner gilt. Ein Einbehalt ist verdientes Geld, über das der Unternehmer nicht verfügen kann; eine Kalkulation, die dazu schweigt, schweigt zum Betriebskapital"
     },
     "cdm_duty_holders_declared": {
       "fail": "Die Verantwortlichen nach CDM 2015 sind nicht hinterlegt: {missing} fehlt",
-      "suggestion": "Hinterlegen Sie die Bestellungen. Arbeitet mehr als ein Unternehmer am Projekt, muss der Bauherr einen Principal Designer und einen Principal Contractor schriftlich bestellen; unterbleibt das, traegt der Bauherr diese Pflichten selbst"
+      "suggestion": "Hinterlegen Sie die Bestellungen. Arbeitet mehr als ein Unternehmer am Projekt, muss der Bauherr einen Principal Designer und einen Principal Contractor schriftlich bestellen; unterbleibt das, trägt der Bauherr diese Pflichten selbst"
     },
     "hrb_regime_declared": {
-      "fail": "Die Einstufung als Gebaeude mit erhoehtem Risiko ist offen: {reason}",
-      "unanswered": "die Kalkulation sagt nicht, ob es sich um ein Gebaeude mit erhoehtem Risiko handelt",
+      "fail": "Die Einstufung als Gebäude mit erhöhtem Risiko ist offen: {reason}",
+      "unanswered": "die Kalkulation sagt nicht, ob es sich um ein Gebäude mit erhöhtem Risiko handelt",
       "disagrees": "die Kalkulation gibt {declared} an, die eigenen Abmessungen ergeben {derived}",
-      "suggestion": "Ein Gebaeude gilt als Gebaeude mit erhoehtem Risiko, wenn es mindestens 18 m hoch ist oder mindestens 7 Geschosse hat UND mindestens zwei Wohneinheiten enthaelt. Beide Haelften zaehlen: ein hohes Gebaeude ohne Wohnungen faellt nicht darunter, und es dennoch so zu behandeln erkauft ein Genehmigungsverfahren, das niemand brauchte"
+      "suggestion": "Ein Gebäude gilt als Gebäude mit erhöhtem Risiko, wenn es mindestens 18 m hoch ist oder mindestens 7 Geschosse hat UND mindestens zwei Wohneinheiten enthält. Beide Hälften zählen: ein hohes Gebäude ohne Wohnungen fällt nicht darunter, und es dennoch so zu behandeln erkauft ein Genehmigungsverfahren, das niemand brauchte"
     },
     "vat_treatment_declared": {
       "fail": "Die Kalkulation sagt nicht, wie die Umsatzsteuer behandelt wird",
-      "suggestion": "Hinterlegen Sie die Behandlung: Regelsatz, ermaessigter oder Nullsatz, soweit die Leistung dafuer qualifiziert, oder das Reverse-Charge-Verfahren, soweit die Leistung darunter faellt. Das Reverse-Charge-Verfahren verlagert die Steuer auf den Leistungsempfaenger und aendert, was der Unternehmer abrechnen darf"
+      "suggestion": "Hinterlegen Sie die Behandlung: Regelsatz, ermäßigter oder Nullsatz, soweit die Leistung dafür qualifiziert, oder das Reverse-Charge-Verfahren, soweit die Leistung darunter fällt. Das Reverse-Charge-Verfahren verlagert die Steuer auf den Leistungsempfänger und ändert, was der Unternehmer abrechnen darf"
     }
   }
 }
