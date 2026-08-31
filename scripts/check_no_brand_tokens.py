@@ -126,6 +126,11 @@ _DENY_HASHES: frozenset[str] = frozenset(
         "58b4537b616e657203a685e86b79ab85c981615d4c0ad243608f457cbbe0de34",
         "8ae56be495a96f1f31eabe97921415525913c2985c70b473631f52dee05c25be",
         "e0a27b93a6c5fd64c53a87e60bf2eff7113e271567044c910576f2c5dd760e0f",
+        # 2026-08-31: a commercial cost-database product named in the Canadian
+        # pack's description and README, on both of which it shipped. The gate
+        # did not hold it, so the purge was one file edit away from coming back
+        # the next time somebody described the pack from memory.
+        "535951eee5c78021bdca282e8c240c4df6c4fcab24a44b86e26799b64b6c9784",
         # 2026-07 purge: pure competitor tool names (BCF coordination, BIM
         # authoring, estimating, construction management). Format-intrinsic vendor
         # names that spell a file format's own vocabulary (the DWG version labels

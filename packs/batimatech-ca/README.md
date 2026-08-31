@@ -1,10 +1,10 @@
-# OpenConstructionERP × batimatech (Canada)
+# OpenConstructionERP × Canada Batimatech
 
 Partner pack pre-configuring [OpenConstructionERP](https://github.com/DataDrivenConstruction/openconstructionerp)
 for Canadian construction companies.
 
 > **Pré-configuré pour les entreprises canadiennes de construction —
-> normes NBC, contrats CCDC, base de coûts RSMeans Canada.**
+> normes NBC, contrats CCDC, base de coûts canadienne.**
 
 ## What this pack does
 

@@ -3135,8 +3135,8 @@ Five reference packs ship under `packs/`:
 - `uk-jct` - UK general contractor (en-GB, London CWICR, NRM 1+2 +
   JCT contract clauses + BCIS benchmarks, GBP, Union flag blue
   `#012169`).
-- `us-rsmeans` - US general contractor (en-US, New York CWICR,
-  MasterFormat 2018 + AIA A201 2017 + RSMeans City Cost Index rule
+- `us-costdata` - US general contractor (en-US, New York CWICR,
+  MasterFormat 2018 + AIA A201 2017 + US city cost index rule
   packs, USD, Old Glory blue `#0A3161`).
 
 Install pattern:
@@ -8468,7 +8468,7 @@ in one click.
 - **Correspondence** - formal communication register
 - **BIM Hub** - BIM models, elements, BOQ links, quantity maps, model diffs
 - **Reporting** - KPI snapshots, 6 report templates, report generation
-- **8 Regional Packs** - US (AIA/CSI/RSMeans), DACH (DIN 276/GAEB/VOB/HOAI), UK (NRM2/JCT/NEC4/CIS), Russia (GESN/FER/TER), Middle East (FIDIC/Hijri/VAT GCC), Asia-Pacific, India, LatAm
+- **8 Regional Packs** - US (AIA/CSI/city cost index), DACH (DIN 276/GAEB/VOB/HOAI), UK (NRM2/JCT/NEC4/CIS), Russia (GESN/FER/TER), Middle East (FIDIC/Hijri/VAT GCC), Asia-Pacific, India, LatAm
 - **3 Enterprise Packs** - approval workflows, deep EVM (ETC/EAC/VAC/TCPI), RFQ bidding pipeline
 - **CPM Engine** - forward/backward pass, float calculation, critical path, calendar-aware
 

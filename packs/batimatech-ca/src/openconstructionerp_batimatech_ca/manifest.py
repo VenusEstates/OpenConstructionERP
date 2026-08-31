@@ -10,7 +10,7 @@ from app.core.partner_pack.manifest import PartnerBranding, PartnerPackManifest
 
 MANIFEST = PartnerPackManifest(
     slug="batimatech-ca",
-    partner_name="Batimatech",
+    partner_name="Canada Batimatech",
     partner_url="https://www.batimatech.com",
     pack_version="0.2.0",
     description=(

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openconstructionerp-batimatech-ca"
 version = "0.2.0"
-description = "Pre-configured partner pack for Canadian construction companies — NBC, CCDC, RSMeans Canada."
+description = "Pre-configured partner pack for Canadian construction companies: NBC, CCDC, Canadian cost data."
 readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.11"
