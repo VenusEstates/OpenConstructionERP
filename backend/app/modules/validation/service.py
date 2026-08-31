@@ -112,8 +112,8 @@ class ValidationModuleService:
             ValueError: If the BOQ is not found or has no positions.
         """
         # 1. Load BOQ and positions (scoped to the authorized project)
-        positions_data = await self._load_boq_positions(boq_id, project_id)
-        if not positions_data:
+        payload = await self._engine_payload(boq_id, project_id)
+        if not payload.get("positions"):
             logger.warning("Validation: BOQ %s has no positions", boq_id)
 
         # 2. Run validation engine. Pass the request locale so rule messages
@@ -123,7 +123,7 @@ class ValidationModuleService:
         from app.core.i18n import get_locale
 
         engine_report: EngineReport = await validation_engine.validate(
-            data=await with_project_context(self.session, project_id, {"positions": positions_data}),
+            data=payload,
             rule_sets=rule_sets,
             target_type="boq",
             target_id=str(boq_id),
@@ -424,11 +424,11 @@ class ValidationModuleService:
 
         from app.core.i18n import get_locale
 
-        positions_data = await self._load_boq_positions(boq_id, project_id)
+        payload = await self._engine_payload(boq_id, project_id)
         rule_sets = _build_rule_sets([estimate_audit.ESTIMATE_AUDIT_RULE_SET])
 
         engine_report: EngineReport = await validation_engine.validate(
-            data=await with_project_context(self.session, project_id, {"positions": positions_data}),
+            data=payload,
             rule_sets=rule_sets,
             target_type="boq",
             target_id=str(boq_id),
@@ -453,7 +453,7 @@ class ValidationModuleService:
         ]
 
         # Group failing results into actionable findings + fixes (pure).
-        findings = estimate_audit.build_findings(results_json, positions_data)
+        findings = estimate_audit.build_findings(results_json, payload["positions"])
         groups = estimate_audit.summarize_groups(findings)
         status_map = estimate_audit.build_status_map(results_json)
         finding_meta = estimate_audit.build_position_audit_meta(findings)
@@ -705,6 +705,55 @@ class ValidationModuleService:
                     "parent_id": str(pos.parent_id) if pos.parent_id else None,
                     "currency": pos_currency or boq_currency,
                     "type": pmeta.get("type", "position"),
+                    # The whole blob, not just the keys this loader happens to
+                    # read. Eleven rule sites call ``_position_metadata`` for
+                    # things an importer left here - the GAEB Bedarfsposition
+                    # marker, the Hungarian two-price split, the GESN resource
+                    # decomposition - and every one of them was reading an
+                    # empty dict on this path, so the rule either skipped the
+                    # position or reported the data missing. Both readings were
+                    # about the loader and neither was about the bill.
+                    "metadata": pmeta,
                 }
             )
         return positions_data
+
+    async def _load_boq_header(self, boq_id: uuid.UUID, project_id: uuid.UUID) -> dict[str, Any]:
+        """Load the bill's own fields, the ones that describe the document.
+
+        Separate from the positions because a document-level rule asks a
+        different question: not "is this line measured correctly" but "does
+        this estimate say what it is". A cost plan's base date, the standard
+        it was measured to and the contract it is priced against live on the
+        bill, not on any line of it.
+        """
+        from app.modules.boq.models import BOQ
+
+        boq = await self.session.get(BOQ, boq_id)
+        if boq is None or boq.project_id != project_id:
+            # Same message and same shape as the positions loader: a mismatch
+            # must not tell the caller whether the foreign bill exists.
+            msg = f"BOQ {boq_id} not found"
+            raise ValueError(msg)
+        return {
+            "id": str(boq.id),
+            "name": boq.name,
+            "description": boq.description,
+            "status": boq.status,
+            "estimate_type": boq.estimate_type,
+            "base_date": boq.base_date,
+            "currency": (getattr(boq, "currency", "") or "").strip().upper(),
+            "metadata": boq.metadata_ or {},
+        }
+
+    async def _engine_payload(self, boq_id: uuid.UUID, project_id: uuid.UUID) -> dict[str, Any]:
+        """The mapping the validation engine reads for one bill.
+
+        Every BOQ validation path goes through this one builder. A rule reads
+        its inputs from this mapping, and a rule whose input is absent returns
+        nothing at all rather than failing, so a path that assembles the
+        payload by hand drops rules silently instead of erroring.
+        """
+        positions = await self._load_boq_positions(boq_id, project_id)
+        header = await self._load_boq_header(boq_id, project_id)
+        return await with_project_context(self.session, project_id, {"boq": header, "positions": positions})

@@ -116,6 +116,36 @@ def _position_currency(pos: dict[str, Any]) -> str:
     return ""
 
 
+def _boq_document(context: ValidationContext) -> dict[str, Any]:
+    """The bill's own fields, as the shared payload builder supplies them.
+
+    A document-level rule asks a different question from a line-level one: not
+    whether a line is measured correctly but whether the estimate says what it
+    is. The base date, the standard it was measured to, the contract it is
+    priced against - all of that lives on the bill and on none of its lines.
+    """
+    data = context.data
+    block = data.get("boq") if isinstance(data, dict) else None
+    return block if isinstance(block, dict) else {}
+
+
+def _boq_document_metadata(context: ValidationContext) -> dict[str, Any]:
+    """What the bill records about itself, the bill first and the run second.
+
+    The run metadata carries the request locale and nothing a person authored,
+    so a rule reading only there is asking a question the product has no way
+    to answer: it can never pass, and a warning nobody can clear teaches the
+    reader to skip the whole rule set. It stays second in the lookup because a
+    caller driving one rule directly still hands its fixture in that way.
+    """
+    meta = _boq_document(context).get("metadata")
+    merged = dict(meta) if isinstance(meta, dict) else {}
+    if isinstance(context.metadata, dict):
+        for key, value in context.metadata.items():
+            merged.setdefault(key, value)
+    return merged
+
+
 def _position_metadata(pos: dict[str, Any]) -> dict[str, Any]:
     """Return the position's metadata blob regardless of dict shape.
 
@@ -3348,9 +3378,16 @@ class GESNPriceLevelDeclared(ValidationRule):
         if not _gesn_is_russian_estimate(context):
             return []
         locale = _get_locale(context)
-        meta = context.metadata if isinstance(context.metadata, dict) else {}
+        meta = _boq_document_metadata(context)
         block = meta.get("gesn")
-        declared = (block.get("price_level") if isinstance(block, dict) else None) or meta.get("price_level")
+        declared = (
+            (block.get("price_level") if isinstance(block, dict) else None)
+            or meta.get("price_level")
+            # The bill carries a base date in a column of its own, and an
+            # estimate that states one has said which roubles it is in. Reading
+            # only the metadata blob would have called that estimate silent.
+            or _boq_document(context).get("base_date")
+        )
         # An empty string is not a declaration. The published base carries the
         # level as a date, and a blank field reads as a level of nothing.
         passed = bool(str(declared or "").strip())

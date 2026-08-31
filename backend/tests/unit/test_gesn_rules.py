@@ -200,3 +200,48 @@ async def test_a_blank_price_level_is_not_a_declaration(blank: Any) -> None:
     rule into a check that somebody had opened the dialogue."""
     results = await GESNPriceLevelDeclared().validate(context([position()], price_level=blank))
     assert not results[0].passed
+
+
+# ── Where the estimate's own facts actually live ─────────────────────────
+#
+# The helper above puts them in the run metadata, which is where a test can
+# put them and where the product never does: the BOQ validation path fills
+# that dict with the request locale and nothing else. A rule reading only
+# there can never pass in the product, and a warning nobody can clear teaches
+# the reader to skip the rule set. These exercise the bill block, which is
+# what the shared payload builder supplies.
+
+
+def bill(positions: list[dict[str, Any]], **fields: Any) -> ValidationContext:
+    """A context shaped like the one the payload builder hands the engine."""
+    return ValidationContext(data={"positions": positions, "boq": fields}, metadata={"locale": "en"})
+
+
+@pytest.mark.asyncio
+async def test_a_price_level_recorded_on_the_bill_is_a_declaration() -> None:
+    results = await GESNPriceLevelDeclared().validate(bill([position()], metadata={"price_level": "01.01.2022"}))
+    assert results[0].passed
+    assert results[0].details["price_level"] == "01.01.2022"
+
+
+@pytest.mark.asyncio
+async def test_the_bills_base_date_is_the_price_level_it_is_in() -> None:
+    """The bill carries a base date in a column of its own. An estimate that
+    states one has said which roubles it is in, and reading only the metadata
+    blob would have called that estimate silent."""
+    results = await GESNPriceLevelDeclared().validate(bill([position()], base_date="01.01.2022"))
+    assert results[0].passed
+    assert results[0].details["price_level"] == "01.01.2022"
+
+
+@pytest.mark.asyncio
+async def test_the_bill_outranks_the_run_metadata() -> None:
+    """Both are read, and the estimate's own record is the one that counts.
+    The run metadata is the caller's, and a caller driving a single rule with
+    a fixture is the only thing that puts a price level there."""
+    ctx = ValidationContext(
+        data={"positions": [position()], "boq": {"metadata": {"price_level": "01.01.2022"}}},
+        metadata={"locale": "en", "price_level": "01.01.2000"},
+    )
+    results = await GESNPriceLevelDeclared().validate(ctx)
+    assert results[0].details["price_level"] == "01.01.2022"

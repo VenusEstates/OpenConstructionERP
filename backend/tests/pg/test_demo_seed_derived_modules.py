@@ -202,7 +202,6 @@ async def test_validation_persists_the_engines_own_verdict(pg_session, quiet_val
     positions and every rule outcome is compared.
     """
     from app.core.validation.engine import validation_engine
-    from app.core.validation.project_context import with_project_context
     from app.modules.validation.service import ValidationModuleService
 
     project_id = await _make_project(pg_session, "Quay", demo=True)
@@ -219,14 +218,17 @@ async def test_validation_persists_the_engines_own_verdict(pg_session, quiet_val
 
     boq_id = uuid.UUID(report.target_id)
     service = ValidationModuleService(pg_session)
-    positions = await service._load_boq_positions(boq_id, project_id)
-    # The payload comes from the shared builder rather than being hand-rolled
-    # here - the same one the seeder's own run went through. A rule reads its
-    # inputs from this mapping, and one whose input is missing returns nothing
-    # at all rather than failing, so a payload assembled by hand quietly drops
-    # that rule from this side of the comparison, and the test then reads as
-    # the seeder having invented a verdict it did not invent.
-    engine_data = await with_project_context(pg_session, project_id, {"positions": positions})
+    # The payload comes from the service's own builder rather than being
+    # hand-rolled here - the same one the seeder's run went through. A rule
+    # reads its inputs from this mapping, and one whose input is missing
+    # returns nothing at all rather than failing, so a payload assembled by
+    # hand quietly drops that rule from this side of the comparison, and the
+    # test then reads as the seeder having invented a verdict it did not
+    # invent. Calling the builder rather than reassembling its output keeps
+    # that true when the payload grows a key: it used to carry positions
+    # alone, and a document-level rule reading the bill's own fields would
+    # have been dropped here and nowhere else.
+    engine_data = await service._engine_payload(boq_id, project_id)
     # Both sides of the comparison now share that builder, so pin what it
     # contributes: the fixture project declares DE, its regional pack answers,
     # and the measurement system has to be in the payload. Without this the two

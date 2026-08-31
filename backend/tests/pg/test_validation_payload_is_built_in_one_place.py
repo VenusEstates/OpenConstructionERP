@@ -172,6 +172,55 @@ def hand_built_positions_payloads(source: str, label: str) -> list[str]:
     return sorted(offenders)
 
 
+def _returns_a_positions_mapping(expr: ast.expr, assigned: dict[str, ast.expr]) -> bool:
+    """True when ``expr`` evaluates to a mapping literal carrying ``positions``.
+
+    Deliberately narrower than :func:`_mentions`. A function that returns a
+    plain list it happens to have called ``positions`` is not building a
+    payload, and reading the name would convict every loader in the tree.
+    A dict literal with that key is a payload and nothing else is.
+    """
+    for part in _expanded(expr, assigned):
+        for node in ast.walk(part):
+            if isinstance(node, ast.Dict) and any(
+                isinstance(key, ast.Constant) and key.value == POSITIONS_KEY for key in node.keys
+            ):
+                return True
+    return False
+
+
+def helper_built_positions_payloads(source: str, label: str) -> list[str]:
+    """Return ``"label:line"`` for each function that returns a positions payload without ``BUILDER``.
+
+    The gate above reads the ``validate(data=...)`` call site, so a payload
+    assembled one function earlier is invisible to it - the call site sees
+    ``data=await self._engine_payload(...)`` and cannot say what is inside.
+    That hop is the normal way this code is written, not an evasion, so the
+    property is restated where the payload is actually built: a function whose
+    return value is a mapping carrying ``positions`` calls the builder.
+
+    Args:
+        source: Python source to read.
+        label: What to call it in the returned findings (a path, usually).
+
+    Returns:
+        One entry per offending function, empty when the module is clean.
+    """
+    tree = ast.parse(source)
+    offenders: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        assigned = _assignments(node)
+        returns = [inner.value for inner in ast.walk(node) if isinstance(inner, ast.Return) and inner.value is not None]
+        if not any(_returns_a_positions_mapping(value, assigned) for value in returns):
+            continue
+        if any(_mentions(inner, BUILDER) for inner in ast.walk(node)):
+            continue
+        offenders.append(f"{label}:{node.lineno}")
+    return sorted(offenders)
+
+
 def test_every_positions_payload_in_app_is_built_by_the_shared_builder() -> None:
     """The positive side: no surface in ``app`` hand-builds one today."""
     offenders: list[str] = []
@@ -185,6 +234,33 @@ def test_every_positions_payload_in_app_is_built_by_the_shared_builder() -> None
     assert offenders == [], (
         "these validation runs hand-build a payload of positions, so every rule reading a "
         f"project-derived key is silent on them: {offenders}"
+    )
+
+
+#: What makes a module one that runs validation. A mapping with a ``positions``
+#: key is not by itself a validation payload - the demo catalog, the cost-base
+#: registry and the chat tool layer all return one and mean a page of rows -
+#: so the helper property is asked only of modules that drive the engine. The
+#: limit that leaves: a payload builder living in a module that never names the
+#: engine is not read. That is a module boundary worth keeping anyway, and the
+#: call-site gate above still covers wherever such a payload is handed over.
+ENGINE = "validation_engine"
+
+
+def test_every_helper_that_returns_a_positions_payload_calls_the_builder() -> None:
+    """The same property one hop earlier: no helper in ``app`` builds one by hand."""
+    offenders: list[str] = []
+    scanned = 0
+    for path in sorted(APP_DIR.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        if ENGINE not in source:
+            continue
+        scanned += 1
+        offenders.extend(helper_built_positions_payloads(source, path.relative_to(APP_DIR.parent).as_posix()))
+    assert scanned > 5, f"the scan read {scanned} modules that drive the engine, which is too few to be the set"
+    assert offenders == [], (
+        "these helpers return a payload of positions the shared builder never saw, so a rule "
+        f"reading a project-derived key is silent wherever they are used: {offenders}"
     )
 
 
@@ -289,6 +365,38 @@ async def run(session, project_id, rows):
     payload = await with_project_context(session, project_id, {"positions": rows})
     return await validation_engine.validate(data=payload, rule_sets=["boq_quality"])
 """
+
+
+_HELPER_HAND_BUILT = """
+async def payload(session, project_id, rows):
+    return {"positions": rows}
+"""
+
+_HELPER_COMPLIANT = """
+async def payload(session, project_id, rows):
+    return await with_project_context(session, project_id, {"positions": rows})
+"""
+
+_A_LOADER_RETURNING_A_LIST = """
+async def load(session):
+    positions = await fetch(session)
+    return positions
+"""
+
+
+def test_a_helper_that_builds_a_payload_by_hand_is_named() -> None:
+    """The new property goes red on the form it exists to catch."""
+    assert helper_built_positions_payloads(_HELPER_HAND_BUILT, "helper") == ["helper:2"]
+
+
+@pytest.mark.parametrize(
+    ("label", "source"),
+    [("compliant", _HELPER_COMPLIANT), ("a_loader", _A_LOADER_RETURNING_A_LIST)],
+    ids=["compliant", "a_loader"],
+)
+def test_a_helper_that_is_not_hand_building_a_payload_is_not_named(label: str, source: str) -> None:
+    """And its controls, including the loader whose list is merely called positions."""
+    assert helper_built_positions_payloads(source, label) == []
 
 
 @pytest.mark.parametrize(
