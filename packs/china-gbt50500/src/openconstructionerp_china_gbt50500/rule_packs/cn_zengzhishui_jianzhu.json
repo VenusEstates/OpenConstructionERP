@@ -1,0 +1,42 @@
+{
+  "rule_pack_id": "cn_zengzhishui_jianzhu",
+  "name": "VAT on construction services: two methods, two rates",
+  "name_zh": "建筑服务增值税：一般计税与简易计税",
+  "standard": "gb50500",
+  "jurisdiction": "CN",
+  "applies_to": [
+    "boq",
+    "invoicing",
+    "reporting"
+  ],
+  "review_status": "Drawn from the published national codes and from public statutory sources. Pending review by a Chinese cost engineer (造价工程师) before it is relied on for a tender.",
+  "references": [
+    "财税〔2016〕36号 营业税改征增值税试点实施办法",
+    "财税〔2018〕32号",
+    "财政部 税务总局 海关总署公告2019年第39号",
+    "住建部办公厅〔2016〕4号 建筑业营改增计价依据调整"
+  ],
+  "description": "Construction moved from business tax to VAT in 2016, and the whole of the pricing base moved with it: a Chinese bill is priced tax-exclusive (除税价) and the tax is added as bill five. Which rate applies is not a property of the work but of the contract, and a contractor can be running both methods on different jobs at the same time.",
+  "methods": [
+    {
+      "name_zh": "一般计税方法",
+      "name": "general method",
+      "rate": 9,
+      "basis": "output VAT on the tax-exclusive works cost, with input VAT credited",
+      "applies_to": "construction services in general"
+    },
+    {
+      "name_zh": "简易计税方法",
+      "name": "simplified method",
+      "rate": 3,
+      "basis": "a collection rate on the tax-exclusive works cost, with no input credit",
+      "applies_to": "labour-only contracts (清包工), works where the employer supplies the materials (甲供工程), and old projects (老项目) whose permit or contract predates 2016-04-30, at the contractor's election"
+    }
+  ],
+  "practice_notes": [
+    "The 9 percent figure is the rate since 2019-04-01. It was 11 percent from 2016 and 10 percent from 2018-05-01, so an older bill is not wrong for carrying a different number",
+    "Tax-exclusive pricing means every rate in bills one to four already excludes VAT; applying the rate to a tax-inclusive base overstates the total",
+    "The election between methods is made per project and is not freely reversible"
+  ],
+  "enables_rule_ids": []
+}

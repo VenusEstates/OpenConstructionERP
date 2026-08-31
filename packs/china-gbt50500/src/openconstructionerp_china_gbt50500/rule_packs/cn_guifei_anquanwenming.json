@@ -1,0 +1,64 @@
+{
+  "rule_pack_id": "cn_guifei_anquanwenming",
+  "name": "The fees that may not be discounted",
+  "name_zh": "规费与安全文明施工费（不可竞争费）",
+  "standard": "gb50500",
+  "jurisdiction": "CN",
+  "applies_to": [
+    "boq",
+    "tendering",
+    "compliance"
+  ],
+  "review_status": "Drawn from the published national codes and from public statutory sources. Pending review by a Chinese cost engineer (造价工程师) before it is relied on for a tender.",
+  "references": [
+    "GB 50500-2013 建设工程工程量清单计价规范",
+    "建标〔2013〕44号 建筑安装工程费用项目组成",
+    "中华人民共和国招标投标法"
+  ],
+  "description": "Two of the five bills are non-competitive. The statutory charges and the safe and civilised construction fee are set by the rules in force and may not be discounted to win work, because both of them are money that leaves the contractor for somebody else: social insurance for the workforce, and the physical safety provisions on the site. A bid that shaves them is non-responsive, not merely aggressive. This is the single commonest way a foreign-prepared Chinese bid is disqualified.",
+  "guifei": {
+    "name_zh": "规费",
+    "components": [
+      {
+        "name_zh": "社会保险费",
+        "name": "social insurance: pension, unemployment, medical, work injury, maternity"
+      },
+      {
+        "name_zh": "住房公积金",
+        "name": "housing provident fund"
+      },
+      {
+        "name_zh": "工程排污费",
+        "name": "construction pollutant discharge fee",
+        "note": "carried in the 2013 fee structure. The discharge fee was replaced by the environmental protection tax from 2018-01-01, so whether it still appears as a line depends on the provincial fee document in force; treat its presence or absence as a local question rather than a national one."
+      }
+    ]
+  },
+  "anquan_wenming": {
+    "name_zh": "安全文明施工费",
+    "components": [
+      {
+        "name_zh": "环境保护费",
+        "name": "environmental protection"
+      },
+      {
+        "name_zh": "文明施工费",
+        "name": "civilised construction"
+      },
+      {
+        "name_zh": "安全施工费",
+        "name": "safe construction"
+      },
+      {
+        "name_zh": "临时设施费",
+        "name": "temporary facilities"
+      }
+    ]
+  },
+  "practice_notes": [
+    "Both are computed on a base and at a rate the provincial fee document sets, so the percentage is a local number and not a national one",
+    "The safe and civilised construction fee is a 总价措施项目, a lump sum inside bill two, and the statutory charges are bill four in their own right",
+    "An advance payment of the safe and civilised construction fee is required in many provinces before work starts"
+  ],
+  "enables_rule_ids": []
+}

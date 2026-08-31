@@ -3562,6 +3562,33 @@ class ONORMDescriptionLength(ValidationRule):
 
 
 # ── GB/T 50500 Rules (China) ────────────────────────────────────────────
+#
+# One standard, two spellings, and until 2026-08 the two readers of a Chinese
+# cost item disagreed about which one to use. The classification registry names
+# the standard ``gb50500`` and ``classification_order`` hands that name to the
+# section path builder in ``match_elements``; these rules looked the code up
+# under ``gbt50500``, which is what the shipped demo bills were keyed with. The
+# result was that the rules below worked and the section path never rendered,
+# for every line of both Chinese demo projects.
+#
+# The demo data now carries the registry's spelling. The rule ids, the
+# ``standard`` attribute and the ``validation_rule_sets`` entry keep the older
+# one, because those live in the rule-set namespace, resolve through a
+# different registry, and renaming them would break every manifest that
+# declares the set and every message key in four locales for no gain.
+#
+# The legacy key is still read. An installation that has been storing bills
+# since before this change has rows keyed the old way, and a hard switch would
+# turn a bill that passed yesterday into one that fails today, which is a worse
+# thing to do to a user than carrying one extra lookup.
+
+
+def _gb50500_code(pos: dict[str, Any]) -> str:
+    """The Chinese item code on a position, under either spelling."""
+    classification = pos.get("classification") or {}
+    if not isinstance(classification, dict):
+        return ""
+    return str(classification.get("gb50500") or classification.get("gbt50500") or "")
 
 
 class GBT50500CodeRequired(ValidationRule):
@@ -3576,7 +3603,7 @@ class GBT50500CodeRequired(ValidationRule):
         locale = _get_locale(context)
         results: list[RuleResult] = []
         for pos in _get_leaf_positions(context):
-            code = (pos.get("classification") or {}).get("gbt50500", "")
+            code = _gb50500_code(pos)
             passed = bool(code) and len(str(code)) >= 6
             if passed:
                 message = _ok(locale)
@@ -3618,7 +3645,7 @@ class GBT50500ValidCode(ValidationRule):
         locale = _get_locale(context)
         results: list[RuleResult] = []
         for pos in _get_positions(context):
-            code = str((pos.get("classification") or {}).get("gbt50500", ""))
+            code = _gb50500_code(pos)
             if not code:
                 continue
             passed = code.isdigit() and len(code) in (9, 12)

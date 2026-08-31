@@ -1,0 +1,72 @@
+{
+  "rule_pack_id": "cn_qingdan_wubu_jiegou",
+  "name": "The five bills a Chinese tender is made of",
+  "name_zh": "工程量清单的五部分构成",
+  "standard": "gb50500",
+  "jurisdiction": "CN",
+  "applies_to": [
+    "boq",
+    "tendering",
+    "reporting"
+  ],
+  "review_status": "Derived from GB 50500-2013 read in full for the structures it states. Pending review by a Chinese cost engineer (造价工程师) for current practice.",
+  "references": [
+    "GB 50500-2013 建设工程工程量清单计价规范"
+  ],
+  "description": "A Chinese tender price is not one list with a margin on the end. It is five bills that are summed in a fixed order, and two of the five are priced by rules rather than by competition. Importing a Chinese bill as a single flat list of measured works loses roughly the whole of the preliminaries and the whole of the statutory content, which on a building job is not a rounding difference.",
+  "bills": [
+    {
+      "order": 1,
+      "name_zh": "分部分项工程量清单",
+      "name": "measured works",
+      "note": "the items with twelve-digit codes, priced at comprehensive unit rates"
+    },
+    {
+      "order": 2,
+      "name_zh": "措施项目清单",
+      "name": "measure items",
+      "note": "splits in two. 单价措施项目 are measured and priced at a rate (scaffolding, formwork, vertical transport). 总价措施项目 are lump sums taken as a percentage (safe and civilised construction, night work, secondary handling, completion clean)."
+    },
+    {
+      "order": 3,
+      "name_zh": "其他项目清单",
+      "name": "other items",
+      "components": [
+        {
+          "name_zh": "暂列金额",
+          "name": "provisional sum, held by the employer and spent only on instruction"
+        },
+        {
+          "name_zh": "暂估价",
+          "name": "prime cost sums, for materials (材料暂估价) and for nominated specialist works (专业工程暂估价)"
+        },
+        {
+          "name_zh": "计日工",
+          "name": "dayworks"
+        },
+        {
+          "name_zh": "总承包服务费",
+          "name": "main contractor attendance on employer-appointed specialists and on employer-supplied materials"
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "name_zh": "规费",
+      "name": "statutory charges",
+      "note": "not competitive, see cn_guifei_anquanwenming"
+    },
+    {
+      "order": 5,
+      "name_zh": "税金",
+      "name": "tax",
+      "note": "output VAT, see cn_zengzhishui_jianzhu"
+    }
+  ],
+  "practice_notes": [
+    "The order is fixed and the tax sits last, on top of everything else including the statutory charges",
+    "暂列金额 belongs to the employer for the whole of the job. It is in the contract sum and is not the contractor's money until an instruction spends it",
+    "A bill that shows only bill 1 is a measured-works schedule, not a tender price"
+  ],
+  "enables_rule_ids": []
+}

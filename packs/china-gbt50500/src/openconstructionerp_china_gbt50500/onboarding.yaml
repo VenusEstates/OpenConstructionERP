@@ -1,0 +1,84 @@
+# China Construction Pack - first-login onboarding wizard.
+# Streamed by /api/v1/partner-pack/onboarding-script and rendered by the
+# OnboardingWizard React component in place of the default steps.
+#
+# Labels are Chinese first. The application ships a zh interface bundle and
+# this pack selects it, so the wizard is read in Chinese; the English half is
+# there for an administrator setting the workspace up for somebody else.
+#
+# The steps follow the shape of a Chinese tender rather than a generic setup
+# flow: the five bills, the two fees that may not be discounted, and the tax
+# method. Those are the three things a workspace configured from a European
+# default gets wrong, and the wizard is the last place to ask before a bill is
+# priced against the wrong structure.
+
+version: 2
+locale: zh
+title: "OpenConstructionERP - 中国版"
+title_en: "Welcome to OpenConstructionERP - China"
+subtitle: "六个步骤，把工作区按国内计价规范配置好：清单编码、综合单价、不可竞争费、计税方法。Six steps to line the workspace up with Chinese pricing practice."
+
+steps:
+  - id: company_profile
+    title: "企业信息 / Company details"
+    body: "用于清单、投标文件和报表。Used on bills, tender documents and reports."
+    fields:
+      - { key: company_name, label: "企业名称 / Company name", type: text, required: true }
+      - { key: usci, label: "统一社会信用代码 / Unified social credit code", type: text, required: false, placeholder: "91310000000000000X" }
+      - { key: qualification_grade, label: "施工总承包资质等级 / General contracting qualification grade", type: select, required: false, default: "二级 / Grade 2", options: ["特级 / Special grade", "一级 / Grade 1", "二级 / Grade 2", "三级 / Grade 3", "专业承包 / Specialist contractor", "暂不填写 / Skip for now"] }
+      - { key: province, label: "主要经营省份 / Principal province", type: select, required: true, default: "上海 / Shanghai", options: ["北京 / Beijing", "上海 / Shanghai", "广东 / Guangdong", "江苏 / Jiangsu", "浙江 / Zhejiang", "四川 / Sichuan", "湖北 / Hubei", "山东 / Shandong", "其他 / Other"], help: "费用定额和取费标准按省发布，这里决定默认取哪一份。The fee schedule is issued province by province and this decides which one is offered first." }
+
+  - id: metro
+    title: "造价数据 / Cost data"
+    body: "综合单价按城市价格水平编制。目前市场化数据只接入了上海，其余城市在市场更新中陆续开放。Comprehensive unit rates are compiled at a city price level. Only Shanghai is wired in today; the other metros arrive in marketplace updates."
+    fields:
+      - { key: metro, label: "城市 / City", type: select, required: true, default: "上海 / Shanghai", options: ["上海 / Shanghai", "北京 / Beijing (即将开放 / coming)", "深圳 / Shenzhen (即将开放 / coming)", "广州 / Guangzhou (即将开放 / coming)", "成都 / Chengdu (即将开放 / coming)"] }
+      - { key: price_level, label: "价格水平 / Price level", type: text, required: true, default: "2026-Q1", placeholder: "2026-Q1", help: "一个季度或一个日期，不是年份。人民币金额离开价格水平就没有意义。A quarter or a date, not a year: a renminbi figure without its price level means nothing." }
+
+  - id: bill_structure
+    title: "清单构成 / Bill structure"
+    body: "国内投标价由五部分组成，顺序固定，其中两部分不参与竞争。只导入分部分项，等于丢掉了措施费和规费。A Chinese tender price is five bills summed in a fixed order, and two of them are not competitive. Importing only the measured works loses the preliminaries and the statutory content."
+    fields:
+      - { key: bill_edition, label: "计价规范版本 / Pricing code edition", type: radio, required: true, default: "GB 50500-2013", options: ["GB 50500-2013", "GB/T 50500-2024"], help: "2013 版是强制性国标 GB，2024 版是推荐性国标 GB/T。本包的示例数据按 2013 版编码。The 2013 edition is a mandatory code and the 2024 edition is a recommended standard; the demo data here is coded to 2013." }
+      - { key: code_digits, label: "清单项目编码位数 / Item code length", type: radio, required: true, default: "12 位（9 位国标 + 3 位顺序码）", options: ["12 位（9 位国标 + 3 位顺序码）", "9 位（仅国标码）"], help: "后三位由编制人给定，同一份清单内不重复。The last three digits are assigned by whoever compiles the bill and are unique within it." }
+      - { key: require_item_features, label: "要求填写项目特征 / Require item characteristics on every item", type: checkbox, default: true, help: "综合单价是按项目特征报的，结算争议也基本出在这里。The rate is priced against the characteristics, and that is what a settlement dispute turns on." }
+
+  - id: fees
+    title: "取费与不可竞争费 / Fees, competitive and not"
+    body: "规费和安全文明施工费按规定计取，不得作为竞争性费用下浮。压这两项的投标按无效标处理。The statutory charges and the safe and civilised construction fee are set by the rules in force and may not be discounted to win work; a bid that shaves them is non-responsive."
+    fields:
+      - { key: management_fee_percent, label: "企业管理费 % / Enterprise management fee", type: text, required: true, default: "6.5", help: "计取基数按本省费用定额，未必是直接费。The base is what the provincial fee schedule states, which is not always the direct cost." }
+      - { key: profit_percent, label: "利润 % / Profit", type: text, required: true, default: "5.0" }
+      - { key: guifei_percent, label: "规费 % / Statutory charges", type: text, required: true, default: "3.2", help: "社会保险费、住房公积金等，按省定标准。Social insurance and housing fund, at the provincial rate." }
+      - { key: safety_fee_percent, label: "安全文明施工费 % / Safe and civilised construction fee", type: text, required: true, default: "2.5" }
+      - { key: protect_noncompetitive, label: "锁定不可竞争费，不允许下浮 / Lock the non-competitive fees against discounting", type: checkbox, default: true }
+
+  - id: tax
+    title: "计税方法 / Tax method"
+    body: "清单按除税价编制，税金作为第五部分单列。计税方法取决于合同而不是工程性质，同一家企业可以同时跑两种。The bill is priced tax-exclusive and the tax is bill five. Which method applies is a property of the contract, not of the work, and a contractor can be running both at once."
+    fields:
+      - { key: tax_method, label: "计税方法 / Method", type: radio, required: true, default: "一般计税 9% / General method 9%", options: ["一般计税 9% / General method 9%", "简易计税 3% / Simplified method 3%"], help: "简易计税适用于清包工、甲供工程和老项目，由承包人选择。The simplified method covers labour-only contracts, employer-supplied-material contracts and old projects, at the contractor's election." }
+      - { key: tax_exclusive_pricing, label: "按除税价编制清单 / Price the bill tax-exclusive", type: checkbox, default: true }
+
+  - id: review
+    title: "确认并完成 / Review and finish"
+    body: "工作区将设为人民币、按所选计税方法建税、启用国内计价规范的检查项。以上都可以在设置中修改。The workspace will be set to renminbi with the tax method you chose and the national pricing checks switched on. All of it can be changed later in Settings."
+    action:
+      label: "创建中国工作区 / Create my China workspace"
+      apply:
+        - set_default_currency: CNY
+        - set_tax_template: cn_vat_9
+        - enable_rule_packs:
+            - cn_gb50500_qingdan_bianma
+            - cn_qingdan_wubu_jiegou
+            - cn_zonghe_danjia
+            - cn_zengzhishui_jianzhu
+        - conditionally_enable_rule_pack:
+            rule_pack: cn_guifei_anquanwenming
+            when: "protect_noncompetitive == true"
+        - conditionally_enable_rule_pack:
+            rule_pack: cn_gb50854_gongchengliang
+            when: "require_item_features == true"
+        - conditionally_enable_rule_pack:
+            rule_pack: cn_zhaobiao_jiesuan
+            when: "bill_edition == 'GB 50500-2013'"

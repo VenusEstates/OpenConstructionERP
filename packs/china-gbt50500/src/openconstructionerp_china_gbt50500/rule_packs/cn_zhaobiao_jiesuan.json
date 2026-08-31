@@ -1,0 +1,60 @@
+{
+  "rule_pack_id": "cn_zhaobiao_jiesuan",
+  "name": "The bid ceiling, and how the price moves after it is fixed",
+  "name_zh": "最高投标限价与合同价款调整、竣工结算",
+  "standard": "gb50500",
+  "jurisdiction": "CN",
+  "applies_to": [
+    "tendering",
+    "contract",
+    "reporting"
+  ],
+  "review_status": "Drawn from the published national codes and from public statutory sources. Pending review by a Chinese cost engineer (造价工程师) before it is relied on for a tender.",
+  "references": [
+    "中华人民共和国招标投标法",
+    "中华人民共和国招标投标法实施条例",
+    "GB 50500-2013 建设工程工程量清单计价规范"
+  ],
+  "description": "A Chinese public tender is bounded from above rather than only from below. The employer publishes a maximum bid price computed on the same bill everybody is pricing, and a bid over it is rejected outright however good it is. After award, the code enumerates the grounds on which the contract price may move, which makes a variation an exercise in naming the right ground rather than an open negotiation.",
+  "ceiling": {
+    "name_zh": "最高投标限价",
+    "also_known_as_zh": "招标控制价",
+    "note": "computed by the employer on the published bill and the prevailing cost information, published with the tender documents, and binding: a bid above it is non-responsive."
+  },
+  "price_adjustment_grounds": [
+    {
+      "name_zh": "工程量偏差",
+      "name": "quantity deviation beyond the agreed threshold"
+    },
+    {
+      "name_zh": "工程变更",
+      "name": "variation instructed by the employer"
+    },
+    {
+      "name_zh": "项目特征描述不符",
+      "name": "the work does not match the characteristics the item was priced against"
+    },
+    {
+      "name_zh": "物价波动",
+      "name": "price movement, by price index (价格指数法) or by published cost information (造价信息法)"
+    },
+    {
+      "name_zh": "不可抗力",
+      "name": "force majeure"
+    },
+    {
+      "name_zh": "暂估价",
+      "name": "a prime cost sum being fixed"
+    },
+    {
+      "name_zh": "索赔",
+      "name": "claim"
+    }
+  ],
+  "practice_notes": [
+    "The quantity deviation threshold and the adjustment formula are contract terms; the code offers a default rather than imposing one",
+    "A characteristic that was described wrongly is its own ground for adjustment, separate from a variation, which is why the characteristics are worth writing out in full at tender",
+    "Settlement runs to statutory review periods; a submission that misses them can be deemed agreed"
+  ],
+  "enables_rule_ids": []
+}

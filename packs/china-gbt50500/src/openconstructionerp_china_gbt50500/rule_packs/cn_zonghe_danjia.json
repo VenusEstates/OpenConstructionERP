@@ -1,0 +1,60 @@
+{
+  "rule_pack_id": "cn_zonghe_danjia",
+  "name": "What the comprehensive unit rate contains, and what it does not",
+  "name_zh": "综合单价的构成",
+  "standard": "gb50500",
+  "jurisdiction": "CN",
+  "applies_to": [
+    "boq",
+    "estimating",
+    "validation"
+  ],
+  "review_status": "Derived from GB 50500-2013 read in full for the structures it states. Pending review by a Chinese cost engineer (造价工程师) for current practice.",
+  "references": [
+    "GB 50500-2013 建设工程工程量清单计价规范",
+    "建标〔2013〕44号 建筑安装工程费用项目组成"
+  ],
+  "description": "综合单价 is comprehensive in a specific and limited sense. It carries the direct cost, the enterprise management fee, the profit and an agreed slice of risk, and it stops there. The statutory charges and the tax are outside it and are added later as their own bills. Reading it as an all-in rate double counts nothing and under-reads the tender total by the whole of bills four and five.",
+  "components": [
+    {
+      "name_zh": "人工费",
+      "name": "labour"
+    },
+    {
+      "name_zh": "材料费",
+      "name": "materials, including 工程设备费, plant and equipment forming part of the works"
+    },
+    {
+      "name_zh": "施工机具使用费",
+      "name": "construction plant and tools"
+    },
+    {
+      "name_zh": "企业管理费",
+      "name": "enterprise management fee"
+    },
+    {
+      "name_zh": "利润",
+      "name": "profit"
+    },
+    {
+      "name_zh": "风险费用",
+      "name": "the risk the contract says the contractor carries, within the agreed range"
+    }
+  ],
+  "excluded": [
+    {
+      "name_zh": "规费",
+      "name": "statutory charges, priced as bill four"
+    },
+    {
+      "name_zh": "税金",
+      "name": "tax, priced as bill five"
+    }
+  ],
+  "practice_notes": [
+    "The management fee and profit are taken on a base the local fee document defines; it is not universally the direct cost and it is worth reading the provincial document rather than assuming",
+    "An item's rate is priced against its 项目特征, so a rate quoted without the characteristics it was priced against cannot be compared with another",
+    "Risk inside the rate is bounded by the contract. Movement outside that range is a price adjustment, not a rate the contractor already carried"
+  ],
+  "enables_rule_ids": []
+}

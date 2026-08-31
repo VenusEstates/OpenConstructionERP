@@ -1,0 +1,86 @@
+{
+  "rule_pack_id": "cn_gb50500_qingdan_bianma",
+  "name": "Bill of quantities item code and the five required elements",
+  "name_zh": "工程量清单项目编码与五要件",
+  "standard": "gb50500",
+  "jurisdiction": "CN",
+  "applies_to": [
+    "boq",
+    "tendering",
+    "validation"
+  ],
+  "review_status": "Derived from GB 50500-2013 read in full for the structures it states. Pending review by a Chinese cost engineer (造价工程师) for current practice.",
+  "references": [
+    "GB 50500-2013 建设工程工程量清单计价规范",
+    "GB 50854-2013 房屋建筑与装饰工程工程量计算规范"
+  ],
+  "description": "A Chinese bill item is identified by a twelve-digit code, and only the first nine digits are national. The last three are assigned by whoever compiles the bill, run from 001 upward, and have to be unique inside that one bill. This is the part that surprises readers used to a fixed national code: two bills for the same work will legitimately carry different twelve-digit codes and identical nine-digit prefixes.",
+  "code_format": {
+    "length": 12,
+    "national_digits": 9,
+    "compiler_digits": 3,
+    "levels": [
+      {
+        "digits": "1-2",
+        "name_zh": "工程分类顺序码",
+        "name": "engineering category, from the appendix (01 is buildings and decoration)"
+      },
+      {
+        "digits": "3-4",
+        "name_zh": "专业工程顺序码",
+        "name": "professional works within that category"
+      },
+      {
+        "digits": "5-6",
+        "name_zh": "分部工程顺序码",
+        "name": "division"
+      },
+      {
+        "digits": "7-9",
+        "name_zh": "分项工程项目名称顺序码",
+        "name": "the national item name, and the end of the fixed part"
+      },
+      {
+        "digits": "10-12",
+        "name_zh": "清单项目名称顺序码",
+        "name": "assigned by the compiler, 001 upward, unique within this bill"
+      }
+    ],
+    "example": "010101001001",
+    "example_note": "010101001 is the national code for site clearance and grading (平整场地); the trailing 001 says this is the first such item in this particular bill."
+  },
+  "required_elements": [
+    {
+      "name_zh": "项目编码",
+      "name": "item code",
+      "note": "twelve digits, as above"
+    },
+    {
+      "name_zh": "项目名称",
+      "name": "item name"
+    },
+    {
+      "name_zh": "项目特征",
+      "name": "item characteristics",
+      "note": "the load-bearing one. It is what the comprehensive unit rate is priced against, and it is what a settlement dispute turns on. An item described without its characteristics is not a priced item, it is an invitation to argue later."
+    },
+    {
+      "name_zh": "计量单位",
+      "name": "unit of measurement"
+    },
+    {
+      "name_zh": "工程量",
+      "name": "quantity",
+      "note": "net, measured per GB 50854; see cn_gb50854_gongchengliang"
+    }
+  ],
+  "practice_notes": [
+    "A nine-digit code stored without its three-digit tail is the national code, not a bill item, and both spellings occur in real files",
+    "Codes were authored against the 2013 edition; whether the 2024 family renumbered the appendix chapters has not been checked against the standard text",
+    "GB 50500-2013 is a mandatory code (GB). The 2024 edition is GB/T, a recommended standard, and the prefix is the fastest way to tell which one a document means"
+  ],
+  "enables_rule_ids": [
+    "gbt50500.code_required",
+    "gbt50500.valid_code"
+  ]
+}

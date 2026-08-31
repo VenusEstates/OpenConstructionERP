@@ -1,0 +1,56 @@
+{
+  "rule_pack_id": "cn_gb50854_gongchengliang",
+  "name": "Net measurement, and where the waste goes instead",
+  "name_zh": "工程量计算规则与净量原则",
+  "standard": "gb50500",
+  "jurisdiction": "CN",
+  "applies_to": [
+    "boq",
+    "takeoff",
+    "validation"
+  ],
+  "review_status": "Drawn from the published national codes and from public statutory sources. Pending review by a Chinese cost engineer (造价工程师) before it is relied on for a tender.",
+  "references": [
+    "GB 50854-2013 房屋建筑与装饰工程工程量计算规范",
+    "GB 50500-2013 建设工程工程量清单计价规范"
+  ],
+  "description": "Quantities in a Chinese bill are net, computed by the calculation code, and they are the same number for every tenderer. Waste, laps, working space and battering are not added to the quantity; they are priced inside the comprehensive unit rate. A tenderer who adds waste to the quantity has changed a number that is supposed to be identical across bids, and the bid is comparing against a different scope from everyone else's.",
+  "principles": [
+    "The quantity is net per the calculation code, not the ordered or delivered quantity",
+    "Waste, laps, working space (工作面) and battering (放坡) belong to the rate",
+    "Reinforcement is measured by mass from the drawing, with laps per the code rather than per the site",
+    "Openings are deducted or not deducted per the code's own threshold for each item, and the thresholds differ item by item"
+  ],
+  "precision": [
+    {
+      "unit": "t",
+      "decimals": 3
+    },
+    {
+      "unit": "m3",
+      "decimals": 2
+    },
+    {
+      "unit": "m2",
+      "decimals": 2
+    },
+    {
+      "unit": "m",
+      "decimals": 2
+    },
+    {
+      "unit": "kg",
+      "decimals": 2
+    },
+    {
+      "unit": "个 / 件 / 根 / 套 / 樘",
+      "decimals": 0,
+      "note": "whole numbers"
+    }
+  ],
+  "practice_notes": [
+    "The precision above is a rounding rule for the bill, not a tolerance on the measurement",
+    "Two bills that disagree on a quantity usually disagree about a deduction threshold rather than about the drawing"
+  ],
+  "enables_rule_ids": []
+}

@@ -7,7 +7,28 @@ Validation this pack switches on:
   * ``gbt50500`` - two rules in the core engine, both over the bill of
     quantities item code. One requires the code to be present on every
     position, the other requires it to be a 9-digit or 12-digit numeric
-    national code. That is the whole of it.
+    national code. That is the whole of what the engine checks.
+
+Two spellings, and they are not interchangeable. ``gbt50500`` is the
+engine rule set: it is the rule ids, the ``standard`` attribute on the
+two rule classes, the message keys in four locales and the entry in
+``validation_rule_sets`` below. ``gb50500`` is the classification
+standard: it is what the registry calls the standard, what
+``classification_order`` hands to the section path builder, and
+therefore the key a cost item's ``classification`` dict has to use. The
+demo bills were keyed with the rule set name until 2026-08, which meant
+the two rules read them correctly and no Chinese cost item ever produced
+a section path. The rules now read either spelling, so a bill stored
+before that change still validates.
+
+Reference documents. Seven ``rule_packs/*.json`` files, declared below.
+They are read by a person rather than by the engine, and each carries a
+``review_status`` saying how far it has been checked. They exist because
+the things a Chinese bill does differently are not things a foreign
+estimator finds out by looking at one: the comprehensive unit rate
+excludes the statutory charges and the tax, the quantity is net and the
+waste is priced in the rate, and two of the five bills may not be
+discounted in a tender at all.
 
 Standards the demo data is written against. These are reference context
 for the reader; no engine rules exist behind them today:
@@ -82,8 +103,24 @@ MANIFEST = PartnerPackManifest(
     ],
     default_currency="CNY",
     default_tax_template="cn_vat_9",
-    # This pack ships no rule_packs/ documents, so the document list is empty.
-    validation_rule_packs=[],
+    # The regional markup table states the Chinese national build-up, and
+    # ``_reconcile_with_region_table`` derives the methodology from it. Naming
+    # it here is what makes a project created from this pack open on that
+    # build-up rather than on the neutral international one.
+    default_methodology="china",
+    # Reference documents. These are read by a person, not by the engine: each
+    # states what a Chinese bill does and why, and each carries a review_status
+    # saying how far it has been checked. Only the first is backed by engine
+    # rules today, and it names them in enables_rule_ids.
+    validation_rule_packs=[
+        "cn_gb50500_qingdan_bianma",  # the twelve-digit item code and the five required elements
+        "cn_qingdan_wubu_jiegou",  # the five bills a tender price is made of
+        "cn_zonghe_danjia",  # what the comprehensive unit rate contains, and what it does not
+        "cn_gb50854_gongchengliang",  # net measurement, and where the waste goes instead
+        "cn_guifei_anquanwenming",  # the two fees that may not be discounted
+        "cn_zengzhishui_jianzhu",  # VAT: general method 9%, simplified method 3%
+        "cn_zhaobiao_jiesuan",  # the bid ceiling, and how the price moves afterwards
+    ],
     validation_rule_sets=[
         "gbt50500",  # GB 50500-2013 item code: presence and 9/12-digit format
         #
@@ -110,8 +147,10 @@ MANIFEST = PartnerPackManifest(
         favicon_path=None,
         powered_by_text=None,  # use default co-branding string
     ),
-    # No onboarding.yaml either, so the default wizard steps run.
-    onboarding_script_path=None,
+    # Chinese-first, six steps. It asks about the things a workspace configured
+    # from a European default gets wrong: the five bills, the two fees that may
+    # not be discounted, and which of the two tax methods the contract is on.
+    onboarding_script_path="onboarding.yaml",
     metadata={
         "country": "CN",
         "country_name_en": "China",
