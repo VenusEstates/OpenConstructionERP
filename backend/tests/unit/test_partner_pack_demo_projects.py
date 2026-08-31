@@ -35,7 +35,14 @@ from app.core.demo_projects import (
 # 50500-2013 demo uses the standard Chinese measurement words: "项" (xiang,
 # lump-sum work item, like "lsum"), "台" (tai, a machine/equipment set), "樘"
 # (tang, a door/window leaf), "组" (zu, a group/set), "套" (tao, a set/system),
-# "根" (gen, a long single piece such as a pile or rod).
+# "根" (gen, a long single piece such as a pile or rod). Hungary uses the
+# tetelrend words "db" (darab, piece), "klt" (keszlet, set), "ho" (month) and
+# "nap" (day), plus "kWp" for photovoltaic capacity. Russia uses GESN measurers,
+# which carry the norm multiplier in the unit itself: "100 m2" means the rate is
+# per hundred square metres, which is how the resource-index method prices a
+# norm, so the scaled forms are units in their own right and not a formatting
+# accident. Cyrillic month and Latin "mes" (Portuguese) look near-identical and
+# are two separate tokens on purpose.
 _ALLOWED_UNITS = {
     "m2",
     "m3",
@@ -62,6 +69,25 @@ _ALLOWED_UNITS = {
     "组",
     "套",
     "根",
+    # Hungary (tetelrend)
+    "db",
+    "klt",
+    "hó",
+    "nap",
+    "kWp",
+    # Russia (GESN measurers)
+    "шт",
+    "компл",
+    "м3",
+    "мес",
+    "т",
+    "100 м",
+    "100 м2",
+    "100 м3",
+    "100 шт",
+    "100 компл",
+    "1000 м2",
+    "1000 м3",
 }
 
 _CATALOG_BY_ID = {c["demo_id"]: c for c in DEMO_CATALOG}

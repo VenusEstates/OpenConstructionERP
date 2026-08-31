@@ -2280,11 +2280,13 @@ PACK_DEMO_PROJECT: dict[str, str] = {
     "brazil-sinapi": "residential-saopaulo",
     "china-gbt50500": "office-shanghai",
     "doker-formwork": "rc-structure-formwork",
+    "hungary-hu": "residential-budapest",
     "india-cpwd": "govt-building-delhi",
     "mexico-mx": "mixed-use-mexico-city",
     "modular-prefab": "modular-housing",
     "renewables-epc": "solar-bess-epc",
     "retail-grocery-dach": "retail-market-heilbronn",
+    "russia-gesn": "residential-moscow",
     "saudi-vision2030": "mixed-use-riyadh",
     "south-africa": "mixed-use-johannesburg",
     "uk-jct": "commercial-london",
@@ -2317,6 +2319,8 @@ _COUNTRY_ISO2: dict[str, str] = {
     "United Kingdom": "GB",
     "United States": "US",
     "France": "FR",
+    "Hungary": "HU",
+    "Russia": "RU",
     "United Arab Emirates": "AE",
 }
 
@@ -2335,6 +2339,8 @@ _AUTHORITY_BY_COUNTRY: dict[str, str] = {
     "IN": "the municipal corporation",
     "MX": "the municipal works authority",
     "NL": "the gemeente",
+    "HU": "az építésügyi hatóság",
+    "RU": "орган государственного строительного надзора",
     "SA": "the municipality",
     "ZA": "the local building control officer",
     "GB": "the local authority building control",
@@ -2361,6 +2367,8 @@ _NOTICE_CLAUSE_BY_COUNTRY: dict[str, str] = {
     "NZ": "NZS 3910, written notice",
     "CA": "CCDC 2, notice in writing",
     "NL": "UAV 2012, kennisgeving",
+    "HU": "Ptk. vállalkozási szerződés, írásbeli értesítés",
+    "RU": "ГК РФ ст. 716, письменное уведомление",
 }
 
 # Friendly project archetype label per pack demo project.
@@ -2393,6 +2401,10 @@ _PACK_DEMO_TYPE: dict[str, str] = {
     "retail-market-heilbronn": "Retail",
     "retail-market-heidelberg": "Retail",
     "retail-market-karlsruhe": "Retail",
+    "residential-budapest": "Residential",
+    "office-debrecen": "Commercial",
+    "residential-moscow": "Residential",
+    "school-stpetersburg": "Education",
 }
 
 
@@ -2408,6 +2420,8 @@ _CURRENCY_SYMBOL: dict[str, str] = {
     "NZD": "NZ$",
     "CAD": "C$",
     "CNY": "¥",
+    "HUF": "Ft",
+    "RUB": "₽",
 }
 
 
@@ -2444,6 +2458,8 @@ _DEMO_COST_LEVEL: dict[str, tuple[float, float]] = {
     "ZAR": (17.00, 5.00),
     "MXN": (19.00, 3.20),
     "INR": (55.00, 8.00),
+    "HUF": (400.00, 140.00),
+    "RUB": (100.00, 35.00),
 }
 
 # The words the assemblies and resources vocabularies use for people. Both

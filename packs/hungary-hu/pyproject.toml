@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "openconstructionerp-hungary-hu"
 version = "0.1.0"
 description = "Country pack for the Hungarian market: the seventeen-chapter building item order, the infrastructure item order with per-project item numbers and code dictionaries, the material and fee split, contingency and VAT on the summary sheet, forint at zero decimals."
+readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.11"
 authors = [

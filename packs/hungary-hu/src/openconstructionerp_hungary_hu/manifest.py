@@ -59,7 +59,7 @@ MANIFEST = PartnerPackManifest(
     ],
     default_modules=[],  # empty = show all
     hidden_modules=[],
-    demo_template_ids=[],
+    demo_template_ids=["residential-budapest", "office-debrecen"],
     branding=PartnerBranding(
         primary_color="#CE2939",  # red of the national flag
         accent_color="#477050",  # green of the national flag

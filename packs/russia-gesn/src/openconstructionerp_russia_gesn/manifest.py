@@ -61,7 +61,7 @@ MANIFEST = PartnerPackManifest(
     ],
     default_modules=[],  # empty = show all
     hidden_modules=[],
-    demo_template_ids=[],
+    demo_template_ids=["residential-moscow", "school-stpetersburg"],
     branding=PartnerBranding(
         primary_color="#0039A6",  # blue of the national flag
         accent_color="#D52B1E",  # red of the national flag
