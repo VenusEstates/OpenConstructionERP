@@ -4,6 +4,7 @@
   "name_hi": "आईएस 800:2007 — इस्पात में सामान्य निर्माण (सीमा-स्थिति)",
   "standard": "IS 800:2007",
   "jurisdiction": "IN",
+  "review_status": "Written from the published standard. Nothing in it is checked by the engine, and a steel design decision is an engineer's, not an estimator's. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet.",
   "regulator": "Bureau of Indian Standards (BIS)",
   "publication_year": 2007,
   "applies_to": ["boq", "validation", "structural-design"],

@@ -4,6 +4,7 @@
   "name_hi": "आईएस 456:2000 — सादा एवं प्रबलित कंक्रीट (संशोधनों सहित)",
   "standard": "IS 456:2000",
   "jurisdiction": "IN",
+  "review_status": "Written from the published standard and its amendments. Nothing in it is checked by the engine, and a concrete design decision is an engineer's, not an estimator's. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet.",
   "regulator": "Bureau of Indian Standards (BIS)",
   "publication_year": 2000,
   "latest_amendment_year": 2021,

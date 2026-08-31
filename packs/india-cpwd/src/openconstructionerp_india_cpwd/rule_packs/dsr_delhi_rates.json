@@ -4,6 +4,7 @@
   "name_hi": "डीएसआर 2023 — दिल्ली अनुसूची दर (सीपीडब्ल्यूडी)",
   "standard": "DSR-2023",
   "jurisdiction": "IN",
+  "review_status": "DSR is republished annually and the rates in any edition are the publisher's, so none are reproduced here; what this document carries is the item structure and the trade sections. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet. Not reviewed by an Indian quantity surveyor.",
   "regulator": "Central Public Works Department, Government of India",
   "publication_year": 2023,
   "note_reference_year": "DSR is annually updated. 2023 is the most recent published edition at v5.7.0 ship date. The onboarding wizard prompts the user to confirm the active reference year and quarterly Cost Index.",

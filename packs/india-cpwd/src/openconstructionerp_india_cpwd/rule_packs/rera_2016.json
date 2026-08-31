@@ -4,6 +4,7 @@
   "name_hi": "रेरा 2016 — रियल एस्टेट (विनियमन एवं विकास) अधिनियम",
   "standard": "RERA Act 2016",
   "jurisdiction": "IN",
+  "review_status": "Written from the Act. RERA is administered state by state and the registration thresholds, fees and escrow mechanics differ between authorities, so the state authority is the reference for anything a project is held to. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet.",
   "regulator": "Real Estate Regulatory Authority (state-wise: UP-RERA, MahaRERA, K-RERA, TN-RERA, etc.)",
   "publication_year": 2016,
   "applies_to": ["projects", "tendering", "compliance", "validation"],

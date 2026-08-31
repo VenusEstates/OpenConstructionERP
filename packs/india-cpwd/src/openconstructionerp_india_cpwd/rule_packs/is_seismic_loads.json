@@ -4,6 +4,7 @@
   "name_hi": "आईएस 1893 + आईएस 875 + आईएस 13920 — भूकम्पीय एवं भार बंडल",
   "standard": "IS 1893-1:2016 + IS 875:1987 + IS 13920:2016",
   "jurisdiction": "IN",
+  "review_status": "Written from the three published standards in the bundle. The seismic zone, the importance factor and the response reduction factor are design inputs recorded against a project, not quantities the engine can derive or check. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet.",
   "regulator": "Bureau of Indian Standards (BIS)",
   "applies_to": ["validation", "structural-design", "projects"],
   "codes_in_bundle": [

@@ -4,6 +4,7 @@
   "name_hi": "सीपीडब्ल्यूडी विशिष्टियाँ 2019 + वर्क्स मैनुअल 2019 + डीएसआर 2023",
   "standard": "CPWD-Specs-2019",
   "jurisdiction": "IN",
+  "review_status": "The sub-head order, item numbering and unit vocabulary are drawn from the published CPWD specifications and schedule. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet. Not reviewed by an Indian quantity surveyor.",
   "regulator": "Central Public Works Department, Government of India",
   "publication_year": 2019,
   "complementary_documents": [

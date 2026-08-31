@@ -25,14 +25,14 @@ MANIFEST = PartnerPackManifest(
         "hi": "locales/hi.json",
     },
     cwicr_regions=[
-        # Top 7 Indian metros — pre-loaded for instant project setup
-        "cwicr-eng-delhi",  # Delhi NCR (default for DSR)
-        "cwicr-eng-mumbai",  # Maharashtra
-        "cwicr-eng-bangalore",  # Karnataka
-        "cwicr-eng-chennai",  # Tamil Nadu
-        "cwicr-eng-hyderabad",  # Telangana
-        "cwicr-eng-kolkata",  # West Bengal
-        "cwicr-eng-pune",  # Maharashtra (industrial belt)
+        # One Indian catalogue exists and this is its marketplace slug. The
+        # list used to name seven metros; six of them resolved to nothing, and
+        # the one the pack called its default, Delhi, was among them. A slug
+        # with no catalogue behind it is skipped at install with no error, so
+        # the pack read as if it shipped seven cities of rates and shipped
+        # one. The other six are recorded under metadata as planned, which is
+        # what they always were.
+        "cwicr-hi-mumbai",
     ],
     default_currency="INR",
     default_tax_template="in_gst_18",
@@ -86,7 +86,7 @@ MANIFEST = PartnerPackManifest(
             "Income-Tax Act s.194C (TDS on contractors)",
             "BOCW Cess Act 1996 (labour cess 1%)",
         ],
-        # CPWD = central PWD only. State works follow state-specific SoRs.
+        # CPWD is central PWD only. State works follow state-specific SoRs.
         # Top 5 state SoRs flagged in onboarding as separately-enableable.
         "compatible_state_sors": [
             "mppwd",  # Madhya Pradesh PWD
@@ -97,18 +97,28 @@ MANIFEST = PartnerPackManifest(
         ],
         "compatible_state_sors_note": (
             "CPWD is central-only. State PWD works need the matching state "
-            "SoR enabled separately — the onboarding wizard prompts the user "
+            "SoR enabled separately. The onboarding wizard prompts the user "
             "to select the predominant work type so the right SoR is loaded."
         ),
-        "cwicr_metros_preloaded": [
-            "Delhi NCR",
+        # What actually loads, and what does not. Kept apart on purpose: the
+        # single list that used to hold all seven could not tell a reader
+        # which of them the install would produce.
+        "cwicr_metros_available": [
             "Mumbai",
+        ],
+        "cwicr_metros_planned": [
+            "Delhi NCR",
             "Bangalore",
             "Chennai",
             "Hyderabad",
             "Kolkata",
             "Pune",
         ],
+        "cwicr_metros_planned_note": (
+            "No catalogue is published for these yet. DSR is a Delhi schedule "
+            "and no Delhi catalogue ships, so rates for Delhi work come from "
+            "your own cost history or your own copy of the schedule."
+        ),
         "dsr_reference_year": 2023,
         "nbc_amendment_year": 2024,
         "support_email": "info@datadrivenconstruction.io",

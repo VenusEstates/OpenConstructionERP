@@ -4,6 +4,7 @@
   "name_hi": "भारत का राष्ट्रीय भवन निर्माण संहिता 2016 (2024 संशोधनों सहित)",
   "standard": "NBC 2016",
   "jurisdiction": "IN",
+  "review_status": "Written from the published code and the 2024 amendments. The code is adopted by states and local bodies with their own variations, so what applies on a given project is a local question this document cannot answer. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet.",
   "regulator": "Bureau of Indian Standards (BIS)",
   "publication_year": 2016,
   "latest_amendment_year": 2024,

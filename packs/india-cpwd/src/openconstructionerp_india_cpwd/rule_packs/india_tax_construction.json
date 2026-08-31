@@ -4,6 +4,7 @@
   "name_hi": "भारत निर्माण कर — जीएसटी + टीडीएस + श्रम उपकर",
   "standard": "CGST/SGST/IGST Act + Income-Tax Act + BOCW Cess Act",
   "jurisdiction": "IN",
+  "review_status": "Rates are drawn from public sources and change by finance act and notification, so they are a starting point rather than an authority; confirm against the current notification before relying on any of them. What the engine runs against an Indian estimate is the cpwd rule set: cpwd.code_required and cpwd.measurement_units. The rule ids listed below are the checks this document is written for and are not built yet. Nothing here is tax advice.",
   "regulator": "Central Board of Indirect Taxes & Customs (CBIC) + Central Board of Direct Taxes (CBDT) + Building & Other Construction Workers Welfare Cess Act 1996",
   "applies_to": ["tendering", "invoicing", "payments", "validation"],
   "description": "Enables OCERP built-in validation rules that check tender documents, invoices and payment certificates for combined Indian-construction tax compliance — GST (correct HSN/SAC, rate by contract type: 12% affordable housing / 18% commercial / 5% govt works contract), TDS u/s 194C (1% individual, 2% company) on contractor payments, labour cess 1% on construction cost (BOCW Act), reverse-charge, place-of-supply, composition-scheme consistency.",

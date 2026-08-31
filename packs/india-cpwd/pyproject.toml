@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "openconstructionerp-india-cpwd"
 version = "0.2.0"
 description = "Pre-configured partner pack for Indian contractors, PSUs and private developers — CPWD Specs 2019 + Works Manual 2019 + DSR 2023, IS-codes bundle (456, 800, 1893, 875, 13920), NBC 2016 + 2024 amendments, RERA 2016, GST + TDS u/s 194C + BOCW labour cess. English + Hindi UI."
+readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.11"
 authors = [

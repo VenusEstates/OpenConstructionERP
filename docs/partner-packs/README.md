@@ -233,11 +233,11 @@ wheels and are independent of the core release cycle.
 | `batimatech-ca` | Canada | CAD | fr-CA, en-CA | NBC 2020, CCDC 2, CSA A23 | Full reference — favicon + bilingual locales + onboarding |
 | `bimhessen-de` | Germany (Hessen) | EUR | de | DIN 276, GAEB X83/X86, VOB 2023, ISO 19650 CDE, BKI | German BIM consultancy preset |
 | `doker-formwork` | Germany | EUR | de | DIN 18218, formwork-cycle rules | Formwork-supplier vertical |
-| `uk-jct` | United Kingdom | GBP | en-GB | NRM 1 + NRM 2, JCT clauses, BCIS | UK GC preset |
+| `uk-jct` | United Kingdom | GBP | en-GB | NRM 1, 2 and 3, JCT contract suite, Construction Act payments, CIS and the VAT reverse charge, CDM 2015, Building Safety Act 2022 | Two engine rule sets, `nrm` and `uk_statutory`; no commercial price book bundled |
 | `us-costdata` | United States | USD | en-US | MasterFormat 2020, AIA A201-2017, US city cost index | US GC preset |
 | `aus-nzs` | Australia / NZ | AUD | en-AU | AS 1684, NZS 3604, Rawlinsons, AS 4000 | AU/NZ residential + commercial |
 | `brazil-sinapi` | Brazil | BRL | pt-BR | NBR 12721, RPS PDF, SINAPI | Latam tier-1 |
-| `india-cpwd` | India | INR | en-IN, hi | CPWD, IS standards, DSR | Indian public-works |
+| `india-cpwd` | India | INR | en, hi | CPWD Specifications and DSR, IS 456, IS 800, the IS 1893 seismic bundle, IS 1200 measurement, NBC 2016, RERA, GST and TDS | Central PWD works; state SoRs are named, not shipped |
 | `hungary-hu` | Hungary | HUF | en | Building and infrastructure item orders, material and fee split, VAT | Runs in English: no Hungarian UI bundle ships yet |
 | `russia-gesn` | Russia | RUB | ru | GESN/FER norm base, resource decomposition, price level, overhead and profit on payroll | Ships a Russian UI; carries the `cwicr-ru-stpetersburg` cost database |
 | `saudi-vision2030` | Saudi Arabia | SAR | ar, en | SBC, MoMRAH, Aramco standards | KSA mega-projects |
