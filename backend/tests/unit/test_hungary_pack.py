@@ -30,6 +30,8 @@ from app.core.classification_registry import (
     KNOWN_CLASSIFICATION_STANDARDS,
     resolve_standard,
 )
+from app.core.demo_packs import PACK_TEMPLATES
+from app.core.demo_projects import DemoTemplate, _enrich_position_metadata
 from app.core.validation.messages import is_key_present
 from app.core.validation.rules import HU_BUILDING_CHAPTERS
 
@@ -217,3 +219,101 @@ def test_every_message_exists_in_every_validation_locale(key: str, locale: str) 
     """A missing message is not an error anywhere: the bundle prints the key at
     the user and logs a warning nobody reads."""
     assert is_key_present(key, locale), f"{key} is missing from {locale}.json"
+
+
+# ── The shipped demos ─────────────────────────────────────────────────────
+#
+# The pair above compares copies of a fact. This pair compares the fact
+# against the data the product actually shows, which is where both Hungarian
+# defects lived: the demos named a rule set that does not exist, so none of
+# the rules above ran on them, and their lines carried no anyag/dij split, so
+# the one rule that speaks to the thing every Hungarian bill is quoted in had
+# nothing to read even once the set name was right.
+
+
+def _hungarian_templates() -> list[DemoTemplate]:
+    """The two shipped Hungarian demo templates."""
+    return [t for t in PACK_TEMPLATES if t.demo_id in {"office-debrecen", "residential-budapest"}]
+
+
+def test_both_hungarian_demos_are_present() -> None:
+    """Without this the two tests below pass over an empty list."""
+    assert len(_hungarian_templates()) == 2, "the Hungarian demo templates are not both loading"
+
+
+@pytest.mark.parametrize("demo_id", ["office-debrecen", "residential-budapest"])
+def test_the_demo_asks_for_the_rule_set_that_exists(demo_id: str) -> None:
+    """``tetelrend`` is the classification standard, ``hungary`` is the rule set.
+
+    Both templates named the standard where the rule set goes. The engine logs
+    an unimplemented rule set and continues, so the only symptom was a report
+    that had run fewer checks than it listed.
+    """
+    template = next(t for t in _hungarian_templates() if t.demo_id == demo_id)
+    assert "hungary" in template.validation_rule_sets, (
+        f"{demo_id} does not ask for the hungary rule set, so the item order, "
+        "the seventeen chapters and the material and fee split run on nothing"
+    )
+    assert "tetelrend" not in template.validation_rule_sets, (
+        f"{demo_id} names tetelrend as a rule set again; it is the classification standard"
+    )
+    assert template.classification_standard == "tetelrend", (
+        f"{demo_id} should still classify to tetelrend, which is the standard's real job"
+    )
+
+
+@pytest.mark.parametrize("demo_id", ["office-debrecen", "residential-budapest"])
+def test_every_priced_demo_line_carries_a_reconciling_split(demo_id: str) -> None:
+    """anyag plus dij is the rate, on every priced line of the shipped demo.
+
+    ``HungarianMaterialFeeSplit`` treats a line with no split as "not my row",
+    which is right for the imported bills a Hungarian workspace also holds and
+    wrong for the country's own demo: it made the rule silent on the one bill
+    that exists to show what the pack does. The split is derived from the
+    resource rollup the seeder already computes, so this asserts the derivation
+    stays exact rather than merely present.
+    """
+    template = next(t for t in _hungarian_templates() if t.demo_id == demo_id)
+
+    lines = 0
+    for _ordinal, _title, _classification, items in template.sections:
+        for item_ordinal, description, unit, _qty, rate, cls in items:
+            lines += 1
+            meta = _enrich_position_metadata(description=description, unit=unit, unit_rate=rate, classification=cls)
+            block = meta.get("hu")
+            assert block, f"{demo_id} line {item_ordinal} carries no anyag/dij split"
+            split = block["material_unit_rate"] + block["fee_unit_rate"]
+            # The rule's own tolerance is 1 percent; the derivation should be
+            # exact, so this is tighter on purpose. A drift here means the
+            # resource leaves stopped summing to the rate.
+            assert abs(split - rate) <= max(0.01, rate * 1e-9), (
+                f"{demo_id} line {item_ordinal}: anyag {block['material_unit_rate']} plus "
+                f"dij {block['fee_unit_rate']} is {split}, and the rate is {rate}"
+            )
+
+    assert lines >= 50, f"{demo_id} priced only {lines} lines, which is too few to be the shipped demo"
+
+
+def test_the_split_is_not_emitted_for_a_line_from_elsewhere() -> None:
+    """A bill that is not Hungarian must not grow a Hungarian block.
+
+    The rule reads a missing block as "not my row", and that behaviour is what
+    keeps a Hungarian workspace from flagging every imported foreign bill. If
+    the seeder started emitting the block for everything, the rule would begin
+    judging bills it has no business judging.
+    """
+    foreign = _enrich_position_metadata(
+        description="Cast in-situ RC slab C30/37",
+        unit="m3",
+        unit_rate=520.0,
+        classification={"din276": "331"},
+    )
+    assert "hu" not in foreign, "a DIN 276 line was given an anyag/dij split"
+
+    hungarian = _enrich_position_metadata(
+        description="Monolit vasbeton fodem C30/37",
+        unit="m3",
+        unit_rate=38500.0,
+        classification={"tetelrend": "MA-04-12-01"},
+    )
+    assert "hu" in hungarian, "a tetelrend line was not given an anyag/dij split"

@@ -4615,6 +4615,29 @@ def _enrich_position_metadata(description: str, unit: str, unit_rate: float, cla
     if breakdown:
         meta["resource_breakdown"] = breakdown
 
+    # A Hungarian bill quotes every priced line twice over, as anyag (material)
+    # and dij (labour and plant fee), and the two together are the rate. The
+    # split is not presentation there: the summary sheets are built on it and
+    # it is what a client compares between tenderers, which is why the country
+    # pack ships a rule that reconciles the halves against the line.
+    #
+    # The two numbers are the resource rollup computed above, not a per-chapter
+    # guess: anyag is the material leaf and dij is everything else the rate is
+    # built from. ``_make_resources`` leaves sum to the unit rate exactly, so
+    # the halves reconcile by construction rather than by rounding luck.
+    #
+    # Emitted only for a line that actually carries a Hungarian item code. A
+    # Hungarian workspace holds plenty of bills imported from elsewhere, and
+    # ``HungarianMaterialFeeSplit`` reads a missing block as "not my row"
+    # rather than as a failure, which is the behaviour to preserve.
+    if breakdown and (classification or {}).get("tetelrend"):
+        material = Decimal(str(breakdown.get("material", {}).get("total", 0.0)))
+        fee = sum(
+            (Decimal(str(v.get("total", 0.0))) for k, v in breakdown.items() if k != "material"),
+            Decimal("0"),
+        )
+        meta["hu"] = {"material_unit_rate": float(material), "fee_unit_rate": float(fee)}
+
     return meta
 
 
