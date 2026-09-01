@@ -93,6 +93,15 @@ class InvoiceLineItemCreate(BaseModel):
     # Gap B (Wave 6): optional link to a costmodel.CostLine so the paid actual
     # posts onto the matching cost-spine budget row.
     cost_line_id: UUID | None = Field(default=None)
+    # The same link said the way the person entering a supplier invoice knows
+    # it (Issue #454). Nobody typing an invoice thinks in cost lines; they think
+    # in the bill item the work was for. The service resolves this to the
+    # position's own cost line and stores that, so there is still exactly one
+    # link on the row and only one way for the money to roll up. Naming a
+    # position that is not on the cost spine is refused rather than dropped -
+    # a line that silently posted nowhere is the failure this whole field
+    # exists to remove.
+    boq_position_id: UUID | None = Field(default=None)
     sort_order: int = Field(default=0, ge=0)
     # EN 16931 per-line VAT. Left unset the exporter falls back to the
     # invoice-level rate, which is only right when every line shares one rate.

@@ -1042,6 +1042,9 @@ async def get_position_actuals(
                 installed_amount=row.installed_amount,
                 consumed_quantity=row.consumed_quantity,
                 consumed_amount=row.consumed_amount,
+                labour_hours=row.labour_hours,
+                plant_hours=row.plant_hours,
+                labour_hours_per_installed_unit=row.labour_hours_per_installed_unit,
             )
             for row in report.rows
         ],

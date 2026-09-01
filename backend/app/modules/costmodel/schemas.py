@@ -875,6 +875,17 @@ class PositionActualsRow(BaseModel):
     consumed_quantity: Decimal = Decimal("0")
     consumed_amount: Decimal = Decimal("0")
 
+    #: Net hours booked against this position on approved, unreversed field
+    #: timesheets. Labour and plant stay apart: only labour compares with a
+    #: productivity norm.
+    labour_hours: Decimal = Decimal("0")
+    plant_hours: Decimal = Decimal("0")
+    #: Labour hours per unit of work actually IN PLACE, or None when no progress
+    #: has been reported for the position. Deliberately not hours over the
+    #: billed quantity, which would make a half-built item read as twice as
+    #: productive as it is and an untouched one as the best on the project.
+    labour_hours_per_installed_unit: Decimal | None = None
+
     @field_serializer(
         "estimate_quantity",
         "estimate_unit_rate",
@@ -889,6 +900,9 @@ class PositionActualsRow(BaseModel):
         "installed_amount",
         "consumed_quantity",
         "consumed_amount",
+        "labour_hours",
+        "plant_hours",
+        "labour_hours_per_installed_unit",
         when_used="json",
     )
     def _ser_money(self, v: Decimal | None) -> str | None:

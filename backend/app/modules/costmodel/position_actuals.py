@@ -15,11 +15,30 @@ physical facts next to the money that the cost line does not hold:
 * how much of the item is installed, from the progress module's latest
   percent-complete observation for that position;
 * how much material was consumed against it and what that material cost, from
-  the site inventory ledger.
+  the site inventory ledger;
+* how many hours the crew and the plant booked against it, from approved field
+  timesheets.
 
 Which lets one row say the thing nobody could see before: you billed 120 m3 at
-180, you have committed 1800 of it, the crew reports 40 percent installed, and
-the store has issued 55 m3 worth 9900 against it.
+180, you have committed 1800 of it, the crew reports 40 percent installed, the
+store has issued 55 m3 worth 9900 against it, and the gang has booked 21 hours
+on it.
+
+Hours, and the denominator under them
+-------------------------------------
+
+Booked hours are the half of the productivity question the platform can know.
+The other half, what the estimate predicted, lives in the norm the line was
+priced from, and nothing records which norm that was, so this module reports
+the measured side and does not invent the predicted one.
+
+Even the measured side has a trap in the denominator. Hours divided by the
+BILLED quantity on a half-built item reads better the less of the item is
+finished, which is the same failure as a zero risk dispersion: an item nobody
+has touched would post the best productivity on the project. So the per-unit
+figure is reported against the INSTALLED quantity and is None on any position
+whose progress nobody has reported. A rate with no denominator is not a rate,
+and a blank says so where a number would lie.
 
 Two spines, met in one row
 --------------------------
@@ -61,7 +80,7 @@ import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 #: Money is quantised to two places on the way out, quantities to four, which
@@ -70,6 +89,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 _MONEY_Q = Decimal("0.01")
 _QTY_Q = Decimal("0.0001")
 _PCT_Q = Decimal("0.01")
+#: Hours to two places, matching ``field_time.field_time_math``, so a figure
+#: does not change shape between the module that recorded it and this one.
+_HOURS_Q = Decimal("0.01")
+#: Hours per unit to four places: a norm of 0.30 h/m2 is quoted to two, and a
+#: measured rate needs more room than the target it is compared against.
+_RATE_Q = Decimal("0.0001")
 _ZERO = Decimal("0")
 
 
@@ -124,6 +149,27 @@ class PositionActuals:
     consumed_quantity: Decimal = _ZERO
     consumed_amount: Decimal = _ZERO
 
+    labour_hours: Decimal = _ZERO
+    plant_hours: Decimal = _ZERO
+
+    @property
+    def labour_hours_per_installed_unit(self) -> Decimal | None:
+        """Booked labour hours per unit of work actually in place.
+
+        None when the crew has not reported progress on this position, or has
+        reported none, or the position carries no quantity. Those are three
+        different reasons and all three make the same point: there is no
+        denominator, so there is no rate. Reporting hours over the BILLED
+        quantity instead would make every half-built item look fast and every
+        untouched item look fastest of all.
+        """
+        if self.installed_percent is None or self.installed_percent <= _ZERO:
+            return None
+        installed_quantity = self.estimate_quantity * self.installed_percent / Decimal("100")
+        if installed_quantity <= _ZERO:
+            return None
+        return (self.labour_hours / installed_quantity).quantize(_RATE_Q)
+
     @property
     def on_cost_spine(self) -> bool:
         """Whether the money columns can mean anything for this position."""
@@ -161,7 +207,13 @@ class PositionActualsReport:
         )
         out = {k: sum((getattr(r, k) for r in self.rows), _ZERO) for k in keys}
         out["uncommitted_amount"] = out["estimate_amount"] - out["committed_amount"]
-        return {k: v.quantize(_MONEY_Q) for k, v in out.items()}
+        totals = {k: v.quantize(_MONEY_Q) for k, v in out.items()}
+        # Hours quantise to their own scale rather than to money's. No project
+        # total for hours per unit: adding up rates over positions in different
+        # units would produce a number with no unit at all.
+        for key in ("labour_hours", "plant_hours"):
+            totals[key] = sum((getattr(r, key) for r in self.rows), _ZERO).quantize(_HOURS_Q)
+        return totals
 
     @property
     def positions_off_spine(self) -> int:
@@ -184,6 +236,7 @@ def assemble_rows(
     cost_line_codes: dict[str, str],
     installed_pct: dict[uuid.UUID, float],
     consumed: dict[uuid.UUID, tuple[Decimal, Decimal]],
+    booked_hours: dict[uuid.UUID, tuple[Decimal, Decimal]] | None = None,
 ) -> list[PositionActuals]:
     """Join the aggregates onto the positions. Pure, so it can be tested alone.
 
@@ -207,6 +260,7 @@ def assemble_rows(
             else _ZERO
         )
         consumed_qty, consumed_amount = consumed.get(pos.id, (_ZERO, _ZERO))
+        labour_hours, plant_hours = (booked_hours or {}).get(pos.id, (_ZERO, _ZERO))
 
         rows.append(
             PositionActuals(
@@ -228,6 +282,8 @@ def assemble_rows(
                 installed_amount=installed_amount,
                 consumed_quantity=consumed_qty.quantize(_QTY_Q),
                 consumed_amount=consumed_amount.quantize(_MONEY_Q),
+                labour_hours=labour_hours.quantize(_HOURS_Q),
+                plant_hours=plant_hours.quantize(_HOURS_Q),
             )
         )
     return rows
@@ -267,6 +323,57 @@ async def consumption_by_position(
             StockMovement.boq_position_id.in_(position_ids),
         )
         .group_by(StockMovement.boq_position_id)
+    )
+    rows = (await session.execute(stmt)).all()
+    return {row[0]: (_to_decimal(row[1]), _to_decimal(row[2])) for row in rows}
+
+
+async def hours_by_position(
+    session: AsyncSession,
+    project_id: uuid.UUID,
+    position_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, tuple[Decimal, Decimal]]:
+    """Labour and plant hours booked against each position, in one grouped query.
+
+    Only approved timesheets count, and only those that have not been reversed.
+    That single condition is what makes a corrected day net to nothing, and it
+    is worth spelling out because the obvious filter gets it exactly backwards.
+    Correcting an approved timesheet does not edit it: the original flips to
+    ``reversed`` and a mirror sheet is written with ``reverses_id`` set and its
+    hours still POSITIVE, because in this module the sign lives on the sheet
+    and not on the row (see ``field_time_math.net_hours``). Filter on
+    ``status == 'approved'`` alone and the original drops out while its mirror
+    is counted at face value, so a day that was cancelled reports its hours
+    twice over - once, in full, in the wrong direction. Excluding sheets that
+    reverse something removes both halves and leaves zero, which is what a
+    cancelled day is worth.
+
+    Draft and submitted sheets are excluded too. Hours nobody has approved are
+    a proposal, and an estimate compared against proposals is compared against
+    nothing.
+
+    Labour and plant come back separately because they answer different
+    questions and only one of them is a productivity norm. A line is one or the
+    other by a CHECK constraint, so nothing is counted twice and nothing that
+    is neither is counted at all.
+    """
+    if not position_ids:
+        return {}
+
+    from app.modules.field_time.models import FieldTimesheet, FieldTimesheetLine
+
+    labour = func.sum(case((FieldTimesheetLine.resource_id.isnot(None), FieldTimesheetLine.hours), else_=0))
+    plant = func.sum(case((FieldTimesheetLine.equipment_id.isnot(None), FieldTimesheetLine.hours), else_=0))
+    stmt = (
+        select(FieldTimesheetLine.boq_position_id, labour, plant)
+        .join(FieldTimesheet, FieldTimesheetLine.timesheet_id == FieldTimesheet.id)
+        .where(
+            FieldTimesheet.project_id == project_id,
+            FieldTimesheet.status == "approved",
+            FieldTimesheet.reverses_id.is_(None),
+            FieldTimesheetLine.boq_position_id.in_(position_ids),
+        )
+        .group_by(FieldTimesheetLine.boq_position_id)
     )
     rows = (await session.execute(stmt)).all()
     return {row[0]: (_to_decimal(row[1]), _to_decimal(row[2])) for row in rows}
@@ -317,11 +424,11 @@ async def build_position_actuals(
 ) -> PositionActualsReport:
     """Assemble the report for a project, optionally narrowed to some positions.
 
-    Six queries regardless of how many positions come back: the positions
-    themselves, then one grouped aggregate each for budget, purchase orders,
-    contracts, claims, progress and consumption. Narrowing happens before the
-    aggregates run, so a drawer asking about one position does not pay for the
-    whole project.
+    A fixed number of queries regardless of how many positions come back: the
+    positions themselves, then one grouped aggregate each for budget, purchase
+    orders, contracts, claims, progress, consumption and booked hours.
+    Narrowing happens before the aggregates run, so a drawer asking about one
+    position does not pay for the whole project.
     """
     from app.modules.boq.repository import PositionRepository
     from app.modules.costmodel.repository import CostSpineRepository
@@ -367,6 +474,7 @@ async def build_position_actuals(
     ids = [p.id for p in positions]
     installed_pct = await ProgressRepository(session).latest_pct_for_positions(project_id, ids)
     consumed = await consumption_by_position(session, project_id, ids)
+    booked_hours = await hours_by_position(session, project_id, ids)
 
     report.rows = assemble_rows(
         list(positions),
@@ -377,6 +485,7 @@ async def build_position_actuals(
         cost_line_codes=cost_line_codes,
         installed_pct=installed_pct,
         consumed=consumed,
+        booked_hours=booked_hours,
     )
     report.currency = await _project_currency(session, project_id)
     return report

@@ -8,10 +8,12 @@ Stateless service layer.
 import hashlib
 import logging
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -288,6 +290,70 @@ def _line_item_from(invoice_id: uuid.UUID, item_data: InvoiceLineItemCreate, idx
     )
 
 
+async def resolve_position_cost_lines(
+    session: AsyncSession,
+    items: Sequence[InvoiceLineItemCreate],
+) -> None:
+    """Turn a named bill position into the cost line the money posts against.
+
+    Issue #454. A supplier invoice arrives against work, and the person entering
+    it knows which bill item the work was for; they do not know, and should not
+    have to look up, the cost line that item rolls into. This resolves the one
+    to the other in a single query and writes the result onto ``cost_line_id``,
+    so the row still carries exactly one link and the rollup still has exactly
+    one way to find it.
+
+    Two refusals rather than two silent outcomes:
+
+    * a position that is not on the cost spine, because a line that quietly
+      posted nowhere is precisely the failure this field exists to remove, and
+      the fix is one call to the spine generator rather than a guess here;
+    * a position and a cost line that disagree, because that is two answers to
+      one question and picking either one is picking somebody's mistake.
+
+    Lines that name no position are left exactly as they are, which is every
+    line written before this existed.
+    """
+    wanted = {item.boq_position_id for item in items if getattr(item, "boq_position_id", None) is not None}
+    if not wanted:
+        return
+
+    from app.modules.boq.models import Position
+
+    rows = (await session.execute(select(Position.id, Position.cost_line_id).where(Position.id.in_(wanted)))).all()
+    resolved = {row[0]: row[1] for row in rows}
+
+    for item in items:
+        position_id = getattr(item, "boq_position_id", None)
+        if position_id is None:
+            continue
+        if position_id not in resolved:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"No bill position {position_id} exists, so this line cannot be attributed to it.",
+            )
+        cost_line_id = resolved[position_id]
+        if cost_line_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Bill position {position_id} is not on the cost spine, so an actual posted "
+                    "against it would roll up nowhere. Generate the spine for the project first "
+                    "(POST /api/v1/costmodel/projects/{project_id}/spine/generate-from-boq/) and "
+                    "send this line again."
+                ),
+            )
+        if item.cost_line_id is not None and item.cost_line_id != cost_line_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"This line names bill position {position_id}, which belongs to cost line "
+                    f"{cost_line_id}, and cost line {item.cost_line_id} as well. Send one of them."
+                ),
+            )
+        item.cost_line_id = cost_line_id
+
+
 class FinanceService:
     """Business logic for finance operations."""
 
@@ -372,6 +438,7 @@ class FinanceService:
         invoice = await self.invoices.create(invoice)
 
         # Create line items
+        await resolve_position_cost_lines(self.session, data.line_items)
         for idx, item_data in enumerate(data.line_items):
             await self.line_items.create(_line_item_from(invoice.id, item_data, idx))
 
@@ -490,6 +557,7 @@ class FinanceService:
             prior_total = _sum(prior_items)
             new_total = _sum(data.line_items)
 
+            await resolve_position_cost_lines(self.session, data.line_items)
             await self.line_items.delete_by_invoice(invoice_id)
             for idx, item_data in enumerate(data.line_items):
                 await self.line_items.create(_line_item_from(invoice_id, item_data, idx))

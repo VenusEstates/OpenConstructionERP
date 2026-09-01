@@ -56,6 +56,10 @@ class FieldTimesheetLineCreate(BaseModel):
     hours: Decimal = Field(default=Decimal("0"), ge=0, le=100000, max_digits=18, decimal_places=4)
     cost_code: str = Field(default="", max_length=100)
     wbs: str | None = Field(default=None, max_length=100)
+    # The bill position these hours went on, when the foreman knows which one.
+    # Optional on purpose: a day spent across six positions names none of them,
+    # and the estimate is better served by an honest blank than by a guess.
+    boq_position_id: UUID | None = None
     is_daywork: bool = False
     variation_id: UUID | None = None
     note: str | None = Field(default=None, max_length=2000)
@@ -83,6 +87,7 @@ class FieldTimesheetLineUpdate(BaseModel):
     hours: Decimal | None = Field(default=None, ge=0, le=100000, max_digits=18, decimal_places=4)
     cost_code: str | None = Field(default=None, max_length=100)
     wbs: str | None = Field(default=None, max_length=100)
+    boq_position_id: UUID | None = None
     is_daywork: bool | None = None
     variation_id: UUID | None = None
     note: str | None = Field(default=None, max_length=2000)
@@ -108,6 +113,7 @@ class FieldTimesheetLineResponse(BaseModel):
     hours: Decimal = Decimal("0")
     cost_code: str = ""
     wbs: str | None = None
+    boq_position_id: UUID | None = None
     is_daywork: bool = False
     variation_id: UUID | None = None
     daywork_sheet_id: UUID | None = None

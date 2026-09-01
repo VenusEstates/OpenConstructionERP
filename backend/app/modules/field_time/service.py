@@ -704,6 +704,16 @@ class FieldTimeService:
                     hours=ft.to_decimal(line.get("hours")),
                     cost_code=str(line.get("cost_code") or ""),
                     wbs=line.get("wbs"),
+                    # Carried onto the reversal deliberately, so the mirror
+                    # is a faithful negative of what it corrects on this axis
+                    # too. Consumers net a corrected day in one of two ways:
+                    # by dropping both sheets (which is what
+                    # ``costmodel.position_actuals`` does), or by summing
+                    # signed contributions the way ``ft.net_hours`` does. The
+                    # second one needs the position on BOTH halves or the
+                    # credit lands nowhere and the original hours stand against
+                    # the position for ever.
+                    boq_position_id=_as_uuid(line.get("boq_position_id")),
                     is_daywork=bool(line.get("is_daywork")),
                     variation_id=_as_uuid(line.get("variation_id")),
                     note=line.get("note"),
@@ -1312,6 +1322,7 @@ class FieldTimeService:
             ),
             cost_code=data.cost_code or "",
             wbs=data.wbs,
+            boq_position_id=data.boq_position_id,
             is_daywork=data.is_daywork,
             variation_id=data.variation_id,
             note=data.note,
@@ -1358,6 +1369,7 @@ class FieldTimeService:
                     "hours": line.hours if line.hours is not None else Decimal("0"),
                     "cost_code": line.cost_code or "",
                     "wbs": line.wbs,
+                    "boq_position_id": str(line.boq_position_id) if line.boq_position_id else None,
                     "is_daywork": bool(line.is_daywork),
                     "variation_id": str(line.variation_id) if line.variation_id else None,
                     "note": line.note or "",

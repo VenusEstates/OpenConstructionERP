@@ -564,8 +564,8 @@ def reverse_lines(lines: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     """Build the line payload for a reversing timesheet from an original.
 
     The reversal mirrors every original line verbatim (same worker/plant, hours,
-    cost_code, daywork/variation link) so the reversal is a faithful negative of
-    what it corrects. Hours stay positive on the row; the *timesheet* carries the
+    cost_code, bill position, daywork/variation link) so the reversal is a
+    faithful negative of what it corrects. Hours stay positive on the row; the *timesheet* carries the
     reversal sign (see :func:`net_hours`), matching how the payroll and cost
     consumers net an approved original against its reversal.
 
@@ -584,6 +584,7 @@ def reverse_lines(lines: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
                 "hours": quantize_hours(_get(line, "hours")),
                 "cost_code": _clean_str(_get(line, "cost_code")),
                 "wbs": _clean_str(_get(line, "wbs")) or None,
+                "boq_position_id": _clean_str(_get(line, "boq_position_id")) or None,
                 "is_daywork": bool(_get(line, "is_daywork")),
                 "variation_id": _clean_str(_get(line, "variation_id")) or None,
                 "note": _clean_str(_get(line, "note")),

@@ -232,3 +232,76 @@ async def test_payroll_nets_a_reversed_timesheet_to_zero(session: AsyncSession) 
     # Original flips to 'reversed' (excluded) and the reversal carries
     # reverses_id (excluded), so the net authoritative labour is zero.
     assert hours == Decimal("0.00")
+
+
+async def test_a_line_can_name_the_bill_position_the_hours_went_on(session: AsyncSession) -> None:
+    """Issue #454. Hours are worth comparing only against what predicted them.
+
+    A cost code is free text on the project chart and a WBS path is a tree
+    address. Neither resolves to a position id, so before this the recorded
+    hours could be grouped by cost code and never set beside the estimate line
+    they belong to.
+    """
+    project_id = await _seed_project(session)
+    resource_id = await _seed_resource(session)
+    position_id = uuid.uuid4()
+    service = FieldTimeService(session)
+
+    timesheet = await service.create_timesheet(
+        FieldTimesheetCreate(
+            project_id=project_id,
+            date=_WORK_DATE,
+            lines=[
+                FieldTimesheetLineCreate(
+                    resource_id=resource_id,
+                    hours=Decimal("8"),
+                    cost_code="01.10",
+                    boq_position_id=position_id,
+                ),
+                # Unattributed on purpose: a day that covered several items
+                # names none of them, and that has to stay possible.
+                FieldTimesheetLineCreate(resource_id=resource_id, hours=Decimal("2"), cost_code="01.20"),
+            ],
+        ),
+        str(uuid.uuid4()),
+    )
+
+    attributed, unattributed = sorted(timesheet.lines, key=lambda ln: ln.cost_code)
+    assert attributed.boq_position_id == position_id
+    assert unattributed.boq_position_id is None
+
+
+async def test_a_reversal_carries_the_position_it_is_cancelling(session: AsyncSession) -> None:
+    """A credit attributed nowhere cannot cancel a debit attributed somewhere.
+
+    Consumers net a corrected day either by dropping both sheets or by summing
+    signed contributions. The second one needs the position on both halves.
+    """
+    project_id = await _seed_project(session)
+    resource_id = await _seed_resource(session)
+    position_id = uuid.uuid4()
+    service = FieldTimeService(session)
+    actor = str(uuid.uuid4())
+
+    timesheet = await service.create_timesheet(
+        FieldTimesheetCreate(
+            project_id=project_id,
+            date=_WORK_DATE,
+            lines=[
+                FieldTimesheetLineCreate(
+                    resource_id=resource_id,
+                    hours=Decimal("8"),
+                    cost_code="01.10",
+                    boq_position_id=position_id,
+                )
+            ],
+        ),
+        actor,
+    )
+    await service.submit_timesheet(timesheet.id, actor)
+    await service.approve_timesheet(timesheet.id, actor)
+
+    reversal = await service.reverse_timesheet(timesheet.id, ReverseTimesheetRequest(note="wrong item"), actor)
+
+    (mirrored,) = reversal.lines
+    assert mirrored.boq_position_id == position_id
