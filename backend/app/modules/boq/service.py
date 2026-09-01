@@ -950,6 +950,13 @@ def _build_position_response(pos: Position) -> PositionResponse:
         classification=pos.classification,
         source=pos.source,
         confidence=(_str_to_float(pos.confidence) if pos.confidence is not None else None),
+        # Issue #453. ``getattr`` because this converter also runs over rows
+        # built by fixtures and by importers that construct a Position without
+        # touching the estimating-judgement columns at all.
+        risk_dispersion=(
+            _str_to_float(pos.risk_dispersion) if getattr(pos, "risk_dispersion", None) is not None else None
+        ),
+        price_basis=getattr(pos, "price_basis", None),
         cad_element_ids=pos.cad_element_ids,
         # Issue #347: surface the owning BIM model so the grid picker resolves
         # against the right model in multi-model projects.
@@ -2150,6 +2157,13 @@ class BOQService:
             classification=dict(source.classification) if source.classification else {},
             source=source.source,
             confidence=source.confidence,
+            # Issue #453: a duplicated line carries the judgement that was made
+            # about it. Dropping these would leave the copy looking unjudged,
+            # and an unjudged line is excluded from the dispersion average
+            # rather than counted as certain - so the copy would quietly
+            # improve the risk picture of the bill it was added to.
+            risk_dispersion=getattr(source, "risk_dispersion", None),
+            price_basis=getattr(source, "price_basis", None),
             cad_element_ids=list(source.cad_element_ids) if source.cad_element_ids else [],
             # Issue #347: carry the owning model so a duplicate resolves its BIM
             # links against the same model as the original.
@@ -2190,6 +2204,8 @@ class BOQService:
                     classification=(dict(child.classification) if child.classification else {}),
                     source=child.source,
                     confidence=child.confidence,
+                    risk_dispersion=getattr(child, "risk_dispersion", None),
+                    price_basis=getattr(child, "price_basis", None),
                     cad_element_ids=(list(child.cad_element_ids) if child.cad_element_ids else []),
                     # Issue #347: carry the owning model onto the cloned child.
                     cad_model_id=getattr(child, "cad_model_id", None),
@@ -2905,6 +2921,8 @@ class BOQService:
             classification=data.classification,
             source=data.source,
             confidence=str(data.confidence) if data.confidence is not None else None,
+            risk_dispersion=(str(data.risk_dispersion) if data.risk_dispersion is not None else None),
+            price_basis=data.price_basis,
             cad_element_ids=data.cad_element_ids,
             metadata_=merged_metadata,
             # BUG-B-013 (cost-item unit/currency) + BUG-B-014 (duplicate
@@ -3489,6 +3507,9 @@ class BOQService:
         if "confidence" in fields:
             val = fields["confidence"]
             fields["confidence"] = str(val) if val is not None else None
+        if "risk_dispersion" in fields:
+            val = fields["risk_dispersion"]
+            fields["risk_dispersion"] = str(val) if val is not None else None
 
         # Map 'metadata' key to the model's 'metadata_' column
         if "metadata" in fields:
@@ -4574,7 +4595,7 @@ class BOQService:
         # Build a single-key PositionUpdate. Float fields need numeric
         # coercion so a stringified '12.5' still validates cleanly.
         payload_kwargs: dict[str, Any] = {}
-        if field in {"quantity", "unit_rate", "confidence"}:
+        if field in {"quantity", "unit_rate", "confidence", "risk_dispersion"}:
             try:
                 payload_kwargs[field] = None if value is None or value == "" else float(value)
             except (TypeError, ValueError) as exc:

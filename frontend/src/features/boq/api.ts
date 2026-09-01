@@ -44,6 +44,23 @@ export interface Position {
   classification: Record<string, string>;
   source: string;
   confidence: number | null;
+  /**
+   * Issue #453 - the estimating standard deviation for this line, as a
+   * fraction of its own amount. `confidence` says how sure the estimator is;
+   * this says how wrong the line could be, which is the number an offer is
+   * tested against. Null means nobody has judged it, which is not zero: a
+   * zero here is a claim of certainty.
+   */
+  risk_dispersion?: number | null;
+  /**
+   * Issue #453 - what the price stands on, not how the row was entered.
+   * `source` answers the second question, defaults to `manual` and is written
+   * literally by every ordinary create path, so grouping money by it looks
+   * like a price-evidence report and is a provenance report with one bar.
+   * One of invoice, quotation, price_list, contract_rate, norm, historic,
+   * judgement. Null means nobody has said, which is not `judgement`.
+   */
+  price_basis?: string | null;
   sort_order: number;
   validation_status: string;
   /** BIM element IDs linked to this position (cross-highlight source). */

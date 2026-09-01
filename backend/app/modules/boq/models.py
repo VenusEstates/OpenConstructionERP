@@ -149,6 +149,31 @@ class Position(Base):
     )
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
     confidence: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
+    # ── Issue #453: the judgement in a line, beside the arithmetic ────────
+    # ``confidence`` says how sure the estimator is. It cannot say how WRONG
+    # the line could be, and that is the number an offer is tested against:
+    # a margin that survives the declared risk is ``target - z * sigma``
+    # weighted by amount. ``risk_dispersion`` is that sigma, as a fraction of
+    # the line's own amount, so it stays comparable across lines of very
+    # different size and can be averaged with ``amount`` as the weight. Values
+    # above 1 are allowed and mean what they say: a line can be more uncertain
+    # than it is big.
+    #
+    # ``price_basis`` says what the price STANDS ON, which is not what
+    # ``source`` says. Source records how the row was entered, defaults to
+    # ``manual`` and is written literally by every ordinary create path, so on
+    # a typed or workbook-imported bill it is ``manual`` on nearly every row -
+    # money grouped by it looks like a price-evidence report and is a
+    # provenance report with one bar. A hand-typed row can have an invoice
+    # behind it and a catalogue row can rest on a guess.
+    #
+    # Both are NULL until somebody judges the line, and NULL is not zero and
+    # not ``judgement``. A default on either would put an unearned number on
+    # every row that already exists, which is the failure the columns exist to
+    # prevent. String for the same reason the money columns above are strings.
+    risk_dispersion: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    price_basis: Mapped[str | None] = mapped_column(String(30), nullable=True)
     cad_element_ids: Mapped[list] = mapped_column(  # type: ignore[assignment]
         JSON,
         nullable=False,

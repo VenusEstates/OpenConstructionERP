@@ -245,7 +245,9 @@ class TestMarkupRatesAreOfferedAndMarkupMoneyIsNot:
         assert len(spec["filters"]) == 2
 
     def test_a_breakdown_by_estimate_is_named_rather_than_keyed_by_id(self) -> None:
-        spec = validate_spec({"entity": "boq_markup", "aggregation": "sum", "field": "fixed_amount", "group_by": "boq_id"})
+        spec = validate_spec(
+            {"entity": "boq_markup", "aggregation": "sum", "field": "fixed_amount", "group_by": "boq_id"}
+        )
         assert spec["label_field"] == "boq_name"
 
     def test_the_company_standard_can_be_told_from_a_section_exception(self) -> None:
@@ -281,9 +283,21 @@ class TestMarkupRatesAreOfferedAndMarkupMoneyIsNot:
 
 
 class TestTheApiServesTheNewEntities:
-    def test_all_five_are_served_with_the_fields_a_form_needs(self) -> None:
+    def test_every_entity_is_served_with_the_fields_a_form_needs(self) -> None:
+        # A closed set on purpose, and worth keeping closed: the catalogue is
+        # what a picker offers and what a stored spec is validated against, so
+        # an entity added in one place and not the other is not a missing
+        # feature, it is a spec that validates today and cannot be computed
+        # tomorrow. Grew by ``schedule_activity`` for issue #453.
         served = {e["name"]: e for e in catalog_as_dict()}
-        assert set(served) == {"boq", "boq_position", "boq_markup", "cost_item_usage", "project"}
+        assert set(served) == {
+            "boq",
+            "boq_position",
+            "boq_markup",
+            "cost_item_usage",
+            "project",
+            "schedule_activity",
+        }
         for entity in served.values():
             assert entity["description"]
             assert entity["source_module"].startswith("oe_")

@@ -24,6 +24,47 @@ from pydantic import (
     model_validator,
 )
 
+#: What a price stands on, as a closed vocabulary - issue #453.
+#:
+#: Ordered from the strongest evidence to the weakest, and that order is the
+#: point of the list rather than a tidiness: the question these values exist to
+#: answer is what share of the money on an offer is backed by something outside
+#: the organisation, and a reader who has to remember which half of an
+#: unordered list is external cannot answer it at a glance.
+#:
+#: * ``invoice``       a paid invoice for the same scope
+#: * ``quotation``     a supplier or subcontractor quotation for this job
+#: * ``price_list``    a published list or catalogue price
+#: * ``contract_rate`` a rate fixed by the contract or imposed by the client
+#: * ``norm``          a published norm or cost index
+#: * ``historic``      the organisation's own cost history
+#: * ``judgement``     professional judgement, with nothing external behind it
+#:
+#: The first five are external and the last two are internal. That split is
+#: NOT encoded here, on purpose: it is what a KPI filter says, and a
+#: deployment whose auditor treats its own history as evidence is entitled to
+#: draw the line elsewhere without editing the platform.
+PRICE_BASIS_VALUES: tuple[str, ...] = (
+    "invoice",
+    "quotation",
+    "price_list",
+    "contract_rate",
+    "norm",
+    "historic",
+    "judgement",
+)
+
+PRICE_BASIS_PATTERN: str = f"^({'|'.join(PRICE_BASIS_VALUES)})$"
+
+PRICE_BASIS_DESCRIPTION: str = (
+    "What the price on this line stands on. This is NOT ``source``, which "
+    "records how the row was entered: a hand-typed row can have an invoice "
+    "behind it and a catalogue row can rest on a guess. One of: "
+    + ", ".join(PRICE_BASIS_VALUES)
+    + ". Unset means nobody has said, which is not the same as ``judgement``."
+)
+
+
 # Probe-A scenario 11: hard cap on ``quantity * unit_rate``. A 1e10 × 1e10
 # input would compute to 1e20, which is far beyond any plausible
 # construction line item and likely indicates fat-fingered input or
@@ -312,6 +353,24 @@ class PositionCreate(BaseModel):
         le=1.0,
         description="AI confidence score (0.0-1.0). Only for AI-sourced positions",
     )
+    risk_dispersion: float | None = Field(
+        default=None,
+        ge=0.0,
+        description=(
+            "Estimating standard deviation for this line, as a fraction of its "
+            "own amount. Answers how wrong the line could be, which is a "
+            "different question from confidence and the one an offer is tested "
+            "against. No upper bound: a line can be more uncertain than it is "
+            "big. Unset means unjudged, which is not the same as zero."
+        ),
+        examples=[0.15],
+    )
+    price_basis: str | None = Field(
+        default=None,
+        pattern=PRICE_BASIS_PATTERN,
+        description=PRICE_BASIS_DESCRIPTION,
+        examples=["quotation"],
+    )
     cad_element_ids: list[str] = Field(default_factory=list, description="Linked CAD element IDs from canonical format")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Arbitrary metadata")
     wbs_id: str | None = Field(default=None, description="Linked WBS node ID")
@@ -443,6 +502,8 @@ class PositionUpdate(BaseModel):
         pattern=r"^(manual|cad_import|ai_takeoff|gaeb_import|excel_import|takeoff|smart_import|smart_import_ai|cad_import_ai|cost_database|assembly|cwicr|enriched|ai_match|formwork|ai_estimate|ai_estimate_cwicr|ai_precise_estimate|ai_plan_read|ai_copilot_auto|ai_copilot_accepted)$",
     )
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    risk_dispersion: float | None = Field(default=None, ge=0.0)
+    price_basis: str | None = Field(default=None, pattern=PRICE_BASIS_PATTERN)
     cad_element_ids: list[str] | None = None
     validation_status: str | None = Field(
         default=None,
@@ -793,6 +854,8 @@ class PositionResponse(BaseModel):
     classification: dict[str, Any]
     source: str
     confidence: float | None
+    risk_dispersion: float | None = None
+    price_basis: str | None = None
     cad_element_ids: list[str]
     # Issue #347: the BIM model that owns the elements in ``cad_element_ids``.
     # Threaded to the BOQ grid so the "pick quantity from BIM" picker and mini
