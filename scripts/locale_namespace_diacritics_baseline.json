@@ -1,50 +1,22 @@
 {
- "de.ts": [
-  "clash.bulk_suppress_confirm"
- ],
  "es-CL.ts": [
-  "howto.teams.what",
   "modules.dev_trouble_7_a"
  ],
  "es-CO.ts": [
-  "howto.teams.what",
   "modules.dev_trouble_7_a"
  ],
  "es-MX.ts": [
-  "howto.teams.what",
   "modules.dev_trouble_7_a"
  ],
  "es.ts": [
-  "howto.geo.how.2",
-  "howto.teams.what",
   "modules.dev_trouble_7_a"
- ],
- "fi.ts": [
-  "defects_liability.no_defects_filtered",
-  "defects_liability.no_warranties_filtered",
-  "defects_liability.no_warranties_hint",
-  "defects_liability.subtitle",
-  "interface_management.field_work_package_from",
-  "interface_management.subtitle",
-  "interface_management.title_placeholder"
  ],
  "fr.ts": [
   "aiest.alts.grounded_note",
-  "cases.compare_the_tender_bill_against_the_settlement.longdesc",
-  "cases.import_a_gaeb_tender_into_a_priced_boq.step.import.what"
- ],
- "hr.ts": [
-  "finance.send_for_approval_hint"
- ],
- "no.ts": [
-  "howto.bid-management.what",
-  "howto.bim.what",
-  "howto.changeorders.how.2"
+  "cases.compare_the_tender_bill_against_the_settlement.longdesc"
  ],
  "pl.ts": [
-  "cases.certify_the_month_against_the_mediciones.step.measure.what",
-  "geo_hub.empty.place_manually_cta",
-  "geo_hub.place_anchor.instruction"
+  "cases.certify_the_month_against_the_mediciones.step.measure.what"
  ],
  "ro.ts": [
   "cases.draft_the_first_year_maintenance_budget.step.budget.in.planned",
@@ -75,13 +47,5 @@
   "howto.methodologies.tip.1",
   "howto.users.when",
   "whatsnew.v820.fx.title"
- ],
- "tr.ts": [
-  "interface_management.load_failed",
-  "interface_management.no_results",
-  "journey.phase.capture.desc",
-  "journey.phase.close.desc",
-  "journey.phase.control.desc",
-  "journey.phase.tender.desc"
  ]
 }

@@ -5199,7 +5199,7 @@ const resource = {
     "finance.invoice_sent_for_approval": "Racun poslan na odobrenje",
     "finance.send_for_approval": "Posalji na odobrenje",
     "finance.send_for_approval_failed": "Slanje racuna na odobrenje nije uspjelo",
-    "finance.send_for_approval_hint": "Premjestite ovaj nacrt racuna u status na cekanju kako bi ga voditelj mogao odobriti.",
+    "finance.send_for_approval_hint": "Premjestite ovaj nacrt računa u status na čekanju kako bi ga voditelj mogao odobriti.",
     "finance.status_current": "trenutno",
     "finance.status_edit_hint": "Premještajte račun između statusa nacrt, na čekanju i otkazano. Odobravanje računa i označavanje kao plaćeno obavlja se gumbima Odobri i Označi kao plaćeno u retku računa.",
     "finance.status_label": "Status",

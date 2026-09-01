@@ -23771,7 +23771,7 @@ const resource = {
     "cases.import_a_gaeb_tender_into_a_priced_boq.step.receive.in.invite": "Invitation a soumissionner",
     "cases.import_a_gaeb_tender_into_a_priced_boq.step.receive.out.filed": "Document d'appel d'offres classe",
     "cases.import_a_gaeb_tender_into_a_priced_boq.step.import.title": "L'importer en bordereau",
-    "cases.import_a_gaeb_tender_into_a_priced_boq.step.import.what": "Importer le GAEB dans un nouveau bordereau. Les groupes, positions, quantites, unites et textes longs passent intacts, si bien que vous avez une colonne de prix vide a remplir et rien d'autre a ressaisir.",
+    "cases.import_a_gaeb_tender_into_a_priced_boq.step.import.what": "Importer le GAEB dans un nouveau bordereau. Les groupes, positions, quantités, unités et textes longs passent intacts, si bien que vous avez une colonne de prix vide à remplir et rien d'autre à ressaisir.",
     "cases.import_a_gaeb_tender_into_a_priced_boq.step.import.why": "Ressaisir un bordereau de quelques centaines de positions est là où se glissent quantités transposées et articles oubliés. L'import garde votre offre liée au libellé et à la numérotation exacts du client.",
     "cases.import_a_gaeb_tender_into_a_priced_boq.step.import.in.file": "Fichier d'appel d'offres GAEB",
     "cases.import_a_gaeb_tender_into_a_priced_boq.step.import.out.boq": "Bordereau avec positions",
