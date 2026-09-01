@@ -135,7 +135,18 @@ class PartnerPackManifest(BaseModel):
     )
     default_tax_template: str | None = Field(
         default=None,
-        description="Tax template slug to set as default (e.g. 'ca_gst_pst').",
+        description=(
+            "Documentation only: a label for the tax regime the pack's market "
+            "applies, e.g. 'ca_gst_pst'. Nothing resolves it. There is no "
+            "registry of tax-template slugs anywhere in the platform, so the "
+            "string travels to the pack preview panel and stops there, and "
+            "applying the pack says as much in its warnings. It used to be "
+            "described as a slug 'to set as default', which reads as a setting "
+            "that will be applied and is why this note is long. The rate that "
+            "actually reaches money is the tax line in the market's markup "
+            "stack (app.modules.boq.markup_templates), overridable per project; "
+            "changing this field changes no number anywhere."
+        ),
     )
     default_methodology: str | None = Field(
         default=None,

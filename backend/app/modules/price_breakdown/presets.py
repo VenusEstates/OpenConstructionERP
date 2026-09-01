@@ -139,6 +139,38 @@ _US_BID = Preset(
     ),
 )
 
+# Hungarian anyag/dij sheet. A Hungarian bill quotes every priced line twice,
+# once as material (anyag) and once as fee (dij), and totals the two separately
+# per sub-chapter, per chapter and on the cover, because the client compares
+# tenderers on both columns rather than on the sum alone. Six resource kinds
+# therefore land in two columns, not six: material is the anyag column and
+# everything else - labour, plant, hired equipment, sublet work and the rest -
+# is the dij column. The labels say which column each kind falls in, so the
+# grouping is readable from the sheet instead of being knowledge the reader has
+# to bring.
+#
+# This is the one preset that does not open with labour. The others follow the
+# order an estimator builds a rate in; this one follows the order the Hungarian
+# workbook prints, which is anyag first. Reordering it to match the rest would
+# make the sheet disagree with the column order the client reads it against.
+#
+# Wording follows packs/hungary-hu rule pack ``hu_anyag_dij_bontas``, which
+# derives it from Hungarian workbooks in production use rather than from a
+# translation of these English headings.
+_HU_ANYAG_DIJ = Preset(
+    name="hu_anyag_dij",
+    label="Anyag es dij bontas (material and fee split)",
+    region="HU",
+    kind_labels=(
+        (ResourceKind.MATERIAL, "Anyag"),
+        (ResourceKind.LABOUR, "Díj - munkadíj"),
+        (ResourceKind.MACHINERY, "Díj - gépköltség"),
+        (ResourceKind.EQUIPMENT, "Díj - eszközköltség"),
+        (ResourceKind.SUBCONTRACT, "Díj - alvállalkozói teljesítés"),
+        (ResourceKind.OTHER, "Díj - egyéb költség"),
+    ),
+)
+
 # Generic cost-plus sheet: neutral, market-agnostic wording for a build-up
 # where a fee is added to measured cost. Useful as a plain fallback heading set.
 _COST_PLUS = Preset(
@@ -155,7 +187,7 @@ _COST_PLUS = Preset(
     ),
 )
 
-PRESETS: dict[str, Preset] = {p.name: p for p in (_INTERNATIONAL, _EFB, _NRM, _US_BID, _COST_PLUS)}
+PRESETS: dict[str, Preset] = {p.name: p for p in (_INTERNATIONAL, _EFB, _NRM, _US_BID, _HU_ANYAG_DIJ, _COST_PLUS)}
 
 
 def get_preset(name: str | None) -> Preset:

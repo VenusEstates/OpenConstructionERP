@@ -691,6 +691,227 @@ DEFAULT_MARKUP_TEMPLATES: dict[str, list[dict[str, object]]] = {
             "sort_order": 5,
         },
     ],
+    # ── Hungary ─────────────────────────────────────────────────────────
+    # Egységes magasépítési ágazati tételrend, and the cover summary the
+    # packs/hungary-hu rule pack ``hu_anyag_dij_bontas`` states: the chapters
+    # total to a net anyag and a net díj figure, those add to the net subtotal,
+    # the tartalékkeret is taken on that subtotal, and ÁFA closes the sheet.
+    #
+    # Two decisions in the stack are the Hungarian ones and not stylistic.
+    # ``tartalékkeret`` is ``direct_cost`` because the summary takes it on the
+    # net anyag-plus-díj subtotal, which is the base before the contractor's
+    # margin, so the general rule in the header and the national method agree
+    # here rather than pulling apart the way they do for UK and RU. ÁFA is
+    # ``cumulative`` because it is levied on the contract value the client
+    # signs, which does contain the margin.
+    #
+    # The ÁFA figure is statutory. The other three are working defaults taken
+    # from the shipped Hungarian demos, because the tartalékkeret is agreed per
+    # contract rather than set nationally, and overhead and margin are the
+    # contractor's own. What this row asserts is the shape - which lines exist,
+    # in what order, on which base - not that a Hungarian job carries exactly
+    # eight percent overhead.
+    "HU": [
+        {
+            "name": "Általános költség",
+            "category": "overhead",
+            "percentage": "8.0",
+            "apply_to": "direct_cost",
+            "sort_order": 0,
+        },
+        {
+            "name": "Nyereség",
+            "category": "profit",
+            "percentage": "6.0",
+            "apply_to": "direct_cost",
+            "sort_order": 1,
+        },
+        {
+            "name": "Tartalékkeret",
+            "category": "contingency",
+            "percentage": "5.0",
+            "apply_to": "direct_cost",
+            "sort_order": 2,
+        },
+        {
+            "name": "ÁFA",
+            "category": "tax",
+            "percentage": "27.0",
+            "apply_to": "cumulative",
+            "sort_order": 3,
+        },
+    ],
+    # ── Italy ───────────────────────────────────────────────────────────
+    # Computo metrico estimativo. Two things here are Italian rather than
+    # generic. ``Utile d'impresa`` is cumulative because the contractor's
+    # margin is taken on the works plus the general expenses, not on the works
+    # alone. And ``oneri della sicurezza`` is a line in its own right, carried
+    # as ``other`` rather than as overhead, because safety costs are not
+    # subject to the tender discount: they are quoted and paid in full, and
+    # folding them into an overhead percentage would lose the one property
+    # that makes them a separate line on an Italian bill.
+    "IT": [
+        {
+            "name": "Spese generali",
+            "category": "overhead",
+            "percentage": "15.0",
+            "apply_to": "direct_cost",
+            "sort_order": 0,
+        },
+        {
+            "name": "Utile d'impresa",
+            "category": "profit",
+            "percentage": "10.0",
+            "apply_to": "cumulative",
+            "sort_order": 1,
+        },
+        {
+            "name": "Oneri della sicurezza non soggetti a ribasso",
+            "category": "other",
+            "percentage": "2.5",
+            "apply_to": "direct_cost",
+            "sort_order": 2,
+        },
+        {
+            "name": "IVA",
+            "category": "tax",
+            "percentage": "22.0",
+            "apply_to": "cumulative",
+            "sort_order": 3,
+        },
+    ],
+    # ── Spain ───────────────────────────────────────────────────────────
+    # Mediciones y presupuesto. Both percentages are taken on the presupuesto
+    # de ejecución material, so both are ``direct_cost``; the pair of them is
+    # what turns the material execution budget into the contract budget, and
+    # Spanish public works regulation fixes the shape of exactly these two
+    # lines rather than leaving them to the estimator.
+    "ES": [
+        {
+            "name": "Gastos generales",
+            "category": "overhead",
+            "percentage": "13.0",
+            "apply_to": "direct_cost",
+            "sort_order": 0,
+        },
+        {
+            "name": "Beneficio industrial",
+            "category": "profit",
+            "percentage": "6.0",
+            "apply_to": "direct_cost",
+            "sort_order": 1,
+        },
+        {
+            "name": "IVA",
+            "category": "tax",
+            "percentage": "21.0",
+            "apply_to": "cumulative",
+            "sort_order": 2,
+        },
+    ],
+    # ── Netherlands ─────────────────────────────────────────────────────
+    # RAW / STABU begroting. The stack is a ladder on purpose: site overheads
+    # are taken on the direct works, head-office overheads on the works plus
+    # site overheads, and the insurance and the combined profit-and-risk line
+    # on everything before them. That laddering is the Dutch convention and is
+    # why four of the five lines are cumulative.
+    "NL": [
+        {
+            "name": "Algemene bouwplaatskosten (ABK)",
+            "category": "overhead",
+            "percentage": "8.5",
+            "apply_to": "direct_cost",
+            "sort_order": 0,
+        },
+        {
+            "name": "Algemene kosten (AK)",
+            "category": "overhead",
+            "percentage": "6.0",
+            "apply_to": "cumulative",
+            "sort_order": 1,
+        },
+        {
+            "name": "CAR-verzekering en bankgarantie",
+            "category": "insurance",
+            "percentage": "0.6",
+            "apply_to": "cumulative",
+            "sort_order": 2,
+        },
+        {
+            "name": "Winst en risico (W&R)",
+            "category": "profit",
+            "percentage": "4.5",
+            "apply_to": "cumulative",
+            "sort_order": 3,
+        },
+        {
+            "name": "BTW",
+            "category": "tax",
+            "percentage": "21.0",
+            "apply_to": "cumulative",
+            "sort_order": 4,
+        },
+    ],
+    # ── Poland ──────────────────────────────────────────────────────────
+    # Kosztorys budowlany. ``Rezerwa`` is cumulative and therefore sits on a
+    # base containing profit, which is the opposite of the general rule in the
+    # header. It is recorded that way because a Polish reserve for unforeseen
+    # works is taken on the net contract value rather than on bare cost, and
+    # ``CONTINGENCY_ON_PROFIT_BY_DESIGN`` in the pure-helpers test carries the
+    # same statement so the shape cannot drift back without a decision.
+    "PL": [
+        {
+            "name": "Koszty pośrednie (Kp)",
+            "category": "overhead",
+            "percentage": "18.0",
+            "apply_to": "direct_cost",
+            "sort_order": 0,
+        },
+        {
+            "name": "Zysk (Z)",
+            "category": "profit",
+            "percentage": "8.0",
+            "apply_to": "cumulative",
+            "sort_order": 1,
+        },
+        {
+            "name": "Rezerwa na roboty nieprzewidziane",
+            "category": "contingency",
+            "percentage": "3.0",
+            "apply_to": "cumulative",
+            "sort_order": 2,
+        },
+        {
+            "name": "Podatek VAT",
+            "category": "tax",
+            "percentage": "23.0",
+            "apply_to": "cumulative",
+            "sort_order": 3,
+        },
+    ],
+    # ── Türkiye ─────────────────────────────────────────────────────────
+    # Birim fiyat. The single 25 percent line is not a shortcut for two lines
+    # that should be split: the Turkish unit-price tradition quotes the
+    # contractor's profit and general expenses as one combined percentage, and
+    # splitting it here would invent a division the market does not make. It
+    # is filed as overhead because that is the wider half of what it covers,
+    # so this region has no line categorised as profit, on purpose.
+    "TR": [
+        {
+            "name": "Müteahhit kârı ve genel giderler",
+            "category": "overhead",
+            "percentage": "25.0",
+            "apply_to": "direct_cost",
+            "sort_order": 0,
+        },
+        {
+            "name": "KDV",
+            "category": "tax",
+            "percentage": "20.0",
+            "apply_to": "cumulative",
+            "sort_order": 1,
+        },
+    ],
     # ── Default (generic international) ─────────────────────────────────
     # The fallback for every region without a template of its own, so it can
     # appeal to no national standard method and follows the general rule: the
@@ -774,6 +995,12 @@ REGION_BY_COUNTRY: dict[str, str] = {
     "CN": "CN",
     "KR": "KR",
     "RU": "RU",
+    "HU": "HU",
+    "IT": "IT",
+    "ES": "ES",
+    "NL": "NL",
+    "PL": "PL",
+    "TR": "TR",
 }
 
 # Regions whose tax lines a single country VAT rate cannot stand in for, and

@@ -71,6 +71,14 @@ MANIFEST = PartnerPackManifest(
     ],
     default_currency="BRL",
     default_tax_template="br_iss_municipal",
+    # The Brazilian cascade the catalogue already builds from the BR regional
+    # markup stack: BDI, and the federal and municipal levies underneath it.
+    # This field was empty, which is not the same as absent. An empty field
+    # leaves a project created under this pack on the flat international
+    # default, so the pack shipped the SINAPI cost base and the NBR rules and
+    # then priced the bill with a method that is not Brazilian. The template
+    # was there the whole time; nothing was naming it.
+    default_methodology="brazil",
     validation_rule_packs=[
         "sinapi_cost_db",
         "nbr_12721",

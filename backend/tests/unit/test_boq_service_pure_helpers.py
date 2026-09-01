@@ -482,6 +482,9 @@ CONTINGENCY_ON_PROFIT_BY_DESIGN: dict[str, set[str]] = {
     # Unforeseen costs are taken on the chapter total, which already includes
     # the overhead and profit lines above it.
     "RU": {"Непредвиденные расходы"},
+    # A Polish reserve for unforeseen works is taken on the net contract value,
+    # which is the figure after Kp and Z, rather than on bare cost.
+    "PL": {"Rezerwa na roboty nieprzewidziane"},
     # UNRATIFIED, recorded to keep this test honest rather than to endorse the
     # shape: no ordering source was confirmed for either market.
     "IN": {"Contingency"},
