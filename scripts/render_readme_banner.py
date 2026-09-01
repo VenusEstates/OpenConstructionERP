@@ -647,7 +647,7 @@ def _bucket_index(category: str) -> int:
 
 def _tint(base: tuple[int, int, int], t: float) -> tuple[int, int, int]:
     """The bucket colour, from a dark wash at t=0 to the full colour at t=1."""
-    pale = [round(c + (g - c) * RAMP_FLOOR) for c, g in zip(base, PALE_GROUND)]
+    pale = [round(c + (g - c) * RAMP_FLOOR) for c, g in zip(base, PALE_GROUND, strict=True)]
     return (
         round(pale[0] + (base[0] - pale[0]) * t),
         round(pale[1] + (base[1] - pale[1]) * t),
@@ -760,7 +760,7 @@ def _ground(width: int, height: int) -> Image.Image:
         t = y / max(1, height - 1)
         pen.point(
             (0, y),
-            fill=tuple(round(a + (b - a) * t) for a, b in zip(GROUND_TOP, GROUND_BOTTOM)),
+            fill=tuple(round(a + (b - a) * t) for a, b in zip(GROUND_TOP, GROUND_BOTTOM, strict=True)),
         )
     return ground.resize((width, height), Image.Resampling.BILINEAR)
 
