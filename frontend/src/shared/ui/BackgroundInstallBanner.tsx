@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Loader2,
   CheckCircle2,
@@ -37,6 +38,15 @@ export function BackgroundInstallBanner() {
   const install = useBackgroundInstallStore((s) => s.install);
   const dismiss = useBackgroundInstallStore((s) => s.dismiss);
   const [collapsed, setCollapsed] = useState(false);
+  const qc = useQueryClient();
+
+  // Every step that has reached a terminal status so far, as a stable string.
+  // It grows by one entry each time a step lands, which is exactly the moment
+  // the data behind that step finished changing on the server.
+  const settledSteps = (install?.steps ?? [])
+    .filter((s) => s.status === 'ok' || s.status === 'skipped' || s.status === 'error')
+    .map((s) => s.step)
+    .join(',');
 
   // Auto-clear a clean finish after a short grace window so the banner does not
   // linger forever. A finish with errors is kept until the user dismisses it so
@@ -48,6 +58,26 @@ export function BackgroundInstallBanner() {
     }
     return undefined;
   }, [install?.done, install?.hadError, dismiss]);
+
+  // Re-read the workspace as the install lands, rather than waiting for the
+  // user to reload. The onboarding path drives this install from a
+  // module-scoped function with no component around it, so it cannot reach the
+  // query cache at all; this banner is the one observer of that stream which
+  // can. Without this the header chip, the module list and the project list go
+  // on serving their five-minute-stale entries while the pack is already live,
+  // which reads to the user as an install that did nothing.
+  useEffect(() => {
+    if (!settledSteps) return;
+    // The whole ['partner-pack'] prefix so both siblings are covered: 'current'
+    // (the co-brand hook) and 'installed' (the header chip).
+    void qc.invalidateQueries({ queryKey: ['partner-pack'] });
+    void qc.invalidateQueries({ queryKey: ['partner-packs'] });
+    void qc.invalidateQueries({ queryKey: ['partner-pack-applied'] });
+    // Applying a pack enables and disables modules, and the backend scopes the
+    // project listing to the pack the instant it is applied.
+    void qc.invalidateQueries({ queryKey: ['modules'] });
+    void qc.invalidateQueries({ queryKey: ['projects'] });
+  }, [settledSteps, qc]);
 
   if (!install) return null;
 

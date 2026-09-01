@@ -268,7 +268,15 @@ export function PartnerPackApplyDialog({
       // co-brand hook re-reads the now-applied pack.
       void qc.invalidateQueries({ queryKey: ['partner-packs'] });
       void qc.invalidateQueries({ queryKey: ['partner-pack-applied'] });
-      void qc.invalidateQueries({ queryKey: ['partner-pack', 'current'] });
+      // The whole prefix, not ['partner-pack', 'current']. React Query matches
+      // keys by prefix, so naming 'current' leaves its sibling
+      // ['partner-pack', 'installed'] alone, and that sibling is the one the
+      // header chip reads. The pack applied and the header went on saying
+      // nothing, for as long as the stale entry stayed fresh.
+      void qc.invalidateQueries({ queryKey: ['partner-pack'] });
+      // Applying a pack enables and disables modules, so the navigation and the
+      // dashboard are holding a module list that just changed under them.
+      void qc.invalidateQueries({ queryKey: ['modules'] });
       // The backend scopes the project listing to the active pack the instant
       // it is applied, so drop the cached (un-scoped) project list to make the
       // clean single-client view appear immediately (mirrors deactivation).

@@ -165,9 +165,14 @@ export function PartnerPackDeactivateDialog({
     // co-brand hook drops the pack.
     setStep('workspace', 'running');
     void qc.invalidateQueries({ queryKey: ['projects'] });
-    void qc.invalidateQueries({ queryKey: ['partner-pack', 'current'] });
+    // The whole prefix: ['partner-pack', 'current'] never reaches its sibling
+    // ['partner-pack', 'installed'], which is the key behind the header chip.
+    // Deactivating and leaving the chip standing is the same defect as applying
+    // and never raising it.
+    void qc.invalidateQueries({ queryKey: ['partner-pack'] });
     void qc.invalidateQueries({ queryKey: ['partner-packs'] });
     void qc.invalidateQueries({ queryKey: ['partner-pack-applied'] });
+    void qc.invalidateQueries({ queryKey: ['modules'] });
     setStep('workspace', 'ok');
 
     setFinished({ ok: true });

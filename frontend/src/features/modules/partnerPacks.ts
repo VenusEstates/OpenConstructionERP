@@ -129,8 +129,11 @@ function useInvalidatePackQueries() {
   return () => {
     void qc.invalidateQueries({ queryKey: [KEY_INSTALLED] });
     void qc.invalidateQueries({ queryKey: [KEY_APPLIED] });
-    // The boot-time co-brand hook (usePartnerPack) keys off this.
-    void qc.invalidateQueries({ queryKey: ['partner-pack', 'current'] });
+    // The whole ['partner-pack'] prefix, which covers both the boot-time
+    // co-brand hook ('current') and the header chip ('installed'). Naming one
+    // of the two siblings has left the other serving a stale answer.
+    void qc.invalidateQueries({ queryKey: ['partner-pack'] });
+    void qc.invalidateQueries({ queryKey: ['modules'] });
   };
 }
 
