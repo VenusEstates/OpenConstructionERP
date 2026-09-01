@@ -50,6 +50,7 @@ from typing import Any, Callable
 from sqlalchemy import Integer, cast, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.sql_dates import days_since
 from app.core.sql_numeric import numeric_value
 from app.modules.bi_dashboards.models import KPIDefinition
 
@@ -301,9 +302,11 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
         display_name_for={"boq_id": "boq_name"},
         # The only place a position says what KIND of work it is. `source`
         # is the nearest declared field and answers a different question,
-        # how the row was entered, which on a real installation is `manual`
-        # for 257 of 258 rows: a breakdown by it looks like a cost analysis
-        # and is a provenance report with one bar.
+        # how the row was entered. That column defaults to `manual` and
+        # every ordinary create path writes it literally - only the CAD and
+        # AI import paths write anything else - so on a bill that was typed
+        # or imported from a workbook, a breakdown by it looks like a cost
+        # analysis and is a provenance report with one bar.
         json_fields={"classification": KIND_TEXT},
     ),
     "boq": CatalogEntity(
@@ -319,6 +322,93 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "estimate_type": KIND_TEXT,
             "is_locked": KIND_BOOL,
         },
+    ),
+    "project": CatalogEntity(
+        name="project",
+        source_module="oe_projects",
+        description=(
+            "One project. This is the only entity here with one row per "
+            "building, which is what makes ``gross_floor_area`` measurable "
+            "and why it is offered here rather than borrowed onto the "
+            "estimate or the line: the same area read over four estimates "
+            "sums to four buildings, and the number looks right. "
+            "``gross_floor_area`` is m2 GFA, ``contract_value`` and "
+            "``budget_estimate`` are money in ``currency``, and all three may "
+            "be unset, in which case the row is left out of the reading "
+            "rather than counted as zero."
+        ),
+        fields={
+            "gross_floor_area": KIND_NUMERIC,
+            "contract_value": KIND_NUMERIC,
+            "budget_estimate": KIND_NUMERIC,
+            "name": KIND_TEXT,
+            "status": KIND_TEXT,
+            "phase": KIND_TEXT,
+            "project_code": KIND_TEXT,
+            "project_type": KIND_TEXT,
+            "country_code": KIND_TEXT,
+            "currency": KIND_TEXT,
+            "parent_project_id": KIND_UUID,
+        },
+    ),
+    "boq_markup": CatalogEntity(
+        name="boq_markup",
+        source_module="oe_boq",
+        description=(
+            "One markup line on an estimate: overhead, profit, tax, "
+            "contingency. ``percentage`` and ``fixed_amount`` are the rate as "
+            "the estimator entered it, which is what answers what margin an "
+            "estimate is carrying and how many estimates carry none. It is "
+            "deliberately not the markup MONEY: what a line adds to a total "
+            "depends on the compounding order, on whether it applies to the "
+            "direct cost or cumulatively, and on whether a section-scoped "
+            "line overrides a bill-wide one. That cascade is the BOQ "
+            "service's, and a second copy of it written in SQL would be a "
+            "second answer to the same question."
+        ),
+        fields={
+            "percentage": KIND_NUMERIC,
+            "fixed_amount": KIND_NUMERIC,
+            "name": KIND_TEXT,
+            "markup_type": KIND_TEXT,
+            "category": KIND_TEXT,
+            "apply_to": KIND_TEXT,
+            "is_active": KIND_BOOL,
+            "boq_id": KIND_UUID,
+            "boq_name": KIND_TEXT,
+            "scope_position_id": KIND_UUID,
+        },
+        display_name_for={"boq_id": "boq_name"},
+    ),
+    "cost_item_usage": CatalogEntity(
+        name="cost_item_usage",
+        source_module="oe_costs",
+        description=(
+            "One application of a catalogue rate to this project's work, from "
+            "the append-only ledger written whenever a position is created "
+            "with a cost-item link. ``price_age_days`` is how many days have "
+            "passed since the item's recorded price date, counted today "
+            "rather than when the KPI was written, so a threshold saved once "
+            "keeps asking the question it was saved with. It is unset when "
+            "the item carries no price date at all, and those rows are left "
+            "out rather than read as zero, because an unknown price date is "
+            "the opposite of a fresh one. One row per application, so a rate "
+            "applied ten times weighs ten times: that is the right weighting "
+            "for how much of the estimate rests on a stale price and the "
+            "wrong one for counting catalogue items."
+        ),
+        fields={
+            "price_age_days": KIND_NUMERIC,
+            "unit_rate_at_use": KIND_NUMERIC,
+            "cost_item_id": KIND_UUID,
+            "cost_item_code": KIND_TEXT,
+            "cost_item_description": KIND_TEXT,
+            "unit": KIND_TEXT,
+            "currency": KIND_TEXT,
+            "region": KIND_TEXT,
+            "context": KIND_TEXT,
+        },
+        display_name_for={"cost_item_id": "cost_item_code"},
     ),
 }
 
@@ -452,9 +542,127 @@ def _bind_boq() -> BoundEntity:
     )
 
 
+def _bind_project() -> BoundEntity:
+    from app.modules.projects.models import Project
+
+    # ``gross_floor_area``, ``contract_value`` and ``budget_estimate`` are all
+    # decimal-strings for the same reason the BOQ money columns are, so they
+    # need the same tolerant coercion - and, more importantly, the same
+    # ``nullable_source``. ``numeric_value`` reads a NULL text column as 0 on
+    # PostgreSQL, so without it ``min(gross_floor_area)`` over a portfolio
+    # where one project records an area and thirteen do not comes back 0, and
+    # ``avg`` divides one building by fourteen.
+    return BoundEntity(
+        model=Project,
+        project_column=Project.id,
+        period_column=Project.created_at,
+        joins=[],
+        fields={
+            "gross_floor_area": BoundField(
+                numeric_value(Project.gross_floor_area),
+                KIND_NUMERIC,
+                nullable_source=Project.gross_floor_area,
+            ),
+            "contract_value": BoundField(
+                numeric_value(Project.contract_value),
+                KIND_NUMERIC,
+                nullable_source=Project.contract_value,
+            ),
+            "budget_estimate": BoundField(
+                numeric_value(Project.budget_estimate),
+                KIND_NUMERIC,
+                nullable_source=Project.budget_estimate,
+            ),
+            "name": BoundField(Project.name, KIND_TEXT),
+            "status": BoundField(Project.status, KIND_TEXT),
+            "phase": BoundField(Project.phase, KIND_TEXT, nullable_source=Project.phase),
+            "project_code": BoundField(Project.project_code, KIND_TEXT, nullable_source=Project.project_code),
+            "project_type": BoundField(Project.project_type, KIND_TEXT, nullable_source=Project.project_type),
+            "country_code": BoundField(Project.country_code, KIND_TEXT),
+            "currency": BoundField(Project.currency, KIND_TEXT),
+            "parent_project_id": BoundField(
+                Project.parent_project_id,
+                KIND_UUID,
+                nullable_source=Project.parent_project_id,
+            ),
+        },
+    )
+
+
+def _bind_boq_markup() -> BoundEntity:
+    from app.modules.boq.models import BOQ, BOQMarkup
+
+    # Scoped through the same join the positions use, for the same reason: a
+    # markup has no project of its own, and a KPI that could not be narrowed
+    # to a project would be the one read on the dashboard that ignores which
+    # project the dashboard is showing.
+    return BoundEntity(
+        model=BOQMarkup,
+        project_column=BOQ.project_id,
+        period_column=BOQMarkup.created_at,
+        joins=[(BOQ, BOQMarkup.boq_id == BOQ.id)],
+        fields={
+            # Both NOT NULL with a "0" default, so an inactive or unused half
+            # of a line reads as zero rather than as absent - which is what it
+            # means here, unlike a price date nobody recorded.
+            "percentage": BoundField(numeric_value(BOQMarkup.percentage), KIND_NUMERIC),
+            "fixed_amount": BoundField(numeric_value(BOQMarkup.fixed_amount), KIND_NUMERIC),
+            "name": BoundField(BOQMarkup.name, KIND_TEXT),
+            "markup_type": BoundField(BOQMarkup.markup_type, KIND_TEXT),
+            "category": BoundField(BOQMarkup.category, KIND_TEXT),
+            "apply_to": BoundField(BOQMarkup.apply_to, KIND_TEXT),
+            "is_active": BoundField(BOQMarkup.is_active, KIND_BOOL),
+            "boq_id": BoundField(BOQMarkup.boq_id, KIND_UUID),
+            "boq_name": BoundField(BOQ.name, KIND_TEXT),
+            # NULL means bill-wide, which is the ordinary case rather than a
+            # missing value, so ``is_null`` on it is how a spec asks for the
+            # company standard as against a section's own exception.
+            "scope_position_id": BoundField(
+                BOQMarkup.scope_position_id,
+                KIND_UUID,
+                nullable_source=BOQMarkup.scope_position_id,
+            ),
+        },
+    )
+
+
+def _bind_cost_item_usage() -> BoundEntity:
+    from app.modules.costs.models import CostItem, CostItemUsage
+
+    # The ledger carries the project; the item carries the price date. Neither
+    # alone answers "how old are the prices this project is built on", which is
+    # why this entity is the join rather than either table.
+    return BoundEntity(
+        model=CostItemUsage,
+        project_column=CostItemUsage.project_id,
+        period_column=CostItemUsage.used_at,
+        joins=[(CostItem, CostItemUsage.cost_item_id == CostItem.id)],
+        fields={
+            "price_age_days": BoundField(
+                days_since(CostItem.price_as_of),
+                KIND_NUMERIC,
+                nullable_source=CostItem.price_as_of,
+            ),
+            # Numeric(18, 4) rather than text, so no coercion and no null
+            # source: the ledger always records what the rate was.
+            "unit_rate_at_use": BoundField(CostItemUsage.unit_rate_at_use, KIND_NUMERIC),
+            "cost_item_id": BoundField(CostItemUsage.cost_item_id, KIND_UUID),
+            "cost_item_code": BoundField(CostItem.code, KIND_TEXT),
+            "cost_item_description": BoundField(CostItem.description, KIND_TEXT),
+            "unit": BoundField(CostItem.unit, KIND_TEXT),
+            "currency": BoundField(CostItem.currency, KIND_TEXT),
+            "region": BoundField(CostItem.region, KIND_TEXT, nullable_source=CostItem.region),
+            "context": BoundField(CostItemUsage.context, KIND_TEXT),
+        },
+    )
+
+
 _BINDERS: dict[str, Callable[[], BoundEntity]] = {
     "boq_position": _bind_boq_position,
     "boq": _bind_boq,
+    "project": _bind_project,
+    "boq_markup": _bind_boq_markup,
+    "cost_item_usage": _bind_cost_item_usage,
 }
 
 
@@ -482,6 +690,16 @@ def check_catalog_binding_parity() -> dict[str, dict[str, list[str]]]:
             bound = bind_entity(name)
         except ImportError:  # pragma: no cover - source module absent
             report[name] = {"unbindable": [entry.source_module]}
+            continue
+        except KeyError:
+            # A catalog entry with no binder at all. This used to escape the
+            # check rather than be reported by it: `_BINDERS[name]` raises
+            # KeyError, which is not an ImportError, so the parity test died
+            # with a traceback naming the dict instead of failing with the
+            # entity that was left half-added. That is the exact mistake the
+            # check exists to catch, and it is the likeliest one, because
+            # declaring an entity and binding it are two edits in two places.
+            report[name] = {"unbound_entity": [name]}
             continue
         declared = set(entry.fields)
         built = set(bound.fields)
