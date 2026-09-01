@@ -26066,7 +26066,7 @@ const resource = {
     "dashboard.inspections_title": "检查质量",
     "dashboard.labour_used": "已使用",
     "dashboard.milestones_help": "这些是标记为里程碑的计划活动，尚未完成，按日期排序，最近的优先。筹码显示距离日期有多少天，或日期已经滑动多远。刚刚通过的里程碑会列出两周，以免错过。",
-    "dashboard.milestones_in_days": "in {{n}} 天",
+    "dashboard.milestones_in_days": "{{n}} 天后",
     "dashboard.milestones_open": "打开计划",
     "dashboard.milestones_overdue": "overdue by {{n}} 天",
     "dashboard.milestones_subtitle": "您的计划中的下一个关键日期",

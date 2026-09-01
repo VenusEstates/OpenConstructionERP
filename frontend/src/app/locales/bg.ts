@@ -26207,7 +26207,7 @@ const resource = {
     "dashboard.inspections_title": "Качество на проверката",
     "dashboard.labour_used": "Използвано",
     "dashboard.milestones_help": "Това са дейности в графика, отбелязани като важни моменти, които все още не са завършени, сортирани по дата с най-близката първа. Чипът показва колко дни до датата или колко далеч дата вече е пропаднала. Важен момент, който е наскоро преминал, остава в списъка две седмици, така че не е пропуснат.",
-    "dashboard.milestones_in_days": "в {{n}} дни",
+    "dashboard.milestones_in_days": "след {{n}} дни",
     "dashboard.milestones_open": "Отворен график",
     "dashboard.milestones_overdue": "просрочено с {{n}} дни",
     "dashboard.milestones_subtitle": "Следващите ключови дати от вашия график",
