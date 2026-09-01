@@ -58,6 +58,7 @@ class _ComputeSpy:
         period_end: _date | None = None,
         filters: dict[str, Any] | None = None,
         allowed_project_ids: set[uuid.UUID] | None = None,
+        boq_id: uuid.UUID | None = None,
     ) -> Any:
         self.calls.append(
             {
@@ -69,6 +70,10 @@ class _ComputeSpy:
                 # IDOR scope forwarded on every path (incl. the off path),
                 # so a non-admin never aggregates beyond accessible projects.
                 "allowed_project_ids": allowed_project_ids,
+                # Recorded rather than merely accepted. A stand-in that took
+                # the argument and dropped it would keep these tests green
+                # while telling us nothing about where the estimate went.
+                "boq_id": boq_id,
             },
         )
         # Mirror the real KPIComputation shape just enough.
@@ -260,3 +265,27 @@ async def test_widget_drill_path_round_trips(session: AsyncSession) -> None:
     assert response is not None
     matched = next(w for w in response.widgets if w.id == widget_id)
     assert matched.drill_path == drill_path
+
+
+def test_the_stand_in_still_accepts_everything_the_real_one_does() -> None:
+    """The drift this file was failing on, caught where it happens.
+
+    ``_ComputeSpy`` replaces ``_kpis.compute`` wholesale, so every keyword
+    the real function grows has to grow here too. When ``boq_id`` was added
+    so a KPI could read a single estimate, this stand-in kept the older
+    signature and three unrelated cross-filter tests began failing with a
+    ``TypeError`` about an unexpected keyword, which names the spy but not
+    the change that outdated it.
+
+    Comparing the two signatures fails in both directions and says which
+    parameter is missing from which side, so the next keyword added to
+    ``compute`` is a one line fix rather than a puzzle.
+    """
+    import inspect
+
+    from app.modules.bi_dashboards import kpis as _kpis
+
+    real = list(inspect.signature(_kpis.compute).parameters)
+    stand_in = [p for p in inspect.signature(_ComputeSpy.__call__).parameters if p != "self"]
+
+    assert stand_in == real
