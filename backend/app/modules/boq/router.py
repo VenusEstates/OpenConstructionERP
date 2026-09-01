@@ -108,6 +108,7 @@ from app.modules.boq.copilot_schemas import (
     CopilotChatResponse,
     CopilotMessageOut,
 )
+from app.modules.boq.markup_templates import DEFAULT_MARKUP_TEMPLATES
 from app.modules.boq.roundtrip import (
     ID_COLUMN_ALIASES,
     ID_COLUMN_HEADER,
@@ -2652,17 +2653,31 @@ async def apply_default_markups(
     session: SessionDep,
     region: str = Query(
         default="DEFAULT",
-        description="Region code: DACH, UK, US, FR, GULF, IN, AU, JP, BR, NORDIC, RU, CN, KR, DEFAULT",
+        description=f"Region code, one of: {', '.join(sorted(DEFAULT_MARKUP_TEMPLATES))}",
     ),
     service: BOQService = Depends(_get_service),
 ) -> list[MarkupResponse]:
     """Apply regional default markups to a BOQ.
 
     Replaces any existing markups with the standard template for the region.
-    Pass region as query parameter: ``?region=DACH``.
+    Pass region as query parameter: ``?region=DACH``. The list of codes is read
+    from the markup table itself rather than written out here, because it was
+    written out here: the docstring and the query description both carried a
+    hand-kept list of fourteen regions, and six national stacks were added
+    without either of them noticing. A caller reading the API had no way to
+    learn that Hungary, Italy, Spain, the Netherlands, Poland or Turkiye had a
+    stack at all.
 
-    Supported regions: DACH, UK, US, FR, GULF, IN, AU, JP, BR, NORDIC,
-    RU, CN, KR, DEFAULT.
+    Note what this endpoint does NOT do: nothing derives ``region`` from the
+    project's own country, so a caller who does not pass one gets the neutral
+    international stack no matter which market the project belongs to. The
+    project row does carry ``region`` and ``country_code``, and neither is
+    consulted. That is deliberate rather than forgotten - both columns default
+    to a real value rather than to "unset" (``DACH`` and ``DE``), so a project
+    where nobody chose a country is stored identically to one where somebody
+    chose Germany, and auto-picking from either would price an unstated market
+    as German instead of neutrally. Fixing it properly means teaching those
+    columns to say "unknown", which is a migration and a product decision.
     """
     # IDOR guard: this destructively REPLACES all markups, yet the global
     # boq.update role is not project-scoped - verify the caller may access the

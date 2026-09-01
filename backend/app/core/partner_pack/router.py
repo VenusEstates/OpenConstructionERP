@@ -381,8 +381,20 @@ def partner_favicon() -> Response:
 def partner_onboarding_script() -> Response:
     """Stream the onboarding YAML/JSON shipped by the active pack.
 
-    Frontend OnboardingWizard fetches this and renders partner-specific
-    steps instead of the default sequence.
+    Nothing in the product calls this. The line that stood here said the
+    OnboardingWizard fetches it and renders partner-specific steps instead of
+    the default sequence, and that is not true and may never have been: the
+    frontend has no reference to this route under any spelling, and carries
+    ``has_onboarding_script`` only as a field on a type. The scripts themselves
+    are equally inert. Fifteen packs ship one, each with ``apply:`` verbs such
+    as ``set_default_currency`` and ``set_tax_template``, and the only code
+    anywhere that reads those verbs is a unit test checking one pack's YAML
+    against itself.
+
+    Left in place rather than deleted, because the endpoint does what it says
+    and the scripts are a designed feature somebody may finish. But a docstring
+    asserting a consumer that does not exist is worse than no docstring: it is
+    what makes a pack author believe the steps they wrote will run.
     """
     active = get_active_pack()
     if not active or not active.onboarding_script_path:
