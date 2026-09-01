@@ -1790,7 +1790,7 @@ const REMOTE_PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 /// second server. Here a person has named this server on purpose, so the only
 /// question is whether it answers; refusing it over an unrecognised health
 /// field would be overruling an explicit instruction on a technicality.
-async fn probe_remote_backend(base_url: &str) -> Result<(), String> {
+async fn probe_remote_backend(base_url: &str) -> Result<Option<String>, String> {
     let url = format!("{base_url}api/health");
     let client = reqwest::Client::new();
     let resp = match client.get(&url).timeout(REMOTE_PROBE_TIMEOUT).send().await {
@@ -1814,7 +1814,21 @@ server is running and reachable from here."
 
     let status = resp.status();
     if status.is_success() {
-        return Ok(());
+        // Read the version out of the body, and never fail on it. The question
+        // this probe answers is whether the server is there; a health body that
+        // will not parse, or one from a build too old to publish a version, is
+        // not a reason to refuse an address a person typed in on purpose.
+        let version = resp
+            .text()
+            .await
+            .ok()
+            .and_then(|body| serde_json::from_str::<serde_json::Value>(&body).ok())
+            .and_then(|json| {
+                json.get("version")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.to_string())
+            });
+        return Ok(version);
     }
     if status.as_u16() == 404 {
         // Something is listening and it is not us. Worth its own sentence,
@@ -1830,6 +1844,43 @@ Check that the address is complete, including any folder the server is published
         "It answered with HTTP {}. The server is reachable but is not ready to serve the \
 application.",
         status.as_u16()
+    ))
+}
+
+/// The sentence to show when a named server and this build are far enough
+/// apart to matter, or `None` when they are not.
+///
+/// Deliberately NOT the equality test `is_our_backend_healthy` uses, and the
+/// difference is a decision rather than an omission. That test decides whether
+/// to attach to something NOBODY ASKED ABOUT, where the cost of being wrong is
+/// a second server started on the running one's data directory, so it may
+/// reject on a doubt. Here a person named this server on purpose, and the
+/// deployment this whole mode exists for is an office whose desks update on
+/// their own schedule: an equality gate would lock a fleet out of its own ERP
+/// on the morning after the server was upgraded, which is a worse outage than
+/// anything it would prevent.
+///
+/// There is still something real to warn about, which is why this is not simply
+/// dropped. In remote mode the webview loads the FRONTEND from the server, and
+/// that frontend talks to THIS shell over Tauri IPC. Across a major version the
+/// two are not promised to offer the same commands, so a feature can fail with
+/// nothing on screen to say why. A major difference is worth a sentence. A
+/// minor or a patch difference is the normal state of a fleet and gets none.
+///
+/// A server that reports no version at all gets none either. That is an older
+/// build, not a mismatched one, and guessing would put a warning on the one
+/// case where there is no evidence.
+fn remote_version_note(ours: &str, theirs: Option<&str>) -> Option<String> {
+    let theirs = theirs?;
+    let major = |v: &str| v.split('.').next()?.parse::<u32>().ok();
+    let (ours_major, theirs_major) = (major(ours)?, major(theirs)?);
+    if ours_major == theirs_major {
+        return None;
+    }
+    Some(format!(
+        "This desktop application is version {ours} and the server is version {theirs}. \
+They are a major version apart, so anything that needs the desktop application itself may \
+not work until the older of the two is updated."
     ))
 }
 
@@ -1859,12 +1910,28 @@ fn attach_to_remote_backend(
     );
 
     tauri::async_runtime::spawn(async move {
-        if let Err(reason) = probe_remote_backend(&base_url).await {
-            report_remote_unreachable(&handle, &base_url, source, &reason);
-            return;
+        let their_version = match probe_remote_backend(&base_url).await {
+            Ok(version) => version,
+            Err(reason) => {
+                report_remote_unreachable(&handle, &base_url, source, &reason);
+                return;
+            }
+        };
+
+        // Logged whether or not it is a problem. Both versions are the first
+        // two facts anybody answering a support report has to establish, and
+        // in remote mode neither is visible from the machine that failed.
+        let ours = env!("CARGO_PKG_VERSION");
+        log_line(&format!(
+            "remote: {base_url} answered, server version {}, desktop version {ours}",
+            their_version.as_deref().unwrap_or("not reported")
+        ));
+        let note = remote_version_note(ours, their_version.as_deref());
+        if let Some(note) = note.as_deref() {
+            log_line(&format!("remote: {note}"));
         }
 
-        boot_stage(&handle, "server", "done", "");
+        boot_stage(&handle, "server", "done", note.as_deref().unwrap_or(""));
         boot_stage(&handle, "open", "done", "Ready");
         set_app_url(&handle, &base_url);
 
@@ -2978,6 +3045,37 @@ fn show_startup_failure_dialog(_message: &str) {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A named server is warned about, never refused, and only across a major.
+    ///
+    /// The three cases below are the whole rule, and the middle one is the one
+    /// that matters: a fleet whose server is upgraded before its desks is the
+    /// ordinary state of the deployment this mode was built for, and a gate
+    /// that fired there would take the office off its own ERP.
+    #[test]
+    fn a_remote_server_is_only_flagged_across_a_major_version() {
+        assert!(remote_version_note("16.4.0", Some("16.4.0")).is_none());
+        assert!(remote_version_note("16.4.0", Some("16.9.1")).is_none());
+
+        let note = remote_version_note("16.4.0", Some("17.0.0")).expect("a major apart");
+        // Both numbers, because "versions differ" sends the reader looking for
+        // the two facts the message already had.
+        assert!(note.contains("16.4.0"), "{note}");
+        assert!(note.contains("17.0.0"), "{note}");
+    }
+
+    /// No version reported is an older server, not a mismatched one.
+    ///
+    /// The two absent cases are separate on purpose. A build too old to publish
+    /// a version and a health body that would not parse both arrive here as
+    /// `None`, and warning on either would be putting a claim about a
+    /// difference on the one case where there is no evidence of one.
+    #[test]
+    fn a_server_that_reports_no_version_is_not_accused_of_anything() {
+        assert!(remote_version_note("16.4.0", None).is_none());
+        assert!(remote_version_note("16.4.0", Some("")).is_none());
+        assert!(remote_version_note("16.4.0", Some("nightly")).is_none());
+    }
 
     /// A server that has gone away is described differently depending on whose
     /// server it was.
