@@ -46,13 +46,7 @@ import pathlib
 import re
 import sys
 
-LOCALES = (
-    pathlib.Path(__file__).resolve().parent.parent
-    / "frontend"
-    / "src"
-    / "app"
-    / "locales"
-)
+LOCALES = pathlib.Path(__file__).resolve().parent.parent / "frontend" / "src" / "app" / "locales"
 
 # The lead byte of a multi-byte UTF-8 sequence, as CP1252 renders it.
 LEADS = "ÂÃÄÅÐÑàáâãäåð"

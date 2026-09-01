@@ -160,9 +160,7 @@ def main() -> int:
         )
         return 1
 
-    print(
-        f"locale umlaut folding OK: {len(paths)} files, no file disagrees with itself"
-    )
+    print(f"locale umlaut folding OK: {len(paths)} files, no file disagrees with itself")
     for name, folded in sorted(set(allowed)):
         print(f"  ALLOWED: {name}: {folded} - {_ALLOWED_PAIRS[(name, folded)]}")
     return 0
