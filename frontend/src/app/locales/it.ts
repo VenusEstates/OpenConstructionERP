@@ -16668,7 +16668,7 @@ const resource = {
     "schedule.confirm_reset": "Eliminare tutte le attività di questo cronoprogramma? L'operazione non può essere annullata. Potrai rigenerarle in seguito da un computo metrico.",
     "takeoff.drop_file_here": "Trascina qui il tuo PDF",
     "takeoff.file_limit": "PDF",
-    "takeoff.formats_detailed": "Disegni costruttivi PDF â€” planimetrie vettoriali, sezioni e scansioni. L'AI estrarrà pareti, solai, porte e altri elementi con le quantità.",
+    "takeoff.formats_detailed": "Disegni costruttivi PDF — planimetrie vettoriali, sezioni e scansioni. L'AI estrarrà pareti, solai, porte e altri elementi con le quantità.",
     "takeoff.landing_drop_pdf_only_msg": "Questo visualizzatore misura disegni PDF. Trascina un file PDF per iniziare.",
     "takeoff.landing_feat_extract_desc": "Estrai elenchi e tabelle di computo metrico direttamente dal testo del PDF, ogni riga viene restituita con un punteggio di affidabilità da rivedere.",
     "takeoff.landing_feat_extract_title": "Estrazione AI di testo e tabelle",

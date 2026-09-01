@@ -17471,7 +17471,7 @@ const resource = {
     "schedule.confirm_reset": "حذف جميع الأنشطة في هذا الجدول؟ لا يمكن التراجع عن هذا الإجراء. يمكنك إعادة إنشائها لاحقًا من BOQ.",
     "takeoff.drop_file_here": "أفلت ملف PDF هنا",
     "takeoff.file_limit": "PDF",
-    "takeoff.formats_detailed": "رسومات إنشائية بصيغة PDF â€” مخططات طوابق متجهية ومقاطع وملفات ممسوحة. سيستخرج AI الجدران والبلاطات والأبواب وعناصر أخرى مع الكميات.",
+    "takeoff.formats_detailed": "رسومات إنشائية بصيغة PDF — مخططات طوابق متجهية ومقاطع وملفات ممسوحة. سيستخرج AI الجدران والبلاطات والأبواب وعناصر أخرى مع الكميات.",
     "takeoff.landing_drop_pdf_only_msg": "يقيس هذا العارض رسومات PDF. أفلت ملف PDF للبدء.",
     "takeoff.landing_feat_extract_desc": "استخرج الجداول وجداول BOQ مباشرة من نص PDF، يعود كل صف مع درجة ثقة للمراجعة.",
     "takeoff.landing_feat_extract_title": "استخراج النصوص والجداول بـ AI",

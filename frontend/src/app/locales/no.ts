@@ -17128,7 +17128,7 @@ const resource = {
     "schedule.confirm_reset": "Slette alle aktiviteter i denne fremdriftsplanen? Dette kan ikke angres. Du kan generere dem på nytt etterpå fra en BOQ.",
     "takeoff.drop_file_here": "Slipp PDF-en din her",
     "takeoff.file_limit": "PDF",
-    "takeoff.formats_detailed": "PDF-byggetegninger â€” vektorplantegninger, snitt og skanninger. AI vil hente ut vegger, dekker, dører og andre elementer med mengder.",
+    "takeoff.formats_detailed": "PDF-byggetegninger — vektorplantegninger, snitt og skanninger. AI vil hente ut vegger, dekker, dører og andre elementer med mengder.",
     "takeoff.landing_drop_pdf_only_msg": "Denne fremviseren måler PDF-tegninger. Slipp en PDF-fil for å komme i gang.",
     "takeoff.landing_feat_extract_desc": "Hent oppstillinger og BOQ-tabeller rett ut av PDF-teksten, hver rad kommer tilbake med en sikkerhetsscore til gjennomgang.",
     "takeoff.landing_feat_extract_title": "AI-uttak av tekst og tabeller",

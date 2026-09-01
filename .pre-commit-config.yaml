@@ -319,6 +319,25 @@ repos:
         pass_filenames: false
         files: ^frontend/src/app/locales/.*\.ts$
 
+      # Block a UTF-8 string that something read one byte at a time as CP1252.
+      # An em dash becomes "a with circumflex, euro sign, right double quote"
+      # and the value stays valid TypeScript, parses, renders and equals
+      # nothing, so the parse gate, both diacritic rules, the homoglyph rule
+      # and the leak baseline are all blind to it by construction. Four hits
+      # when this was written, all the same em dash in the same key in ar, da,
+      # it and no, from one translation batch; twelve other locales carried the
+      # correct character for the same key. The test is the definition of the
+      # corruption rather than a guess at it, a lead byte in C2..F4 with the
+      # right number of continuation bytes in 80..BF, so the 108 real A and O
+      # circumflex letters in fr, pt, pt-BR, ro and vi do not qualify. No
+      # baseline: it is at zero and any hit is new.
+      - id: locale-mojibake-check
+        name: Block locale text that was UTF-8 and got read as a code page
+        entry: python scripts/check_locale_mojibake.py
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/app/locales/.*\.ts$
+
       # Scan the whole of en.ts for values byte-identical to their source in
       # 24+ of 28 non-en locales, and require every hit to land in exactly
       # one of two never-merged lists: i18n_leak_allowlist.json (identical on

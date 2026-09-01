@@ -17225,7 +17225,7 @@ const resource = {
     "schedule.confirm_reset": "Slet alle aktiviteter i denne tidsplan? Dette kan ikke fortrydes. Du kan genskabe dem bagefter ud fra en BOQ.",
     "takeoff.drop_file_here": "Slip din PDF her",
     "takeoff.file_limit": "PDF",
-    "takeoff.formats_detailed": "PDF-bygningstegninger â€” vektorplantegninger, snit og scanninger. AI udtrækker vægge, dæk, døre og andre elementer med mængder.",
+    "takeoff.formats_detailed": "PDF-bygningstegninger — vektorplantegninger, snit og scanninger. AI udtrækker vægge, dæk, døre og andre elementer med mængder.",
     "takeoff.landing_drop_pdf_only_msg": "Denne fremviser måler PDF-tegninger. Slip en PDF-fil for at komme i gang.",
     "takeoff.landing_feat_extract_desc": "Træk skemaer og BOQ-tabeller direkte ud af PDF-teksten, hver række kommer tilbage med en sikkerhedsscore til gennemgang.",
     "takeoff.landing_feat_extract_title": "AI-tekst- og tabeludtræk",

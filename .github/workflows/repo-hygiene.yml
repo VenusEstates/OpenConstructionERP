@@ -932,6 +932,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: python scripts/check_locale_mixed_script.py
 
+      # An em dash whose UTF-8 bytes were read as CP1252 renders as three Latin
+      # letters and leaves the file valid, parseable and wrong. Four locales
+      # carried one from a single translation batch and nothing went red.
+      - name: Check locale files for UTF-8 read as a byte code page
+        if: ${{ !cancelled() }}
+        run: python scripts/check_locale_mojibake.py
+
       # A class like `bg-oe-blue-subtle/60` names a colour token that cannot
       # take an alpha modifier, and Tailwind's answer to that is to emit
       # nothing. No warning, no fallback, no approximation: the declaration is
