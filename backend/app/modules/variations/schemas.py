@@ -179,6 +179,14 @@ class VariationRequestResponse(BaseModel):
     decision_at: str | None = None
     decision_notes: str = ""
     decided_by: str | None = None
+    # Issue #435: the commercial approval boundary. Served so a caller can
+    # see what was priced, what was agreed and why the two differ, without
+    # having to reconstruct any of it from the bill as it stands now.
+    submitted_boq_id: UUID | None = None
+    submitted_boq_total: Decimal | None = None
+    agreed_cost_impact: Decimal | None = None
+    agreed_basis: str = ""
+    agreed_variance_note: str = ""
     contract_standard: str = ""
     contract_clause_ref: str = ""
     quotation_due_at: str | None = None
@@ -193,6 +201,22 @@ class VariationRequestResponse(BaseModel):
     @classmethod
     def _ser_money(cls, v: Decimal) -> str:
         return _serialize_money_string(v) or "0"
+
+    @field_serializer("submitted_boq_total", "agreed_cost_impact", when_used="json")
+    @classmethod
+    def _ser_optional_money(cls, v: Decimal | None) -> str | None:
+        # No zero fallback here, unlike its neighbour, and the absence is the
+        # point rather than an omission. These two are nullable: a request
+        # nobody has decided and one agreed at nothing are different facts,
+        # and a fallback would make them read the same on every screen
+        # downstream. ``_serialize_money_string`` already returns None only
+        # for None, so there is nothing else a fallback would catch.
+        #
+        # Spelled without the three characters themselves on purpose. The gate
+        # in tests/unit/test_an_or_zero_fallback_stays_unreachable.py reads the
+        # function's SOURCE, comments included, so a comment explaining why the
+        # fallback is absent is enough to convict the function of having one.
+        return _serialize_money_string(v)
 
 
 # ── Variation request BOQ (Issue #435) ────────────────────────────────────

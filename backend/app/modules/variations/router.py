@@ -93,6 +93,10 @@ class _DecisionBody(BaseModel):
     decision_notes: str | None = None
     decided_amount: Decimal | None = None
     granted_days: int | None = Field(default=None, ge=0, le=3650)
+    #: Why an approved amount departs from the pricing state it was agreed
+    #: against (Issue #435). Approving a variation at an amount that differs
+    #: from the submitted bill total is refused without it.
+    agreed_variance_note: str | None = None
 
 
 class _ConvertVOBody(BaseModel):
@@ -368,12 +372,24 @@ async def approve_variation_request(
     # variations.approve_request must not wave through a variation whose cost
     # impact exceeds HIGH_VALUE_APPROVAL_THRESHOLD without the admin-only
     # variations.approve_high_value permission (closes the dead-gate finding).
-    ensure_high_value_authorised(existing.estimated_cost_impact, payload=payload)
+    # The gate is applied to the LARGER of the request's own figure and the
+    # amount actually being approved. Checking only the stored figure would
+    # let a Manager approve a small variation at a large number, which is the
+    # same authorisation hole the gate was added to close, reopened by the
+    # field that lets the approver name a different amount.
+    ensure_high_value_authorised(
+        max(existing.estimated_cost_impact, body.decided_amount)
+        if body.decided_amount is not None
+        else existing.estimated_cost_impact,
+        payload=payload,
+    )
     vr = await service.transition_variation_request(
         vr_id,
         "approved",
         user_id=user_id,
         decision_notes=body.decision_notes,
+        agreed_cost_impact=body.decided_amount,
+        agreed_variance_note=body.agreed_variance_note,
     )
     return VariationRequestResponse.model_validate(vr)
 

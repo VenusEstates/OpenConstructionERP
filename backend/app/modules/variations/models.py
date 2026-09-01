@@ -100,6 +100,39 @@ class VariationRequest(Base):
     decision_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     decision_notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     decided_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    # ── The commercial approval boundary (Issue #435) ────────────────────
+    # A request carries a headline estimate and may own a priced bill, and
+    # the two are allowed to differ while the change is being priced. What
+    # nothing recorded was the boundary between them: which pricing state
+    # was put in front of the approver, and what the approver actually
+    # agreed to. Without both, the agreed value is inherited implicitly
+    # from whatever figure happened to be on the request, and a negotiated
+    # amount is indistinguishable from a stale headline. Both are plausible
+    # numbers of the right order of magnitude, so nothing downstream can
+    # tell them apart either.
+    #
+    # ``submitted_boq_total`` is frozen at submission and never recomputed.
+    # The bill goes on being revised afterwards; this column answers what
+    # the approver was looking at, not what the bill says today.
+    submitted_boq_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True)
+    submitted_boq_total: Mapped[Decimal | None] = mapped_column(MoneyType(), nullable=True)
+    #: The commercial amount actually approved. NULL until a decision is
+    #: taken, and NULL on every request decided before this existed: putting
+    #: a figure there for them would be putting a decision in somebody's
+    #: mouth years after the fact.
+    agreed_cost_impact: Mapped[Decimal | None] = mapped_column(MoneyType(), nullable=True)
+    #: Why the agreed amount is what it is - ``negotiated`` when a person
+    #: named it, ``priced_boq`` when it is the submitted bill's own total,
+    #: ``headline_estimate`` when there was no bill to price. Empty until
+    #: decided. It exists so "the agreed value equals the bill total" and
+    #: "the agreed value was never really decided" cannot look the same.
+    agreed_basis: Mapped[str] = mapped_column(String(30), nullable=False, default="", server_default="")
+    #: Why an agreed amount departs from the pricing state it was agreed
+    #: against. Required when a person names an amount that differs, because
+    #: a difference nobody explained is the one this whole boundary exists
+    #: to stop being invisible.
+    agreed_variance_note: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     # Contract standard + sub-clause reference (FIDIC 13.x / JCT 5.x /
     # NEC4 60-65). Free string so unsupported standards still record.
     contract_standard: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")

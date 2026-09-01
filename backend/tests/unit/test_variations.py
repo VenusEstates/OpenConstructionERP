@@ -207,8 +207,17 @@ class _StubSession:
         return None
 
     async def execute(self, stmt: Any) -> Any:
-        # rowcount=1 satisfies the concurrent-conversion guard (one row flipped).
-        return SimpleNamespace(scalar_one_or_none=lambda: None, rowcount=1)
+        # rowcount=1 satisfies the concurrent-conversion guard (one row
+        # flipped). ``scalars().all()`` answers the query submission makes to
+        # find the request's own bill (Issue #435), and answering it with no
+        # rows is the case these FSM tests are about: a request priced by its
+        # headline alone, which records no pricing state and agrees on the
+        # headline.
+        return SimpleNamespace(
+            scalar_one_or_none=lambda: None,
+            rowcount=1,
+            scalars=lambda: SimpleNamespace(all=lambda: []),
+        )
 
 
 def _make_service() -> VariationsService:

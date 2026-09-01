@@ -477,6 +477,58 @@ def _normalise_ai_draft(
     }
 
 
+def refuse_repricing_a_mirrored_order(order: ChangeOrder, fields: dict[str, Any]) -> None:
+    """A change order mirrored from a variation is not a second price.
+
+    Issue #435. Converting an approved variation writes the agreed amount onto
+    the Variation Order and mirrors it here, and the point of that chain is
+    that one commercial decision produces one number the whole way down. An
+    independently editable amount on this end makes the mirror a second price
+    for the same change, and when the two disagree nothing in the record says
+    which one the client actually agreed to.
+
+    Only the amount is held. Title, description, category, dates, linked
+    documents and the ball-in-court are this order's own business and stay
+    editable, because nothing upstream claims to own them.
+
+    ``currency`` is deliberately NOT held, and the exception is worth naming
+    because it looks like an omission. A variation order raised in a currency
+    the contract does not use is appended to the contract's ``variation_ids``
+    before the currency guard runs, so it sits on that list having moved
+    nothing, and the PATCH that links the mirror is also what puts the mirror
+    in the contract's own currency - which leaves the mirror as the only half
+    able to post at all. Holding the currency here would close that route and
+    the amount would reach the contract by neither. See
+    ``tests/integration/test_variation_mirror_contract_double_post.py::
+    test_a_currency_mismatched_variation_does_not_silence_its_mirror``, which
+    fails the moment this guard widens.
+
+    A standalone change order is untouched. It has no variation behind it, so
+    there is no other price for it to contradict and its own cost impact is
+    the only decision there is.
+
+    Raises:
+        HTTPException: 409 when the amount of a mirrored order is being changed
+            here rather than on the variation it came from.
+    """
+    metadata = getattr(order, "metadata_", None)
+    if not isinstance(metadata, dict):
+        return
+    variation_order_id = metadata.get("variation_order_id")
+    if not variation_order_id:
+        return
+    if "cost_impact" not in fields:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=(
+            f"This change order mirrors variation order {variation_order_id}, so its amount is "
+            f"set by the variation rather than here. Change it on the variation order and the "
+            f"mirror follows."
+        ),
+    )
+
+
 class ChangeOrderService:
     """Business logic for change order operations."""
 
@@ -964,6 +1016,7 @@ class ChangeOrderService:
             )
 
         fields = data.model_dump(exclude_unset=True)
+        refuse_repricing_a_mirrored_order(order, fields)
         if "metadata" in fields:
             _incoming = fields.pop("metadata")
             fields["metadata_"] = (

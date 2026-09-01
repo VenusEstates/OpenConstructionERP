@@ -269,6 +269,21 @@ def _convert_money_buckets(
 #: rounded to cents before they meet, so a sub-cent gap is rounding.
 _MONEY_EPSILON = Decimal("0.01")
 
+#: Why an approved variation's agreed amount is the number it is - Issue #435.
+#:
+#: Three facts, not three ways of reaching one number. Kept as constants
+#: because the value is written by the service, read by the API and shown on a
+#: screen, and a string spelled three times is a string that will be spelled
+#: two ways.
+AGREED_BASIS_NEGOTIATED = "negotiated"
+AGREED_BASIS_PRICED_BOQ = "priced_boq"
+AGREED_BASIS_HEADLINE = "headline_estimate"
+AGREED_BASES: tuple[str, ...] = (
+    AGREED_BASIS_NEGOTIATED,
+    AGREED_BASIS_PRICED_BOQ,
+    AGREED_BASIS_HEADLINE,
+)
+
 
 def _money(value: Any) -> Decimal:
     """Coerce a computed money figure to an exact Decimal rounded to cents.
@@ -1483,14 +1498,120 @@ class VariationsService:
             )
         return vr
 
+    async def _freeze_submitted_pricing_state(self, vr_id: uuid.UUID) -> dict[str, Any]:
+        """Which bill, and at what total, was put in front of the approver.
+
+        Read once, at submission, and never recomputed. The bill can go on
+        being revised after it is submitted - that is the normal way a
+        variation gets negotiated - so a total read later answers a
+        different question from the one the record has to answer.
+
+        A request with no bill of its own is priced by its headline figure
+        alone, which is a legitimate way to run a small variation, and both
+        columns stay NULL to say so.
+
+        A request whose revision chain has forked is refused rather than
+        recorded as NULL. It HAS a bill and we cannot say which one, so
+        letting it through would file "no pricing state" against a request
+        that has two, and that is the one answer that is worse than an
+        error message.
+        """
+        boq, reason = await self.resolve_request_boq(vr_id)
+        if boq is None:
+            if reason == "no_active_boq":
+                return {"submitted_boq_id": None, "submitted_boq_total": None}
+            raise self._request_boq_refusal(reason)
+
+        from app.modules.boq.service import BOQService
+
+        breakdown = (await BOQService(self.session).compute_boq_totals([boq.id])).get(boq.id, {})
+        return {
+            "submitted_boq_id": boq.id,
+            "submitted_boq_total": _money(breakdown.get("grand_total")),
+        }
+
+    def _record_agreed_value(
+        self,
+        vr: VariationRequest,
+        *,
+        named_amount: Decimal | None,
+        variance_note: str | None,
+    ) -> dict[str, Any]:
+        """What was agreed, and on what basis, at the moment of approval.
+
+        Three bases, and they are three different facts rather than three
+        ways of arriving at one number:
+
+        * ``negotiated`` - a person named the amount. This is the only one
+          that can legitimately depart from the pricing state, and when it
+          does it has to say why.
+        * ``priced_boq`` - nobody named one and the submitted bill had a
+          total, so the agreement is that total. Recorded explicitly rather
+          than left to be recomputed later, because the bill will move.
+        * ``headline_estimate`` - nobody named one and there was no bill.
+          The headline is the only figure there has ever been, and saying
+          so is the point: it is the case the reporter wanted to stop being
+          silently indistinguishable from a priced agreement.
+
+        Raises:
+            HTTPException: 422 when a named amount departs from the
+                submitted total with nothing said about why.
+        """
+        baseline = vr.submitted_boq_total
+        note = (variance_note or "").strip()
+        if named_amount is not None:
+            agreed = _to_decimal(named_amount)
+            if baseline is not None and abs(agreed - _to_decimal(baseline)) >= _MONEY_EPSILON and not note:
+                raise HTTPException(
+                    status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=(
+                        "The amount being approved differs from the pricing state that was "
+                        "submitted, so the approval needs a reason. Send agreed_variance_note "
+                        "saying what was negotiated."
+                    ),
+                )
+            return {
+                "agreed_cost_impact": agreed,
+                "agreed_basis": AGREED_BASIS_NEGOTIATED,
+                "agreed_variance_note": note,
+            }
+        if baseline is not None:
+            return {
+                "agreed_cost_impact": _to_decimal(baseline),
+                "agreed_basis": AGREED_BASIS_PRICED_BOQ,
+                "agreed_variance_note": note,
+            }
+        return {
+            "agreed_cost_impact": _to_decimal(vr.estimated_cost_impact),
+            "agreed_basis": AGREED_BASIS_HEADLINE,
+            "agreed_variance_note": note,
+        }
+
     async def transition_variation_request(
         self,
         vr_id: uuid.UUID,
         to_status: str,
         user_id: str | None = None,
         decision_notes: str | None = None,
+        agreed_cost_impact: Decimal | None = None,
+        agreed_variance_note: str | None = None,
     ) -> VariationRequest:
-        """Move a VariationRequest along its state machine. Emits events."""
+        """Move a VariationRequest along its state machine. Emits events.
+
+        Two of the transitions now write the commercial approval boundary
+        (Issue #435) as well as the status.
+
+        Submitting freezes which pricing state was put in front of the
+        approver. Approving records what was actually agreed and why it is
+        that number, which is the half that was missing: without it the
+        agreed value is whatever figure happened to be on the request, and a
+        negotiated amount cannot be told from a stale headline.
+
+        ``agreed_cost_impact`` is what a person named. Naming one that
+        differs from the pricing state it was agreed against requires
+        ``agreed_variance_note``, because an unexplained difference is
+        exactly the thing this boundary exists to stop being invisible.
+        """
         vr = await self.get_request(vr_id)
         if to_status not in allowed_vr_transitions(vr.status):
             raise HTTPException(
@@ -1503,11 +1624,20 @@ class VariationsService:
         fields: dict[str, Any] = {"status": to_status}
         if to_status == "submitted":
             fields["submitted_at"] = _now_iso()
+            fields.update(await self._freeze_submitted_pricing_state(vr_id))
         if to_status in {"approved", "rejected"}:
             fields["decision_at"] = _now_iso()
             fields["decided_by"] = user_id
             if decision_notes is not None:
                 fields["decision_notes"] = decision_notes
+        if to_status == "approved":
+            fields.update(
+                self._record_agreed_value(
+                    vr,
+                    named_amount=agreed_cost_impact,
+                    variance_note=agreed_variance_note,
+                )
+            )
         await self.vr_repo.update_fields(vr_id, **fields)
         await self.session.refresh(vr)
         event_name = {
@@ -2395,7 +2525,15 @@ class VariationsService:
         if "title" not in named:
             payload_dict["title"] = vr.title or ""
         if "final_cost_impact" not in named:
-            payload_dict["final_cost_impact"] = _to_decimal(vr.estimated_cost_impact)
+            # Issue #435: the agreed value is what flows, and it flows without
+            # being re-entered. The headline is the fallback only for a
+            # request approved before the agreement was recorded at all;
+            # for anything approved since, falling back to it would be the
+            # implicit inheritance the approval boundary exists to end.
+            agreed = getattr(vr, "agreed_cost_impact", None)
+            payload_dict["final_cost_impact"] = (
+                _to_decimal(agreed) if agreed is not None else _to_decimal(vr.estimated_cost_impact)
+            )
         if "final_schedule_days" not in named:
             payload_dict["final_schedule_days"] = vr.estimated_schedule_days or 0
         if "currency" not in named:

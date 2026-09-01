@@ -69,7 +69,13 @@ class _StubSession:
         return None
 
     async def execute(self, stmt: Any) -> Any:
-        return SimpleNamespace(scalar_one_or_none=lambda: None)
+        # ``scalars().all()`` answers the bill lookup submission makes since
+        # Issue #435; no rows means this request is priced by its headline
+        # alone, which is what these lifecycle tests set up.
+        return SimpleNamespace(
+            scalar_one_or_none=lambda: None,
+            scalars=lambda: SimpleNamespace(all=lambda: []),
+        )
 
 
 def _make_service() -> VariationsService:
