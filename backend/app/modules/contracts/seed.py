@@ -196,8 +196,22 @@ def _month_starts(first: date, last: date) -> list[date]:
 
 
 def _stamp(day: date, hour: int) -> str:
-    """A business-hours ISO timestamp on ``day``."""
-    return datetime(day.year, day.month, day.day, hour, 0, 0, tzinfo=UTC).isoformat()
+    """A business-hours ISO timestamp on ``day``, never later than right now.
+
+    The clamp is the whole point and it belongs here rather than at the call
+    sites. A caller that has already limited a claim to ``today`` has limited
+    the date and nothing else, so a business hour laid on top of it lands in
+    the future for every hour of the morning before that one. The demo estate
+    is seeded at whatever time of day the installation is created, and a
+    progress claim submitted at a time that has not arrived yet is a defect a
+    reader would report, not a rounding of the clock.
+
+    Clamping to the seeding instant keeps the ladder monotonic, because every
+    later stage of a claim is derived from a day at or after the one before it
+    and the same ceiling applies to all of them.
+    """
+    at = datetime(day.year, day.month, day.day, hour, 0, 0, tzinfo=UTC)
+    return min(at, datetime.now(UTC)).isoformat()
 
 
 #: How many claim periods a single contract materializes at most. Enough to
