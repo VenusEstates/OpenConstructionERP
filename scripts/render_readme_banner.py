@@ -100,14 +100,17 @@ MOD_STEP = MOD_H * 3 // 4
 # as one palette rather than as a contact sheet, little enough that the faces
 # stay faces.
 #
-# The wash is heavier and the lift is gone since the ground went dark. On white
-# paper a little lift kept the tiles from sinking; on this ground it only greys
-# them, and what the tiles needed instead was less of their own colour. Twenty
-# three photographs shot on different days at different exposures are a contact
-# sheet until something makes them agree, and desaturation is that something.
-WASH = 0.26
-LIFT = 0.0
-KEEP_COLOUR = 0.62
+# Retuned when the ground went back to white. On a dark ground the tiles needed
+# heavy desaturation and no lift at all, because lifting them only greyed them.
+# On paper the failure is the opposite one: unlifted tiles with a dark caption
+# band under each face sit on white as one slab of shadow, and the faces go into
+# it. A little lift and a little more of their own colour keeps them
+# photographs. The wash still does the work that matters, which is agreement -
+# twenty three pictures shot on different days at different exposures are a
+# contact sheet until something makes them one palette.
+WASH = 0.24
+LIFT = 0.05
+KEEP_COLOUR = 0.70
 
 # Where the module colour ramp saturates, in number of modules wired to. Read off
 # the measured distribution: the union of the two graphs has a median around five
@@ -119,34 +122,45 @@ KEEP_COLOUR = 0.62
 RAMP_TOP = 20
 RAMP_GAMMA = 0.62
 
-# How far the palest cell is washed toward the ground. This was 0.90 against
-# white paper and the least wired buckets came out close enough to white that
-# you could not count them. A banner whose subject is how many modules there are
-# cannot afford cells that disappear, and that is as true against black.
+# How far the palest cell is washed toward the ground, and what it is washed
+# toward. Both halves matter and the second one is the one that keeps getting
+# retuned, because it has to be measured against the ground actually in use.
 #
-# The floor mixes toward PALE_GROUND rather than toward PAPER. A cell washed all
-# the way to the ground colour is a hole in the comb, and holes read as missing
-# modules; lifting the floor off the ground keeps the quietest cell a cell.
-# Retuned after the first dark render. At 0.74 against a (38, 43, 55) floor the
-# least wired cells of the grey and amber buckets came back close enough to the
-# ground that you could not count them, which is the same failure thewhite version
-# had at 0.90 and for the same reason: the floor was measured against the wrong
-# background. A lighter floor and a shallower wash keep the quietest cell a
-# cell without flattening the depth the ramp exists to show.
-RAMP_FLOOR = 0.62
-PALE_GROUND = (60, 67, 82)
+# The floor mixes toward PALE_GROUND and never toward PAPER. A cell washed all
+# the way to the ground colour is a hole in the comb, and a hole reads as a
+# missing module, so the palest cell has to stop short of the paper. This has
+# failed twice in the other direction: 0.90 toward white paper, and 0.74 toward
+# a (38, 43, 55) floor on the dark ground, each time leaving the least wired
+# cells of the grey and amber buckets uncountable. A banner whose subject is how
+# many modules there are cannot afford cells that disappear.
+#
+# Back on paper the floor is a light tint rather than a dark one, and it is a
+# tint and not a grey: mixing toward a slightly blue light stops the amber and
+# the red buckets going chalky at their quiet end while staying far enough from
+# white to count.
+RAMP_FLOOR = 0.58
+PALE_GROUND = (208, 216, 230)
 
-# The ground is a gradient rather than a fill, top lighter than bottom, so the
-# picture has somewhere to sit. PAPER stays the name the rest of the file uses
-# for "whatever is behind the cells", which is what the hairlines between them
-# are cut out of.
-PAPER = (11, 13, 18)
-GROUND_TOP = (19, 23, 32)
-GROUND_BOTTOM = (9, 10, 14)
+# The ground is white, with the faintest possible cool ramp toward the bottom so
+# the picture has a top and a bottom rather than floating. It is deliberately
+# too slight to name a colour by: anything readable as grey turns the paper into
+# a panel, and a panel with its own edges inside a README is worse than a flat
+# fill. PAPER stays the name the rest of the file uses for "whatever is behind
+# the cells", which is what the hairlines between them are cut out of - so on
+# this ground the gutters of both combs are white.
+PAPER = (255, 255, 255)
+GROUND_TOP = (255, 255, 255)
+GROUND_BOTTOM = (241, 245, 250)
 
-INK = (237, 240, 246)
-MUTED = (147, 155, 170)
-LABEL = (125, 182, 255)
+INK = (16, 22, 33)
+MUTED = (104, 114, 133)
+LABEL = (28, 96, 210)
+
+# Hairline between sections. Empty ground was the divider on the dark version,
+# where a band of near black reads as one. White has no such band: without a
+# rule the module heading sits closer to the photographs above it than to the
+# comb it names, and reads as their caption.
+RULE = (223, 229, 238)
 
 # One colour per `category` value that at least three modules claim for
 # themselves. The six categories with a single member each, and the directories
@@ -154,19 +168,27 @@ LABEL = (125, 182, 255)
 # category of one would give six specks equal billing with a hundred and nineteen
 # modules.
 #
-# Respaced for the dark ground. The old set was picked against white and mixed a
-# 216 blue with a 148 teal and a 158 grey, three different luminances doing the
-# same job, which is why the comb read as a rainbow rather than as a sorted
-# field. These sit at one chroma and one luminance band, far enough apart in hue
-# to stay countable and close enough in weight that no bucket shouts.
+# Respaced twice. An early set picked against white mixed a 216 blue with a 148
+# teal and a 158 grey, three different luminances doing the same job, and the
+# comb read as a rainbow rather than as a sorted field; the dark set that
+# replaced it put all seven at one chroma and one luminance band. That band was
+# chosen to sit on black, and every one of those swatches is a shade too light
+# to hold on paper, so the rule is kept and the band is moved: still one chroma
+# and one weight, still far enough apart in hue to count, a step deeper.
+#
+# The last two are the pair to watch. Enterprise and Other are both greys, three
+# modules and nine, and on the dark ground they were four points of luminance
+# apart, which is not a difference a reader can use in a legend. Enterprise is
+# now a slate with some blue in it and Other a true neutral, so the legend can
+# be read without counting cells.
 BUCKETS: list[tuple[str, str, tuple[int, int, int]]] = [
-    ("core", "Core", (79, 140, 255)),
-    ("business", "Business", (34, 197, 176)),
-    ("regional", "Regional", (245, 166, 60)),
-    ("extension", "Extension", (167, 139, 250)),
-    ("controls", "Controls", (244, 96, 118)),
-    ("enterprise", "Enterprise", (125, 145, 175)),
-    ("__other__", "Other", (150, 160, 176)),
+    ("core", "Core", (46, 112, 240)),
+    ("business", "Business", (13, 165, 148)),
+    ("regional", "Regional", (226, 142, 30)),
+    ("extension", "Extension", (139, 108, 240)),
+    ("controls", "Controls", (230, 71, 96)),
+    ("enterprise", "Enterprise", (86, 106, 138)),
+    ("__other__", "Other", (160, 168, 180)),
 ]
 
 # --------------------------------------------------------------------------- #
@@ -199,7 +221,9 @@ def _read_ids(source: Path, array_name: str) -> list[str]:
     # never been written. An id this regex cannot match is invisible twice over:
     # its tile goes missing, and because `_accents` pairs ids with tints by
     # position it also shifts the accent of every entry after it.
-    return re.findall(r"^\s{4}id: '([a-z0-9-]+)',$", text[start:end], flags=re.MULTILINE)
+    return re.findall(
+        r"^\s{4}id: '([a-z0-9-]+)',$", text[start:end], flags=re.MULTILINE
+    )
 
 
 # The two cast headings, and the counts they spell out. These are the reason the
@@ -305,7 +329,9 @@ TAILWIND_600: dict[str, tuple[int, int, int]] = {
 }
 
 
-def _accents(source: Path, array_name: str, ids: list[str]) -> dict[str, tuple[int, int, int]]:
+def _accents(
+    source: Path, array_name: str, ids: list[str]
+) -> dict[str, tuple[int, int, int]]:
     """The accent colour per entry, taken from the Tailwind hue in its `tint.text`.
 
     `tint.text` is a literal like `text-amber-600 dark:text-amber-400`; the hue is
@@ -318,12 +344,16 @@ def _accents(source: Path, array_name: str, ids: list[str]) -> dict[str, tuple[i
     # and tints are paired by POSITION, so one stray or missing match silently
     # recolours every entry after it - hence `!=` rather than `<`.
     end = text.index("\n];", start)
-    hues = re.findall(r"^\s+text: 'text-([a-z]+)-\d00 ", text[start:end], flags=re.MULTILINE)
+    hues = re.findall(
+        r"^\s+text: 'text-([a-z]+)-\d00 ", text[start:end], flags=re.MULTILINE
+    )
     if len(hues) != len(ids):
         raise SystemExit(f"{source.name}: found {len(hues)} tints for {len(ids)} ids")
     unknown = sorted({h for h in hues if h not in TAILWIND_600})
     if unknown:
-        raise SystemExit(f"{source.name}: no RGB for Tailwind hue(s) {', '.join(unknown)}")
+        raise SystemExit(
+            f"{source.name}: no RGB for Tailwind hue(s) {', '.join(unknown)}"
+        )
     return {i: TAILWIND_600[h] for i, h in zip(ids, hues, strict=True)}
 
 
@@ -345,7 +375,9 @@ def build_cells() -> tuple[list[Cell], list[Cell]]:
             "Update HEAD_CAST, the expected counts and the captions together."
         )
 
-    company_accents = _accents(CASES / "companyTypes.ts", "COMPANY_TYPE_META", company_ids)
+    company_accents = _accents(
+        CASES / "companyTypes.ts", "COMPANY_TYPE_META", company_ids
+    )
     role_accents = _accents(CASES / "roles.ts", "ROLE_META", role_ids)
 
     companies, roles = [], []
@@ -371,7 +403,9 @@ def build_cells() -> tuple[list[Cell], list[Cell]]:
         )
 
     if len({c.photo for c in roles}) != len(roles):
-        raise SystemExit("two roles share a portrait; give each its own face in ROLE_STEM")
+        raise SystemExit(
+            "two roles share a portrait; give each its own face in ROLE_STEM"
+        )
     for cell in companies + roles:
         if not cell.photo.exists():
             raise SystemExit(f"{cell.ident}: no photograph at {cell.photo}")
@@ -426,19 +460,28 @@ def _manifest_of(path: Path) -> tuple[str | None, str, list[str]]:
     """
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "ModuleManifest":
+        if (
+            isinstance(node, ast.Call)
+            and getattr(node.func, "id", "") == "ModuleManifest"
+        ):
             kw = {k.arg: k.value for k in node.keywords if k.arg}
 
             def read(key: str, fallback):
                 return ast.literal_eval(kw[key]) if key in kw else fallback
 
-            return read("name", None), read("category", "__other__"), read("depends", None) or []
+            return (
+                read("name", None),
+                read("category", "__other__"),
+                read("depends", None) or [],
+            )
     return None, "__other__", []
 
 
 def survey() -> Survey:
     """Read the module tree and both dependency graphs."""
-    idents = sorted(p.name for p in MODULES.iterdir() if p.is_dir() and p.name != "__pycache__")
+    idents = sorted(
+        p.name for p in MODULES.iterdir() if p.is_dir() and p.name != "__pycache__"
+    )
     known = set(idents)
 
     modules: list[Module] = []
@@ -518,7 +561,8 @@ def _hex_mask(w: int, h: int, inset: float) -> Image.Image:
     """
     big = Image.new("L", (w * SS, h * SS), 0)
     points = [
-        ((px - w / 2) * (1 - inset) + w / 2, (py - h / 2) * (1 - inset) + h / 2) for px, py in _hexagon(0, 0, w, h)
+        ((px - w / 2) * (1 - inset) + w / 2, (py - h / 2) * (1 - inset) + h / 2)
+        for px, py in _hexagon(0, 0, w, h)
     ]
     ImageDraw.Draw(big).polygon([(px * SS, py * SS) for px, py in points], fill=255)
     return big.resize((w, h), Image.Resampling.LANCZOS)
@@ -581,7 +625,9 @@ def _tile(cell: Cell, mask: Image.Image) -> Image.Image:
     return tile
 
 
-def draw_cast(canvas: Image.Image, pen: ImageDraw.ImageDraw, rows: list[list[Cell]], top: int) -> int:
+def draw_cast(
+    canvas: Image.Image, pen: ImageDraw.ImageDraw, rows: list[list[Cell]], top: int
+) -> int:
     """Draw the photograph comb. Returns the bottom y."""
     mask = _hex_mask(CAST_W, CAST_H, inset=0.018)
     caption_font = _font(21, 600)
@@ -601,7 +647,13 @@ def draw_cast(canvas: Image.Image, pen: ImageDraw.ImageDraw, rows: list[list[Cel
             centre = x + CAST_W // 2
             baseline = y + round(CAST_H * 0.745) - line_height * len(cell.caption)
             for line in cell.caption:
-                pen.text((centre, baseline), line, font=caption_font, fill=(255, 255, 255), anchor="ma")
+                pen.text(
+                    (centre, baseline),
+                    line,
+                    font=caption_font,
+                    fill=(255, 255, 255),
+                    anchor="ma",
+                )
                 baseline += line_height
     return top + (len(rows) - 1) * CAST_STEP + CAST_H
 
@@ -625,7 +677,10 @@ def _tint(base: tuple[int, int, int], t: float) -> tuple[int, int, int]:
 
 def draw_modules(data: Survey) -> Image.Image:
     """The module honeycomb, sorted by bucket and then by how wired each one is."""
-    order = sorted(data.modules, key=lambda m: (_bucket_index(m.category), -data.degree[m.ident], m.ident))
+    order = sorted(
+        data.modules,
+        key=lambda m: (_bucket_index(m.category), -data.degree[m.ident], m.ident),
+    )
     if len(order) > MOD_COLS * MOD_ROWS:
         raise SystemExit(
             f"{len(order)} modules will not fit {MOD_ROWS} rows of {MOD_COLS}. "
@@ -653,7 +708,12 @@ def draw_modules(data: Survey) -> Image.Image:
         y = row * MOD_STEP * SS
         t = min(1.0, (data.degree[module.ident] / RAMP_TOP) ** RAMP_GAMMA)
         fill = _tint(BUCKETS[_bucket_index(module.category)][2], t)
-        pen.polygon(_hexagon(x, y, MOD_W * SS, MOD_H * SS), fill=(*fill, 255), outline=(0, 0, 0, 0), width=2 * SS)
+        pen.polygon(
+            _hexagon(x, y, MOD_W * SS, MOD_H * SS),
+            fill=(*fill, 255),
+            outline=(0, 0, 0, 0),
+            width=2 * SS,
+        )
     return canvas.resize((comb_w, comb_h), Image.Resampling.LANCZOS)
 
 
@@ -666,12 +726,20 @@ def draw_label(pen: ImageDraw.ImageDraw, text: str, top: int) -> int:
     """
     font = _font(21, 650)
     bullet = 13
-    pen.polygon(_hexagon(MARGIN, top + 3, bullet, round(bullet * 2 / 3**0.5)), fill=LABEL)
+    pen.polygon(
+        _hexagon(MARGIN, top + 3, bullet, round(bullet * 2 / 3**0.5)), fill=LABEL
+    )
     x = float(MARGIN + bullet + 11)
     for character in text:
         pen.text((x, top), character, font=font, fill=LABEL)
         x += pen.textlength(character, font=font) + 1.9
     return top + 25
+
+
+def draw_rule(pen: ImageDraw.ImageDraw, top: int) -> int:
+    """A hairline across the content width. Returns the bottom y."""
+    pen.line((MARGIN, top, WIDTH - MARGIN - 1, top), fill=RULE, width=1)
+    return top + 1
 
 
 def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int) -> int:
@@ -684,7 +752,13 @@ def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int) -> int:
     entries = []
     for i, (_, label, colour) in enumerate(BUCKETS):
         count = str(counts[i])
-        span = chip_w + 10 + pen.textlength(label, font=label_font) + 7 + pen.textlength(count, font=count_font)
+        span = (
+            chip_w
+            + 10
+            + pen.textlength(label, font=label_font)
+            + 7
+            + pen.textlength(count, font=count_font)
+        )
         entries.append((label, count, colour, span))
 
     gap = (CONTENT - sum(e[3] for e in entries)) / (len(entries) - 1)
@@ -700,17 +774,24 @@ def draw_legend(pen: ImageDraw.ImageDraw, data: Survey, top: int) -> int:
 
 
 def _ground(width: int, height: int) -> Image.Image:
-    """The dark gradient everything is drawn on.
+    """The paper everything is drawn on: white, with one very slight ramp.
 
-    A flat fill was what made the old banner look printed. One vertical ramp is
-    enough to give the picture a top and a bottom; anything more elaborate
-    competes with the two combs, which are the subject.
+    One vertical ramp is enough to give the picture a top and a bottom; anything
+    more elaborate competes with the two combs, which are the subject. Kept
+    almost invisible here on purpose, because on white the ramp has a second job
+    it did not have on black - it must not turn the image into a grey panel with
+    edges of its own sitting inside a white README.
     """
     ground = Image.new("RGB", (1, height))
     pen = ImageDraw.Draw(ground)
     for y in range(height):
         t = y / max(1, height - 1)
-        pen.point((0, y), fill=tuple(round(a + (b - a) * t) for a, b in zip(GROUND_TOP, GROUND_BOTTOM)))
+        pen.point(
+            (0, y),
+            fill=tuple(
+                round(a + (b - a) * t) for a, b in zip(GROUND_TOP, GROUND_BOTTOM)
+            ),
+        )
     return ground.resize((width, height), Image.Resampling.BILINEAR)
 
 
@@ -724,22 +805,28 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
     lead_font = _font(26, 500)
     note_font = _font(23, 400)
     label_h, after_label = 25, 11
+    # Hand kept in step with the sequence of draws below, section by section, so
+    # that a change to one has an obvious counterpart here.
     height = (
-        20
+        20  # top margin
         + label_h
         + after_label
         + cast_h
-        + 30
+        + 26  # cast comb to rule
+        + 1  # rule
+        + 25  # rule to the module heading
         + label_h
         + after_label
         + comb.height
-        + 26
-        + 23
-        + 20
+        + 26  # module comb to legend
+        + 23  # legend
+        + 22  # legend to rule
+        + 1  # rule
+        + 20  # rule to the lead line
         + 32
         + 11
         + 29
-        + 26
+        + 26  # bottom margin
     )
 
     canvas = _ground(WIDTH, height)
@@ -749,8 +836,11 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
     libraries = len(data.modules) - modules
 
     y = draw_label(pen, HEAD_CAST, 20) + after_label
-    y = draw_cast(canvas, pen, cast_rows, y) + 30
-    y = draw_label(pen, f"{modules} BACKEND MODULES, WIRED TO EACH OTHER", y) + after_label
+    y = draw_rule(pen, draw_cast(canvas, pen, cast_rows, y) + 26) + 25
+    y = (
+        draw_label(pen, f"{modules} BACKEND MODULES, WIRED TO EACH OTHER", y)
+        + after_label
+    )
     canvas.paste(comb, (MARGIN, y), comb)
     y = draw_legend(pen, data, y + comb.height + 26)
 
@@ -763,15 +853,18 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
         f"{libraries} of the lower cells are shared libraries, not modules. Colour depth is how many "
         f"others each is wired to, deepest at {busiest}."
     )
-    pen.text((MARGIN, y + 20), lead, font=lead_font, fill=INK)
-    pen.text((MARGIN, y + 20 + 32 + 11), note, font=note_font, fill=MUTED)
+    y = draw_rule(pen, y + 22) + 20
+    pen.text((MARGIN, y), lead, font=lead_font, fill=INK)
+    pen.text((MARGIN, y + 32 + 11), note, font=note_font, fill=MUTED)
 
     # A caption that runs off the edge is a caption nobody finishes reading, and
     # the width it needs depends on the numbers, which change with the tree.
     for name, text, face in (("lead", lead, lead_font), ("note", note, note_font)):
         over = pen.textlength(text, font=face) - CONTENT
         if over > 0:
-            raise SystemExit(f"the {name} line overruns the banner by {over:.0f}px: {text}")
+            raise SystemExit(
+                f"the {name} line overruns the banner by {over:.0f}px: {text}"
+            )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     # Saved as full colour on purpose, and it is worth saying why, because the
@@ -785,14 +878,22 @@ def render(companies: list[Cell], roles: list[Cell], data: Survey) -> None:
 
     degrees = [data.degree[m.ident] for m in data.modules]
     unmanifested = [m.ident for m in data.modules if m.manifest_name is None]
-    print(f"wrote {OUT.relative_to(REPO)}  {canvas.width}x{canvas.height}  {OUT.stat().st_size // 1024} KB")
-    print(f"  cast   {len(companies)} companies + {len(roles)} roles, cell {CAST_W}x{CAST_H}, step {CAST_STEP}")
-    print(f"  comb   {len(data.modules)} cells in {MOD_ROWS} rows of {MOD_COLS}, cell {MOD_W}x{MOD_H}")
+    print(
+        f"wrote {OUT.relative_to(REPO)}  {canvas.width}x{canvas.height}  {OUT.stat().st_size // 1024} KB"
+    )
+    print(
+        f"  cast   {len(companies)} companies + {len(roles)} roles, cell {CAST_W}x{CAST_H}, step {CAST_STEP}"
+    )
+    print(
+        f"  comb   {len(data.modules)} cells in {MOD_ROWS} rows of {MOD_COLS}, cell {MOD_W}x{MOD_H}"
+    )
     print(f"  modules with a manifest {modules}, shared libraries {libraries}")
     print(f"  declared dependencies   {len(data.declared)}")
     print(f"  import links            {len(data.imports)}")
     print(f"  wired to at least one   {sum(1 for d in degrees if d)}")
-    print(f"  degree median {statistics.median(degrees)}  mean {statistics.mean(degrees):.1f}  max {max(degrees)}")
+    print(
+        f"  degree median {statistics.median(degrees)}  mean {statistics.mean(degrees):.1f}  max {max(degrees)}"
+    )
     if unmanifested:
         # Said out loud rather than raised. The loader discovers modules by finding
         # a manifest, so a directory without one is invisible to it and drops out
