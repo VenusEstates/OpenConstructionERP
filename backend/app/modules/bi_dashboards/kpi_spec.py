@@ -77,6 +77,20 @@ KIND_BOOL = "bool"
 #: this is about keeping the vocabulary sane rather than about injection.
 JSON_KEY_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
 
+#: What one computed value is a value OF.
+#:
+#: ``project`` is what every stored value has always been and stays the
+#: default. ``estimate`` narrows the same definition to a single bill, which
+#: is the only honest reading for anything normalised: a project holding nine
+#: separately quoted and separately contracted additions has nine areas, nine
+#: durations and nine margins, and the average of them is not a rougher
+#: version of the right answer, it is a number with no referent. Money and
+#: contract value still roll up to the project, which is why this is a choice
+#: per definition rather than a change of meaning for all of them.
+SCOPE_PROJECT = "project"
+SCOPE_ESTIMATE = "estimate"
+KPI_SCOPES: tuple[str, ...] = (SCOPE_PROJECT, SCOPE_ESTIMATE)
+
 #: Aggregations a custom KPI may ask for. Anything outside this tuple is
 #: rejected by name.
 AGGREGATIONS: tuple[str, ...] = (
@@ -222,6 +236,19 @@ class CatalogEntity:
     #: deployment could read its own data, which is the thing this feature
     #: exists to avoid.
     json_fields: dict[str, str] = field(default_factory=dict)
+    #: Whether one row here belongs to exactly one estimate.
+    #:
+    #: Declared rather than inferred, because "has a reachable ``boq_id``" and
+    #: "means one estimate" are not the same claim. A project row reaches
+    #: every estimate under it and belongs to none of them, and the usage
+    #: ledger records the project a rate was applied to and not the bill it
+    #: landed in, so neither can answer a per-estimate question however the
+    #: join is written. The binder holds the column; this says whether the
+    #: entity has the property at all, and
+    #: :func:`check_catalog_binding_parity` refuses a disagreement between
+    #: the two - a promise here with no column there would be accepted at
+    #: creation and unanswerable at compute time.
+    narrows_to_estimate: bool = False
 
     def numeric_fields(self) -> list[str]:
         return sorted(n for n, k in self.fields.items() if k == KIND_NUMERIC)
@@ -268,6 +295,10 @@ class CatalogEntity:
             "json_path_fields": [
                 {"name": n, "kind": k, "example": f"{n}.<key>"} for n, k in sorted(self.json_fields.items())
             ],
+            # Served so a picker can grey out estimate scope on an entity that
+            # cannot carry it, rather than offering it and letting the create
+            # call refuse afterwards.
+            "narrows_to_estimate": self.narrows_to_estimate,
         }
 
 
@@ -281,7 +312,16 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "estimator confidence and may be unset, in which case the row "
             "is left out of averages instead of being read as zero. "
             "``boq_name`` is the parent document's name, so a breakdown "
-            "per bid can be read by a person rather than by id."
+            "per bid can be read by a person rather than by id. "
+            "``risk_dispersion`` is the estimating standard deviation for "
+            "the line as a fraction of its own amount, which is what a "
+            "risk-adjusted margin needs and what confidence cannot give: "
+            "read it with weighted_avg weighted by amount. ``price_basis`` "
+            "is what the price stands on, one of invoice, quotation, "
+            "price_list, contract_rate, norm, historic, judgement - "
+            "deliberately separate from ``source``, which records how the "
+            "row was entered and is ``manual`` on nearly every row of a "
+            "typed bill."
         ),
         fields={
             "quantity": KIND_NUMERIC,
@@ -289,6 +329,8 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "total": KIND_NUMERIC,
             "amount": KIND_NUMERIC,
             "confidence": KIND_NUMERIC,
+            "risk_dispersion": KIND_NUMERIC,
+            "price_basis": KIND_TEXT,
             "boq_id": KIND_UUID,
             "boq_name": KIND_TEXT,
             "parent_id": KIND_UUID,
@@ -308,6 +350,7 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
         # or imported from a workbook, a breakdown by it looks like a cost
         # analysis and is a provenance report with one bar.
         json_fields={"classification": KIND_TEXT},
+        narrows_to_estimate=True,
     ),
     "boq": CatalogEntity(
         name="boq",
@@ -322,6 +365,7 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "estimate_type": KIND_TEXT,
             "is_locked": KIND_BOOL,
         },
+        narrows_to_estimate=True,
     ),
     "project": CatalogEntity(
         name="project",
@@ -350,6 +394,12 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "currency": KIND_TEXT,
             "parent_project_id": KIND_UUID,
         },
+        # One row per project, which is exactly what makes it useful and
+        # exactly what stops it narrowing: an estimate does not have a
+        # project's floor area, it has whatever part of the building it was
+        # quoted for, and reading the project's number under an estimate's
+        # label would answer a question nobody asked with a plausible figure.
+        narrows_to_estimate=False,
     ),
     "boq_markup": CatalogEntity(
         name="boq_markup",
@@ -379,6 +429,47 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "scope_position_id": KIND_UUID,
         },
         display_name_for={"boq_id": "boq_name"},
+        narrows_to_estimate=True,
+    ),
+    "schedule_activity": CatalogEntity(
+        name="schedule_activity",
+        source_module="oe_schedule",
+        description=(
+            "One activity of a project schedule. Duration is a commercial "
+            "figure and not only a planning one - it prices site overhead "
+            "and it is what a client asks about before margin - so the "
+            "values CPM has already computed are readable here the way an "
+            "estimate is: ``duration_days`` per activity, ``total_float`` "
+            "and ``free_float`` in days, ``progress_pct`` 0..100, and "
+            "``is_critical`` to filter to the critical path, whose length "
+            "in days is the sum of duration over that filter. Float is "
+            "unset until CPM has run, so an unscheduled activity is left "
+            "out of an average rather than read as having no slack. What "
+            "is NOT here is the calendar span of the project itself: that "
+            "is a latest-finish minus earliest-start over two date "
+            "columns, and this engine has no span aggregate to express it."
+        ),
+        fields={
+            "duration_days": KIND_NUMERIC,
+            "total_float": KIND_NUMERIC,
+            "free_float": KIND_NUMERIC,
+            "progress_pct": KIND_NUMERIC,
+            "sort_order": KIND_NUMERIC,
+            "is_critical": KIND_BOOL,
+            "schedule_id": KIND_UUID,
+            "schedule_name": KIND_TEXT,
+            "parent_id": KIND_UUID,
+            "name": KIND_TEXT,
+            "wbs_code": KIND_TEXT,
+            "status": KIND_TEXT,
+            "activity_type": KIND_TEXT,
+            "activity_code": KIND_TEXT,
+        },
+        display_name_for={"schedule_id": "schedule_name"},
+        # An activity belongs to a schedule, and a schedule to a project.
+        # Nothing on this path names a bill, and a project's schedule is not
+        # drawn up per estimate, so there is no estimate to narrow to.
+        narrows_to_estimate=False,
     ),
     "cost_item_usage": CatalogEntity(
         name="cost_item_usage",
@@ -409,6 +500,13 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "context": KIND_TEXT,
         },
         display_name_for={"cost_item_id": "cost_item_code"},
+        # The ledger records which PROJECT a rate was applied to and not which
+        # bill it landed in, so "how old are the prices this estimate rests
+        # on" cannot be answered from it today however the join is written.
+        # Declared false rather than approximated: the nearest available
+        # answer is the project's, and serving that under an estimate's label
+        # is the failure this flag exists to prevent.
+        narrows_to_estimate=False,
     ),
 }
 
@@ -449,6 +547,12 @@ class BoundEntity:
     #: what keeps that from meaning "assemble SQL from a string": it takes
     #: the key as a value and hands it to SQLAlchemy, which binds it.
     json_fields: dict[str, Callable[[str], BoundField]] = field(default_factory=dict)
+    #: The column carrying the estimate a row belongs to, or ``None``.
+    #:
+    #: ``None`` is not "not wired up yet", it is the entity saying it has no
+    #: single estimate - see ``narrows_to_estimate`` on the catalog entry,
+    #: which the parity check holds to this.
+    boq_column: Any | None = None
 
     def resolve_field(self, name: str) -> BoundField:
         """The bound field for a plain name or a ``<column>.<key>`` path.
@@ -482,6 +586,7 @@ def _bind_boq_position() -> BoundEntity:
         project_column=BOQ.project_id,
         period_column=Position.created_at,
         joins=[(BOQ, Position.boq_id == BOQ.id)],
+        boq_column=Position.boq_id,
         fields={
             "quantity": BoundField(numeric_value(Position.quantity), KIND_NUMERIC),
             "unit_rate": BoundField(numeric_value(Position.unit_rate), KIND_NUMERIC),
@@ -494,6 +599,21 @@ def _bind_boq_position() -> BoundEntity:
                 numeric_value(Position.confidence),
                 KIND_NUMERIC,
                 nullable_source=Position.confidence,
+            ),
+            # Both carry a nullable source, and here that is the whole
+            # design rather than a formality. An unjudged line has no
+            # dispersion, and a row read as zero would say the estimator
+            # declared it certain - the one reading that turns a missing
+            # judgement into a reassuring one.
+            "risk_dispersion": BoundField(
+                numeric_value(Position.risk_dispersion),
+                KIND_NUMERIC,
+                nullable_source=Position.risk_dispersion,
+            ),
+            "price_basis": BoundField(
+                Position.price_basis,
+                KIND_TEXT,
+                nullable_source=Position.price_basis,
             ),
             "boq_id": BoundField(Position.boq_id, KIND_UUID),
             # Free: the join to BOQ is already there for the project
@@ -533,6 +653,9 @@ def _bind_boq() -> BoundEntity:
         project_column=BOQ.project_id,
         period_column=BOQ.created_at,
         joins=[],
+        # The bill itself, so narrowing to one estimate leaves one row and
+        # ``count`` reads 1 rather than the project's estimate count.
+        boq_column=BOQ.id,
         fields={
             "name": BoundField(BOQ.name, KIND_TEXT),
             "status": BoundField(BOQ.status, KIND_TEXT),
@@ -601,6 +724,10 @@ def _bind_boq_markup() -> BoundEntity:
         project_column=BOQ.project_id,
         period_column=BOQMarkup.created_at,
         joins=[(BOQ, BOQMarkup.boq_id == BOQ.id)],
+        # The reason this entity is worth narrowing at all: margin is the
+        # textbook case of a figure that means one thing per estimate and
+        # nothing averaged across the estimates of one project.
+        boq_column=BOQMarkup.boq_id,
         fields={
             # Both NOT NULL with a "0" default, so an inactive or unused half
             # of a line reads as zero rather than as absent - which is what it
@@ -657,12 +784,57 @@ def _bind_cost_item_usage() -> BoundEntity:
     )
 
 
+def _bind_schedule_activity() -> BoundEntity:
+    from app.modules.schedule.models import Activity, Schedule
+
+    # ``progress_pct`` is a String column like the BOQ money columns and gets
+    # the same tolerant coercion; ``duration_days`` and the two floats are
+    # real Integers and need none. The floats are nullable because CPM writes
+    # them and may not have run, so they carry a null source and drop out of
+    # averages rather than reading as zero slack.
+    return BoundEntity(
+        model=Activity,
+        project_column=Schedule.project_id,
+        period_column=Activity.created_at,
+        joins=[(Schedule, Activity.schedule_id == Schedule.id)],
+        fields={
+            "duration_days": BoundField(Activity.duration_days, KIND_NUMERIC),
+            "total_float": BoundField(
+                Activity.total_float,
+                KIND_NUMERIC,
+                nullable_source=Activity.total_float,
+            ),
+            "free_float": BoundField(
+                Activity.free_float,
+                KIND_NUMERIC,
+                nullable_source=Activity.free_float,
+            ),
+            "progress_pct": BoundField(numeric_value(Activity.progress_pct), KIND_NUMERIC),
+            "sort_order": BoundField(Activity.sort_order, KIND_NUMERIC),
+            "is_critical": BoundField(Activity.is_critical, KIND_BOOL),
+            "schedule_id": BoundField(Activity.schedule_id, KIND_UUID),
+            "schedule_name": BoundField(Schedule.name, KIND_TEXT),
+            "parent_id": BoundField(Activity.parent_id, KIND_UUID, nullable_source=Activity.parent_id),
+            "name": BoundField(Activity.name, KIND_TEXT),
+            "wbs_code": BoundField(Activity.wbs_code, KIND_TEXT),
+            "status": BoundField(Activity.status, KIND_TEXT),
+            "activity_type": BoundField(Activity.activity_type, KIND_TEXT),
+            "activity_code": BoundField(
+                Activity.activity_code,
+                KIND_TEXT,
+                nullable_source=Activity.activity_code,
+            ),
+        },
+    )
+
+
 _BINDERS: dict[str, Callable[[], BoundEntity]] = {
     "boq_position": _bind_boq_position,
     "boq": _bind_boq,
     "project": _bind_project,
     "boq_markup": _bind_boq_markup,
     "cost_item_usage": _bind_cost_item_usage,
+    "schedule_activity": _bind_schedule_activity,
 }
 
 
@@ -728,6 +900,19 @@ def check_catalog_binding_parity() -> dict[str, dict[str, list[str]]]:
         wrong_json_kind = sorted(
             n for n in declared_json & built_json if entry.json_fields[n] != bound.json_fields[n]("probe").kind
         )
+        # And the same question for the estimate dimension. A catalog that
+        # promises ``narrows_to_estimate`` while its binder holds no column
+        # is the JSON case again in a worse place: the definition is accepted
+        # with ``scope="estimate"``, stored, put on a dashboard, and the
+        # narrowing silently does not happen - every estimate reads the
+        # project's number under its own name, which looks like data.
+        estimate_scope_mismatch = (
+            ["declared but no column bound"]
+            if entry.narrows_to_estimate and bound.boq_column is None
+            else ["column bound but not declared"]
+            if bound.boq_column is not None and not entry.narrows_to_estimate
+            else []
+        )
         diff = {
             "declared_only": sorted(declared - built),
             "bound_only": sorted(built - declared),
@@ -736,10 +921,23 @@ def check_catalog_binding_parity() -> dict[str, dict[str, list[str]]]:
             "json_declared_only": sorted(declared_json - built_json),
             "json_bound_only": sorted(built_json - declared_json),
             "json_kind_mismatch": wrong_json_kind,
+            "estimate_scope_mismatch": estimate_scope_mismatch,
         }
         if any(diff.values()):
             report[name] = diff
     return report
+
+
+def entity_narrows_to_estimate(name: str) -> bool:
+    """Whether one value of this entity belongs to exactly one estimate.
+
+    Reads the catalog rather than the binding, so the answer is the same
+    whether or not the source module is installed - a definition is
+    accepted or refused at creation time, and that decision cannot depend
+    on which modules happen to be loaded on the machine taking the call.
+    """
+    entry = ENTITY_CATALOG.get(name)
+    return bool(entry and entry.narrows_to_estimate)
 
 
 # ── Validation ─────────────────────────────────────────────────────────
@@ -1149,6 +1347,7 @@ def _base_predicates(
     period_start: _date | None,
     period_end: _date | None,
     allowed_project_ids: set[uuid.UUID] | None,
+    boq_id: uuid.UUID | None = None,
 ) -> Any:
     from app.modules.bi_dashboards.kpis import _scope_portfolio
 
@@ -1156,6 +1355,21 @@ def _base_predicates(
         stmt = stmt.join(target, onclause)
     if project_id is not None:
         stmt = stmt.where(bound.project_column == project_id)
+    if boq_id is not None:
+        # Refused rather than ignored. An entity with no estimate of its own
+        # would otherwise answer with the project's figure, and the caller
+        # asked for one estimate: a wrong number under the right label is the
+        # failure this module is built around, and it is invisible because it
+        # is the right ORDER of magnitude.
+        if bound.boq_column is None:
+            raise KPISpecError(
+                "entity",
+                f"entity '{spec.get('entity')}' has no estimate of its own, so it cannot be "
+                f"narrowed to one. Its rows belong to a project.",
+                value=spec.get("entity"),
+                allowed=sorted(n for n, e in ENTITY_CATALOG.items() if e.narrows_to_estimate),
+            )
+        stmt = stmt.where(bound.boq_column == boq_id)
     # Same portfolio narrowing every built-in formula gets. A custom KPI
     # is not allowed to be the one read that ignores it.
     stmt = _scope_portfolio(stmt, bound.project_column, project_id, allowed_project_ids)
@@ -1253,6 +1467,7 @@ async def _evaluate_top_by(
     period_start: _date | None,
     period_end: _date | None,
     allowed_project_ids: set[uuid.UUID] | None,
+    boq_id: uuid.UUID | None = None,
 ) -> SpecResult:
     """The single highest row, optionally one per group.
 
@@ -1282,6 +1497,7 @@ async def _evaluate_top_by(
         period_start=period_start,
         period_end=period_end,
         allowed_project_ids=allowed_project_ids,
+        boq_id=boq_id,
     )
     sub = inner.subquery()
     outer = (
@@ -1314,6 +1530,7 @@ async def evaluate_spec(
     period_start: _date | None = None,
     period_end: _date | None = None,
     allowed_project_ids: set[uuid.UUID] | None = None,
+    boq_id: uuid.UUID | None = None,
 ) -> SpecResult:
     """Run a validated spec.
 
@@ -1331,10 +1548,19 @@ async def evaluate_spec(
         period_end: Include rows created on or before this date.
         allowed_project_ids: The caller's accessible projects, applied in
             portfolio mode exactly as the built-in formulas apply it.
+        boq_id: Narrow to one estimate. ``None`` is the whole project,
+            which is what every reading was before this existed. The
+            caller is responsible for having access-checked the project
+            the estimate belongs to - passing an estimate id alone must
+            not be a way around ``allowed_project_ids``.
 
     Returns:
         The aggregate, the number of rows behind it, and the per-group
         breakdown when the spec asked for one.
+
+    Raises:
+        KPISpecError: An estimate was asked for on an entity whose rows do
+            not belong to one.
     """
     bound = bind_entity(spec["entity"])
     aggregation = spec["aggregation"]
@@ -1347,6 +1573,7 @@ async def evaluate_spec(
             period_start=period_start,
             period_end=period_end,
             allowed_project_ids=allowed_project_ids,
+            boq_id=boq_id,
         )
 
     measures = _measures(bound, spec)
@@ -1359,6 +1586,7 @@ async def evaluate_spec(
         period_start=period_start,
         period_end=period_end,
         allowed_project_ids=allowed_project_ids,
+        boq_id=boq_id,
     )
     row = (await session.execute(headline)).one()
     values = list(row)
@@ -1388,6 +1616,7 @@ async def evaluate_spec(
             period_start=period_start,
             period_end=period_end,
             allowed_project_ids=allowed_project_ids,
+            boq_id=boq_id,
         )
         # ``count`` has no measure to rank by, so groups come back by key.
         order = cast(measures[0], Integer).desc() if aggregation == "count" else measures[0].desc()
@@ -1411,20 +1640,35 @@ async def evaluate_spec(
 # ── Definition lookup ──────────────────────────────────────────────────
 
 
-async def load_custom_spec(session: AsyncSession, code: str) -> tuple[dict[str, Any], str] | None:
+@dataclass(frozen=True)
+class LoadedSpec:
+    """One stored custom KPI, as the compute path needs it.
+
+    A record rather than a tuple because ``scope`` joined it later: an
+    unpacking call site would have kept working with the wrong number of
+    names in exactly one of the two places, and the compute path is where
+    a mistake becomes a number on a dashboard.
+    """
+
+    spec: dict[str, Any]
+    unit: str
+    scope: str
+
+
+async def load_custom_spec(session: AsyncSession, code: str) -> LoadedSpec | None:
     """Fetch the stored spec for a custom KPI code.
 
-    Returns ``(spec, unit)`` or ``None`` when the code has no definition
-    row or its row carries no spec (every system KPI is the latter).
+    Returns ``None`` when the code has no definition row or its row
+    carries no spec (every system KPI is the latter).
     """
-    stmt = select(KPIDefinition.spec_json, KPIDefinition.unit).where(KPIDefinition.code == code)
+    stmt = select(KPIDefinition.spec_json, KPIDefinition.unit, KPIDefinition.scope).where(KPIDefinition.code == code)
     row = (await session.execute(stmt)).first()
     if row is None:
         return None
-    spec, unit = row
+    spec, unit, scope = row
     if not isinstance(spec, dict) or not spec:
         return None
-    return spec, unit or "ratio"
+    return LoadedSpec(spec=spec, unit=unit or "ratio", scope=scope or SCOPE_PROJECT)
 
 
 __all__ = [
@@ -1434,14 +1678,19 @@ __all__ = [
     "MAX_BREAKDOWN_GROUPS",
     "MAX_IN_VALUES",
     "NULL_GROUP_KEY",
+    "KPI_SCOPES",
+    "SCOPE_ESTIMATE",
+    "SCOPE_PROJECT",
     "BoundEntity",
     "BoundField",
     "CatalogEntity",
     "KPISpecError",
+    "LoadedSpec",
     "SpecResult",
     "bind_entity",
     "catalog_as_dict",
     "check_catalog_binding_parity",
+    "entity_narrows_to_estimate",
     "evaluate_spec",
     "load_custom_spec",
     "source_modules_for",

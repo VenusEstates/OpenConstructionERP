@@ -3893,6 +3893,7 @@ async def _compute_from_spec(
     period_start: _date | None = None,
     period_end: _date | None = None,
     allowed_project_ids: set[uuid.UUID] | None = None,
+    boq_id: uuid.UUID | None = None,
 ) -> KPIComputation:
     """Resolve a code with no Python formula against the custom KPI table.
 
@@ -3916,7 +3917,19 @@ async def _compute_from_spec(
             code,
         )
         return KPIComputation()
-    spec, unit = loaded
+    spec, unit, scope = loaded.spec, loaded.unit, loaded.scope
+    if scope == _spec.SCOPE_ESTIMATE and boq_id is None:
+        # The definition says its value is a value of one estimate, and no
+        # estimate was named. The project-wide figure is reachable and is the
+        # wrong answer: it is exactly what declaring this scope was meant to
+        # stop being read. Degrade the way an unknown code degrades, and say
+        # so above DEBUG, because the visible symptom is a tile showing 0 and
+        # nothing else in the system is going to explain it.
+        logger.warning(
+            "compute: KPI %s is scoped to one estimate and none was given - the widget renders 0 until it names one",
+            code,
+        )
+        return KPIComputation(unit=unit)
     try:
         result = await _spec.evaluate_spec(
             spec,
@@ -3925,6 +3938,7 @@ async def _compute_from_spec(
             period_start=period_start,
             period_end=period_end,
             allowed_project_ids=allowed_project_ids,
+            boq_id=boq_id,
         )
     except ImportError:
         # The entity's source module is not installed. Designed condition,
@@ -3950,6 +3964,7 @@ async def compute(
     period_end: _date | None = None,
     filters: dict[str, Any] | None = None,
     allowed_project_ids: set[uuid.UUID] | None = None,
+    boq_id: uuid.UUID | None = None,
 ) -> KPIComputation:
     """Invoke a registered KPI safely.
 
@@ -3969,6 +3984,15 @@ async def compute(
     accessible projects (IDOR defence). ``None`` means no restriction
     (admin / single-project, which is already access-checked). Formulas
     that have no portfolio fan-out ignore it via their ``**_`` catch-all.
+
+    ``boq_id`` narrows to one estimate and reaches the declarative specs
+    only. A registered Python formula takes no such argument, and there are
+    35 of them: rather than pass it along to be swallowed by a ``**_`` and
+    have the caller receive the project figure labelled as one estimate's,
+    the combination is refused before it can produce a number. The refusal
+    is a zero here because this function never raises at its callers; the
+    service layer refuses the same combination loudly, which is where a
+    person who asked for it finds out.
     """
     fn = KPI_FORMULAS.get(code)
     if fn is None:
@@ -3985,7 +4009,14 @@ async def compute(
             period_start=period_start,
             period_end=period_end,
             allowed_project_ids=allowed_project_ids,
+            boq_id=boq_id,
         )
+    if boq_id is not None:
+        logger.warning(
+            "compute: KPI %s is a built-in formula and cannot be narrowed to one estimate",
+            code,
+        )
+        return KPIComputation()
     try:
         return await fn(
             session,

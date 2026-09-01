@@ -31,6 +31,10 @@ const boqPosition: KpiSpecEntity = {
   numeric_fields: ['amount'],
   groupable_fields: ['boq_id', 'boq_name', 'unit'],
   display_name_for: { boq_id: 'boq_name' },
+  json_path_fields: [],
+  // A priced line carries the bill it is part of, so it is one of the
+  // entities a KPI can be read one estimate at a time (issue #447).
+  narrows_to_estimate: true,
 };
 
 describe('drillFieldText', () => {

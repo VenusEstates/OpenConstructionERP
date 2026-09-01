@@ -101,6 +101,24 @@ class KPIDefinition(Base):
         default=False,
         server_default="0",
     )
+    # What one computed value of this KPI is a value OF: "project" or
+    # "estimate". Project is what every stored value was before this column
+    # existed and stays the default, so nothing already registered changes
+    # meaning. "estimate" says the definition is only readable one bill at a
+    # time - the case for anything normalised, where a project holding
+    # several separately quoted and separately contracted estimates has one
+    # figure per estimate and no meaningful average of them.
+    #
+    # Not a Boolean, because the third scope this platform will want is
+    # already visible (a package or section within one bill), and a column
+    # named for the two-valued case would have to be replaced rather than
+    # extended.
+    scope: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="project",
+        server_default="project",
+    )
     # The declarative spec behind a custom KPI - empty for every system
     # KPI, whose behaviour lives in Python. Validated against the entity /
     # field / aggregation whitelist before it is written, so what is
@@ -617,7 +635,16 @@ class DashboardWidgetSnapshot(Base):
 
 
 class KPIValue(Base):
-    """Historical KPI value for trend analysis."""
+    """Historical KPI value for trend analysis.
+
+    A row is a value of one KPI over one period at one scope. The scope is
+    ``project_id`` plus ``boq_id``, and both being NULL is the portfolio
+    figure. ``boq_id IS NULL`` is the project-level reading rather than
+    "any estimate", which is why every read that means the project asks for
+    it explicitly: a project-level trend line that did not would start
+    mixing in per-estimate points the day the first estimate-scoped KPI was
+    persisted, and the chart would keep drawing.
+    """
 
     __tablename__ = "oe_bi_dashboards_kpi_value"
 
@@ -627,6 +654,15 @@ class KPIValue(Base):
         index=True,
     )
     project_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(),
+        nullable=True,
+        index=True,
+    )
+    # No ORM FK to oe_boq - read-only consumer, same rule as project_id.
+    # NULL is the whole project, which is what every row written before this
+    # column existed already is, so the old meaning survives without a
+    # backfill.
+    boq_id: Mapped[uuid.UUID | None] = mapped_column(
         GUID(),
         nullable=True,
         index=True,

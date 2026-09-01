@@ -96,6 +96,8 @@ from app.modules.bi_dashboards.service import (
     CustomKPIInUse,
     CustomKPIIsSystem,
     CustomKPINotFound,
+    EstimateNotFound,
+    KPIScopeUnavailable,
 )
 
 logger = logging.getLogger(__name__)
@@ -472,20 +474,64 @@ async def compute_kpi(
     # verify they own that project. A project-less (portfolio) call is
     # scoped to the caller's accessible projects so a non-admin cannot
     # aggregate across every tenant's projects (admins get None = no filter).
+    #
+    # An estimate is not a second, independent way to name a row set. It is
+    # resolved to the project that owns it and THAT project is access-checked,
+    # because ``allowed_project_ids`` knows nothing about estimate ids: an
+    # estimate-scoped query adds its predicate alongside a project predicate
+    # the rows already satisfy, so an unresolved estimate id would read
+    # another tenant's bill through a call that looks scoped.
+    project_id = payload.project_id
+    if payload.boq_id is not None:
+        try:
+            owner = await service.estimate_owner_project(payload.boq_id)
+        except EstimateNotFound as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "estimate_not_found", "boq_id": str(payload.boq_id), "message": str(exc)},
+            ) from exc
+        if project_id is not None and project_id != owner:
+            # Two scopes that disagree. Silently preferring either one
+            # answers a question the caller did not ask, and the reading
+            # would look ordinary.
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "scope_conflict",
+                    "message": (
+                        f"estimate {payload.boq_id} belongs to project {owner}, not to the "
+                        f"requested project {project_id}."
+                    ),
+                },
+            )
+        project_id = owner
+
     allowed: set[uuid.UUID] | None = None
-    if payload.project_id is not None:
-        await verify_project_access(payload.project_id, user_id, session)
+    if project_id is not None:
+        await verify_project_access(project_id, user_id, session)
     else:
         allowed = await accessible_project_ids(session, user_id)
-    return await service.compute_kpi(
-        code,
-        project_id=payload.project_id,
-        period_start=payload.period_start,
-        period_end=payload.period_end,
-        filters=payload.filters,
-        persist=payload.persist,
-        allowed_project_ids=allowed,
-    )
+    try:
+        return await service.compute_kpi(
+            code,
+            project_id=project_id,
+            boq_id=payload.boq_id,
+            period_start=payload.period_start,
+            period_end=payload.period_end,
+            filters=payload.filters,
+            persist=payload.persist,
+            allowed_project_ids=allowed,
+        )
+    except KPIScopeUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error": "kpi_scope_unavailable", "code": exc.code, "message": str(exc)},
+        ) from exc
+    except CustomKPINotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "kpi_not_found", "code": exc.code, "message": str(exc)},
+        ) from exc
 
 
 @router.get(
@@ -499,11 +545,31 @@ async def kpi_history(
     session: SessionDep,
     service: BIDashboardsService = Depends(_service),
     project_id: uuid.UUID | None = Query(default=None),
+    boq_id: uuid.UUID | None = Query(default=None),
     limit: int = Query(default=24, ge=1, le=500),
 ) -> KPIHistoryResponse:
     # Same portfolio IDOR scope as compute_kpi: a specific project is
     # access-checked; a project-less history is scoped to the caller's
-    # accessible projects (admins get None = unrestricted).
+    # accessible projects (admins get None = unrestricted). And the same
+    # rule for an estimate: resolved to its owning project, which is what
+    # gets checked.
+    if boq_id is not None:
+        try:
+            owner = await service.estimate_owner_project(boq_id)
+        except EstimateNotFound as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "estimate_not_found", "boq_id": str(boq_id), "message": str(exc)},
+            ) from exc
+        if project_id is not None and project_id != owner:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "scope_conflict",
+                    "message": f"estimate {boq_id} belongs to project {owner}, not to the requested project.",
+                },
+            )
+        project_id = owner
     allowed: set[uuid.UUID] | None = None
     if project_id is not None:
         await verify_project_access(project_id, user_id, session)
@@ -512,6 +578,7 @@ async def kpi_history(
     points = await service.kpi_history(
         code,
         project_id=project_id,
+        boq_id=boq_id,
         limit=limit,
         allowed_project_ids=allowed,
     )

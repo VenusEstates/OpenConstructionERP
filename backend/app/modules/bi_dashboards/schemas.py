@@ -10,6 +10,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.modules.bi_dashboards.kpi_spec import KPI_SCOPES as _KPI_SCOPES
+
 # ── Canonical enumerations ─────────────────────────────────────────────
 
 KPI_UNITS: tuple[str, ...] = (
@@ -38,6 +40,10 @@ KPI_CATEGORIES: tuple[str, ...] = (
     "sustainability",
     "operational",
 )
+#: What one computed KPI value is a value OF. Defined in ``kpi_spec``
+#: because that module is what knows which entities can carry which scope,
+#: and a second spelling here would be a second answer to the same question.
+KPI_SCOPES = _KPI_SCOPES
 DASHBOARD_SCOPES: tuple[str, ...] = ("personal", "role", "global", "project")
 REPORT_SCOPES: tuple[str, ...] = ("personal", "role", "global")
 WIDGET_TYPES: tuple[str, ...] = (
@@ -87,6 +93,7 @@ class KPIDefinitionRead(BaseModel):
     is_system: bool = False
     spec_json: dict[str, Any] = Field(default_factory=dict)
     project_id: UUID | None = None
+    scope: str = "project"
     created_at: datetime
     updated_at: datetime
 
@@ -115,6 +122,11 @@ class KPIDefinitionCreate(BaseModel):
     aggregation: str = "last"
     category: str = "operational"
     project_id: UUID | None = None
+    # What one value of this KPI is a value OF. "project" is the default and
+    # is what every definition registered before this field existed means.
+    # "estimate" is refused at creation when the spec's entity has no
+    # estimate of its own, rather than accepted and found unanswerable later.
+    scope: str = "project"
     spec: dict[str, Any] = Field(...)
 
     @field_validator("unit")
@@ -141,10 +153,21 @@ class KPIDefinitionCreate(BaseModel):
             raise ValueError(f"unknown category {value!r}. Allowed: {', '.join(KPI_CATEGORIES)}.")
         return value
 
+    @field_validator("scope")
+    @classmethod
+    def _known_scope(cls, value: str) -> str:
+        if value not in KPI_SCOPES:
+            raise ValueError(f"unknown scope {value!r}. Allowed: {', '.join(KPI_SCOPES)}.")
+        return value
+
 
 class KPIComputeRequest(BaseModel):
     kpi_code: str | None = None  # path param wins; body version optional
     project_id: UUID | None = None
+    # Narrow the reading to one estimate. The estimate is resolved to the
+    # project that owns it and THAT project is access-checked, so this is
+    # not a second, unguarded way to name a row set - see the router.
+    boq_id: UUID | None = None
     period_start: date | None = None
     period_end: date | None = None
     filters: dict[str, Any] = Field(default_factory=dict)

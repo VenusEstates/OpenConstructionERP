@@ -59,9 +59,21 @@ export interface KpiDefinition {
   is_system: boolean;
   /** Null means the definition is company-wide and shows on every project. */
   project_id: string | null;
+  /**
+   * What one value of this KPI is a value OF.
+   *
+   * `project` is what every definition registered before this field existed
+   * means, and stays the default. `estimate` says the KPI is only readable
+   * one bill at a time, which is the honest reading for anything normalised:
+   * a project holding several separately quoted estimates has one figure per
+   * estimate and no meaningful average of them.
+   */
+  scope: KpiScope;
   created_at: string;
   updated_at: string;
 }
+
+export type KpiScope = 'project' | 'estimate';
 
 export interface KpiHistoryPoint {
   period_start: string;
@@ -301,10 +313,14 @@ export function listKpis(params?: {
 
 export function getKpiHistory(
   code: string,
-  params?: { project_id?: string; limit?: number },
+  params?: { project_id?: string; boq_id?: string; limit?: number },
 ): Promise<KpiHistoryResponse> {
   const qs = new URLSearchParams();
   if (params?.project_id) qs.set('project_id', params.project_id);
+  // Narrows the trend to one estimate. Omitting it is the project-level
+  // series, which is what every stored point was before estimates existed -
+  // the server reads the absence as `boq_id IS NULL` rather than as "any".
+  if (params?.boq_id) qs.set('boq_id', params.boq_id);
   if (params?.limit !== undefined) qs.set('limit', String(params.limit));
   const q = qs.toString();
   return apiGet<KpiHistoryResponse>(
@@ -316,6 +332,16 @@ export function computeKpi(
   code: string,
   payload: {
     project_id?: string | null;
+    /**
+     * Read one estimate rather than the whole project.
+     *
+     * The server resolves it to the project that owns it and checks access
+     * against that, so passing it alone is enough and passing a `project_id`
+     * that disagrees with it is refused rather than silently resolved.
+     * A KPI that cannot be read per estimate answers 422 instead of
+     * returning the project figure under the estimate's name.
+     */
+    boq_id?: string | null;
     period_start?: string | null;
     period_end?: string | null;
     filters?: Record<string, unknown>;
@@ -338,6 +364,13 @@ export interface KpiSpecField {
   kind: KpiSpecFieldKind;
 }
 
+export interface KpiSpecJsonPathField {
+  name: string;
+  kind: KpiSpecFieldKind;
+  /** The shape to show, e.g. `classification.<key>`. */
+  example: string;
+}
+
 /** One entity a custom KPI may aggregate over, as the catalog describes it. */
 export interface KpiSpecEntity {
   name: string;
@@ -356,6 +389,24 @@ export interface KpiSpecEntity {
    * The form reads the same map so what it shows is what will be stored.
    */
   display_name_for: Record<string, string>;
+  /**
+   * JSON columns a `<column>.<key>` path may be built on.
+   *
+   * There is no finite list of paths to offer - the keys live in the data,
+   * because these columns hold classification schemes - so the picker offers
+   * the column and prompts for the key.
+   */
+  json_path_fields: KpiSpecJsonPathField[];
+  /**
+   * Whether one row of this entity belongs to exactly one estimate.
+   *
+   * False for `project`, whose one row per building is what makes its floor
+   * area worth measuring, and for `cost_item_usage`, whose ledger records
+   * which project a rate was applied to and not which bill. Offering
+   * estimate scope on those would be offering the project's number under an
+   * estimate's label.
+   */
+  narrows_to_estimate: boolean;
 }
 
 /**
@@ -403,6 +454,12 @@ export interface CreateKpiPayload {
   aggregation?: string;
   category?: KpiCategory;
   project_id?: string | null;
+  /**
+   * Defaults to `project`. `estimate` is refused at creation when the spec's
+   * entity has no estimate of its own, rather than accepted and found
+   * unanswerable once it is on a dashboard.
+   */
+  scope?: KpiScope;
   spec: KpiSpec;
 }
 

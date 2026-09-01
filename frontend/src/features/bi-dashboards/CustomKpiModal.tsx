@@ -27,6 +27,7 @@ import {
   createKpi,
   getKpiSpecCatalog,
   type KpiCategory,
+  type KpiScope,
   type KpiSpec,
   type KpiSpecCatalog,
   type KpiSpecEntity,
@@ -132,6 +133,7 @@ export function CustomKpiModal({
   const [trend, setTrend] = useState<string>('last');
   const [target, setTarget] = useState('');
 
+  const [scope, setScope] = useState<KpiScope>('project');
   const [entityName, setEntityName] = useState('');
   const [aggregation, setAggregation] = useState('');
   const [fieldName, setFieldName] = useState('');
@@ -152,6 +154,15 @@ export function CustomKpiModal({
     : (aggregations[0] ?? '');
   const operators = catalog?.filter_operators ?? [];
 
+  // Not every entity has an estimate of its own. A project has one row per
+  // building, which is what makes its floor area worth measuring and what
+  // stops an estimate owning it; the cost-item ledger records which project a
+  // rate was applied to and not which bill. Reading the effective value here
+  // rather than resetting the state means switching between two entities that
+  // both support it keeps the choice, while switching to one that does not
+  // shows - and sends - what will actually happen.
+  const canScopeToEstimate = entity?.narrows_to_estimate ?? false;
+  const effectiveScope: KpiScope = canScopeToEstimate ? scope : 'project';
   const numericFields = entity?.numeric_fields ?? [];
   const groupableFields = entity?.groupable_fields ?? [];
   const allFields = entity?.fields ?? [];
@@ -325,6 +336,7 @@ export function CustomKpiModal({
         aggregation: trend,
         target_default: target.trim() === '' ? null : Number(target),
         ...(projectId ? { project_id: projectId } : {}),
+        scope: effectiveScope,
         spec,
       }),
     onSuccess: (created) => {
@@ -523,6 +535,34 @@ export function CustomKpiModal({
                     {humanizeToken(e.name)}
                   </option>
                 ))}
+              </select>
+            </WideModalField>
+            <WideModalField
+              label={t('bi.kpi_scope', { defaultValue: 'Read it per' })}
+              hint={
+                canScopeToEstimate
+                  ? t('bi.kpi_scope_hint', {
+                      defaultValue:
+                        'A project holding several estimates gets one figure per estimate. Money adds up across them; a rate, an area or a margin does not.',
+                    })
+                  : t('bi.kpi_scope_hint_project_only', {
+                      defaultValue:
+                        'This data has no estimate of its own, so it can only be read per project.',
+                    })
+              }
+            >
+              <select
+                value={effectiveScope}
+                onChange={(e) => setScope(e.target.value as KpiScope)}
+                className={inputCls}
+                disabled={!canScopeToEstimate}
+              >
+                <option value="project">
+                  {t('bi.kpi_scope_project', { defaultValue: 'Project' })}
+                </option>
+                <option value="estimate">
+                  {t('bi.kpi_scope_estimate', { defaultValue: 'Estimate' })}
+                </option>
               </select>
             </WideModalField>
             <WideModalField label={t('bi.kpi_aggregation', { defaultValue: 'Aggregation' })}>

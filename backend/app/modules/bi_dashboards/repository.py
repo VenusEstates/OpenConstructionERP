@@ -743,6 +743,7 @@ class BIDashboardsRepository:
         kpi_code: str,
         *,
         project_id: uuid.UUID | None = None,
+        boq_id: uuid.UUID | None = None,
         limit: int = 12,
         allowed_project_ids: set[uuid.UUID] | None = None,
     ) -> list[KPIValue]:
@@ -764,8 +765,18 @@ class BIDashboardsRepository:
         all-project figure), and an empty set returns nothing - never all.
         Ignored when ``project_id`` is supplied (that row set is already
         access-checked upstream).
+
+        ``boq_id`` picks the estimate dimension, and its default is a
+        predicate rather than the absence of one: ``None`` means
+        ``boq_id IS NULL``, the project-level reading, which is what every
+        row written before that column existed is and what every caller
+        here means. Left unfiltered instead, a project's trend line would
+        start absorbing per-estimate points the day somebody persisted the
+        first estimate-scoped KPI - nine values a period where there was
+        one, and the sparkline would keep drawing without complaint.
         """
         stmt = select(KPIValue).where(KPIValue.kpi_code == kpi_code)
+        stmt = stmt.where(KPIValue.boq_id == boq_id if boq_id is not None else KPIValue.boq_id.is_(None))
         if project_id is not None:
             stmt = stmt.where(KPIValue.project_id == project_id)
         elif allowed_project_ids is not None:
