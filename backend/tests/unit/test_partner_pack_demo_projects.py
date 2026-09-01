@@ -46,8 +46,14 @@ from app.core.demo_projects import (
 # which carry the norm multiplier in the unit itself: "100 m2" means the rate is
 # per hundred square metres, which is how the resource-index method prices a
 # norm, so the scaled forms are units in their own right and not a formatting
-# accident. Cyrillic month and Latin "mes" (Portuguese) look near-identical and
-# are two separate tokens on purpose.
+# accident. Cyrillic month and Latin "mes" look near-identical and are two
+# separate tokens on purpose. The Latin one is a single token serving both
+# Portuguese and Spanish, which is why the Spanish block below does not repeat
+# it. Six more markets joined with their own
+# measurers rather than translated ones, which is the whole reason this
+# allowlist grows by market instead of being replaced with a generic set: the
+# Spanish, Dutch, Polish, Turkish, Japanese and Korean blocks below each carry
+# the word a local estimator would actually read on the line.
 _ALLOWED_UNITS = {
     "m2",
     "m3",
@@ -93,6 +99,46 @@ _ALLOWED_UNITS = {
     "100 компл",
     "1000 м2",
     "1000 м3",
+    # Italy (computo metrico estimativo)
+    "cad",  # cadauno
+    "a corpo",  # a lump sum, the Italian "lsum"; the space is part of the token
+    "mese",
+    # Spain (mediciones y presupuesto)
+    "u",  # unidad
+    "pa",  # partida alzada, a lump-sum item
+    # Spanish "mes" is the same Latin token as the Brazilian one above and is
+    # already allowed; it is listed once because it is one token, unlike the
+    # Cyrillic "мес" which only looks the same.
+    # Netherlands (RAW / STABU)
+    "st",  # stuks
+    "post",  # a lump-sum post
+    "mnd",  # maand
+    "ton",  # also used by the Istanbul pack
+    # Poland (KNR kosztorys)
+    "szt",  # sztuka
+    "kpl",  # komplet
+    "mies",  # miesiąc
+    # Türkiye (birim fiyat)
+    "adet",
+    "takım",  # a set
+    # Japan (sekisan). "台" is already allowed above, from the Chinese set.
+    "式",  # shiki, a lump-sum item
+    "基",  # ki, a founded or standing installation
+    "本",  # hon, a long slender object
+    "箇所",  # kasho, a location
+    "面",  # men, a flat face or panel
+    # South Korea (pumsem)
+    "EA",
+    "식",  # sik, a lump-sum item
+    "개소",  # gaeso, a location
+    "대",  # dae, a machine or vehicle
+    "대·월",  # unit-months, how plant hire is measured rather than a typo
+    "세대",  # sedae, a dwelling unit
+    # Korean "본" (U+BCF8) is the hangul spelling of the same word the Japanese
+    # block writes as "本" (U+672C). Two codepoints, one meaning, and the pair
+    # is as easy to mistake for one token as the Cyrillic and Latin months
+    # above. Listing only one of them silently rejects the other market.
+    "본",
 }
 
 _CATALOG_BY_ID = {c["demo_id"]: c for c in DEMO_CATALOG}

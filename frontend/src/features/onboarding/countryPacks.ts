@@ -10,19 +10,30 @@
  *   - region          → a CWICR cost-database id (must exist in
  *                       ``CWICR_DATABASES`` in OnboardingWizard.tsx)
  *   - demoId          → a demo project id that is ALWAYS available from the
- *                       backend (one of the built-in ``DEMO_TEMPLATES``), or
- *                       ``null`` when no representative built-in demo exists
- *                       for that market (the demo component is then omitted,
- *                       never broken)
+ *                       backend (a key of ``DEMO_TEMPLATES``)
  *   - classification  → the cost-classification standard recorded for the
  *                       workspace (DIN 276, NRM, MasterFormat, …)
  *
  * Region ids are NOT invented here — every ``region`` below is one of the
- * existing ``CWICR_DATABASES`` ids. Demo ids reference only the five built-in
- * templates that ship with every install (``residential-berlin``,
- * ``office-london``, ``medical-us``, ``warehouse-dubai``, ``school-paris``);
- * partner-pack flagship demos are intentionally NOT referenced because they
- * only register when their partner pack is installed.
+ * existing ``CWICR_DATABASES`` ids.
+ *
+ * Every preset carries a demo, and that is the point of the preset. It used to
+ * say here that demo ids may only reference the five templates compiled into
+ * ``demo_projects.py``, because the flagship demos under ``demo_packs/`` "only
+ * register when their partner pack is installed". That is not what the code
+ * does. ``demo_projects.py`` imports ``app.core.demo_packs`` unconditionally at
+ * the bottom of the module, and the loader globs every pack file and merges it
+ * into ``DEMO_TEMPLATES`` at import time. Nothing about it is conditional on a
+ * pack being installed, applied or even present in ``packs/``.
+ *
+ * The claim cost sixteen of the twenty-one markets their example project. A
+ * user picking Brazil, Japan or Poland was told the preset would set up sample
+ * projects and then got a workspace with none, while the matching demo sat in
+ * the registry the whole time. Measured before this was changed: a fresh
+ * interpreter with no pack installed reports 38 templates and every id below
+ * resolves. ``test_country_preset_demos_resolve.py`` asserts exactly that, so a
+ * preset can no longer name a demo the backend does not have, and a demo can no
+ * longer be assumed absent because a comment says so.
  */
 
 /** Cost-classification standard a Country Pack records for the workspace. */
@@ -48,10 +59,15 @@ export interface CountryPack {
   /** CWICR cost-database id — must exist in ``CWICR_DATABASES``. */
   region: string;
   /**
-   * Demo project id from the always-available built-in templates, or ``null``
-   * when no built-in demo represents this market (component omitted).
+   * Demo project id, a key of the backend ``DEMO_TEMPLATES``.
+   *
+   * Not nullable, and deliberately so. A preset whose demo is missing is a
+   * preset that quietly under-delivers what its own subtitle promises, which
+   * is how sixteen markets ended up shipping without an example project. The
+   * compiler now refuses that shape, and the backend test refuses an id the
+   * registry cannot resolve.
    */
-  demoId: string | null;
+  demoId: string;
   /** Cost-classification standard recorded for the workspace. */
   classification: ClassificationStandard;
 }
@@ -61,8 +77,8 @@ export interface CountryPack {
  *
  * Ordered roughly by market prominence so the picker leads with the markets
  * most operators ask for first (US, UK, DACH, France, …). Every ``region``
- * value is a verified ``CWICR_DATABASES`` id and every non-null ``demoId`` is
- * a built-in ``DEMO_TEMPLATES`` key.
+ * value is a verified ``CWICR_DATABASES`` id and every ``demoId`` is a
+ * ``DEMO_TEMPLATES`` key, checked by a backend test rather than by eye.
  */
 export const COUNTRY_PACKS: CountryPack[] = [
   // ── Showcase markets (lead the picker) ──────────────────────────────────
@@ -113,7 +129,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'br',
     locale: 'pt',
     region: 'PT_SAOPAULO',
-    demoId: null,
+    demoId: 'residential-saopaulo',
     classification: 'CWICR',
   },
   {
@@ -133,7 +149,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'in',
     locale: 'hi',
     region: 'HI_MUMBAI',
-    demoId: null,
+    demoId: 'govt-building-delhi',
     classification: 'CWICR',
   },
   {
@@ -143,7 +159,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'cn',
     locale: 'zh',
     region: 'ZH_SHANGHAI',
-    demoId: null,
+    demoId: 'office-shanghai',
     classification: 'CCS',
   },
   // ── Broad spread across CWICR_DATABASES ─────────────────────────────────
@@ -154,7 +170,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'ca',
     locale: 'en',
     region: 'ENG_TORONTO',
-    demoId: null,
+    demoId: 'condo-toronto',
     classification: 'MasterFormat',
   },
   {
@@ -164,7 +180,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'au',
     locale: 'en',
     region: 'AU_SYDNEY',
-    demoId: null,
+    demoId: 'mixed-use-sydney',
     classification: 'NRM',
   },
   {
@@ -174,7 +190,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'nz',
     locale: 'en',
     region: 'NZ_AUCKLAND',
-    demoId: null,
+    demoId: 'commercial-auckland',
     classification: 'NRM',
   },
   {
@@ -184,7 +200,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'it',
     locale: 'it',
     region: 'IT_ROME',
-    demoId: null,
+    demoId: 'residential-rome',
     classification: 'CWICR',
   },
   {
@@ -194,7 +210,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'es',
     locale: 'es',
     region: 'SP_BARCELONA',
-    demoId: null,
+    demoId: 'mixed-use-barcelona',
     classification: 'CWICR',
   },
   {
@@ -204,7 +220,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'nl',
     locale: 'nl',
     region: 'NL_AMSTERDAM',
-    demoId: null,
+    demoId: 'office-amsterdam',
     classification: 'CWICR',
   },
   {
@@ -214,7 +230,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'pl',
     locale: 'pl',
     region: 'PL_WARSAW',
-    demoId: null,
+    demoId: 'residential-warsaw',
     classification: 'CWICR',
   },
   {
@@ -224,7 +240,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'tr',
     locale: 'tr',
     region: 'TR_ISTANBUL',
-    demoId: null,
+    demoId: 'mixed-use-istanbul',
     classification: 'CWICR',
   },
   {
@@ -234,7 +250,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'ru',
     locale: 'ru',
     region: 'RU_STPETERSBURG',
-    demoId: null,
+    demoId: 'school-stpetersburg',
     classification: 'CWICR',
   },
   {
@@ -244,7 +260,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'jp',
     locale: 'ja',
     region: 'JA_TOKYO',
-    demoId: null,
+    demoId: 'office-tokyo',
     classification: 'CWICR',
   },
   {
@@ -254,7 +270,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'kr',
     locale: 'ko',
     region: 'KO_SEOUL',
-    demoId: null,
+    demoId: 'residential-seoul',
     classification: 'CWICR',
   },
   {
@@ -264,7 +280,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'mx',
     locale: 'es',
     region: 'MX_MEXICOCITY',
-    demoId: null,
+    demoId: 'mixed-use-mexico-city',
     classification: 'CWICR',
   },
   {
@@ -274,7 +290,7 @@ export const COUNTRY_PACKS: CountryPack[] = [
     flagId: 'za',
     locale: 'en',
     region: 'ZA_JOHANNESBURG',
-    demoId: null,
+    demoId: 'mixed-use-johannesburg',
     classification: 'NRM',
   },
 ];

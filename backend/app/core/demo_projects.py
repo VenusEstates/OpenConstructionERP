@@ -2322,6 +2322,19 @@ _COUNTRY_ISO2: dict[str, str] = {
     "Hungary": "HU",
     "Russia": "RU",
     "United Arab Emirates": "AE",
+    "Italy": "IT",
+    "Spain": "ES",
+    "Poland": "PL",
+    # Both spellings. The endonym is the country's own preferred form and the
+    # older one is what most address data still carries; a pack writing either
+    # would otherwise fall out of this map without a word. Only the older
+    # spelling is exercised today, because that is what the Istanbul pack
+    # writes, so the second row is a deliberate open door rather than something
+    # the table test covers.
+    "Turkey": "TR",
+    "Türkiye": "TR",
+    "Japan": "JP",
+    "South Korea": "KR",
 }
 
 # Who really receives a notice of commencement, per country. Named because a
@@ -2347,6 +2360,16 @@ _AUTHORITY_BY_COUNTRY: dict[str, str] = {
     "US": "the building department",
     "FR": "the mairie",
     "AE": "the municipality",
+    "IT": "lo Sportello Unico per l'Edilizia",
+    "ES": "el ayuntamiento",
+    # Poland notifies the start of works to the district building inspectorate,
+    # which is a different body from the one that issued the permit.
+    "PL": "Powiatowy Inspektorat Nadzoru Budowlanego",
+    "TR": "the belediye",
+    # Confirmation and inspection in Japan may sit with a designated private
+    # body rather than the local authority, so this is the role, not an office.
+    "JP": "the designated confirmation and inspection body",
+    "KR": "the local government building department",
 }
 
 # The provision a formal notice is raised under, per country, so the register's
@@ -2369,7 +2392,14 @@ _NOTICE_CLAUSE_BY_COUNTRY: dict[str, str] = {
     "NL": "UAV 2012, kennisgeving",
     "HU": "Ptk. vállalkozási szerződés, írásbeli értesítés",
     "RU": "ГК РФ ст. 716, письменное уведомление",
+    "PL": "Prawo budowlane art. 41 ust. 4, zawiadomienie",
 }
+# IT, ES, TR, JP and KR have packs but no row above, and that is the policy in
+# the comment rather than an oversight. Each of those markets has a standard
+# form we could name, but not one this author can point at with the confidence
+# the existing rows carry, and the register renders an empty clause cleanly.
+# A plausible-looking wrong clause is the one failure a local reader would spot
+# instantly and the one this table exists to avoid.
 
 # Friendly project archetype label per pack demo project.
 _PACK_DEMO_TYPE: dict[str, str] = {
@@ -2405,6 +2435,19 @@ _PACK_DEMO_TYPE: dict[str, str] = {
     "office-debrecen": "Commercial",
     "residential-moscow": "Residential",
     "school-stpetersburg": "Education",
+    "residential-rome": "Residential",
+    "mixed-use-barcelona": "Mixed-use",
+    "office-amsterdam": "Commercial",
+    "residential-warsaw": "Residential",
+    "mixed-use-istanbul": "Mixed-use",
+    "office-tokyo": "Commercial",
+    "residential-seoul": "Residential",
+    # Not from the new cohort. This one has been missing since it shipped, and
+    # because the lookup defaults to "Commercial" the catalogue has been calling
+    # a residential building in Shenzhen a commercial one, quietly, for as long
+    # as it has been there. A default that is itself a valid answer is the kind
+    # a miss hides inside.
+    "residential-shenzhen": "Residential",
 }
 
 
@@ -2460,6 +2503,25 @@ _DEMO_COST_LEVEL: dict[str, tuple[float, float]] = {
     "INR": (55.00, 8.00),
     "HUF": (400.00, 140.00),
     "RUB": (100.00, 35.00),
+    # Added with the Rome, Barcelona, Amsterdam, Warsaw, Istanbul, Tokyo and
+    # Seoul packs. Barcelona, Rome and Amsterdam price in euro and need no row.
+    # Read these the way the rows above read: the currency conversion times the
+    # local price level, material and labour apart, not an exchange rate.
+    #
+    # The material column tracks the currency conversion closely in all four,
+    # the way HUF and RUB already do above, because construction materials are
+    # traded and none of these four is a cheap place to buy them. The labour
+    # column is where they separate, and the ratio between the two columns is
+    # the number to sanity-check: HUF and RUB sit near 0.35, Poland is about
+    # half a German wage at 0.51, Türkiye is lower again at 0.23, and Japan and
+    # Korea invert the pattern entirely. Both are high-wage construction
+    # markets, Japan especially, where a skilled trade is paid at or above the
+    # German level, so their labour column sits alongside their material one
+    # rather than far beneath it.
+    "PLN": (4.30, 2.20),
+    "TRY": (43.00, 10.00),
+    "JPY": (165.00, 160.00),
+    "KRW": (1500.00, 1300.00),
 }
 
 # The words the assemblies and resources vocabularies use for people. Both

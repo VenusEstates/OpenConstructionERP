@@ -1489,7 +1489,9 @@ function ReadyPackPicker({
         // they route into the app.
         const outcome = await startBackgroundOnboardingProvision({
           region: pack.region,
-          demoIds: pack.demoId ? [pack.demoId] : [],
+          // Every preset carries a demo now, so this is never the empty list
+          // that used to make the provision step a no-op for sixteen markets.
+          demoIds: [pack.demoId],
           country,
         });
 
@@ -3257,9 +3259,11 @@ function CountryPackCard({
   onInstallPack,
   onPackLocale,
   onPackDb,
+  onPackDemo,
   installing,
   localeState,
   dbState,
+  demoState,
   customizeOpen,
   onToggleCustomize,
   recordedClassification,
@@ -3270,9 +3274,11 @@ function CountryPackCard({
   onInstallPack: (pack: CountryPack) => void;
   onPackLocale: (pack: CountryPack) => void;
   onPackDb: (pack: CountryPack) => void;
+  onPackDemo: (pack: CountryPack) => void;
   installing: boolean;
   localeState: PackComponentState;
   dbState: PackComponentState;
+  demoState: PackComponentState;
   customizeOpen: boolean;
   onToggleCustomize: () => void;
   recordedClassification: string | null;
@@ -3294,7 +3300,10 @@ function CountryPackCard({
   })();
 
   const packLabel = t(selectedPack.labelKey, { defaultValue: selectedPack.labelDefault });
-  const allDone = localeState === 'done' && dbState === 'done';
+  // The example project counts. Reporting the pack as fully installed while the
+  // demo is still running, or has failed, is how the card came to promise more
+  // than the button delivered.
+  const allDone = localeState === 'done' && dbState === 'done' && demoState === 'done';
 
   return (
     <div className="rounded-2xl bg-surface-elevated shadow-sm shadow-black/[0.04] p-6">
@@ -3389,6 +3398,11 @@ function CountryPackCard({
             {t('onboarding.country_pack_db', { defaultValue: 'Cost database' })}
           </span>
           <span className="inline-flex items-center gap-1.5">
+            <PackStatusGlyph state={demoState} />
+            <Building2 size={12} className="text-content-quaternary" />
+            {t('onboarding.country_pack_demo', { defaultValue: 'Demo project' })}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
             <Layers size={12} className="text-content-quaternary" />
             {selectedPack.classification}
           </span>
@@ -3469,6 +3483,21 @@ function CountryPackCard({
             onAction={() => onPackDb(selectedPack)}
             disabled={installing}
           />
+          {/* The example project needs its own runner, not just a slot in the
+              one-click sequence. Without it a user who assembles the pack from
+              these rows can never reach the finished state, because the demo
+              would sit at idle forever with no control able to move it. */}
+          <PackComponentRow
+            icon={<Building2 size={15} />}
+            label={t('onboarding.country_pack_demo', { defaultValue: 'Demo project' })}
+            detail={selectedPack.demoId}
+            state={demoState}
+            actionLabel={t('onboarding.install_demo', { defaultValue: 'Install Demo Project' })}
+            doneLabel={t('onboarding.demo_installed', { defaultValue: 'Installed' })}
+            skippedLabel="—"
+            onAction={() => onPackDemo(selectedPack)}
+            disabled={installing}
+          />
         </div>
       )}
     </div>
@@ -3543,6 +3572,7 @@ export function StepDataSetup({
   // demos are handled exclusively by the partner-pack installer).
   const [packLocaleState, setPackLocaleState] = useState<PackComponentState>('idle');
   const [packDbState, setPackDbState] = useState<PackComponentState>('idle');
+  const [packDemoState, setPackDemoState] = useState<PackComponentState>('idle');
   const [packInstalling, setPackInstalling] = useState(false);
   // À la carte: expandable "Customize / install separately" panel.
   const [packCustomizeOpen, setPackCustomizeOpen] = useState(false);
@@ -3757,11 +3787,35 @@ export function StepDataSetup({
     [loadCostDb],
   );
 
-  // One-click (generic preset): apply language + classification and load the
-  // relational cost DB. No demo — fully-worked demos are installed only via the
-  // partner-pack installer (DESIGN §7). Endpoint called:
+  // À la carte: install just the pack's example project. Idempotent on the
+  // server, which returns the existing project with ``already_installed`` set
+  // rather than failing, so pressing this twice is harmless.
+  const handlePackDemo = useCallback(
+    async (pack: CountryPack) => {
+      setPackDemoState('running');
+      const ok = await installDemoProject(pack.demoId);
+      setPackDemoState(ok ? 'done' : 'error');
+    },
+    [installDemoProject],
+  );
+
+  // One-click (generic preset): language + classification, the relational cost
+  // DB, and the preset's worked example project. Endpoints called:
   //   - POST /api/v1/costs/load-cwicr/{region}
+  //   - POST /api/demo/install/{demoId}
   // Locale + classification are applied client-side.
+  //
+  // This used to stop after the cost database, on the rule that fully-worked
+  // demos belong to the partner-pack installer alone. That rule was written
+  // against a real gap: the per-module seed blocks were keyed by demo id and
+  // fell back to an empty list, so a pack demo installed here would arrive as a
+  // bare bill with no contacts, documents, inspections or invoices behind it,
+  // and an empty example teaches a new user the wrong thing about the product.
+  // That gap is closed. Every block now reads ``_HAND.get(demo_id) or
+  // generated[...]``, there is not one empty-list fallback left in
+  // demo_projects.py, and a pack demo installs with the same module depth as a
+  // built-in. The reason for withholding is gone, so the preset no longer
+  // withholds: what the card lists is what the button installs.
   const handleInstallPack = useCallback(
     async (pack: CountryPack) => {
       if (packInstalling) return;
@@ -3778,9 +3832,16 @@ export function StepDataSetup({
       const dbOk = await loadCostDb(pack.region);
       setPackDbState(dbOk ? 'done' : 'error');
 
+      // 3) Example project. Independent of the cost database on purpose: a
+      // demo carries its own priced bill, so a slow or failed catalogue import
+      // is no reason to leave the workspace with nothing in it.
+      setPackDemoState('running');
+      const demoOk = await installDemoProject(pack.demoId);
+      setPackDemoState(demoOk ? 'done' : 'error');
+
       setPackInstalling(false);
     },
-    [packInstalling, applyLocale, recordClassification, loadCostDb],
+    [packInstalling, applyLocale, recordClassification, loadCostDb, installDemoProject],
   );
 
   // When the user switches the active preset, reset its per-component status and
@@ -3790,6 +3851,7 @@ export function StepDataSetup({
     setSelectedRegion(pack.region);
     setPackLocaleState('idle');
     setPackDbState('idle');
+    setPackDemoState('idle');
   }, []);
 
   const testMutation = useMutation({
@@ -3994,9 +4056,11 @@ export function StepDataSetup({
           </div>
         </div>
 
-        {/* Or install a ready-made country pack: language, both cost
-            databases, and example projects in one click. Offered after the
-            manual base picker so the user chooses bases first. */}
+        {/* Or install a ready-made country pack: language, cost database and a
+            worked example project in one click. Offered after the manual base
+            picker so the user chooses bases first. The example project is not
+            decoration here, it is the only part of the install a new user can
+            actually read on arrival. */}
         <PartnerPackInstaller onActivateLocale={applyLocale} />
         <CountryPackCard
           packs={COUNTRY_PACKS}
@@ -4005,9 +4069,11 @@ export function StepDataSetup({
           onInstallPack={handleInstallPack}
           onPackLocale={handlePackLocale}
           onPackDb={handlePackDb}
+          onPackDemo={handlePackDemo}
           installing={packInstalling}
           localeState={packLocaleState}
           dbState={packDbState}
+          demoState={packDemoState}
           customizeOpen={packCustomizeOpen}
           onToggleCustomize={() => setPackCustomizeOpen((v) => !v)}
           recordedClassification={recordedClassification}

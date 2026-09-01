@@ -1045,7 +1045,17 @@ _DEMO_PROJECTS = "app.core.demo_projects"
 #: point every one of these went red for the right reason: the control had
 #: become covered. That is the expected way this constant dies, so when it
 #: goes red again, repick it rather than reaching for the probe.
-_A_COUNTRY_NO_TABLE_HOLDS = "PL"
+#:
+#: It then became PL, and died the same death when the Warsaw pack shipped.
+#: Twice is a pattern worth naming: the countries we reach for as controls are
+#: the ones we reach for as markets, because both lists are picked for the same
+#: reason. So this pick was made against the classification registry rather
+#: than by taste. BD is one of only three of the twenty-five candidate
+#: countries that COUNTRY_TO_STANDARD does not know at all, which makes it the
+#: furthest from being packable and therefore the longest-lived control
+#: available, without being an unreal market that would make this test a
+#: formality.
+_A_COUNTRY_NO_TABLE_HOLDS = "BD"
 
 #: Dimension and a country the registry holds. The control above is the other
 #: half of each case.
