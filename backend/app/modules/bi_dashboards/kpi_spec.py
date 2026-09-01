@@ -39,6 +39,7 @@ KPI can never read across a tenant boundary that a built-in one respects.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, time, timedelta
@@ -64,6 +65,16 @@ KIND_NUMERIC = "numeric"
 KIND_TEXT = "text"
 KIND_UUID = "uuid"
 KIND_BOOL = "bool"
+
+#: Keys a caller may read out of a declared JSON column, as ``<column>.<key>``.
+#:
+#: This is the one name in a spec that is not already a key in a table here, so
+#: it is the one place the whitelist has to describe a shape instead of listing
+#: members. Bounded length and a conservative alphabet, matching what a
+#: classification scheme actually uses: ``tipo``, ``din276``, ``cost_type``.
+#: The key never reaches SQL as text - SQLAlchemy binds it as a parameter - so
+#: this is about keeping the vocabulary sane rather than about injection.
+JSON_KEY_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
 
 #: Aggregations a custom KPI may ask for. Anything outside this tuple is
 #: rejected by name.
@@ -191,9 +202,42 @@ class CatalogEntity:
     #: ``boq_name`` exists, and it is served in the catalog so the form
     #: offers the same answer the server would.
     display_name_for: dict[str, str] = field(default_factory=dict)
+    #: JSON column -> the kind of the values under it.
+    #:
+    #: A field named ``<column>.<key>`` reads one key out of one of these,
+    #: which is the only place a caller supplies a name this table does not
+    #: already contain. That is a real widening of the contract, so it is
+    #: narrow on purpose: the column must be declared here, the key must
+    #: match :data:`JSON_KEY_RE`, and the value is read as text whatever it
+    #: holds. The key reaches SQL as a bind parameter through SQLAlchemy's
+    #: ``col[key].as_string()`` - the same construct ``costs/repository.py``
+    #: already uses with a variable key - so nothing is concatenated.
+    #:
+    #: The alternative was a per-deployment whitelist of keys, which would
+    #: keep the vocabulary closed. It is rejected because these columns hold
+    #: classification schemes: ``din276``, ``masterformat``, ``nrm`` and
+    #: whatever an estimator's own workbook calls its cost types. A catalog
+    #: that had to know those in advance would have to be edited before a
+    #: deployment could read its own data, which is the thing this feature
+    #: exists to avoid.
+    json_fields: dict[str, str] = field(default_factory=dict)
 
     def numeric_fields(self) -> list[str]:
         return sorted(n for n, k in self.fields.items() if k == KIND_NUMERIC)
+
+    def kind_of(self, name: str) -> str | None:
+        """The kind of a field name, plain or ``<json column>.<key>``.
+
+        Returns ``None`` for a name this entity does not offer, so callers
+        that used to index ``fields`` directly get a miss rather than a
+        ``KeyError`` on a path that is syntactically fine.
+        """
+        if name in self.fields:
+            return self.fields[name]
+        column, _, key = name.partition(".")
+        if key and column in self.json_fields and JSON_KEY_RE.fullmatch(key):
+            return self.json_fields[column]
+        return None
 
     def groupable_fields(self) -> list[str]:
         """Fields a breakdown may be keyed by.
@@ -201,6 +245,10 @@ class CatalogEntity:
         Numeric fields are excluded on purpose: grouping by a measure
         produces one bucket per distinct amount, which is never the
         question anybody meant to ask.
+
+        JSON paths are not listed, because there is no finite list of them
+        to give: the keys live in the data. They are offered separately, in
+        :meth:`as_dict`, as the column names a path may be built on.
         """
         return sorted(n for n, k in self.fields.items() if k != KIND_NUMERIC)
 
@@ -213,6 +261,12 @@ class CatalogEntity:
             "numeric_fields": self.numeric_fields(),
             "groupable_fields": self.groupable_fields(),
             "display_name_for": dict(self.display_name_for),
+            # Served so a picker can offer "group by classification.<key>"
+            # and prompt for the key, rather than a reader having to learn
+            # from the documentation that the dotted form exists at all.
+            "json_path_fields": [
+                {"name": n, "kind": k, "example": f"{n}.<key>"} for n, k in sorted(self.json_fields.items())
+            ],
         }
 
 
@@ -245,6 +299,12 @@ ENTITY_CATALOG: dict[str, CatalogEntity] = {
             "node_type": KIND_TEXT,
         },
         display_name_for={"boq_id": "boq_name"},
+        # The only place a position says what KIND of work it is. `source`
+        # is the nearest declared field and answers a different question,
+        # how the row was entered, which on a real installation is `manual`
+        # for 257 of 258 rows: a breakdown by it looks like a cost analysis
+        # and is a provenance report with one bar.
+        json_fields={"classification": KIND_TEXT},
     ),
     "boq": CatalogEntity(
         name="boq",
@@ -292,6 +352,31 @@ class BoundEntity:
     fields: dict[str, BoundField]
     #: ``(target, onclause)`` pairs applied in order before any predicate.
     joins: list[tuple[Any, Any]] = field(default_factory=list)
+    #: JSON column -> a factory turning one key into a BoundField.
+    #:
+    #: The expression cannot be built ahead of time the way the others can,
+    #: because the key is not known until a spec names it. The factory is
+    #: what keeps that from meaning "assemble SQL from a string": it takes
+    #: the key as a value and hands it to SQLAlchemy, which binds it.
+    json_fields: dict[str, Callable[[str], BoundField]] = field(default_factory=dict)
+
+    def resolve_field(self, name: str) -> BoundField:
+        """The bound field for a plain name or a ``<column>.<key>`` path.
+
+        Raises:
+            KeyError: The name is not bound here. Every caller reaches this
+                with a name a validated spec already carried, so a miss is a
+                catalog/binder disagreement rather than bad input, and the
+                parity check exists to catch it before a spec is stored.
+        """
+        bound = self.fields.get(name)
+        if bound is not None:
+            return bound
+        column, _, key = name.partition(".")
+        factory = self.json_fields.get(column) if key else None
+        if factory is None:
+            raise KeyError(name)
+        return factory(key)
 
 
 def _bind_boq_position() -> BoundEntity:
@@ -331,6 +416,21 @@ def _bind_boq_position() -> BoundEntity:
             "source": BoundField(Position.source, KIND_TEXT),
             "validation_status": BoundField(Position.validation_status, KIND_TEXT),
             "node_type": BoundField(Position.node_type, KIND_TEXT, nullable_source=Position.node_type),
+        },
+        json_fields={
+            # `col[key].as_string()` is the idiom this codebase already uses
+            # with a variable key (costs/repository.py). SQLAlchemy binds the
+            # key as a parameter, so the scheme can be din276, masterformat,
+            # nrm or an estimator's own `tipo` without the catalog knowing any
+            # of them in advance. A row whose classification lacks the key
+            # reads NULL and lands in the null group rather than being
+            # dropped, which is the same treatment every other nullable field
+            # gets here.
+            "classification": lambda key: BoundField(
+                Position.classification[key].as_string(),
+                KIND_TEXT,
+                nullable_source=Position.classification[key].as_string(),
+            ),
         },
     )
 
@@ -385,7 +485,7 @@ def check_catalog_binding_parity() -> dict[str, dict[str, list[str]]]:
             continue
         declared = set(entry.fields)
         built = set(bound.fields)
-        wrong_kind = sorted(n for n in declared & built if entry.fields[n] != bound.fields[n].kind)
+        wrong_kind = sorted(n for n in declared & built if entry.fields[n] != bound.resolve_field(n).kind)
         # A display name is a promise that grouping by one field can be
         # read through another, and the promise is kept by whoever writes
         # the catalog rather than by the type system. Either half naming a
@@ -397,11 +497,27 @@ def check_catalog_binding_parity() -> dict[str, dict[str, list[str]]]:
             for id_field, name_field in entry.display_name_for.items()
             if id_field not in declared or name_field not in declared or entry.fields[name_field] == KIND_NUMERIC
         )
+        # The same parity question for the JSON columns, which need it more
+        # than the plain fields rather than less. A plain field that is
+        # declared and not bound fails the moment anybody uses it. A JSON
+        # column that is declared and not bound is worse: the catalog offers
+        # `classification.<key>` to the picker, validation accepts the path
+        # because the catalog is what validation reads, the definition is
+        # stored, and the failure arrives at compute time on a KPI somebody
+        # has already put on a dashboard.
+        declared_json = set(entry.json_fields)
+        built_json = set(bound.json_fields)
+        wrong_json_kind = sorted(
+            n for n in declared_json & built_json if entry.json_fields[n] != bound.json_fields[n]("probe").kind
+        )
         diff = {
             "declared_only": sorted(declared - built),
             "bound_only": sorted(built - declared),
             "kind_mismatch": wrong_kind,
             "bad_display_name": bad_display_name,
+            "json_declared_only": sorted(declared_json - built_json),
+            "json_bound_only": sorted(built_json - declared_json),
+            "json_kind_mismatch": wrong_json_kind,
         }
         if any(diff.values()):
             report[name] = diff
@@ -419,21 +535,41 @@ def _require_str(spec: dict[str, Any], key: str, path: str) -> str:
 
 
 def _lookup_field(entry: CatalogEntity, name: Any, path: str) -> str:
-    if not isinstance(name, str) or name not in entry.fields:
+    if isinstance(name, str) and entry.kind_of(name) is not None:
+        return name
+    # A dotted name that got here either names an undeclared column or
+    # carries a key this will not accept, and those are different mistakes.
+    # Saying which one saves the author guessing, since neither is visible
+    # in the list of allowed names: the column is in it, the path is not.
+    if isinstance(name, str) and "." in name:
+        column, _, key = name.partition(".")
+        if column not in entry.json_fields:
+            raise KPISpecError(
+                path,
+                f"'{column}' is not a JSON column on entity '{entry.name}', so '{name}' cannot name a key in it.",
+                value=name,
+                allowed=sorted(entry.json_fields) or sorted(entry.fields),
+            )
         raise KPISpecError(
             path,
-            f"unknown field {name!r} on entity '{entry.name}'.",
+            f"'{key}' is not a usable key: a key starts with a letter and continues with "
+            f"letters, digits or underscores, up to 64 characters.",
             value=name,
-            allowed=sorted(entry.fields),
         )
-    return name
+    raise KPISpecError(
+        path,
+        f"unknown field {name!r} on entity '{entry.name}'.",
+        value=name,
+        allowed=sorted(entry.fields),
+    )
 
 
 def _require_numeric(entry: CatalogEntity, name: str, path: str) -> None:
-    if entry.fields[name] != KIND_NUMERIC:
+    kind = entry.kind_of(name)
+    if kind != KIND_NUMERIC:
         raise KPISpecError(
             path,
-            f"field '{name}' is {entry.fields[name]}, and this aggregation needs a numeric field.",
+            f"field '{name}' is {kind}, and this aggregation needs a numeric field.",
             value=name,
             allowed=entry.numeric_fields(),
         )
@@ -451,7 +587,9 @@ def _validate_filter(entry: CatalogEntity, raw: Any, path: str) -> dict[str, Any
             value=op,
             allowed=list(FILTER_OPERATORS),
         )
-    kind = entry.fields[name]
+    # `kind_of` rather than a direct index, so a `<column>.<key>` path is
+    # filterable on the same terms as the plain field it sits beside.
+    kind = entry.kind_of(name)
     if op in _ORDERING_OPERATORS and kind != KIND_NUMERIC:
         raise KPISpecError(
             f"{path}.op",
@@ -671,7 +809,7 @@ def validate_spec(raw: Any) -> dict[str, Any]:
     group_by = raw.get("group_by")
     if group_by is not None:
         group_by = _lookup_field(entry, group_by, "spec.group_by")
-        if entry.fields[group_by] == KIND_NUMERIC:
+        if entry.kind_of(group_by) == KIND_NUMERIC:
             raise KPISpecError(
                 "spec.group_by",
                 f"field '{group_by}' is numeric, and a breakdown keyed by a measure is one bucket per amount.",
@@ -695,7 +833,7 @@ def validate_spec(raw: Any) -> dict[str, Any]:
                 value=label,
             )
         label = _lookup_field(entry, label, "spec.label_field")
-        if entry.fields[label] == KIND_NUMERIC:
+        if entry.kind_of(label) == KIND_NUMERIC:
             raise KPISpecError(
                 "spec.label_field",
                 f"field '{label}' is numeric, and a label must be something a reader can name a row by.",
@@ -748,7 +886,7 @@ class SpecResult:
 
 def _apply_filters(stmt: Any, bound: BoundEntity, filters: list[dict[str, Any]]) -> Any:
     for item in filters:
-        bf = bound.fields[item["field"]]
+        bf = bound.resolve_field(item["field"])
         op = item["op"]
         value = item["value"]
         if op == "is_null":
@@ -816,7 +954,7 @@ def _base_predicates(
     for name in (value_field, weight_field):
         if name is None:
             continue
-        src = bound.fields[name].nullable_source
+        src = bound.resolve_field(name).nullable_source
         if src is not None:
             stmt = stmt.where(src.is_not(None))
     return stmt
@@ -827,7 +965,7 @@ def _measures(bound: BoundEntity, spec: dict[str, Any]) -> list[Any]:
     aggregation = spec["aggregation"]
     if aggregation == "count":
         return [func.count()]
-    expr = bound.fields[spec["field"]].expr
+    expr = bound.resolve_field(spec["field"]).expr
     if aggregation == "sum":
         return [func.sum(expr)]
     if aggregation == "avg":
@@ -837,7 +975,7 @@ def _measures(bound: BoundEntity, spec: dict[str, Any]) -> list[Any]:
     if aggregation == "max":
         return [func.max(expr)]
     if aggregation == "weighted_avg":
-        weight = bound.fields[spec["weight_field"]].expr
+        weight = bound.resolve_field(spec["weight_field"]).expr
         return [func.sum(expr * weight), func.sum(weight)]
     # top_by is handled by its own window query
     return [func.max(expr)]
@@ -906,11 +1044,11 @@ async def _evaluate_top_by(
     """
     from app.modules.bi_dashboards.kpis import _to_decimal
 
-    value_expr = bound.fields[spec["field"]].expr
+    value_expr = bound.resolve_field(spec["field"]).expr
     group_name = spec.get("group_by")
-    group_expr = bound.fields[group_name].expr if group_name else literal(1)
+    group_expr = bound.resolve_field(group_name).expr if group_name else literal(1)
     label_name = spec.get("label_field")
-    label_expr = bound.fields[label_name].expr if label_name else group_expr
+    label_expr = bound.resolve_field(label_name).expr if label_name else group_expr
 
     inner = select(
         group_expr.label("grp"),
@@ -1014,7 +1152,7 @@ async def evaluate_spec(
 
     group_name = spec.get("group_by")
     if group_name:
-        group_expr = bound.fields[group_name].expr
+        group_expr = bound.resolve_field(group_name).expr
         # The label is aggregated rather than added to GROUP BY. Grouping
         # by both would split one group into a row per distinct label, and
         # both rows assign into ``breakdown[key]`` - the later write wins
@@ -1022,7 +1160,7 @@ async def evaluate_spec(
         # was introduced for. ``min`` keeps exactly one row per group and
         # picks the same label every run.
         label_name = spec.get("label_field")
-        label_measures = [func.min(bound.fields[label_name].expr).label("lbl")] if label_name else []
+        label_measures = [func.min(bound.resolve_field(label_name).expr).label("lbl")] if label_name else []
         grouped = select(group_expr.label("grp"), *label_measures, *measures).select_from(bound.model)
         grouped = _base_predicates(
             grouped,
