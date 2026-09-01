@@ -15442,7 +15442,7 @@ const resource = {
     "propdev.buyers": "Покупатели",
     "propdev.handovers": "Передачи",
     "propdev.warranty": "Гарантийные обращения",
-    // ── propdev: Inventory Map (задача #142) ──
+    // ── propdev: Inventory Map (task #142) ──
     "propdev.inventory_map.title": "Карта инвентаря",
     "propdev.inventory_map.cta": "Карта инвентаря",
     "propdev.inventory_map.subtitle": "Сетка корпус → этаж → лот для отдела продаж. Клик по плитке открывает карточку; cmd/shift-клик выделяет диапазон, затем массовая блокировка или снятие.",
@@ -15882,7 +15882,7 @@ const resource = {
     "tour.boq.step.8.body": "Экспорт в Excel (.xlsx), CSV, PDF-отчёт или GAEB XML X83 для немецких тендеров. Валюта, курсы и наценки зашиты внутрь, чтобы получатель видел те же итоги.",
     // --- /Per-module tour: BOQ Editor ---
 
-    // --- Per-module tour: BIM Hub (7 шагов) ---
+    // --- Per-module tour: BIM Hub (7 steps) ---
     "tour.bim.step.1.title": "Лента моделей",
     "tour.bim.step.1.body": "Каждая загруженная модель (RVT, IFC, DWG-в-IFC, CSV с геометрией) живёт здесь. Клик по карточке загружает её, плюсик, загрузка новой, шеврон, свернуть ленту и освободить пространство.",
     "tour.bim.step.2.title": "Активная модель",
@@ -15899,7 +15899,7 @@ const resource = {
     "tour.bim.step.7.body": "Переходите в Geo Hub с этой моделью на глобусе, объединяйте несколько моделей для поиска коллизий, или открывайте извлечённые данные в Data Explorer для SQL-анализа.",
     // --- /Per-module tour: BIM Hub ---
 
-    // --- Per-module tour: Geo Hub (6 шагов) ---
+    // --- Per-module tour: Geo Hub (6 steps) ---
     "tour.geo.step.1.title": "Выбор режима",
     "tour.geo.step.1.body": "Три области: Глобальный показывает все привязанные проекты на карте планеты. Проектный погружает в один проект, якорь, тайлсеты, точки обзора. Девелопмент, карта плотов конкретного развития.",
     "tour.geo.step.2.title": "Живой HUD",
@@ -15914,7 +15914,7 @@ const resource = {
     "tour.geo.step.6.body": "Каждое движение камеры/открытая подложка обновляет URL, ?model=… привязывает конкретный BIM-тайлсет, ?plot=… фокусирует плот PropDev, ?dev_id=… открывает карту девелопмента. Скопируйте ссылку коллегам, они окажутся ровно там, где вы.",
     // --- /Per-module tour: Geo Hub ---
 
-    // --- Per-module tour: Property Development (7 шагов) ---
+    // --- Per-module tour: Property Development (7 steps) ---
     "tour.propdev.step.1.title": "Жизненный цикл",
     "tour.propdev.step.1.body": "Жилая продажа идёт Lead → Резервация → SPA (договор купли-продажи) → Передача → Гарантия. Суммы контрактов автоматически попадают в Финансы. Баннер показывает, где находится активный девелопмент на этом пути.",
     "tour.propdev.step.2.title": "Вкладки сущностей",
@@ -15931,7 +15931,7 @@ const resource = {
     "tour.propdev.step.7.body": "Шесть аналитических представлений: Путь покупателя, Cash-Flow Waterfall, Конверсия воронки, Возраст запасов, Heatmap запасов, Скорость продаж. Каждый шарится как полноэкранный URL.",
     // --- /Per-module tour: Property Development ---
 
-    // --- Per-module tour: Accommodation (7 шагов) ---
+    // --- Per-module tour: Accommodation (7 steps) ---
     "tour.accommodation.step.1.title": "Шапка размещения",
     "tour.accommodation.step.1.body": "Имя, бэйдж типа (вахтовый посёлок / аренда / отель) и быстрые ссылки на связанную BIM-модель и Geo Hub при наличии координат. Запустите модульный тур кнопкой Тур здесь.",
     "tour.accommodation.step.2.title": "Вкладки",
@@ -15948,7 +15948,7 @@ const resource = {
     "tour.accommodation.step.7.body": "На /accommodation кнопка «Подобрать комнату сотруднику» выбирает свободную комнату вахтового посёлка с минимальным номером для нового найма, укажите id сотрудника и дату заезда, примите предложение, бронирование создаётся одним кликом.",
     // --- /Per-module tour: Accommodation ---
 
-    // --- Per-module tour: Dashboard (5 шагов) ---
+    // --- Per-module tour: Dashboard (5 steps) ---
     "tour.dashboard.step.1.title": "Основные действия",
     "tour.dashboard.step.1.body": "Три популярных CTA: Новый проект создаёт новый проект; Новая смета, создаёт BOQ внутри последнего проекта; Быстрый старт продолжает вашу последнюю смету одним кликом.",
     "tour.dashboard.step.2.title": "Настроить",

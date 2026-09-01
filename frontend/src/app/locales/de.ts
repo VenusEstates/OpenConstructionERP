@@ -8777,7 +8777,7 @@ const resource = {
     "dashboard.labour_over": "Budgetüberschreitung um {{amount}}",
     "dashboard.labour_pct_used": "{{pct}}% des Budgets verbraucht",
     "dashboard.labour_hours": "über {{hours}} h erfasst",
-    // Widget-Inhaltsbeschriftungen
+    // Widget content labels
     "dashboard.boq_summary_subtitle": "Status der Leistungsverzeichnisse über alle Projekte",
     "dashboard.boq_summary_empty": "Noch keine LVs, legen Sie Ihr erstes an, um Wert und Vollständigkeit zu verfolgen.",
     "dashboard.boq_summary_cta": "LVs öffnen",
@@ -15130,7 +15130,7 @@ const resource = {
     "propdev.buyers": "Käufer",
     "propdev.handovers": "Übergaben",
     "propdev.warranty": "Gewährleistung",
-    // ── propdev: Inventory Map (Aufgabe #142) ──
+    // ── propdev: Inventory Map (task #142) ──
     "propdev.inventory_map.title": "Bestandsplan",
     "propdev.inventory_map.cta": "Bestandsplan",
     "propdev.inventory_map.subtitle": "Block-, Stockwerk- und Einheitenraster für den Verkauf. Kachel anklicken für Details, Cmd/Umschalt-Klick zur Auswahl, dann sperren oder freigeben.",
@@ -15570,7 +15570,7 @@ const resource = {
     "tour.boq.step.8.body": "Export nach Excel (.xlsx), CSV, PDF-Bericht oder GAEB XML X83 für deutsche Ausschreibungen. Währung, Wechselkurse und Zuschläge sind enthalten, sodass der Empfänger dieselben Summen sieht.",
     // --- /Per-module tour: BOQ Editor ---
 
-    // --- Per-module tour: BIM Hub (7 Schritte) ---
+    // --- Per-module tour: BIM Hub (7 steps) ---
     "tour.bim.step.1.title": "Modell-Filmstreifen",
     "tour.bim.step.1.body": "Jedes hochgeladene Modell (RVT, IFC, DWG-zu-IFC, CSV mit Geometrie) liegt hier. Klicke eine Kachel zum Laden, das Plus-Feld für einen neuen Upload oder den Chevron, um den Streifen einzuklappen und mehr Canvas zu gewinnen.",
     "tour.bim.step.2.title": "Aktives Modell",
@@ -15587,7 +15587,7 @@ const resource = {
     "tour.bim.step.7.body": "Springe in den Geo-Hub mit diesem Modell auf dem Globus verankert, föderiere mehrere Modelle für Kollisionserkennung, oder öffne die extrahierten Daten im Data Explorer für SQL-ähnliche Analyse.",
     // --- /Per-module tour: BIM Hub ---
 
-    // --- Per-module tour: Geo Hub (6 Schritte) ---
+    // --- Per-module tour: Geo Hub (6 steps) ---
     "tour.geo.step.1.title": "Modusauswahl",
     "tour.geo.step.1.body": "Drei Bereiche: Global zeigt alle verankerten Projekte auf einer Welt-Karte. Projekt geht in ein Projekt hinein, Anker, Tilesets, Sichtpunkte. Entwicklung ist die per-Development PropDev-Plot-Karte.",
     "tour.geo.step.2.title": "Live-HUD",
@@ -15602,7 +15602,7 @@ const resource = {
     "tour.geo.step.6.body": "Jede Kamerabewegung / jedes geöffnete Overlay aktualisiert die URL, ?model=… verankert ein bestimmtes BIM-Tileset, ?plot=… fokussiert ein PropDev-Plot, ?dev_id=… öffnet eine Entwicklungs-Karte. Kopiere und sende sie Kollegen; sie landen genau wo du bist.",
     // --- /Per-module tour: Geo Hub ---
 
-    // --- Per-module tour: Property Development (7 Schritte) ---
+    // --- Per-module tour: Property Development (7 steps) ---
     "tour.propdev.step.1.title": "Lebenszyklus-Pipeline",
     "tour.propdev.step.1.body": "Ein Wohnverkauf läuft Lead → Reservierung → SPA (Kauf- und Verkaufsvertrag) → Übergabe → Gewährleistung. Vertragswerte fließen automatisch in Finance. Das Banner zeigt, wo die aktive Entwicklung auf diesem Weg steht.",
     "tour.propdev.step.2.title": "Unter-Entity-Tabs",
@@ -15619,7 +15619,7 @@ const resource = {
     "tour.propdev.step.7.body": "Sechs Analyseansichten: Käufer-Journey-Timeline, Cashflow-Wasserfall, Funnel-Konversion, Bestandsalterung, Bestands-Heatmap, Verkaufsgeschwindigkeit. Jede ist als Vollbild-URL teilbar.",
     // --- /Per-module tour: Property Development ---
 
-    // --- Per-module tour: Accommodation (7 Schritte) ---
+    // --- Per-module tour: Accommodation (7 steps) ---
     "tour.accommodation.step.1.title": "Unterkunfts-Kopfzeile",
     "tour.accommodation.step.1.body": "Name, Art-Badge (Arbeitercamp / Vermietung / Hotel) und Schnelllinks zum verknüpften BIM-Modell und Geo-Hub, sofern Koordinaten gesetzt sind. Starte die Modul-Tour über die Tour-Schaltfläche hier.",
     "tour.accommodation.step.2.title": "Registerkarten",
@@ -15636,7 +15636,7 @@ const resource = {
     "tour.accommodation.step.7.body": "Auf /accommodation wählt die Schaltfläche „Zimmer für Mitarbeiter vorschlagen“ das niedrigstnummerierte freie Arbeitercamp-Zimmer für einen Neueinstand, Mitarbeiter-ID und Check-in-Datum eingeben, Vorschlag annehmen, Buchung wird in einem Klick erstellt.",
     // --- /Per-module tour: Accommodation ---
 
-    // --- Per-module tour: Dashboard (5 Schritte) ---
+    // --- Per-module tour: Dashboard (5 steps) ---
     "tour.dashboard.step.1.title": "Primäraktionen",
     "tour.dashboard.step.1.body": "Drei häufig genutzte CTAs: Neues Projekt startet ein neues Projekt; Neue Schätzung legt ein LV im neuesten Projekt an; Schnellstart setzt deine letzte Schätzung mit einem Klick fort.",
     "tour.dashboard.step.2.title": "Anpassen",
@@ -15854,7 +15854,7 @@ const resource = {
     "geo.overlays.show_overlay_aria": "Überlagerung {{name}} anzeigen",
     // --- /Accommodation module ---
 
-    // --- raster overlays (PDF / DWG / Bild auf dem Globus) ---
+    // --- raster overlays (PDF / DWG / image on the globe) ---
     "geo.overlays.title": "Überlagerungen",
     "geo.overlays.aria": "Raster-Überlagerungen",
     "geo.overlays.add": "Hinzufügen",
@@ -19751,8 +19751,8 @@ const resource = {
   "regional.tab_import": "Importieren",
   "regional.intro_body": "Importieren und exportieren Sie LV-Daten in der nativen Struktur Ihrer Region (NRM im UK, MasterFormat in den USA, DPGF in Frankreich und andere), mit der richtigen Gewerkgliederung. Die Daten landen in oder stammen aus einem normalen LV, sodass dasselbe Angebot ohne Neuerfassung über Märkte hinweg wandert.",
   "regional.intro_more": "Diese eine Seite passt sich an Ihr Land an. Der Kopf zeigt die Flagge und den nativen Standard, NRM für das UK, MasterFormat für die USA, DPGF für Frankreich, DIN 276 für die DACH-Region und andere. Auf dem Import-Tab ziehen Sie Ihre Excel-, CSV- oder TSV-Datei (Spanien akzeptiert auch BC3), sehen die geparsten Positionen gegen die Gewerk-Abschnitts-Referenz für diesen Standard vorab, wählen das Zielprojekt und LV, dann Importieren. Auf dem Export-Tab wählen Sie ein LV und exportieren es als detaillierte (bepreiste) oder zusammenfassende CSV oder drucken es nach PDF.\n\nDie Daten landen in oder werden aus einem gewöhnlichen LV gelesen, sodass dieselbe Schätzung ohne Neuerfassung zwischen Märkten wandert. Importe laufen auf dem Weg hinein durch das länderspezifische Validator-Paket, und der Ergebnis-Link öffnet das LV zur Prüfung in der Validierung.\n\n**So holen Sie das Beste heraus:**\n\n- Nutzen Sie den Link \"Beispieldatei herunterladen\", um das genaue Spaltenlayout zu sehen, das Ihr Land erwartet.\n- Die Klassifikations-Referenz-Chips zeigen die Gewerk-Abschnitte (NRM-Elemente, MasterFormat-Divisionen, DPGF-Lose), gegen die Sie codieren sollten.\n- Geld reist als exakte Dezimalzahlen, sodass Einheitspreise unterwegs nicht gerundet werden.",
-  // --- Module "Mehr anzeigen"-Erweiterungstext (intro_more) fuer Seiten, deren
-  //     intro_title/intro_body noch nicht in dieser Datei sind. ---
+  // --- Module "Show more" expansion copy (intro_more) for pages whose
+  //     intro_title/intro_body are not yet in this file. ---
   "assemblies_new.intro_more": "Dies ist der schnelle Einrichtungsschritt für einen brandneuen Sammelposten. Sie geben ihm einen Namen und einen Code, wählen seine Einheit und Kategorie, setzen die Währung (sie übernimmt standardmäßig Ihre bevorzugte Währung aus den Regionalen Einstellungen) und hängen optional einen Klassifikationsstandard und Code an, etwa DIN 276, NRM, MasterFormat, UniFormat oder Uniclass. Das Erstellen erledigt die Aufgabe nicht, es öffnet den Sammelposten-Editor.\n\nWas als Nächstes geschieht und wo es verbindet:\n\n- Nach dem Erstellen landen Sie im **Sammelposten-Editor**, um die Material-, Lohn- und Gerätezeilen hinzuzufügen, die die zusammengesetzte Rate bilden.\n- Wenn Sie einen Vorsprung statt eines leeren Rezepts wollen, durchstöbern Sie die **Sammelposten-Bibliothek** nach einer Vorlage zum Speichern und Anpassen.\n\n**So holen Sie das Beste heraus:** Setzen Sie die Währung hier korrekt, denn sie prägt jede danach hinzugefügte Komponente. Wählen Sie den richtigen Klassifikationsstandard vorab, damit der Sammelposten sauber auf die Kostenstruktur Ihres Projekts abbildet und in Berichten dort erscheint, wo Sie ihn erwarten.",
   "validation.intro_more": "Die Validierung führt Ihre Schätzung gegen Regelsätze und zeigt, wo sie zu kurz greift, bevor ein Auftraggeber oder eine Behörde es tut. Wählen Sie ein Projekt und LV und drücken Sie ausführen. Die angewandten Regelsätze werden aus dem Klassifikationsstandard des Projekts abgeleitet: boq_quality ist universell und läuft immer, DIN-276-Projekte fügen din276 und gaeb hinzu, NRM- und MasterFormat-Projekte fügen ihre eigenen hinzu. Ergebnisse kommen als Ampel-Bericht zurück, mit einem Wert und Zählungen von Fehlern, Warnungen, Infos und Bestehen.\n\nDie Ergebnisse lesen und danach handeln:\n\n- Filtern Sie nach Fehlern, Warnungen, Infos oder Bestanden, um sich zu fokussieren.\n- Jeder Befund verlinkt über seinen Elementverweis zurück zur exakten LV-Position, sodass Sie ihn an der Quelle beheben.\n- Befunde decken fehlende Mengen, fehlende oder außerhalb des Bereichs liegende Einheitspreise, fehlende Beschreibungen, doppelte Ordnungszahlen und Klassifikationscode-Prüfungen ab.\n\nSie prüft das **LV** und seine verknüpften **BIM**-Elemente, und Sie können den Bericht exportieren.\n\n**So holen Sie das Beste heraus:** Lassen Sie die Validierung laufen, bevor Sie eine Schätzung als final markieren, und erneut nach jedem großen Import oder Einfügen. Räumen Sie zuerst Fehler aus, arbeiten Sie dann die Warnungen ab. Nutzen Sie die Regel-Tooltips, um genau zu verstehen, was jede Prüfung erwartet.",
   "geo-hub.intro_more": "Der Hub öffnet sich auf einem gemeinsamen 3D-Globus mit jedem verankerten Projekt als Pin. Nutzen Sie die Bereichssteuerung, um die Ansicht zu wechseln, und das Overlay-Panel, um die Liste der verankerten Projekte zu sehen, und klappen Sie es ein, um den vollen Globus freizulegen. Um ein Projekt zu platzieren, tippen Sie seine Adresse in die Autovervollständigung oder legen eine Koordinate ab, und es wird geokodiert und gepinnt. Von einem Pin springen Sie direkt in das LV, die BIM-Modelle und die übrigen Daten dieses Projekts.\n\nDies ist die Karte auf Portfolio-Ebene. Pins sind verankerte Projekte aus dem Projekte-Modul, und die Adresse-zu-Koordinate-Abfragen werden vom Geokodierungsdienst zwischengespeichert, den die Geo-Hub-Admin-Seite pflegt. Von hier wechseln Sie in die Karte eines einzelnen Projekts für Baustellen-Overlays oder in einen beliebigen Projekt-Hub für die Kostenarbeit.\n\n**So holen Sie das Beste heraus:**\n- Verankern Sie Projekte über die vollständige Straßenadresse für den genauesten Pin, Koordinaten sind die Rückfalloption.\n- Wechseln Sie zur 2D- oder Columbus-Ansicht, wenn Sie eine flachere Lesart einer dichten Region wollen.\n- Nutzen Sie den Hub als Startrampe, klicken Sie einen Pin an, um direkt ins Projekt zu springen, statt durch die Seitenleiste zu navigieren.",
