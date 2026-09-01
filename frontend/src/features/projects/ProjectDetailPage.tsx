@@ -80,7 +80,7 @@ import { useRecentStore } from '@/stores/useRecentStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useToastStore } from '@/stores/useToastStore';
 import { fmtPercent, fmtFixed } from '@/shared/lib/formatters';
-import { formatCurrency as formatMoney } from '@/shared/lib/money';
+import { formatCurrency as formatMoney, toNum } from '@/shared/lib/money';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,7 +101,14 @@ interface BOQDetail {
   description: string;
   status: string;
   positions: PositionSummary[];
-  grand_total: number;
+  // Decimal-as-string on the wire. `PositionResponse` and `BOQResponse` both
+  // carry `@field_serializer(..., when_used="json")` returning a plain decimal
+  // string, so a large total round-trips without a float eating its tail.
+  // Declaring these `number` here was a lie the compiler then enforced against
+  // us: `+=` type-checked and concatenated, and `=== 0` type-checked and never
+  // matched. Both bugs below came from this pair of lines, so the type says
+  // what the wire says and the arithmetic goes through `toNum`.
+  grand_total: number | string;
   created_at: string;
   updated_at: string;
 }
@@ -109,10 +116,45 @@ interface BOQDetail {
 interface PositionSummary {
   id: string;
   description: string;
-  quantity: number;
-  unit_rate: number;
-  total: number;
+  quantity: number | string;
+  unit_rate: number | string;
+  total: number | string;
   validation_status: string;
+}
+
+/**
+ * Sum the grand totals of several estimates.
+ *
+ * `grand_total` arrives as a decimal string, so `total += detail.grand_total`
+ * concatenates instead of adding: starting from `0`, two estimates produce
+ * `"0126150861.5085944498.86"`, which formats to `NaN` and reaches the screen
+ * as the currency code followed by `NaN`. A single-estimate project hides it,
+ * because `0 + "2264760.32"` coerces and looks right, so the fault only
+ * appears from the second estimate onward and can survive for years.
+ */
+export function sumBoqGrandTotals(
+  details: readonly Pick<BOQDetail, 'grand_total'>[],
+): number {
+  let sum = 0;
+  for (const detail of details) sum += toNum(detail.grand_total);
+  return sum;
+}
+
+/**
+ * Is this position still unpriced?
+ *
+ * The rate of an unpriced position is the *string* `"0"`, which is the column
+ * default. `!"0"` is false because a non-empty string is truthy, and
+ * `"0" === 0` is false because the types differ, so the obvious spelling of
+ * this test agrees that nothing is unpriced no matter how much is. That made
+ * the "every position is priced" health check pass on a project where not one
+ * position had a rate: a green check with no measurement behind it, which is
+ * worse than a red one.
+ */
+export function isPositionUnpriced(
+  unitRate: PositionSummary['unit_rate'] | null | undefined,
+): boolean {
+  return toNum(unitRate) === 0;
 }
 
 interface ImportResult {
@@ -318,7 +360,7 @@ function computeProjectHealth(
     for (const detail of boqDetails) {
       for (const pos of detail.positions) {
         totalPositions++;
-        if (!pos.unit_rate || pos.unit_rate === 0) unpricedCount++;
+        if (isPositionUnpriced(pos.unit_rate)) unpricedCount++;
         if (pos.validation_status === 'error') errorCount++;
         if (pos.validation_status && pos.validation_status !== 'pending') {
           validatedCount++;
@@ -1492,13 +1534,12 @@ export function ProjectDetailPage() {
       };
     }
 
-    let totalBudget = 0;
+    const totalBudget = sumBoqGrandTotals(boqDetails);
     let totalPositions = 0;
     let validatedCount = 0;
     let passedCount = 0;
 
     for (const detail of boqDetails) {
-      totalBudget += detail.grand_total;
       totalPositions += detail.positions.length;
       for (const pos of detail.positions) {
         if (pos.validation_status && pos.validation_status !== 'pending') {
@@ -2858,7 +2899,7 @@ export function ProjectDetailPage() {
                 {boqs.map((boq) => {
                   const detail = detailMap.get(boq.id);
                   const posCount = detail?.positions.length ?? 0;
-                  const grandTotal = detail?.grand_total ?? 0;
+                  const grandTotal = toNum(detail?.grand_total);
 
                   return (
                     <div
