@@ -126,12 +126,14 @@ COPY data/match/ data/match/
 COPY packs/aus/src/ packs/aus/src/
 COPY packs/brazil-sinapi/src/ packs/brazil-sinapi/src/
 COPY packs/china-gbt50500/src/ packs/china-gbt50500/src/
+COPY packs/hungary-hu/src/ packs/hungary-hu/src/
 COPY packs/india-cpwd/src/ packs/india-cpwd/src/
 COPY packs/mexico-mx/src/ packs/mexico-mx/src/
 COPY packs/modular-prefab/src/ packs/modular-prefab/src/
 COPY packs/nzs/src/ packs/nzs/src/
 COPY packs/renewables-epc/src/ packs/renewables-epc/src/
 COPY packs/retail-grocery-dach/src/ packs/retail-grocery-dach/src/
+COPY packs/russia-gesn/src/ packs/russia-gesn/src/
 COPY packs/saudi-vision2030/src/ packs/saudi-vision2030/src/
 COPY packs/south-africa/src/ packs/south-africa/src/
 COPY packs/uk-jct/src/ packs/uk-jct/src/
