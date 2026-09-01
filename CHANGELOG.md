@@ -5,6 +5,91 @@ All notable changes to OpenConstructionERP are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.5.0] - 2026-09-01
+
+An estimate can now be compared against its own outturn at the level it was
+written. Progress said how far a bill item had got and nothing said what it cost
+or how long it took, so a ceiling estimated at 0.30 hours per square metre that
+took 0.42 had nowhere for the 0.42 to land, and the next estimate used 0.30
+again. Field timesheet lines can name the bill position the hours were spent on,
+supplier invoice lines can name the bill position the money paid for, and
+position actuals reports the hours beside the money. Neither link is mandatory
+and neither replaces the cost code: a day that covered six items honestly names
+none of them, and a line that names nothing stays where it is.
+
+Two decisions inside that reading are worth stating, because both would
+otherwise have produced a number that is plausible and wrong. Only approved
+timesheets count, and only those that have not been reversed. Correcting an
+approved timesheet does not edit it: the original is marked reversed and a
+mirror sheet is written whose hours are still positive, because in that module
+the sign lives on the sheet rather than on the row. Filtering on approved alone
+drops the original and counts the mirror at face value, so a cancelled day would
+report its hours once, in full, in the wrong direction. And the per unit rate
+divides by what is installed rather than by what was billed, and is blank where
+no progress has been reported, because hours over the billed quantity flatter
+every unfinished item and flatter an untouched one most of all. What this
+deliberately does not report is the estimated side of the comparison. Nothing
+records which productivity norm a bill line was priced from, so the measured
+half is reported and the other half is not invented.
+
+The value agreed on a variation is recorded rather than inherited. The approver
+typed a decided amount, the platform checked it against a cap and then threw it
+away, and conversion copied the requested estimate onto the variation order. A
+change requested at 12000 and agreed at 7200 became a variation order for 12000,
+with nothing in the record saying the client had agreed to anything else. A
+request now freezes the bill it was submitted with and that bill's total at
+submission, approval records the amount agreed and which of three bases it rests
+on, and a named amount that departs from the submitted total with no note is
+refused. Where nothing was agreed explicitly the old behaviour is unchanged, so
+nothing already stored moves. The change order mirrored from a variation is also
+no longer a second price: editing its amount is refused and points at the
+variation order it mirrors.
+
+An estimate carries judgement as well as arithmetic. A position can record the
+dispersion around its price, the basis that price rests on and the schedule
+activity it belongs to, and a dispersion of zero is now a statement somebody made
+rather than the absence of one.
+
+The item code column knew three classification standards and the product ships
+eighteen. Positions coded in any of the other fifteen exported an empty code to
+Excel, which is nine of the thirty three demo projects, and several country rule
+sets require exactly those codes. Thirteen of the eighteen can be stored today
+and the column says which, rather than presenting a picker whose values fall back
+to a default in silence.
+
+The country packs stopped promising work they did not do. The United Kingdom
+pack advertised ninety seven checks the engine did not have, and published one
+version while reporting another. The India pack said it preloaded seven cities of
+rates and shipped one. The Hungarian and Russian packs had no demo project to
+install, both Hungarian demos asked for a rule set that does not exist, and no
+Chinese cost item could produce a section path although the pack that ships them
+had nothing else to read. A Russian estimate had no norm base and its markup
+stack was written but unreachable. All of that is now built rather than
+described.
+
+Custom KPIs can break down by a key inside a classification, read one estimate at
+a time, and draw on floor area, price age and markup rates.
+
+Four alembic revisions created tables the boot sequence had already built. On any
+installation that had started once before the upgrade was run, the first of them
+raised a duplicate object error, rolled the whole upgrade back and skipped every
+later revision, so the schema stopped moving and the health report still called
+it healthy.
+
+A project total joined its estimates together instead of adding them, which
+multiplied the figure by the number of estimates on the project.
+
+A large restoration of diacritics runs through this release. Twelve languages had
+shipped strings with their marks deleted, in some cases across a whole panel, and
+the gate meant to catch it had been reading the breadth of the damage as evidence
+that nothing was wrong: a word stripped everywhere in a file looks like a word
+that has no mark. Italian alone shipped 689 of them. Alongside that, ten
+languages carried English sentences the picker was offering as translations, four
+shipped an em dash that had been read through the wrong code page, and the
+Romanian comma below and breve were restored across the guide, the case library
+and the module help. The detector now compares a string against the language
+rather than against the file it sits in.
+
 ## [16.4.0] - 2026-08-31
 
 How a generated PDF looks is a setting now. Until this release the accent colour
