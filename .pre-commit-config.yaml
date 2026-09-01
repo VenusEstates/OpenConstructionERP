@@ -273,12 +273,18 @@ repos:
         pass_filenames: false
         files: ^(frontend/src/app/locales/.*\.ts|backend/app/core/validation/messages/.*\.json)$
 
-      # Ten locales ship prose with every diacritic deleted: the right words in
-      # the right order, unreadable to a native speaker, and invisible to every
-      # other gate because the key is present and the file parses. The 2176 that
-      # already ship are declared debt in the baseline beside this script; this
-      # hook only stops a 2177th. A green run means no new string crossed the
-      # detector's bar, not that none was stripped - see the script docstring.
+      # Locales ship prose with every diacritic deleted: the right words in the
+      # right order, unreadable to a native speaker, and invisible to every
+      # other gate because the key is present and the file parses. Two rules
+      # run, because the first one alibis itself. It counts a bare word as
+      # evidence only when the file never writes that skeleton bare, so a file
+      # damaged in bulk supplies its own alibi and the wider the damage the
+      # better it hides - it reported nothing on the Italian file that was
+      # shipping 689 stripped words. The second rule takes every OTHER namespace
+      # as the dictionary, so the damaged strings cannot vote on their own
+      # spelling. Both baselines beside this script are declared debt; the hook
+      # only stops a new one joining. A green run means no new string crossed
+      # either bar, not that none was stripped - see the script docstring.
       - id: locale-stripped-diacritics-ratchet
         name: Block a new locale string with its diacritics stripped
         entry: python scripts/check_locale_stripped_diacritics.py

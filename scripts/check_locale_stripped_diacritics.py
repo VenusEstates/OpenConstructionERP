@@ -39,10 +39,50 @@ of fully stripped Swedish that this detector does not report, because only
 `overlamnandet` and `gor` qualified - `mal`, `ar` and `fran` each have a bare
 twin elsewhere in `sv.ts`. Relaxing the rule is not the fix; without the
 every-other-spelling condition it returns 2886 hits for `de.ts` and 3713 for
-`es.ts`, both of which are correct files.
+`es.ts`, neither of which is damaged at anything like that scale.
 
 So a green run means "no new string crossed this detector's bar". It never
 means "no new string was stripped".
+
+The second rule: ask the rest of the file
+-----------------------------------------
+The limit above is not a reason to accept the blindness, because the file
+carries a second, independent witness. Every key is filed under a top level
+namespace, and the damage arrives per namespace, in whatever block a bulk
+translation pass touched. So for each namespace the dictionary is every OTHER
+namespace: a word is evidence when the rest of the file spells that skeleton
+only ever accented, only ever one way, at least three times, and the namespace
+under test writes it bare. The damaged strings never vote on their own
+spelling, which is exactly what the first rule lets them do.
+
+This is what the first rule cannot see, measured: `it.ts` shipped 689 stripped
+words while the first rule reported nothing, because `attivita` occurs bare 44
+times and those 44 disqualify it in all of them. The wider the damage, the
+better it hides. The second rule does not care how often the damaged half
+writes a word, only what the healthy half writes.
+
+The two rules are complementary, and the numbers say so. Run against each file
+as it stood at the commit before its repair, the first rule reports 1 string of
+the French damage and the second 86; Romanian 0 and 112; Czech 0 and 248. The
+Swedish is the other way round, 442 and 290, which is why the Swedish was the
+damage that got noticed first.
+
+What neither rule sees
+----------------------
+Both rules need the damage to be LOCAL: the first needs a clean twin somewhere
+in the file, the second needs a clean namespace. Damage spread evenly over a
+whole file defeats both, and that is not hypothetical. `it.ts` at the commit
+before its repair scores 0 and 0, while actually shipping 689 stripped words,
+because the Italian pass touched every namespace at once so no half of the file
+was left clean enough to act as the dictionary.
+
+The method that did find the Italian is a third one this script does not
+implement: ask the language rather than the file, using a closed list of forms
+that do not exist unaccented (`attivita`, `piu`, `perche`). It needs a
+hand-checked word list per language and a homograph guard - `meta`, `unita`,
+`sara` and the clitics are all real Italian words - so it is a different kind of
+check with a different failure mode, and it is not a ratchet. If a locale is
+ever repaired at that scale again, this is the gap to close.
 
 When a repair makes this gate fail
 ----------------------------------
@@ -75,17 +115,47 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LOCALES_DIR = REPO_ROOT / "frontend" / "src" / "app" / "locales"
 BASELINE = Path(__file__).resolve().parent / "locale_stripped_diacritics_baseline.json"
+NS_BASELINE = (
+    Path(__file__).resolve().parent / "locale_namespace_diacritics_baseline.json"
+)
 
 #: A value must be at least this many words before it is judged. Short values
 #: are labels and units, where an absent accent is usually correct.
 MIN_WORDS = 6
 
-#: How many words of evidence a value needs. Three keeps single coincidences
-#: out; the German locale, which is correct, produces none at this bar.
+#: How many words of evidence a value needs. Three keeps single coincidences out.
 MIN_EVIDENCE = 3
+
+#: Cross namespace rule: how letters a word needs before it is judged. Below
+#: four sit the articles and clitics, where the bare spelling is usually a
+#: different real word - Portuguese `e` (and) against `é` (is), Italian the
+#: same. A skeleton that collides with another real word cannot be judged by
+#: spelling at all, only by reading, so this rule does not try.
+NS_MIN_LEN = 4
+
+#: Cross namespace rule: how often the rest of the file must spell a skeleton,
+#: always accented and always the same single way, before its bare twin inside
+#: one namespace counts as evidence.
+NS_MIN_EVIDENCE = 3
+
+#: Cross namespace rule: how many such words one value needs. Two keeps single
+#: loanwords and proper nouns out.
+NS_MIN_HITS = 2
 
 _LINE = re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s*:\s*"((?:[^"\\]|\\.)*)"')
 _WORD = re.compile(r"[0-9A-Za-zÀ-ɏ]+")
+
+#: Placeholders and markup are code, not language, and their names are ASCII by
+#: construction. The Danish `about.thanks_cta` reads "<star>Stjernemarkér
+#: projektet</star>", where the tag name `star` is not a bare spelling of `står`
+#: and counting it as one both invented a hit and, worse, disqualified the real
+#: word everywhere else in the file.
+_MARKUP = re.compile(r"\{\{.*?\}\}|<[^<>]*>")
+
+
+def _words(value: str) -> list[str]:
+    """The words of ``value``, with placeholders and markup removed first."""
+    return _WORD.findall(_MARKUP.sub(" ", value))
 
 
 def _skeleton(word: str) -> str:
@@ -111,14 +181,12 @@ def _entries(path: Path) -> list[tuple[str, str]]:
     return out
 
 
-def stripped_keys(path: Path) -> dict[str, str]:
-    """Keys in ``path`` whose value looks like prose with its diacritics removed."""
-    entries = _entries(path)
-
+def stripped_keys(entries: list[tuple[str, str]]) -> dict[str, str]:
+    """Keys whose value looks like prose with its diacritics removed."""
     spellings: dict[str, set[str]] = collections.defaultdict(set)
     for _, value in entries:
         if _has_diacritic(value):
-            for word in _WORD.findall(value):
+            for word in _words(value):
                 spellings[_skeleton(word)].add(word)
     # Evidence: this file only ever spells the word with its accent.
     evidence = {
@@ -131,7 +199,7 @@ def stripped_keys(path: Path) -> dict[str, str]:
     for key, value in entries:
         if _has_diacritic(value):
             continue
-        words = _WORD.findall(value)
+        words = _words(value)
         if len(words) < MIN_WORDS:
             continue
         if sum(1 for w in words if _skeleton(w) in evidence) >= MIN_EVIDENCE:
@@ -139,13 +207,105 @@ def stripped_keys(path: Path) -> dict[str, str]:
     return found
 
 
-def observe() -> dict[str, dict[str, str]]:
-    out = {}
+def namespace_stripped_keys(entries: list[tuple[str, str]]) -> dict[str, str]:
+    """Keys spelled bare where every other namespace spells that word accented.
+
+    The rule above asks whether this file ever writes the skeleton bare, and a
+    file damaged in bulk answers yes out of its own damage. This asks the one
+    question the damaged text cannot answer for itself, by taking the rest of
+    the file as the dictionary and never letting a namespace speak for itself.
+    """
+    total: dict[str, collections.Counter[str]] = collections.defaultdict(
+        collections.Counter
+    )
+    per_ns: dict[str, dict[str, collections.Counter[str]]] = collections.defaultdict(
+        lambda: collections.defaultdict(collections.Counter)
+    )
+    rows = []
+    for key, value in entries:
+        namespace = key.split(".")[0]
+        words = _words(value)
+        rows.append((key, value, namespace, words))
+        for word in words:
+            skel = _skeleton(word)
+            total[skel][word.lower()] += 1
+            per_ns[namespace][skel][word.lower()] += 1
+
+    # A word repeats heavily inside one namespace, so decide each (namespace,
+    # word) once. Without this the run is minutes rather than seconds.
+    verdict: dict[tuple[str, str], str | None] = {}
+
+    def accented_twin(namespace: str, word: str) -> str | None:
+        cached = verdict.get((namespace, word))
+        if (namespace, word) in verdict:
+            return cached
+        skel = _skeleton(word)
+        outside = collections.Counter(total[skel])
+        outside.subtract(per_ns[namespace][skel])
+        forms = {f: c for f, c in outside.items() if c > 0}
+        answer = None
+        if (
+            len(forms) == 1
+            and sum(forms.values()) >= NS_MIN_EVIDENCE
+            and all(_has_diacritic(f) for f in forms)
+        ):
+            answer = next(iter(forms))
+        verdict[(namespace, word)] = answer
+        return answer
+
+    found = {}
+    for key, value, namespace, words in rows:
+        hits = 0
+        for word in words:
+            if len(word) < NS_MIN_LEN or _has_diacritic(word):
+                continue
+            if any(c.isdigit() for c in word):
+                continue
+            if accented_twin(namespace, word.lower()):
+                hits += 1
+        if hits >= NS_MIN_HITS:
+            found[key] = value
+    return found
+
+
+#: The two rules, in the order they are reported. Each is a name, the finder,
+#: its baseline file, and the sentence that says what it actually asked.
+RULES = (
+    (
+        "own-file",
+        stripped_keys,
+        BASELINE,
+        "no other string in the same file writes that word bare",
+    ),
+    (
+        "cross-namespace",
+        namespace_stripped_keys,
+        NS_BASELINE,
+        "every other namespace in the file writes that word accented",
+    ),
+)
+
+
+def observe() -> tuple[dict[str, dict[str, dict[str, str]]], int, int]:
+    """Run both rules over every locale, reading each file once.
+
+    Returns the findings per rule, and the population they were drawn from, so
+    the verdict can be printed next to how much was examined to reach it. A
+    green line naming no denominator is how a narrowed run passes for a clean
+    one.
+    """
+    out: dict[str, dict[str, dict[str, str]]] = {name: {} for name, _, _, _ in RULES}
+    keys = 0
+    files = 0
     for path in sorted(LOCALES_DIR.glob("*.ts")):
-        found = stripped_keys(path)
-        if found:
-            out[path.name] = dict(sorted(found.items()))
-    return out
+        entries = _entries(path)
+        keys += len(entries)
+        files += 1
+        for name, finder, _, _ in RULES:
+            found = finder(entries)
+            if found:
+                out[name][path.name] = dict(sorted(found.items()))
+    return out, keys, files
 
 
 def main() -> int:
@@ -156,64 +316,89 @@ def main() -> int:
         )
         return 1
 
-    observed = observe()
+    observed, keys, files = observe()
 
     if "--update-baseline" in sys.argv:
-        payload = {name: sorted(found) for name, found in observed.items()}
-        BASELINE.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
-        )
-        total = sum(len(v) for v in payload.values())
-        print(f"baseline rewritten: {total} strings across {len(payload)} locales")
-        for name, keys in payload.items():
-            print(f"  {name}: {len(keys)}")
+        for name, _, path, _ in RULES:
+            payload = {
+                locale: sorted(found) for locale, found in observed[name].items()
+            }
+            path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=1) + "\n",
+                encoding="utf-8",
+            )
+            total = sum(len(v) for v in payload.values())
+            print(
+                f"{name} baseline rewritten: {total} strings across {len(payload)} locales"
+            )
+            for locale, found in payload.items():
+                print(f"  {locale}: {len(found)}")
         print(
             "\nRead the diff before committing. A number going UP is the gate telling you something."
         )
         return 0
 
-    if not BASELINE.exists():
-        print(
-            f"no baseline at {BASELINE}; create it with --update-baseline",
-            file=sys.stderr,
-        )
-        return 1
-    baseline = {
-        name: set(keys)
-        for name, keys in json.loads(BASELINE.read_text(encoding="utf-8")).items()
-    }
-
-    observed_total = sum(len(v) for v in observed.values())
-    baseline_total = sum(len(v) for v in baseline.values())
-
-    added: list[tuple[str, str, str]] = []
-    unmasking: set[str] = set()
-    for name, found in observed.items():
-        new = set(found) - baseline.get(name, set())
-        if new:
-            added.extend((name, key, found[key]) for key in sorted(new))
-            if baseline.get(name, set()) - set(found):
-                unmasking.add(name)
-
-    if added:
-        print(
-            f"{len(added)} locale string(s) newly detected as stripped of every diacritic "
-            f"(baseline {baseline_total}, observed {observed_total} across {len(observed)} locales):",
-            file=sys.stderr,
-        )
-        for name, key, value in added:
-            shown = value if len(value) <= 110 else value[:107] + "..."
-            print(f"  {name}: {key}\n      {shown}", file=sys.stderr)
-        if unmasking:
+    failed = False
+    summary: list[str] = []
+    for name, _, path, asked in RULES:
+        if not path.exists():
             print(
-                "\n"
-                + ", ".join(sorted(unmasking))
-                + " also LOST keys in this run, so this is very likely a repair uncovering damage the\n"
-                "detector could not see before: fixing strings removes the bare spellings that were\n"
-                "hiding others. Those strings were always broken. Fix them too if you can, or accept\n"
-                "them with --update-baseline and read the diff.",
+                f"no {name} baseline at {path}; create it with --update-baseline",
                 file=sys.stderr,
             )
+            return 1
+        baseline = {
+            locale: set(found)
+            for locale, found in json.loads(path.read_text(encoding="utf-8")).items()
+        }
+        found_by_locale = observed[name]
+        observed_total = sum(len(v) for v in found_by_locale.values())
+        baseline_total = sum(len(v) for v in baseline.values())
+
+        added: list[tuple[str, str, str]] = []
+        unmasking: set[str] = set()
+        for locale, found in found_by_locale.items():
+            new = set(found) - baseline.get(locale, set())
+            if new:
+                added.extend((locale, key, found[key]) for key in sorted(new))
+                if baseline.get(locale, set()) - set(found):
+                    unmasking.add(locale)
+
+        if added:
+            failed = True
+            print(
+                f"\n[{name}] {len(added)} locale string(s) newly detected as stripped of their "
+                f"diacritics.\nThis rule asks: {asked}.\n"
+                f"Baseline {baseline_total}, observed {observed_total} across "
+                f"{len(found_by_locale)} locales, drawn from {keys} keys in {files} files:",
+                file=sys.stderr,
+            )
+            for locale, key, value in added:
+                shown = value if len(value) <= 110 else value[:107] + "..."
+                print(f"  {locale}: {key}\n      {shown}", file=sys.stderr)
+            if unmasking:
+                print(
+                    "\n"
+                    + ", ".join(sorted(unmasking))
+                    + " also LOST keys in this run, so this is very likely a repair uncovering damage the\n"
+                    "detector could not see before: fixing strings removes the bare spellings that were\n"
+                    "hiding others. Those strings were always broken. Fix them too if you can, or accept\n"
+                    "them with --update-baseline and read the diff.",
+                    file=sys.stderr,
+                )
+        else:
+            line = (
+                f"  [{name}] {observed_total} declared across {len(found_by_locale)} locales, "
+                f"nothing new (baseline {baseline_total})"
+            )
+            if baseline_total > observed_total:
+                line += (
+                    f"\n      {baseline_total - observed_total} fewer than the baseline - "
+                    "run --update-baseline to bank the repair"
+                )
+            summary.append(line)
+
+    if failed:
         print(
             "\nWrite the accented text; do NOT run a find/replace to restore marks. That is the exact\n"
             "pass that turned the German locale into non-words (see check_locale_umlaut_folding.py).\n"
@@ -223,17 +408,11 @@ def main() -> int:
         )
         return 1
 
-    removed = baseline_total - observed_total
+    print(f"locale diacritic ratchet OK: {keys} keys examined in {files} locale files")
+    for line in summary:
+        print(line)
     print(
-        f"locale diacritic ratchet OK: {observed_total} declared strings across {len(observed)} locales, "
-        f"nothing new (baseline {baseline_total})"
-    )
-    if removed > 0:
-        print(
-            f"  {removed} fewer than the baseline - run --update-baseline to bank the repair"
-        )
-    print(
-        "  a green run means no new string crossed this detector's bar, not that none was stripped"
+        "  a green run means no new string crossed either detector's bar, not that none was stripped"
     )
     return 0
 

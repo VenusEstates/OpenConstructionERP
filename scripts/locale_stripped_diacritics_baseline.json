@@ -1,1 +1,7 @@
-{}
+{
+ "sv.ts": [
+  "cases.run_a_clash_profile_audit.step.issue.why",
+  "howto.daily-diary.tip.2",
+  "howto.payroll.when"
+ ]
+}
