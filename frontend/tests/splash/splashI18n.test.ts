@@ -44,9 +44,10 @@ function readTable(): Record<string, Table> {
  * than imported: importing ``i18n.ts`` executes i18next and pulls in the whole
  * English locale, and this test is about two files agreeing on a list.
  *
- * A commented-out entry is not an entry — ``uz`` sits in that file behind a
- * ``//`` and is deliberately not offered — so the leading ``{`` has to be the
- * first thing on the line.
+ * A commented-out entry is not an entry, so the leading ``{`` has to be the
+ * first thing on the line. That rule was written while ``uz`` sat behind a
+ * ``//``. Uzbek is offered now, and the rule still stands for the next language
+ * that waits behind one.
  */
 function offeredLanguages(): { code: string; rtl: boolean }[] {
   const block = i18nSource.slice(

@@ -90,6 +90,13 @@ Romanian comma below and breve were restored across the guide, the case library
 and the module help. The detector now compares a string against the language
 rather than against the file it sits in.
 
+Uzbek is offered in the language picker. The file had shipped for some time but
+stayed out of the picker while 942 keys still answered in English, with the
+insights panels and the case library English from end to end. Those bands are
+translated now, what is left is an ordinary tail rather than a whole panel, and
+the desktop startup screen answers Uzbek as well, so the language is offered
+rather than promised.
+
 ## [16.4.0] - 2026-08-31
 
 How a generated PDF looks is a setting now. Until this release the accent colour
