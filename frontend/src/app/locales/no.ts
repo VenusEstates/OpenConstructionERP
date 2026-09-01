@@ -33034,7 +33034,7 @@ const resource = {
     "sustainability.compliance_good": "Bra",
     "sustainability.compliance_non_compliant": "Ikke samsvarende",
     "sustainability.data_quality": "Datakvalitet",
-    "sustainability.data_sources": "Data: Okobaudat, ICE v3.0 (Bath), EU Level(s). GWP A1-A3 (cradle to gate).",
+    "sustainability.data_sources": "Data: Okobaudat, ICE v3.0 (Bath), EU Level(s). GWP A1-A3 (vugge til port).",
     "sustainability.enrich": "Berike CO2",
     "sustainability.enrich_failed": "CO2 berikelse mislyktes",
     "sustainability.enrich_success": "CO2 berik: {{enriched}} posisjoner ({{skipped}} hoppet over)",

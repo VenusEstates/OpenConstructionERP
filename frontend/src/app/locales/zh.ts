@@ -30682,7 +30682,7 @@ const resource = {
     "property_dev.doc_templates.locale_source_bundled": "内置翻译（{{n}}个键）。单击以覆盖。",
     "property_dev.doc_templates.locale_source_bundled_short": "bundled（内置）",
     "property_dev.doc_templates.locale_source_fallback": "未找到翻译-PDF回退到英文。单击以添加。",
-    "property_dev.doc_templates.locale_source_fallback_short": "falls back to English",
+    "property_dev.doc_templates.locale_source_fallback_short": "回退到英文",
     "property_dev.doc_templates.locale_source_override": "租户覆盖处于活跃状态（{{n}}个键）。单击以编辑或还原。",
     "property_dev.doc_templates.locale_source_override_short": "租户覆盖",
     "property_dev.doc_templates.locale_starter_loaded": "加载英文作为入门",

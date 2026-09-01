@@ -30885,7 +30885,7 @@ const resource = {
     "property_dev.doc_templates.editor_create_btn": "إنشاء قالب",
     "property_dev.doc_templates.editor_created": "تم إنشاء القالب",
     "property_dev.doc_templates.editor_cta_btn": "إنشاء قالب جديد",
-    "property_dev.doc_templates.editor_cta_subtitle": "Write HTML or Markdown directly here - no upload required. Click variable chips to insert {placeholders}, and see a live preview alongside the source.",
+    "property_dev.doc_templates.editor_cta_subtitle": "اكتب HTML أو Markdown مباشرة هنا - لا حاجة إلى الرفع. انقر على رقائق المتغيرات لإدراج {placeholders}، واعرض معاينة حية إلى جانب المصدر.",
     "property_dev.doc_templates.editor_cta_title": "إنشاء أو تحرير القوالب في المتصفح الخاص بك",
     "property_dev.doc_templates.editor_footer_hint": "تلميح: انقر على رقاقة متغير لإدراجها عند المؤشر. تعاد معاينة المعاينة بعد 250 مللي ثانية من التوقف عن الكتابة.",
     "property_dev.doc_templates.editor_no_body": "محتوى القالب فارغ",

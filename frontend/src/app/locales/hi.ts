@@ -34413,7 +34413,7 @@ const resource = {
     "assemblies.bulk_delete_desc": "यह चयनित असेंबली और उनके सभी घटकों को स्थायी रूप से हटा देगा। BOQ स्थितियों द्वारा संदर्भित असेंबली स्वचालित रूप से अनलिंक नहीं होंगी।",
     "assemblies.ai_generate_failed": "उत्पन्न करने में विफल",
     "assemblies.ai_assembly_saved": "Assembly saved",
-    "assemblies.ai_save_failed": "Failed to save assembly",
+    "assemblies.ai_save_failed": "संयुक्त दर सहेजने में विफल",
     "assemblies.ai_generate_title": "AI असेंबली जनरेटर",
     "assemblies.ai_description_label": "Description",
     "assemblies.ai_description_placeholder": "जैसे, प्रबलित कंक्रीट की दीवार C30/37, 25 सेमी मोटाई",
