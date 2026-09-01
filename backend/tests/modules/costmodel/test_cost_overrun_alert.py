@@ -45,36 +45,45 @@ async def session() -> AsyncSession:
         yield sess
 
 
+@pytest_asyncio.fixture
+async def orphaned_session() -> AsyncSession:
+    """A session that lets a budget line point at a project that is not there.
+
+    Used by exactly one test, and separately from the fixture above on purpose:
+    turning the foreign keys off for the whole file would quietly weaken every
+    other test in it.
+    """
+    async with transactional_session(disable_fks=True) as sess:
+        yield sess
+
+
 # ── Seed helpers ────────────────────────────────────────────────────────────────
 
 
-async def _seed_project(session: AsyncSession, *, with_owner: bool = True) -> tuple[uuid.UUID, uuid.UUID | None]:
+async def _seed_project(session: AsyncSession) -> tuple[uuid.UUID, uuid.UUID]:
     from app.modules.projects.models import Project
     from app.modules.users.models import User
 
-    owner_id: uuid.UUID | None = None
-    if with_owner:
-        user = User(
-            id=uuid.uuid4(),
-            email=f"gapd-{uuid.uuid4().hex[:10]}@overrun.io",
-            hashed_password="x",
-            full_name="Gap D Owner",
-            role="admin",
-        )
-        session.add(user)
-        await session.flush()
-        owner_id = user.id
+    user = User(
+        id=uuid.uuid4(),
+        email=f"gapd-{uuid.uuid4().hex[:10]}@overrun.io",
+        hashed_password="x",
+        full_name="Gap D Owner",
+        role="admin",
+    )
+    session.add(user)
+    await session.flush()
 
     project = Project(
         id=uuid.uuid4(),
         name="Gap D project",
-        owner_id=owner_id,
+        owner_id=user.id,
         currency="EUR",
         fx_rates=[],
     )
     session.add(project)
     await session.flush()
-    return project.id, owner_id
+    return project.id, user.id
 
 
 async def _seed_line(
@@ -285,18 +294,27 @@ def test_extract_line_id_accepts_both_keys() -> None:
     assert _extract_line_id(type("E", (), {"data": {"line_id": "not-a-uuid"}})()) is None
 
 
-# ── Extra: missing project owner -> no alert, cooldown NOT stamped ───────────────
+# ── Extra: no recipient -> no alert, cooldown NOT stamped ───────────────────────
 
 
-async def test_no_owner_no_alert_no_cooldown(session: AsyncSession) -> None:
-    project_id, _ = await _seed_project(session, with_owner=False)
-    line = await _seed_line(session, project_id, planned="100", actual="200", threshold="10")
+async def test_no_recipient_no_alert_no_cooldown(orphaned_session: AsyncSession) -> None:
+    """A line whose project cannot be resolved has nobody to notify.
 
-    sent = await CostOverrunAlertService(session).check_and_alert(line.id)
+    This used to be written as a project with no owner, which the schema
+    forbids: ``Project.owner_id`` is NOT NULL, so the insert failed and the
+    test had asserted nothing for as long as that was true. The guard it means
+    to cover is reachable by the other route the resolver has - the project row
+    the line points at is not there - and that is what is set up here, which is
+    why the session disables foreign keys.
+    """
+    line = await _seed_line(orphaned_session, uuid.uuid4(), planned="100", actual="200", threshold="10")
+
+    sent = await CostOverrunAlertService(orphaned_session).check_and_alert(line.id)
 
     assert sent is False
-    assert await _count_alerts(session, line.id) == 0
-    # Cooldown must remain unset so a later owner assignment still gets alert #1.
-    reloaded = await CostOverrunAlertService(session).budget_repo.get_by_id(line.id)
+    assert await _count_alerts(orphaned_session, line.id) == 0
+    # Cooldown must remain unset so a recipient appearing later still gets
+    # alert number one rather than a day of silence.
+    reloaded = await CostOverrunAlertService(orphaned_session).budget_repo.get_by_id(line.id)
     assert reloaded is not None
     assert reloaded.overrun_alerted_at is None
