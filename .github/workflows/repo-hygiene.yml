@@ -1,6 +1,6 @@
 # Repo hygiene gate.
 #
-# Guards: 65. They run on every push and pull request, grouped into three
+# Guards: 68. They run on every push and pull request, grouped into three
 # jobs. A guard is a named step that is not a tooling install, and that rule is
 # not a matter of taste: it is the one that reproduces both counts this header
 # carried when it was written on 2026-08-24 - twenty-one guards, over jobs of
@@ -59,6 +59,14 @@
 #     forward-only against a frozen snapshot of already-seen locale-set
 #     shapes, and fails only when a genuinely new cluster of 3+ keys forms.
 #     See scripts/check_i18n_leak_baseline.py for both fingerprints.
+#   * no locale bundle as a whole is still mostly the English placeholder that
+#     the extraction tool seeds every batch value with. That is the same word
+#     "identical" as the guard above and a different question, so the two are
+#     separate on purpose: that one runs down the key axis and needs 24 of 28
+#     locales to agree before it says anything, this one runs down the locale
+#     axis and asks what share of one bundle's whole corpus is English. A
+#     single bundle at 74% is invisible to the first and obvious to the second.
+#     See scripts/check_locale_english_placeholder.py.
 # The file, escape and leak-baseline guards also run as pre-commit hooks; the
 # trailer guard runs as a commit-msg pre-commit hook. So a violation is
 # caught at commit time and in CI, and the file guard is caught again at
@@ -836,6 +844,41 @@ jobs:
       - name: Check for new i18n leaks against the declared baseline
         if: ${{ !cancelled() }}
         run: python scripts/check_i18n_leak_baseline.py
+
+      # The other axis of the guard above, and it has to be a separate guard.
+      # That one asks, for one key, how many locales answer it in English, and
+      # flags at 24 of 28 because a leak copies one string everywhere at once.
+      # This one asks, for one locale, how much of the whole corpus is English.
+      # A single bundle that is three quarters English never reaches the other
+      # guard's count in any locale-set, so it is invisible there: hu.ts was
+      # assembled with 30920 of its 41787 comparable values byte-identical to
+      # English, and every locale gate in this job went green over it, because
+      # each of them asks about the key set and none of them asks what language
+      # a value is in.
+      #
+      # The first step proves the failing branch, over locales small enough to
+      # state by hand, including the two cases either side of the threshold and
+      # the one where the population itself is too narrow to judge.
+      - name: Prove the locale placeholder guard can fail
+        if: ${{ !cancelled() }}
+        run: python scripts/check_locale_english_placeholder.py --selftest
+
+      - name: Check no locale bundle is still mostly English placeholder
+        if: ${{ !cancelled() }}
+        run: python scripts/check_locale_english_placeholder.py
+
+      # The guard above compares each value against its RESOLVED English, which
+      # is en.ts plus the English supplied at the call site and beside a key
+      # field in the playbooks and module guides - about 7700 keys en.ts does
+      # not answer. A field arrangement the resolver cannot read does not make
+      # anything red; it drops those keys out of the guard's population and
+      # makes the verdict narrower without saying so. Two arrangements were
+      # found unreadable this way. This pins them, and pins the arrangements
+      # that must stay unreadable so the fix cannot be widened into inventing
+      # English for fields that are not i18n keys at all.
+      - name: Check the English-source resolver still reads every field shape
+        if: ${{ !cancelled() }}
+        run: python scripts/i18n_new_locale.py selftest
 
       - name: Check for t() keys no locale file can answer
         if: ${{ !cancelled() }}

@@ -134,17 +134,41 @@ TRANS_DEFAULTS = re.compile(
 # never appeared inside the window at all, so the key silently got no source. Exact
 # adjacency in the token stream has neither failure mode: there is no "nearest",
 # only the one token actually sitting next to this key in the object literal.
-FIELD_TOKEN = re.compile(r"""\b(\w+):\s*(['"])((?:\\[\s\S]|(?!\2).)*)\2""")
+#
+# The gap between the colon and the opening quote admits comments as well as
+# whitespace. A field whose value is long enough to sit on its own line often
+# carries an explanation above it, and plain `\s*` stops dead at the first `/`,
+# so the field produced no token at all - not a wrong pairing, an absent one,
+# which then also shifted its neighbour out of reach. That is how the `why` text
+# of the change-order playbook had no English source: a ten-line comment sits
+# between `whyDefault:` and its paragraph, so `whyKey` saw `moduleLabel` as its
+# next token and gave up. The `//` inside a URL is untouched by this, because
+# the alternation is only ever tried before the opening quote, never inside a
+# value that has already started.
+_VALUE_GAP = r"(?:\s|//[^\r\n]*|/\*(?:(?!\*/)[\s\S])*\*/)*"
+FIELD_TOKEN = re.compile(rf"""\b(\w+):{_VALUE_GAP}(['"])((?:\\[\s\S]|(?!\2).)*)\2""")
 
 
 def sibling_pairs(text: str) -> dict[str, str]:
     found: dict[str, str] = {}
     tokens = [(m.group(1), m.group(3)) for m in FIELD_TOKEN.finditer(text)]
     for i, (field, value) in enumerate(tokens):
-        if not field.endswith("Key"):
+        if field.endswith("Key"):
+            stem = field[: -len("Key")]
+            # `en` joins the stem-derived names because a data file that spells
+            # its own language out does not repeat the stem as well.
+            names = (f"{stem}Default", stem, "fallback", "default", "en")
+        elif field == "key":
+            # `Record<State, { key: string; en: string }>` names the key field
+            # `key` outright, with no stem to build a sibling name from, so the
+            # loop above never sees it. Only `en` is accepted here: `key` is an
+            # ordinary field name all over the tree (table columns, list item
+            # identities) and pairing it with `label` or `default` would invent
+            # English for things that are not i18n keys at all. A neighbour
+            # literally named `en` is an English-beside-key pair by construction.
+            names = ("en",)
+        else:
             continue
-        stem = field[: -len("Key")]
-        names = (f"{stem}Default", stem, "fallback", "default")
         for j in (i + 1, i - 1):
             if 0 <= j < len(tokens) and tokens[j][0] in names:
                 found.setdefault(value, tokens[j][1])
@@ -613,15 +637,150 @@ def cmd_verify(code: str) -> int:
         problems.append(f"unescaped quote near: {bad[:60]}")
         break
 
+    # Everything above asks about the shape of the key set, and a bundle whose
+    # every value is still the English placeholder has a perfect key set. That
+    # is not hypothetical: hu.ts passed all of it while 74% of its values were
+    # byte-identical to English. This is deliberately inside verify rather than
+    # only in the CI guard, because verify is the command someone finishing a
+    # locale actually types, and a check they have to remember to run separately
+    # is a check that leaves the trap open. Imported here rather than at module
+    # scope: the guard imports this module for its resolver, and importing it
+    # back at the top would be a cycle.
+    from check_locale_english_placeholder import check_locale
+
+    population, placeholder = check_locale(code)
+    problems += placeholder
+
     if problems:
         for p in problems:
             print(f"FAIL {p}")
+        print(population)
         return 1
     print(f"OK {code}.ts carries {len(present)} key(s), CRLF, no duplicates")
+    print(f"OK {population}")
+    return 0
+
+
+# Shapes sibling_pairs() has to keep resolving, each one abbreviated from the
+# file where it was first found to be unresolved. A shape lives here rather than
+# being asserted against the real file so that moving or rewording the original
+# does not turn this into a test of that file's prose; what is pinned is the
+# arrangement of fields, which is the thing that broke.
+SIBLING_SHAPES: list[tuple[str, str, str, str]] = [
+    (
+        "stem-Key then stem-Default, adjacent",
+        """
+        { titleKey: "a.title", titleDefault: "Attach the proof" }
+        """,
+        "a.title",
+        "Attach the proof",
+    ),
+    (
+        "English first, key second (moduleLabel before moduleLabelKey)",
+        """
+        { moduleLabel: "Claims Evidence", moduleLabelKey: "nav.claims_evidence" }
+        """,
+        "nav.claims_evidence",
+        "Claims Evidence",
+    ),
+    (
+        "stem-Key, then stem-Default separated from its value by a line comment",
+        """
+        {
+          whyKey: "a.why",
+          whyDefault:
+            // A ten-line note about why this sentence is worded as it is sat
+            // here, and the field produced no token at all, so the key beside
+            // it paired with whatever followed the object instead.
+            "The gap you find today is one somebody can still fill.",
+          moduleLabel: "Claims Evidence",
+        }
+        """,
+        "a.why",
+        "The gap you find today is one somebody can still fill.",
+    ),
+    (
+        "stem-Key, then stem-Default separated from its value by a block comment",
+        """
+        { whatKey: "a.what", whatDefault: /* see above */ "Pull the daily reports" }
+        """,
+        "a.what",
+        "Pull the daily reports",
+    ),
+    (
+        "bare `key` beside `en`, the Record<..., { key, en }> badge table",
+        """
+        const STATE_LABEL: Record<StandingState, { key: string; en: string }> = {
+          revoked: { key: 'tax_withholding.state_revoked', en: 'Revoked' },
+          pending: { key: 'tax_withholding.state_pending', en: 'Recorded, not confirmed' },
+        };
+        """,
+        "tax_withholding.state_pending",
+        "Recorded, not confirmed",
+    ),
+    (
+        "a value that contains // is a value, not the start of a comment",
+        """{ docsKey: 'a.docs', docsDefault: 'https://example.invalid/a' }""",
+        "a.docs",
+        "https://example.invalid/a",
+    ),
+]
+
+# Arrangements that must stay unresolved. Inventing English for these would put
+# entries in the source map that are not i18n keys at all, and the map is what
+# the placeholder gate measures its population against.
+SIBLING_NON_SHAPES: list[tuple[str, str, str]] = [
+    (
+        "a table column identity beside its header is not a key beside its English",
+        """{ key: 'unit_rate', label: 'Unit rate' }""",
+        "unit_rate",
+    ),
+    (
+        "a comment before a non-literal value must not reach past it to the next string",
+        """
+        {
+          enabledKey: 'a.enabled',
+          enabledDefault:
+            // resolved at runtime, there is no English here
+            someVariable,
+          heading: 'Unrelated heading',
+        }
+        """,
+        "a.enabled",
+    ),
+]
+
+
+def cmd_selftest() -> int:
+    """Pin the field arrangements english_sources() has to read English out of.
+
+    Every one of these is a shape that resolved to nothing at some point, and an
+    unresolved shape is silent by construction: the key keeps its English on
+    every screen in every language, and no coverage check notices, because the
+    key exists and carries a value. There is nothing to grep for, so the shapes
+    have to be asserted.
+    """
+    failures = 0
+    for name, text, key, english in SIBLING_SHAPES:
+        got = sibling_pairs(text).get(key)
+        if got != english:
+            print(f"FAIL {name}: {key} resolved to {got!r}, expected {english!r}")
+            failures += 1
+    for name, text, key in SIBLING_NON_SHAPES:
+        got = sibling_pairs(text).get(key)
+        if got is not None:
+            print(f"FAIL {name}: {key} should not resolve, got {got!r}")
+            failures += 1
+    if failures:
+        print(f"{failures} of {len(SIBLING_SHAPES) + len(SIBLING_NON_SHAPES)} sibling shape(s) wrong")
+        return 1
+    print(f"OK {len(SIBLING_SHAPES)} sibling shape(s) resolve, {len(SIBLING_NON_SHAPES)} correctly do not")
     return 0
 
 
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "selftest":
+        return cmd_selftest()
     if len(sys.argv) < 3:
         print(__doc__)
         return 2
