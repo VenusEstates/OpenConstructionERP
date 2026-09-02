@@ -159,7 +159,7 @@ _US_BID = Preset(
 # translation of these English headings.
 _HU_ANYAG_DIJ = Preset(
     name="hu_anyag_dij",
-    label="Anyag es dij bontas (material and fee split)",
+    label="Anyag és díj bontás (material and fee split)",
     region="HU",
     kind_labels=(
         (ResourceKind.MATERIAL, "Anyag"),

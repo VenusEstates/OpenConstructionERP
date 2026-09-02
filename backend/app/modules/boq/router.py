@@ -8153,6 +8153,36 @@ async def get_cost_breakdown(
 
 
 @router.get(
+    "/price-analysis/presets/",
+    summary="Presentation presets a price analysis can be read in",
+    dependencies=[Depends(RequirePermission("boq.read"))],
+    response_model=None,
+)
+async def list_price_analysis_presets() -> dict[str, Any]:
+    """Return every presentation preset, straight from the preset table.
+
+    A price analysis is a document handed to somebody who expects it in their
+    own market's shape, so the product offers a switch between those shapes.
+    The list behind that switch was written out by hand in the frontend and
+    named two of the six presets, the international one and the German EFB
+    sheets; the UK, US, Hungarian and cost-plus presets existed, were complete,
+    and could not be reached from the interface at all. A hand-kept copy of a
+    table that lives in the backend goes stale in exactly that direction, and
+    it did.
+
+    Each entry is the preset's own ``to_dict``: its name, its English label,
+    the stable i18n key for that label, the market it is written for, and its
+    resource kinds in the preset's own display order with a label and an i18n
+    key each. The order matters and is not decoration: the Hungarian sheet
+    opens with material rather than labour, because that is the column order
+    the Hungarian client reads a tender against.
+    """
+    from app.modules.price_breakdown import PRESETS
+
+    return {"presets": [preset.to_dict() for preset in PRESETS.values()]}
+
+
+@router.get(
     "/positions/{position_id}/price-analysis/",
     summary="Unit-price breakdown for a position",
     dependencies=[Depends(RequirePermission("boq.read"))],
@@ -8201,7 +8231,13 @@ async def get_position_price_analysis(
     (``metadata.resources``); positions without one show the whole rate as a
     single line so the sheet always renders.
     """
-    from app.modules.price_breakdown import efb_221_view, from_position, preset_for_country, render_markdown
+    from app.modules.price_breakdown import (
+        efb_221_view,
+        from_position,
+        get_preset,
+        preset_for_country,
+        render_markdown,
+    )
 
     existing = await service.position_repo.get_by_id(position_id)
     if existing is None:
@@ -8238,6 +8274,13 @@ async def get_position_price_analysis(
         )
 
     result = breakdown.to_dict()
+    # Say which preset produced this. The caller may have omitted it and let
+    # the project's country decide, and without this the answer is invisible:
+    # nothing else in the payload differs between presets except the ``efb``
+    # block, so a reader could not tell a Hungarian sheet from an international
+    # one. It also carries the preset's own per-kind wording and display order,
+    # which is the whole of what a preset is for a JSON reader.
+    result["preset"] = get_preset(preset).to_dict()
     if preset == "efb":
         result["efb"] = efb_221_view(breakdown)
     return result

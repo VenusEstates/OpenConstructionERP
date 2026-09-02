@@ -26,6 +26,7 @@ we wrote down and cannot deliver.
 from __future__ import annotations
 
 import ast
+import asyncio
 import inspect
 import textwrap
 
@@ -168,4 +169,105 @@ def test_the_endpoint_asks_the_project_when_no_preset_is_named() -> None:
     assert "preset_for_country" in called, (
         "the price-analysis endpoint does not call preset_for_country, so the preset is either "
         "fixed again or resolved from a second copy of the market table."
+    )
+
+
+def test_the_response_says_which_preset_produced_it() -> None:
+    """A resolved preset the caller cannot read back is not an answer.
+
+    Nothing in the JSON payload differs between presets except the ``efb``
+    block, so a client that deliberately omitted the preset, which is now the
+    normal case, had no way to learn what it was given. It could not label the
+    sheet, could not keep a switch in step with it, and could not ask for the
+    same shape again as a download.
+    """
+    from app.modules.boq.router import get_position_price_analysis
+
+    src = textwrap.dedent(inspect.getsource(get_position_price_analysis))
+    tree = ast.parse(src)
+
+    assigned = {
+        ast.unparse(target) for node in ast.walk(tree) if isinstance(node, ast.Assign) for target in node.targets
+    }
+    assert "result['preset']" in assigned, (
+        "the price-analysis response does not carry the preset it was rendered in, so a caller "
+        "that let the project decide cannot find out what it decided."
+    )
+
+
+def test_every_preset_describes_itself_completely() -> None:
+    """``to_dict`` is the whole of what a client can know about a preset.
+
+    It was written for a UI to render and translate and had no caller at all
+    until the presets endpoint. A field missing from it is a field the
+    interface cannot show, and the interface would fill the hole with a
+    hand-written copy, which is exactly how the drawer came to hold its own
+    two-entry version of this six-entry table.
+    """
+    for name, preset in PRESETS.items():
+        d = preset.to_dict()
+        assert d["name"] == name
+        assert d["label"], f"{name} has no label to show"
+        assert d["label_i18n_key"] == f"price_breakdown.preset.{name}"
+        assert d["region"], f"{name} names no market, not even the neutral one"
+        kinds = d["kinds"]
+        assert len(kinds) == len(set(k["kind"] for k in kinds)), f"{name} lists a kind twice"
+        for k in kinds:
+            assert k["label"], f"{name} leaves {k['kind']} unlabelled"
+            assert k["i18n_key"] == f"price_breakdown.kind.{k['kind']}"
+
+
+def test_the_hungarian_sheet_opens_with_material() -> None:
+    """The kind order is part of the preset, not a rendering detail.
+
+    Every other preset follows the order an estimator builds a rate in, which
+    starts with labour. This one follows the order the Hungarian workbook
+    prints and the Hungarian client reads a tender against, which starts with
+    anyag. A reader that sorts by anything of its own turns the sheet back into
+    a differently-worded international one.
+    """
+    order = [k["kind"] for k in PRESETS["hu_anyag_dij"].to_dict()["kinds"]]
+    assert order[0] == "material", f"the Hungarian sheet opens with {order[0]}, not with material"
+
+    others = {n: [k["kind"] for k in p.to_dict()["kinds"]][0] for n, p in PRESETS.items()}
+    assert others.pop("hu_anyag_dij") == "material"
+    assert set(others.values()) == {"labor"}, (
+        f"the claim that Hungary is the only preset not opening with labour is stale: {others}"
+    )
+
+
+def test_the_hungarian_label_is_spelled_the_way_the_pack_spells_it() -> None:
+    """A folded Hungarian string is a defect, not a simplification.
+
+    This preset's own comment says its wording follows the Hungarian pack's
+    ``hu_anyag_dij_bontas`` rule pack, which is taken from workbooks in
+    production use. The rule pack writes the phrase with its diacritics and the
+    preset's six kind labels carry theirs; only the preset's own label had been
+    folded to ASCII, so the one string a Hungarian estimator reads first was
+    the one string not written in Hungarian.
+    """
+    label = PRESETS["hu_anyag_dij"].label
+    for word in ("\u00e9s", "d\u00edj", "bont\u00e1s"):
+        assert word in label, f"{label!r} is missing {word!r}, so it has been folded to ASCII"
+
+
+def test_the_presets_endpoint_answers_from_the_table() -> None:
+    """The list a UI offers has to be the list the server can render.
+
+    A hand-kept copy in the frontend named two of six. This asserts the
+    endpoint reads ``PRESETS`` rather than growing a third copy here.
+    """
+    from app.modules.boq.router import list_price_analysis_presets
+
+    src = textwrap.dedent(inspect.getsource(list_price_analysis_presets))
+    assert "PRESETS" in src, "the presets endpoint does not read the preset table"
+    assert "to_dict()" in src, "the presets endpoint hand-builds its entries instead of asking each preset"
+
+    result = asyncio.run(list_price_analysis_presets())
+    names = [entry["name"] for entry in result["presets"]]
+    print(f"the presets endpoint offers {len(names)}: {names}")
+    assert names == list(PRESETS), "the endpoint drops or reorders presets on the way out"
+    assert len(names) >= 6, (
+        f"only {len(names)} presets are offered. This floor is the population the drawer used to "
+        f"understate as two; if a preset was deliberately removed, lower it and say which."
     )

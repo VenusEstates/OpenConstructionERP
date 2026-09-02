@@ -26,7 +26,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Calculator, Download, Loader2, X } from 'lucide-react';
-import { boqApi, type PriceAnalysisPreset, type PriceAnalysisResponse } from './api';
+import {
+  boqApi,
+  type PriceAnalysisPreset,
+  type PriceAnalysisPresetInfo,
+  type PriceAnalysisResponse,
+} from './api';
 import { getErrorMessage } from '@/shared/lib/api';
 import { formatCurrency, toNum } from '@/shared/lib/money';
 import { formatValue } from '@/shared/lib/numberFormat';
@@ -35,24 +40,31 @@ import { fmtPercent } from '@/shared/lib/formatters';
 /* ── Constants ──────────────────────────────────────────────────────── */
 
 /**
- * English defaults for the `price_breakdown.kind.*` keys the backend mints.
- * The keys themselves are the backend's (`model.kind_i18n_key`); only the
- * fallback wording lives here, and it matches the international preset.
+ * How one resource kind is labelled, taken from the preset on the response.
+ *
+ * Two hand-written tables used to stand here: the English wording of every
+ * resource kind, and a two-entry list of the presets this drawer offered. Both
+ * were copies of `price_breakdown/presets.py`, and both were copies of the
+ * international preset specifically, so the drawer could not have shown a
+ * Hungarian or a US sheet even once the right preset was selected. The labels
+ * now arrive with the sheet, worded and ordered by the preset that produced
+ * it.
+ *
+ * The generic key still wins where a locale defines it: `price_breakdown.kind`
+ * keys are preset-independent on the backend and the preset's wording is only
+ * the default. That is the backend's contract, and this component is not the
+ * place to work around it.
  */
-const KIND_DEFAULT_LABELS: Record<string, string> = {
-  labor: 'Labour',
-  material: 'Material',
-  machinery: 'Machinery',
-  equipment: 'Equipment',
-  subcontractor: 'Subcontract',
-  other: 'Other',
-};
-
-/** The two presets offered here, with the English default of each label. */
-const PRESETS: { name: PriceAnalysisPreset; defaultLabel: string }[] = [
-  { name: 'international', defaultLabel: 'Unit price analysis' },
-  { name: 'efb', defaultLabel: 'EFB price sheets (221/222/223)' },
-];
+function kindLabel(
+  preset: PriceAnalysisPresetInfo | undefined,
+  kind: string,
+  t: (key: string, opts: { defaultValue: string }) => string,
+): string {
+  const entry = preset?.kinds.find((k) => k.kind === kind);
+  return t(entry?.i18n_key ?? `price_breakdown.kind.${kind}`, {
+    defaultValue: entry?.label ?? kind,
+  });
+}
 
 /** Colour per resource kind, same assignment as the BOQ cost breakdown. */
 const KIND_DOT_CLASSES: Record<string, string> = {
@@ -95,7 +107,11 @@ export function PriceAnalysisPanel({
   onClose,
 }: PriceAnalysisPanelProps) {
   const { t } = useTranslation();
-  const [preset, setPreset] = useState<PriceAnalysisPreset>('international');
+  // `null` is a request rather than a missing value: it asks the server to
+  // read the project's country and answer in that market's shape. Naming
+  // 'international' here, which is what this did, overrode that resolution
+  // from the one place that knows least about the project.
+  const [preset, setPreset] = useState<PriceAnalysisPreset | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -107,10 +123,28 @@ export function PriceAnalysisPanel({
   // a lump sum as though it were a build-up. Refetching on open costs one
   // round-trip and cannot go stale against the bill.
   const { data, isLoading, error } = useQuery({
-    queryKey: ['boq-price-analysis', positionId, preset],
+    queryKey: ['boq-price-analysis', positionId, preset ?? 'auto'],
     queryFn: () => boqApi.getPriceAnalysis(positionId, preset),
     enabled: !!positionId,
   });
+
+  // The preset table is static configuration, so it is fetched once and held.
+  // A failure here costs the switch and nothing else: the sheet on screen has
+  // already said which preset it is, and that is what the reader is looking
+  // at.
+  const { data: presetData } = useQuery({
+    queryKey: ['boq-price-analysis-presets'],
+    queryFn: () => boqApi.getPriceAnalysisPresets(),
+    staleTime: Infinity,
+  });
+  const presets = presetData?.presets ?? [];
+
+  // What is on screen: the reader's own choice, or, until they make one, the
+  // preset the server resolved from the project. Before the first response
+  // there is no answer yet and no button is pressed, which is the honest
+  // rendering of "not yet known" and deliberately not a guess at
+  // 'international'.
+  const activePreset = preset ?? data?.preset?.name ?? null;
 
   // Escape closes the drawer. The listener sits on the document rather than on
   // the panel because the panel is a plain div: it never takes focus, so a
@@ -125,18 +159,26 @@ export function PriceAnalysisPanel({
   }, [onClose]);
 
   /** Categories that actually carry cost, in the backend's own order. */
+  // Ordered by the preset rather than by whatever order `kind_totals` arrives
+  // in, because the order is part of what a preset is: the Hungarian sheet
+  // opens with material, not labour, since that is the column order a
+  // Hungarian client reads a tender against. Kinds the preset does not name
+  // are kept, after the ones it does, so a kind added on the backend is still
+  // shown rather than silently dropped by a stale preset.
   const activeCategories = useMemo(() => {
     if (!data) return [];
+    const order = new Map((data.preset?.kinds ?? []).map((k, i) => [k.kind, i]));
     return Object.entries(data.kind_totals)
       .filter(([, amount]) => toNum(amount) !== 0)
-      .map(([kind, amount]) => ({ kind, amount }));
+      .map(([kind, amount]) => ({ kind, amount }))
+      .sort((a, b) => (order.get(a.kind) ?? order.size) - (order.get(b.kind) ?? order.size));
   }, [data]);
 
   const handleDownload = async () => {
     setDownloading(true);
     setDownloadError(null);
     try {
-      await boqApi.downloadPriceAnalysisMarkdown(positionId, preset, positionOrdinal);
+      await boqApi.downloadPriceAnalysisMarkdown(positionId, activePreset, positionOrdinal);
     } catch (e: unknown) {
       setDownloadError(getErrorMessage(e));
     } finally {
@@ -189,19 +231,19 @@ export function PriceAnalysisPanel({
             aria-label={t('boq.price_analysis_preset', { defaultValue: 'Presentation preset' })}
             className="flex items-center gap-1 rounded-lg bg-surface-secondary p-0.5"
           >
-            {PRESETS.map((p) => (
+            {presets.map((p) => (
               <button
                 key={p.name}
                 type="button"
-                aria-pressed={preset === p.name}
+                aria-pressed={activePreset === p.name}
                 onClick={() => setPreset(p.name)}
                 className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                  preset === p.name
+                  activePreset === p.name
                     ? 'bg-surface-elevated text-content-primary font-medium shadow-xs'
                     : 'text-content-tertiary hover:text-content-primary'
                 }`}
               >
-                {t(`price_breakdown.preset.${p.name}`, { defaultValue: p.defaultLabel })}
+                {t(p.label_i18n_key, { defaultValue: p.label })}
               </button>
             ))}
           </div>
@@ -269,7 +311,7 @@ export function PriceAnalysisPanel({
                       'This rate has not been broken down into resources yet, so the whole unit rate is carried as one amount. Add resources to the position to see how it is built up.',
                   })}
                 </p>
-              ) : preset === 'efb' && data.efb ? (
+              ) : data.preset?.name === 'efb' && data.efb ? (
                 <EfbSheet data={data} />
               ) : (
                 <>
@@ -286,9 +328,7 @@ export function PriceAnalysisPanel({
                               <span
                                 className={`w-2.5 h-2.5 rounded-sm flex-shrink-0 ${KIND_DOT_CLASSES[c.kind] ?? 'bg-gray-500'}`}
                               />
-                              {t(`price_breakdown.kind.${c.kind}`, {
-                                defaultValue: KIND_DEFAULT_LABELS[c.kind] ?? c.kind,
-                              })}
+                              {kindLabel(data.preset, c.kind, t)}
                             </span>
                             <span className="text-content-primary font-medium tabular-nums">
                               {formatCurrency(c.amount, data.currency)}
@@ -345,9 +385,7 @@ function ComponentTable({ data }: { data: PriceAnalysisResponse }) {
                   <span
                     className={`w-2 h-2 rounded-sm flex-shrink-0 ${KIND_DOT_CLASSES[c.kind] ?? 'bg-gray-500'}`}
                   />
-                  {t(`price_breakdown.kind.${c.kind}`, {
-                    defaultValue: KIND_DEFAULT_LABELS[c.kind] ?? c.kind,
-                  })}
+                  {kindLabel(data.preset, c.kind, t)}
                 </span>
               </td>
               <td className="py-1.5 pr-3 text-content-primary">{c.description}</td>
@@ -384,7 +422,7 @@ function EfbSheet({ data }: { data: PriceAnalysisResponse }) {
   return (
     <div className="space-y-2">
       <h3 className="text-xs font-semibold text-content-tertiary uppercase tracking-wide">
-        {t('price_breakdown.preset.efb', { defaultValue: 'EFB price sheets (221/222/223)' })}
+        {t(data.preset.label_i18n_key, { defaultValue: data.preset.label })}
       </h3>
       <table className="w-full text-xs">
         <tbody>

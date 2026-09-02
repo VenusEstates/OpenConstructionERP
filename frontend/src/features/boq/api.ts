@@ -964,11 +964,56 @@ export interface CostBreakdownResponse {
 /* ── Price Analysis types (per-position unit-rate build-up) ───────── */
 
 /**
- * Presentation presets the backend knows (`price_breakdown/presets.py`).
- * Only these two are offered in the UI: the international default and the
- * German EFB sheets a public client asks for with the tender.
+ * The name of a presentation preset, as the backend spells it.
+ *
+ * This used to be the union `'international' | 'efb'`, a hand-kept copy of a
+ * table that lives in `price_breakdown/presets.py`. The backend has six
+ * presets and has had them for as long as this file has existed: the two named
+ * here plus the UK detailed rate, the US bid breakdown, the Hungarian anyag/dij
+ * split and a generic cost-plus sheet. Naming two of the six did not make the
+ * other four unsupported, it made them unreachable, which is worse because
+ * nothing anywhere said so. The list now comes from
+ * `getPriceAnalysisPresets`, so a preset added on the server is offered here
+ * without an edit.
  */
-export type PriceAnalysisPreset = 'international' | 'efb';
+export type PriceAnalysisPreset = string;
+
+/** One resource kind as a preset words and orders it. */
+export interface PriceAnalysisPresetKind {
+  kind: string;
+  label: string;
+  i18n_key: string;
+}
+
+/**
+ * A preset as the backend describes itself (`Preset.to_dict`).
+ *
+ * `kinds` is in the preset's own display order, and the order carries meaning
+ * rather than being a rendering detail: the Hungarian sheet opens with
+ * material rather than labour, because that is the column order a Hungarian
+ * client reads a tender against. Render the categories in this order rather
+ * than in the order `kind_totals` happens to arrive in.
+ *
+ * `label` and each kind's `label` are English defaults to pass as
+ * `defaultValue` beside the matching `i18n_key`. One limit is worth knowing:
+ * the kind keys (`price_breakdown.kind.material`) are preset-independent while
+ * these labels are not, so where a locale translates the generic key, the
+ * translation wins and the preset's own market wording is not shown. That is
+ * the backend's contract today and not something this file decides.
+ */
+export interface PriceAnalysisPresetInfo {
+  name: PriceAnalysisPreset;
+  label: string;
+  label_i18n_key: string;
+  region: string;
+  kinds: PriceAnalysisPresetKind[];
+  line_i18n_keys: Record<string, string>;
+}
+
+/** The preset table, as the presets endpoint answers with it. */
+export interface PriceAnalysisPresetsResponse {
+  presets: PriceAnalysisPresetInfo[];
+}
 
 /**
  * One resource line of the build-up, costed per ONE unit of the position.
@@ -1043,6 +1088,15 @@ export interface PriceAnalysisResponse {
   profit_amount: string;
   unit_rate: string;
   position_total: string;
+  /**
+   * The preset this sheet was rendered in.
+   *
+   * Present on every response, and the only way to learn the answer when the
+   * request deliberately did not name a preset: apart from the `efb` block,
+   * nothing in this payload differs between presets, so a reader could not
+   * otherwise tell a Hungarian sheet from an international one.
+   */
+  preset: PriceAnalysisPresetInfo;
   efb?: PriceAnalysisEfb;
 }
 
@@ -1760,26 +1814,42 @@ export const boqApi = {
   getCostBreakdown: (boqId: string) =>
     apiGet<CostBreakdownResponse>(`/v1/boq/boqs/${boqId}/cost-breakdown/`),
 
-  /* Price Analysis: how ONE position's unit rate is built up. */
-  getPriceAnalysis: (positionId: string, preset: PriceAnalysisPreset = 'international') =>
+  /* The presentation presets the backend can render a price analysis in. */
+  getPriceAnalysisPresets: () =>
+    apiGet<PriceAnalysisPresetsResponse>('/v1/boq/price-analysis/presets/'),
+
+  /* Price Analysis: how ONE position's unit rate is built up.
+   *
+   * Passing no preset is a request, not an omission: it asks the server to
+   * read the project's own country and answer in that market's shape. Sending
+   * `preset=international` by default is what this did before, and it meant a
+   * Hungarian estimator got the international single-rate sheet on a project
+   * the platform already knew was Hungarian. The response says which preset
+   * was applied either way. */
+  getPriceAnalysis: (positionId: string, preset?: PriceAnalysisPreset | null) =>
     apiGet<PriceAnalysisResponse>(
       `/v1/boq/positions/${encodeURIComponent(positionId)}/price-analysis/` +
-        `?preset=${encodeURIComponent(preset)}`,
+        (preset ? `?preset=${encodeURIComponent(preset)}` : ''),
     ),
 
   /* The same analysis as a Markdown document, which is how a German bidder
    * hands the Preisblatt over. The preset travels with it: `render_markdown`
    * takes its headings from the preset, so downloading the EFB sheet while
-   * looking at the international view would hand over the wrong wording. */
+   * looking at the international view would hand over the wrong wording.
+   *
+   * Pass the preset the reader is actually looking at, including the one the
+   * server chose for them; omitting it here would have the server resolve the
+   * market a second time, which agrees today and is one edit away from not. */
   downloadPriceAnalysisMarkdown: (
     positionId: string,
-    preset: PriceAnalysisPreset = 'international',
+    preset?: PriceAnalysisPreset | null,
     positionRef?: string,
   ) => {
     const safe = (positionRef || 'position').replace(/[/\s]/g, '_');
     return downloadWithAuth(
       `${API_BASE}/v1/boq/positions/${encodeURIComponent(positionId)}/price-analysis/` +
-        `?format=markdown&preset=${encodeURIComponent(preset)}`,
+        `?format=markdown` +
+        (preset ? `&preset=${encodeURIComponent(preset)}` : ''),
       `price_analysis_${safe}.md`,
     );
   },
