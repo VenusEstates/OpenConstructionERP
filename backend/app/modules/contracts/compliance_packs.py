@@ -115,19 +115,28 @@ DEFAULT_PACK_ID = "universal"
 #: source of truth for which pack covers which country, then extended with the
 #: countries a pack covers beyond the one it is named for.
 #:
-#: On the ambiguity of ``DE``: ``Project.country_code`` is NOT NULL with
-#: ``server_default='DE'``, and it has three states that look like two. A
-#: project created through the API with no country chosen holds 'DE' from the
-#: default; a project created through the demo path holds '' because an empty
-#: string does not trigger a server default; and a project whose owner really
-#: did choose Germany also holds 'DE'. Explicit Germany is therefore
-#: indistinguishable from never-chosen in the row. We resolve 'DE' at face
-#: value, because demoting it would break every real German project in order to
-#: protect the ones that never chose, and we treat '' as unknown. Fixing the
-#: ambiguity properly needs a nullable column or a separate "chosen" marker,
-#: which is a migration and not a resolver change. Note that ``currency`` in
-#: the same model deliberately defaults to '' with the comment "No EUR bias";
-#: ``country_code`` did not get the same treatment.
+#: On the ambiguity of ``DE``, which is now halved rather than gone.
+#: ``Project.country_code`` was NOT NULL with ``server_default='DE'`` until
+#: revision ``v3319``, so it had three states that looked like two: a project
+#: created through the API with no country chosen held 'DE' from the default,
+#: a project created through the demo path held '' because an empty string
+#: does not trigger a server default, and a project whose owner really did
+#: choose Germany held 'DE' as well. Explicit Germany was indistinguishable
+#: from never-chosen in the row. The note here used to end by saying that
+#: fixing it needed a nullable column and was a migration rather than a
+#: resolver change; that migration has since been written.
+#:
+#: What changed is only the future. A project created from ``v3319`` onwards
+#: with no country holds NULL, which every reader in this file already treats
+#: as unknown, so never-chosen and Germany are finally distinct. What did not
+#: change is the past: rows written before that revision still hold 'DE', and
+#: no signal in the data separates the deliberate ones from the defaulted
+#: ones, so the migration deliberately rewrites nothing. We therefore still
+#: resolve 'DE' at face value - demoting it would break every real German
+#: project to protect the ones that never chose - and still treat '' as
+#: unknown. Note that ``currency`` in the same model deliberately defaults to
+#: '' with the comment "No EUR bias"; ``country_code`` got the same treatment
+#: only for rows written from here on.
 PACK_BY_COUNTRY: dict[str, str] = {
     **{str(pack["jurisdiction"]): pack_id for pack_id, pack in RULE_PACKS.items() if pack.get("jurisdiction")},
     # Austria and Switzerland run the DACH pack; it is not a German-only pack.

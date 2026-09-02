@@ -31,6 +31,7 @@ __all__ = [
     "NON_SINGLE_TAX_REGIONS",
     "resolve_region_lines",
     "region_lines_for_country",
+    "region_key_for_country",
 ]
 
 
@@ -1096,3 +1097,33 @@ def region_lines_for_country(country_code: str, *, vat_rate: str | None = None) 
         return None
     override = None if region_key in NON_SINGLE_TAX_REGIONS else vat_rate
     return resolve_region_lines(region_key, vat_rate=override)
+
+
+def region_key_for_country(country_code: str | None) -> str:
+    """Return the markup region a project's country belongs to.
+
+    This is the seeding counterpart to :func:`region_lines_for_country`, and it
+    answers a deliberately different question. That function returns ``None``
+    for a market whose national convention the table does not state, because a
+    caller asking "what is this country's method" must be able to hear "we do
+    not claim one". This function is asked "which stack do we seed a bill
+    with", and there a bill has to be seeded with something, so an unstated
+    market resolves to ``DEFAULT``: the neutral international stack, which is
+    what every bill in the product was seeded with before regions existed.
+
+    An empty string and ``None`` both mean the project names no country, and
+    both land on ``DEFAULT``. They must not land on ``DACH``. That is not a
+    hypothetical: ``country_code`` carried ``NOT NULL DEFAULT 'DE'`` until
+    revision ``v3319``, so before it a project whose creator named no country
+    was indistinguishable from one in Germany, and deriving a region from the
+    column would have quoted an unstated market with German site overheads,
+    German profit and German VAT with nothing on screen saying so.
+
+    Args:
+        country_code: ISO 3166-1 alpha-2, case-insensitive, or ``None``.
+
+    Returns:
+        A key of :data:`DEFAULT_MARKUP_TEMPLATES`, always resolvable.
+    """
+    country = (country_code or "").strip().upper()
+    return REGION_BY_COUNTRY.get(country, "DEFAULT")

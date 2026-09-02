@@ -182,8 +182,13 @@ def _sector_for(demo_id: str, name: str) -> str:
     return "general"
 
 
-def _region_for(country_code: str) -> tuple[str, str]:
-    """Delivery region ``(code, name)`` for a project's country."""
+def _region_for(country_code: str | None) -> tuple[str, str]:
+    """Delivery region ``(code, name)`` for a project's country.
+
+    ``None`` is expected rather than tolerated: ``Project.country_code`` is
+    nullable from revision ``v3319``, and a project that names no country files
+    under the default region, which is what the body already did for ''.
+    """
     return _REGION_BY_COUNTRY.get(str(country_code or "").upper(), _DEFAULT_REGION)
 
 

@@ -2651,9 +2651,13 @@ async def apply_default_markups(
     user_id: CurrentUserId,
     payload: CurrentUserPayload,
     session: SessionDep,
-    region: str = Query(
-        default="DEFAULT",
-        description=f"Region code, one of: {', '.join(sorted(DEFAULT_MARKUP_TEMPLATES))}",
+    region: str | None = Query(
+        default=None,
+        description=(
+            "Region code, one of: "
+            f"{', '.join(sorted(DEFAULT_MARKUP_TEMPLATES))}. "
+            "Omit it to resolve the region from the project's own country."
+        ),
     ),
     service: BOQService = Depends(_get_service),
 ) -> list[MarkupResponse]:
@@ -2668,16 +2672,24 @@ async def apply_default_markups(
     learn that Hungary, Italy, Spain, the Netherlands, Poland or Turkiye had a
     stack at all.
 
-    Note what this endpoint does NOT do: nothing derives ``region`` from the
-    project's own country, so a caller who does not pass one gets the neutral
-    international stack no matter which market the project belongs to. The
-    project row does carry ``region`` and ``country_code``, and neither is
-    consulted. That is deliberate rather than forgotten - both columns default
-    to a real value rather than to "unset" (``DACH`` and ``DE``), so a project
-    where nobody chose a country is stored identically to one where somebody
-    chose Germany, and auto-picking from either would price an unstated market
-    as German instead of neutrally. Fixing it properly means teaching those
-    columns to say "unknown", which is a migration and a product decision.
+    Omitting ``region`` now means "decide from the project" rather than "use
+    the neutral stack". The resolution reads the project's ``country_code``
+    against the markup table's country map, and a country the table does not
+    cover falls to the neutral stack rather than to a neighbour.
+
+    That was not safe until v3319. The column was NOT NULL with a 'DE' default
+    while the API accepted the field as optional, so a project where nobody had
+    chosen a country was stored identically to a German one, and deriving from
+    it would have quoted an unstated market with German overheads, German
+    profit and German VAT. The migration makes an unknown country expressible,
+    and an unknown country resolves to the neutral stack, which is exactly what
+    every caller used to get.
+
+    ``project.region`` is deliberately not consulted, despite the name. It
+    holds a cost-database region slug and is read as one by the cost lookups
+    and by language inference, so reading it here would give one column two
+    meanings that disagree the first time a Hungarian project prices from an
+    Austrian cost database.
     """
     # IDOR guard: this destructively REPLACES all markups, yet the global
     # boq.update role is not project-scoped - verify the caller may access the

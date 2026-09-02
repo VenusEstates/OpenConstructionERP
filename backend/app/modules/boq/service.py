@@ -265,7 +265,7 @@ async def _safe_audit(
 # DEFAULT_MARKUP_TEMPLATES`` keeps resolving for the readers that predate the
 # move. The table itself lives in a module the methodology catalogue can import.
 from app.modules.boq.markup_templates import DEFAULT_MARKUP_TEMPLATES as DEFAULT_MARKUP_TEMPLATES
-from app.modules.boq.markup_templates import resolve_region_lines
+from app.modules.boq.markup_templates import region_key_for_country, resolve_region_lines
 from app.modules.boq.models import (
     BOQ,
     BOQActivityLog,
@@ -5546,7 +5546,7 @@ class BOQService:
         )
         return direct_cost, calculated
 
-    async def apply_default_markups(self, boq_id: uuid.UUID, region: str) -> list[BOQMarkup]:
+    async def apply_default_markups(self, boq_id: uuid.UUID, region: str | None = None) -> list[BOQMarkup]:
         """Replace all markups on a BOQ with the default template for a region.
 
         Deletes existing markups and creates the standard set.
@@ -5556,9 +5556,36 @@ class BOQService:
         regional template's default. Other markup rows (overhead, profit,
         contingency) keep their regional defaults.
 
+        ``region=None`` means "decide from the project", and is what the
+        endpoint now sends when a caller names no region. Until v3319 there was
+        nothing safe to decide from: the project's country column was NOT NULL
+        with a 'DE' default, so a project where nobody had chosen a country was
+        stored identically to a German one, and deriving from it would have
+        quoted an unstated market with German overheads, German profit and
+        German VAT. The column is nullable now, so an unknown country is
+        expressible and falls to the neutral international stack, which is what
+        the caller used to get in every case including the Hungarian one.
+
+        The derivation is deliberately one-way. A country the markup table does
+        not cover resolves to DEFAULT rather than to the nearest neighbour,
+        because the table's header is explicit that a country's absence is the
+        honest answer that we ship the neutral method for that market.
+
+        Rows written before v3319 still carry 'DE' and will derive DACH. That
+        is not a new wrong answer - it is the same stored value the working
+        calendar and the payment-application gate have always read - but it is
+        why an explicit ``region`` still wins over the derivation.
+
+        The return value does not name the region it used, and deliberately so:
+        the seeded lines carry the market's own wording, so a bill that came
+        back with Altalanos koltseg and AFA is visibly Hungarian and one that
+        came back with Baustellengemeinkosten is visibly German. A caller that
+        needs the key rather than the evidence should send one.
+
         Args:
             boq_id: Target BOQ identifier.
-            region: Region code - "DACH", "UK", "US", "RU", "GULF", or "DEFAULT".
+            region: A key of ``DEFAULT_MARKUP_TEMPLATES``, or None to resolve
+                it from the owning project's country.
 
         Returns:
             List of newly created BOQMarkup objects.
@@ -5569,11 +5596,13 @@ class BOQService:
         """
         await self._ensure_not_locked(boq_id)
 
-        region_key = region.upper()
+        region_key = region.upper() if region else "DEFAULT"
 
-        # Resolve the project's per-project VAT override, if any. Loaded
-        # via the BOQ → Project chain so we don't need a project_id arg
-        # (keeps backwards compat with the existing public signature).
+        # One project lookup serving two questions: the per-project VAT
+        # override, and - when the caller named no region - which national
+        # stack this project's market uses. Loaded via the BOQ -> Project chain
+        # so no project_id argument is needed, which is what let the older
+        # public signature stay compatible.
         # ``default_vat_rate`` is a decimal-string percentage (e.g. ``"21"``).
         project_vat_override: str | None = None
         try:
@@ -5586,8 +5615,10 @@ class BOQService:
                     raw = getattr(project, "default_vat_rate", None)
                     if raw is not None and str(raw).strip() != "":
                         project_vat_override = str(raw).strip()
+                    if region is None:
+                        region_key = region_key_for_country(getattr(project, "country_code", None))
         except Exception:  # noqa: BLE001 - best-effort, never break seeding
-            logger.debug("default_vat_rate lookup failed for boq %s", boq_id, exc_info=True)
+            logger.debug("project lookup failed for boq %s", boq_id, exc_info=True)
             project_vat_override = None
 
         # Remove existing markups
