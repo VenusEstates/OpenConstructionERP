@@ -27,6 +27,7 @@ from app.modules.measurement.model import (
 from app.modules.measurement.presets import (
     PRESETS,
     get_preset,
+    preset_for_country,
     render_csv,
     render_markdown,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "build_sheet",
     "get_preset",
     "list_variables",
+    "preset_for_country",
     "reconcile",
     "render_csv",
     "render_markdown",

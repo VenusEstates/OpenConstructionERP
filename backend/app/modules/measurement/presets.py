@@ -56,6 +56,57 @@ def get_preset(name: str | None) -> Preset:
     return PRESETS.get((name or "").strip().lower(), _INTERNATIONAL)
 
 
+#: ``region`` -> preset name, built from the presets themselves so a preset
+#: added with a region is reachable without a second list to keep in step.
+#:
+#: "international" is skipped rather than indexed: it is the fallback below,
+#: which is what a market with no convention of its own should get anyway.
+#:
+#: There is no alias table here, unlike the price-breakdown presets, which need
+#: one because they tag the British convention "UK" while the country column
+#: holds the ISO code "GB". Every measurement preset is tagged with the ISO
+#: code already, so an alias table would be an empty dict. The omission is
+#: measured, not overlooked.
+_PRESET_BY_REGION: dict[str, str] = {
+    preset.region.upper(): name
+    for name, preset in PRESETS.items()
+    if preset.region and preset.region.lower() != "international"
+}
+
+
+def preset_for_country(country_code: str | None) -> str:
+    """Name of the preset a project in this country should be measured with.
+
+    The sibling of :func:`app.modules.price_breakdown.presets.preset_for_country`
+    and deliberately the same mechanism: ``Preset.region`` is the market table,
+    and this reads it. A measurement sheet is a document an auditor checks
+    against their own market's rules, and REB 23.003 and OENORM A 2063 are
+    those rules in Germany and Austria. Both presets have shipped since the
+    module was written and nothing selected either one: the endpoints defaulted
+    to the international preset by name, so a German quantity surveyor got the
+    international sheet unless they knew to type ``preset=reb`` into a query
+    string.
+
+    Germany and Austria are separate rows on purpose. They share a language and
+    not a form, and handing an Austrian project the German sheet because the
+    words look familiar is the substitution the neutral preset exists to avoid.
+    Switzerland shares the language too and has no measurement preset of its
+    own, so it gets the neutral one.
+
+    Args:
+        country_code: ISO 3166-1 alpha-2, case-insensitive, or ``None``.
+
+    Returns:
+        A key of :data:`PRESETS`. ``"international"`` for a market with no
+        preset of its own, and for no market at all, which are the same answer
+        here: the neutral preset is the one that assumes nothing.
+    """
+    code = (country_code or "").strip().upper()
+    if not code:
+        return _INTERNATIONAL.name
+    return _PRESET_BY_REGION.get(code, _INTERNATIONAL.name)
+
+
 def _q(value: Decimal, decimals: int) -> str:
     quant = Decimal(1).scaleb(-decimals)  # 10**-decimals
     return str(_dec(value).quantize(quant, rounding=ROUND_HALF_UP))

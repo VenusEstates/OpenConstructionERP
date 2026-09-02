@@ -208,6 +208,7 @@ from app.modules.boq.service import (
 )
 from app.modules.boq.units import to_gaeb_unit_code
 from app.modules.costs.repository import CostItemRepository
+from app.modules.measurement.presets import PRESETS as MEASUREMENT_PRESETS
 from app.modules.price_breakdown.presets import PRESETS as PRICE_BREAKDOWN_PRESETS
 
 router = APIRouter(tags=["boq"])
@@ -8321,7 +8322,14 @@ async def compute_position_measurement(
     session: SessionDep,
     data: dict = Body(...),
     fmt: str = Query(default="json", alias="format"),
-    preset: str = Query(default="international"),
+    preset: str | None = Query(
+        default=None,
+        description=(
+            "Measurement preset, one of: "
+            f"{', '.join(sorted(MEASUREMENT_PRESETS))}. "
+            "Omit it to resolve the preset from the project's own country."
+        ),
+    ),
     service: BOQService = Depends(_get_service),
 ) -> StreamingResponse | dict[str, Any]:
     """Compute a quantity from formula-based take-off lines without saving.
@@ -8334,9 +8342,19 @@ async def compute_position_measurement(
     (PATCH the position with ``quantity`` and ``metadata.measurement``).
 
     ``format=markdown`` or ``format=csv`` streams a readable sheet; otherwise
-    JSON. ``preset`` labels the output (international, reb, oenorm).
+    JSON. ``preset`` labels the output and fixes the rounding convention the
+    quantities are written out with.
+
+    Omitting ``preset`` means "decide from the project" rather than "use the
+    international one". A measurement sheet is a document an auditor checks
+    against their own market's rules: REB 23.003 (DA11/DA12) in Germany and
+    OENORM A 2063 in Austria. Both presets have shipped since the module was
+    written and nothing selected either one, so a German quantity surveyor got
+    the international sheet unless they knew the preset's own slug. A market
+    with no preset of its own still gets the international one, which is what
+    every caller used to get.
     """
-    from app.modules.measurement import build_sheet, reconcile
+    from app.modules.measurement import build_sheet, preset_for_country, reconcile
     from app.modules.measurement.formula import MeasurementError
 
     existing = await service.position_repo.get_by_id(position_id)
@@ -8361,6 +8379,10 @@ async def compute_position_measurement(
             detail=f"measurement error: {exc}",
         ) from exc
 
+    if preset is None:
+        project = await service.project_for_boq(existing.boq_id)
+        preset = preset_for_country(getattr(project, "country_code", None))
+
     streamed = _measurement_stream(sheet, fmt, preset, existing.ordinal or "")
     if streamed is not None:
         return streamed
@@ -8382,15 +8404,27 @@ async def get_position_measurement(
     payload: CurrentUserPayload,
     session: SessionDep,
     fmt: str = Query(default="json", alias="format"),
-    preset: str = Query(default="international"),
+    preset: str | None = Query(
+        default=None,
+        description=(
+            "Measurement preset, one of: "
+            f"{', '.join(sorted(MEASUREMENT_PRESETS))}. "
+            "Omit it to resolve the preset from the project's own country."
+        ),
+    ),
     service: BOQService = Depends(_get_service),
 ) -> StreamingResponse | dict[str, Any]:
     """Return the measurement sheet stored on a position (``metadata.measurement``).
 
     Bad stored formulas are kept as per-line errors (quantity 0) rather than
     failing the whole read, so a saved sheet always renders.
+
+    Omitting ``preset`` resolves it from the project's country, exactly as the
+    compute endpoint does. The pair has to answer the same way: a sheet
+    computed as a REB DA11 take-off and read back as an international one is a
+    worse state than either of them applied consistently.
     """
-    from app.modules.measurement import build_sheet, reconcile
+    from app.modules.measurement import build_sheet, preset_for_country, reconcile
 
     existing = await service.position_repo.get_by_id(position_id)
     if existing is None:
@@ -8421,6 +8455,10 @@ async def get_position_measurement(
         lines=lines,
         strict=False,
     )
+    if preset is None:
+        project = await service.project_for_boq(existing.boq_id)
+        preset = preset_for_country(getattr(project, "country_code", None))
+
     streamed = _measurement_stream(sheet, fmt, preset, existing.ordinal or "")
     if streamed is not None:
         return streamed
