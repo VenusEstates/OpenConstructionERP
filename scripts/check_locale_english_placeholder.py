@@ -33,6 +33,11 @@ nothing in the tree says what their English is. A green line whose compared
 column is far below its keys column is not a pass, it is a narrow question, and
 POPULATION_FLOOR below turns that into a failure rather than leaving it to a
 reader to notice.
+
+English and its regional variants are the one thing this guard does not ask
+about, for the reason in is_english_variant(): a value in en-US that agrees with
+en.ts agrees on purpose, so the question is meaningless there rather than
+merely passing. The report names the files it skipped on that ground.
 """
 
 from __future__ import annotations
@@ -78,6 +83,25 @@ POPULATION_FLOOR = 0.95
 
 def locale_values(path: Path) -> dict[str, str]:
     return {m.group(1): unescape(m.group(3)) for m in KEY_VAL_MULTILINE.finditer(read(path))}
+
+
+def is_english_variant(code: str) -> bool:
+    """Whether this bundle is English, or a regional variant of English.
+
+    en.ts is the comparison source, so asking whether it equals itself is the
+    one question this guard cannot ask. A variant is subtler and is the reason
+    this is a named, tested rule rather than a bare `!= "en"`. en-US exists to
+    override the keys an American reader would otherwise read wrong, and a value
+    in it that agrees with en.ts agrees on purpose: identity with English is the
+    correct content for an English bundle, not an untouched placeholder. It
+    measures 0.00% today only because it currently holds nothing but genuine
+    overrides, which is a fact about its contents and not about what the file is
+    for, and its population is 1584 keys, small enough that one editing session
+    could move it. Left in, the guard would eventually go red at somebody for
+    doing the right thing, and a red that is wrong is how a gate gets switched
+    off. The exemption is narrow, by base subtag only, and the selftest pins it.
+    """
+    return code == "en" or code.startswith("en-")
 
 
 class Row:
@@ -133,21 +157,21 @@ class Row:
         return found
 
 
-def rows_for(sources: dict[str, tuple[str, str]]) -> list[Row]:
-    rows = []
+def rows_for(sources: dict[str, tuple[str, str]]) -> tuple[list[Row], list[str]]:
+    rows, skipped = [], []
     for path in locale_paths():
-        if path.stem == "en":
-            # en.ts is the comparison source. Asking whether it equals itself is
-            # the one question this guard cannot ask.
+        if is_english_variant(path.stem):
+            skipped.append(path.name)
             continue
         rows.append(Row(path.stem, locale_values(path), sources))
-    return rows
+    return rows, skipped
 
 
-def report(rows: list[Row], sources: dict[str, tuple[str, str]]) -> int:
+def report(rows: list[Row], skipped: list[str], sources: dict[str, tuple[str, str]]) -> int:
     from_en = sum(1 for v in sources.values() if v[1] == "en.ts")
     print(f"English source map: {len(sources)} key(s), {from_en} from en.ts, {len(sources) - from_en} from call sites.")
-    print(f"Threshold {THRESHOLD:.0%} identical, population floor {POPULATION_FLOOR:.0%} of a file's keys.\n")
+    print(f"Threshold {THRESHOLD:.0%} identical, population floor {POPULATION_FLOOR:.0%} of a file's keys.")
+    print(f"Not asked, English and its regional variants: {', '.join(skipped) if skipped else 'none'}.\n")
     print(f"{'code':<8}{'keys':>8}{'compared':>10}{'no-english':>12}{'blank-en':>10}{'identical':>11}{'share':>9}")
     for row in sorted(rows, key=lambda r: -r.share):
         print(
@@ -240,10 +264,22 @@ def selftest() -> int:
             for problem in row.problems():
                 print(f"    {problem}")
             failures += 1
+
+    # The exemption, pinned rather than assumed. An English bundle that is 100%
+    # identical to English is right, and any other bundle at 100% is the defect
+    # this guard exists for, so both directions are asserted.
+    exempt = [("en", True), ("en-US", True), ("en-GB", True), ("hu", False), ("eng", False), ("enum", False)]
+    for code, expected in exempt:
+        if is_english_variant(code) != expected:
+            verb = "should be skipped" if expected else "must be judged"
+            print(f"FAIL selftest: {code} {verb} by is_english_variant()")
+            failures += 1
+
+    total = len(cases) + len(exempt)
     if failures:
-        print(f"{failures} of {len(cases)} selftest case(s) wrong")
+        print(f"{failures} of {total} selftest case(s) wrong")
         return 1
-    print(f"OK {len(cases)} selftest case(s): the guard passes and fails where it says it does.")
+    print(f"OK {total} selftest case(s): the guard passes, fails and abstains where it says it does.")
     return 0
 
 
@@ -251,7 +287,8 @@ def main() -> int:
     if "--selftest" in sys.argv:
         return selftest()
     sources = english_sources()
-    return report(rows_for(sources), sources)
+    rows, skipped = rows_for(sources)
+    return report(rows, skipped, sources)
 
 
 if __name__ == "__main__":
