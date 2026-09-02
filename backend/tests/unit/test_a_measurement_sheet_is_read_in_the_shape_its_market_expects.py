@@ -189,12 +189,12 @@ class _Service:
     won" from "the country happened to agree".
     """
 
-    def __init__(self, country_code: str | None) -> None:
+    def __init__(self, country_code: str | None, *, has_project: bool = True) -> None:
         self.position_repo = _Repo(_Position())
-        self._project = _Project(country_code)
+        self._project = _Project(country_code) if has_project else None
         self.project_calls = 0
 
-    async def project_for_boq(self, _boq_id: uuid.UUID) -> _Project:
+    async def project_for_boq(self, _boq_id: uuid.UUID) -> _Project | None:
         self.project_calls += 1
         return self._project
 
@@ -259,9 +259,18 @@ def test_a_market_with_no_measurement_rules_keeps_the_neutral_sheet(endpoint: An
         assert other not in heading
 
 
-def test_a_project_with_no_country_keeps_the_neutral_sheet(endpoint: Any) -> None:
-    """An unset country column is "no opinion", not an error and not a default market."""
-    service = _Service(None)
+@pytest.mark.parametrize("has_project", [True, False], ids=["country column unset", "no project at all"])
+def test_a_project_that_names_no_country_keeps_the_neutral_sheet(endpoint: Any, has_project: bool) -> None:
+    """Both ways the project can decline to answer end on the neutral sheet.
+
+    These are two different inputs and only one of them is obvious.
+    ``project_for_boq`` is fail-soft by design: it returns ``None`` when the
+    BOQ has no project or the lookup raises, so the endpoint can be handed no
+    project at all, not merely a project whose country column is empty. The
+    ``getattr`` default is what covers that, and a default nobody exercises is
+    a default nobody has checked.
+    """
+    service = _Service(None, has_project=has_project)
     heading = asyncio.run(_render(endpoint, service, None))
     assert get_preset(NEUTRAL).label in heading
 
