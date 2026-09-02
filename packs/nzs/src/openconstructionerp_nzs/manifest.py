@@ -27,6 +27,15 @@ MANIFEST = PartnerPackManifest(
     ],
     default_currency="NZD",
     default_tax_template="nz_gst_15",
+    # Was absent, which is not the same as deliberately empty: a project made
+    # under this pack opened on the flat international default while the pack
+    # itself declared NZD, the NZ cost regions and the NZ standards.
+    #
+    # The New Zealand template is still the neutral international method
+    # carrying NZD and 15 percent GST rather than a national convention, and it
+    # says so in its own description. Naming it here is worth doing anyway, and
+    # it turns national by itself once the markup table states the NZ stack.
+    default_methodology="new_zealand",
     validation_rule_packs=[
         "nzbc_acceptable_solutions",
         "nzs_3604_timber",

@@ -39,6 +39,16 @@ MANIFEST = PartnerPackManifest(
     ],
     default_currency="ZAR",
     default_tax_template="za_vat_15",
+    # Absent until now, so the pack shipped the SANS and ASAQS measurement
+    # rules and the CIDB grading and then priced with a method belonging to no
+    # country. The template existed the whole time and nothing named it.
+    #
+    # The South African template is still the neutral international method
+    # carrying ZAR and 15 percent VAT, by its own description, rather than the
+    # ASAQS convention the rest of this pack is about. It is the right pointer
+    # to hold today and becomes the national method without an edit here once
+    # the markup table states the ZA stack.
+    default_methodology="south_africa",
     validation_rule_packs=[
         "sans_1200_measurement",
         "asaqs_measurement",

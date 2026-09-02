@@ -24,6 +24,11 @@ _RULE_SET_NAME = re.compile(r"[a-z][a-z0-9_]*")
 # and ``industry`` already shipped as partner packs and keep working unchanged.
 PackType = Literal["country", "industry", "partner", "showcase"]
 
+#: The value a pack puts in ``metadata["country"]`` to say it spans regions
+#: rather than to name one. It reads like a country code and means the opposite
+#: of one, so both readers below go through this name rather than the literal.
+_CROSS_REGION_MARKER = "XX"
+
 
 class PartnerBranding(BaseModel):
     """Branding overrides applied at runtime when a pack is active."""
@@ -232,6 +237,40 @@ class PartnerPackManifest(BaseModel):
     # Free-form metadata for partners who want to surface extra data
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @property
+    def market_country_code(self) -> str | None:
+        """The single market this pack is for, as ISO 3166-1 alpha-2, or ``None``.
+
+        A country pack is an unambiguous statement of market, and several parts
+        of the product need that statement rather than the pack's name: the
+        markup region a bill is seeded with, the working calendar, the
+        compliance-pack resolver and the measurement system all read a
+        project's ``country_code`` and all answer "no opinion" when it is
+        unset. A project created while a country pack is active used to inherit
+        the pack's methodology and nothing else, so the cascade was national
+        while every one of those still said nothing was known.
+
+        ``None`` is returned for three different situations, and they are the
+        same answer on purpose because none of them names a market:
+
+        * the manifest carries no ``metadata["country"]`` at all, which is what
+          a partner pack and an industry pack look like;
+        * it carries ``"XX"``, the cross-region marker the sector packs use,
+          which means explicitly that the pack is not for one country;
+        * it carries something that is not a clean alpha-2. That is left alone
+          rather than normalised or guessed at, because a pack that cannot
+          state its market plainly is exactly the case where filling a country
+          in on the user's behalf would be wrong.
+
+        Returns:
+            An upper-case alpha-2 code, or ``None`` when the pack names no
+            single market.
+        """
+        code = str((self.metadata or {}).get("country", "")).strip().upper()
+        if len(code) != 2 or not code.isalpha() or code == _CROSS_REGION_MARKER:
+            return None
+        return code
+
     # ------------------------------------------------------------------
     # Pack type resolution
     # ------------------------------------------------------------------
@@ -258,9 +297,9 @@ class PartnerPackManifest(BaseModel):
         industry = str(meta.get("industry", "")).strip()
         has_country_name = any(k == "country" or k.startswith("country_name") for k in meta)
 
-        if industry or country == "XX":
+        if industry or country == _CROSS_REGION_MARKER:
             return "industry"
-        if (country and country != "XX") or has_country_name:
+        if (country and country != _CROSS_REGION_MARKER) or has_country_name:
             return "country"
         if self.branding.powered_by_text:
             return "partner"

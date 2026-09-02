@@ -32,6 +32,18 @@ MANIFEST = PartnerPackManifest(
     ],
     default_currency="CAD",
     default_tax_template="ca_gst_pst",
+    # A country pack that named no methodology left every project created under
+    # it on the flat international default, so the pack shipped Canadian cost
+    # regions and Canadian tax and then priced the bill with a method that
+    # names no country at all. The template has always been in the catalogue.
+    #
+    # Said plainly, because the template says it of itself: the Canadian entry
+    # is still the neutral international method carrying CAD and a GST-only
+    # tax step, not a national cost-planning convention. Activating it is an
+    # improvement over the international default and not a claim that we have
+    # Canadian practice; it becomes national the moment the markup table states
+    # Canada's own stack, with no change needed here.
+    default_methodology="canada",
     validation_rule_packs=[
         "nbc_2020",
         "ccdc_2",

@@ -495,6 +495,31 @@ class ProjectService:
 
                     if _meth in TEMPLATES_BY_SLUG:
                         _pack_meta["methodology_slug"] = _meth
+                # Inherit the pack's country too, and only when the creator
+                # named none. A country pack is an unambiguous statement of
+                # market, and without this the pack fitted out the methodology
+                # cascade while the country column stayed unset, so the bill's
+                # markup region, the working calendar, the compliance-pack
+                # resolver and the measurement system all still answered "no
+                # opinion" on a workspace that had just been told which country
+                # it was for. An explicit choice always wins: this only ever
+                # fills a blank.
+                #
+                # 'XX' is the manifest's own cross-region marker, used by the
+                # sector packs, and means the opposite of a country. Anything
+                # that is not a clean alpha-2 is left alone rather than
+                # normalised, because a pack that cannot state its market
+                # plainly should not be guessed at.
+                #
+                # Recorded in metadata as well as written to the column,
+                # because a country the product filled in is not the same fact
+                # as a country the user typed, and v3319 exists precisely so
+                # those two stop being the same row.
+                if not (data.country_code or "").strip():
+                    _pack_country = getattr(_pack, "market_country_code", None)
+                    if _pack_country:
+                        project.country_code = _pack_country
+                        _pack_meta["country_from_pack"] = _pack_country
                 project.metadata_ = merge_metadata(project.metadata_, _pack_meta)
         except Exception:  # noqa: BLE001 - creation must never break on pack lookup
             pass

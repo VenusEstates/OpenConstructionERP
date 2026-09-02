@@ -24,15 +24,30 @@ warn about, the project is created, and the bill is priced. A reader comparing
 the pack against the catalogue would have to already suspect the field to look
 at it.
 
-Why the check is shaped this way. It fires only where a national method
-demonstrably exists, which is the one condition that makes silence wrong. The
-markup table's own header is explicit that a country's absence from
-``REGION_BY_COUNTRY`` is the honest answer that we ship the neutral
-international method for that market, so demanding a methodology from every
-pack would convict packs for telling the truth and would be red from birth.
-Canada, New Zealand and South Africa sit in exactly that position today: their
-packs declare no methodology, their countries have no national stack, and
-nothing here fires on them, correctly.
+Why the check is shaped in two tiers. The strict tier fires only where a
+national method demonstrably exists, which is the one condition that makes
+silence about a national method wrong. The markup table's own header is
+explicit that a country's absence from ``REGION_BY_COUNTRY`` is the honest
+answer that we ship the neutral international method for that market, so
+demanding a NATIONAL method from every pack would convict packs for telling
+the truth and would be red from birth.
+
+The second tier exists because the first one let three packs through while
+they were doing something plainly wrong. Canada, New Zealand and South Africa
+have no national stack, so nothing above could fire on them, and all three
+shipped no methodology at all. That is not the same as having no national
+convention to name: the catalogue has a template for each of those countries,
+carrying the right currency and the right consumption-tax rate and saying of
+itself that it is the neutral method rather than a national convention. Naming
+it is strictly better than the flat international default, which carries
+neither. So the weaker tier asks only this: a pack that sells a country the
+catalogue has any template for must name that template. It upgrades itself for
+free, because the moment the markup table states that country's stack the
+template is rewritten from it and the pack is already pointing at the result.
+
+Between them the tiers cover every pack in the tree that names a market. What
+neither fires on is a pack that names no country at all, which is the sector
+packs and the one industry pack, correctly.
 
 The population is printed beside the verdict on purpose. A gate over pack
 manifests that silently found none would pass, and this is a file that could
@@ -214,4 +229,64 @@ def test_a_declared_methodology_exists_in_the_catalogue(slug: str, declared: str
         f"{slug} declares default_methodology={declared!r}, which is not in the methodology "
         f"catalogue. Applying the pack reports this as a warning and carries on, so the only "
         f"visible symptom is a bill priced with the flat international default."
+    )
+
+
+# Packs that sell a market the catalogue has a template for but the markup
+# table states no national stack for. The strict assertion above cannot fire on
+# these, and before the second tier existed nothing else did either.
+_NEUTRAL_TIER = [
+    row
+    for row in _PACK_ROWS
+    if row[1]
+    and row[1] != _CROSS_REGION
+    and row[1] not in REGION_BY_COUNTRY
+    and any(str(t.get("country_code") or "").upper() == row[1] for t in TEMPLATES_BY_SLUG.values())
+]
+
+
+def test_every_pack_that_names_a_market_is_checked_by_one_tier_or_the_other() -> None:
+    """The two populations together, because either alone will move.
+
+    A floor on the second tier alone would be wrong in the good direction: as
+    the markup table gains national stacks, packs move OUT of this tier and
+    into the strict one above, and a tier that legitimately empties would read
+    as a broken gate. What must not shrink is the sum, which is the number of
+    packs naming a market the catalogue can serve at all.
+    """
+    covered = len(_NATIONAL) + len(_NEUTRAL_TIER)
+    print(
+        f"{len(_NATIONAL)} packs in the national tier, {len(_NEUTRAL_TIER)} in the neutral tier, {len(_PACK_ROWS)} packs total"
+    )
+    assert covered >= 15, (
+        f"only {covered} of {len(_PACK_ROWS)} packs are checked by either tier. Either the packs "
+        f"stopped declaring metadata.country or the methodology catalogue stopped covering their "
+        f"markets, and in both cases most of this file has gone vacuous."
+    )
+
+
+@pytest.mark.parametrize(
+    ("slug", "country", "declared"),
+    _NEUTRAL_TIER,
+    ids=[f"{r[0]}-{r[1]}" for r in _NEUTRAL_TIER],
+)
+def test_a_pack_names_its_own_countrys_template_even_when_it_is_the_neutral_one(
+    slug: str, country: str, declared: str | None
+) -> None:
+    """A country pack must point at its own country, national stack or not."""
+    expected = sorted(
+        template_slug
+        for template_slug, template in TEMPLATES_BY_SLUG.items()
+        if str(template.get("country_code") or "").upper() == country
+    )
+    assert declared, (
+        f"{slug} sells {country} and declares no default_methodology, so every project created "
+        f"under it opens on the flat international default. The catalogue has {expected} for "
+        f"{country}, carrying that country's currency and consumption-tax rate. That template is "
+        f"currently the neutral method rather than a national convention, and naming it is still "
+        f"strictly better than a method that carries no country at all."
+    )
+    assert declared in expected, (
+        f"{slug} sells {country} and declares methodology {declared!r}, which belongs to another "
+        f"market. The catalogue's templates for {country} are {expected}."
     )
