@@ -201,7 +201,7 @@ _CATALOGUE_DIVERGES: dict[str, str] = {
 }
 
 
-def _catalogue_rates_raw() -> dict[tuple[str, str], Decimal]:
+def _catalogue_rates_raw(templates: list[dict] | None = None) -> dict[tuple[str, str], Decimal]:
     """Every standard rate the methodology catalogue carries, exceptions included.
 
     Only ``(country, "standard")`` keys exist here: a methodology carries one
@@ -212,9 +212,15 @@ def _catalogue_rates_raw() -> dict[tuple[str, str], Decimal]:
     "0", which is a rate this platform quotes and not an absence; ``if not
     rate`` would drop precisely those and the comparison would go quiet on the
     countries where a wrong rate is most obvious.
+
+    ``templates`` defaults to the shipped catalogue and exists so the
+    disagreement guard below can be reached by a control. Every template that
+    ships today agrees with its own country's other templates, so the guard is
+    unreachable on real data, and a guard nobody can reach is a guard nobody
+    has seen work.
     """
     out: dict[tuple[str, str], Decimal] = {}
-    for template in TEMPLATES:
+    for template in TEMPLATES if templates is None else templates:
         country = template.get("country_code")
         rate = template.get("vat_rate")
         if not country or rate is None:
@@ -630,6 +636,37 @@ def test_the_catalogue_side_can_fail_too() -> None:
 
     assert any("templates.py" in line and "IL standard" in line.strip() for line in disagreements), (
         f"a wrong rate in the methodology catalogue was not reported: {disagreements}"
+    )
+
+
+def test_two_templates_disagreeing_about_one_country_are_refused() -> None:
+    """The catalogue reader's own guard, exercised on data that reaches it.
+
+    A country may hold more than one methodology - Brazil, Chile and Colombia
+    each ship a flat template and an APU one - and today every such pair quotes
+    the same VAT rate, so this guard never fires on the shipped catalogue. That
+    makes it the one line in this file no measurement has ever seen do
+    anything. If it were broken, the reader would keep whichever template the
+    catalogue happened to list last and the comparison would silently depend on
+    file order rather than on agreement.
+    """
+    with pytest.raises(AssertionError, match="two methodology templates"):
+        _catalogue_rates_raw(
+            [
+                {"slug": "xx-flat", "country_code": "XX", "vat_rate": "19"},
+                {"slug": "xx-apu", "country_code": "XX", "vat_rate": "21"},
+            ]
+        )
+
+    agreeing = _catalogue_rates_raw(
+        [
+            {"slug": "xx-flat", "country_code": "XX", "vat_rate": "19"},
+            {"slug": "xx-apu", "country_code": "XX", "vat_rate": "19"},
+        ]
+    )
+    assert agreeing[("XX", "standard")] == Decimal("0.19"), (
+        "two templates that agree must be accepted, or the guard would be refusing the shape "
+        "Brazil, Chile and Colombia actually ship rather than the disagreement it is aimed at"
     )
 
 
