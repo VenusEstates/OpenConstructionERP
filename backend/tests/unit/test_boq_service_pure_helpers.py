@@ -485,6 +485,16 @@ CONTINGENCY_ON_PROFIT_BY_DESIGN: dict[str, set[str]] = {
     # A Polish reserve for unforeseen works is taken on the net contract value,
     # which is the figure after Kp and Z, rather than on bare cost.
     "PL": {"Rezerwa na roboty nieprzewidziane"},
+    # The standard Romanian estimate forms build the price as a ladder: profit
+    # is taken on direct plus indirect cost, and the allowance for diverse and
+    # unforeseen works is then taken on the total below it, profit included.
+    #
+    # The two non-ASCII characters in the name are U+0219 (s with comma below)
+    # and U+0103 (a with breve). U+0219 is NOT U+015F (s with cedilla) and the
+    # two render identically in most fonts, so a mismatch here fails with a
+    # diff between what look like two identical strings. Copy the literal from
+    # the RO block in markup_templates.py rather than retyping it.
+    "RO": {"Cheltuieli diverse și neprevăzute"},
     # UNRATIFIED, recorded to keep this test honest rather than to endorse the
     # shape: no ordering source was confirmed for either market.
     "IN": {"Contingency"},
