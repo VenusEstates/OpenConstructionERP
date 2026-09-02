@@ -5546,6 +5546,33 @@ class BOQService:
         )
         return direct_cost, calculated
 
+    async def project_for_boq(self, boq_id: uuid.UUID) -> Any | None:
+        """The project a BOQ belongs to, or ``None`` if it cannot be reached.
+
+        Loaded through the BOQ rather than taken as an argument, so a caller
+        holding only a BOQ or a position does not have to carry a project id it
+        never asked for. That is what let the markup seeding keep its public
+        signature when it started needing the project.
+
+        Fail-soft on purpose, and the reason differs by caller: seeding default
+        markups must not abort because a project row could not be read, and a
+        price analysis must still render for a position whose project is
+        missing. Both want "no opinion" rather than an exception, so the
+        failure is logged and swallowed here instead of at each call site,
+        where the second copy of that decision would eventually disagree with
+        the first.
+        """
+        try:
+            boq = await self.boq_repo.get_by_id(boq_id)
+            if boq is None or not getattr(boq, "project_id", None):
+                return None
+            from app.modules.projects.repository import ProjectRepository  # noqa: PLC0415
+
+            return await ProjectRepository(self.session).get_by_id(boq.project_id)
+        except Exception:  # noqa: BLE001 - a missing project is "no opinion", never an error
+            logger.debug("project lookup failed for boq %s", boq_id, exc_info=True)
+            return None
+
     async def apply_default_markups(self, boq_id: uuid.UUID, region: str | None = None) -> list[BOQMarkup]:
         """Replace all markups on a BOQ with the default template for a region.
 
@@ -5605,21 +5632,13 @@ class BOQService:
         # public signature stay compatible.
         # ``default_vat_rate`` is a decimal-string percentage (e.g. ``"21"``).
         project_vat_override: str | None = None
-        try:
-            boq = await self.boq_repo.get_by_id(boq_id)
-            if boq is not None and getattr(boq, "project_id", None):
-                from app.modules.projects.repository import ProjectRepository
-
-                project = await ProjectRepository(self.session).get_by_id(boq.project_id)
-                if project is not None:
-                    raw = getattr(project, "default_vat_rate", None)
-                    if raw is not None and str(raw).strip() != "":
-                        project_vat_override = str(raw).strip()
-                    if region is None:
-                        region_key = region_key_for_country(getattr(project, "country_code", None))
-        except Exception:  # noqa: BLE001 - best-effort, never break seeding
-            logger.debug("project lookup failed for boq %s", boq_id, exc_info=True)
-            project_vat_override = None
+        project = await self.project_for_boq(boq_id)
+        if project is not None:
+            raw = getattr(project, "default_vat_rate", None)
+            if raw is not None and str(raw).strip() != "":
+                project_vat_override = str(raw).strip()
+            if region is None:
+                region_key = region_key_for_country(getattr(project, "country_code", None))
 
         # Remove existing markups
         await self.markup_repo.delete_all_for_boq(boq_id)

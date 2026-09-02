@@ -194,6 +194,58 @@ def get_preset(name: str | None) -> Preset:
     return PRESETS.get((name or "").strip().lower(), _INTERNATIONAL)
 
 
+#: Country codes whose bill convention this product has always tagged with a
+#: name that is not the ISO code. "UK" is the everyday abbreviation for a
+#: country whose code is "GB", and the markup table spells it the same way.
+#:
+#: Austria and Switzerland are deliberately absent. They share a language with
+#: the German preset and not a form: EFB 221/222/223 are the German federal
+#: procurement sheets, and an Austrian or Swiss bill is not laid out that way.
+#: Handing them the German preset because the words look familiar is exactly
+#: the substitution the neutral preset exists to avoid.
+_PRESET_REGION_ALIASES: dict[str, str] = {"GB": "UK"}
+
+#: ``region`` -> preset name, built from the presets themselves so a preset
+#: added with a region is reachable without a second list to keep in step.
+#:
+#: "international" is skipped rather than indexed. Two presets declare it, the
+#: neutral one and cost-plus, so it identifies no single answer; and it is the
+#: fallback below, which is what an unrecognised market should get anyway.
+_PRESET_BY_REGION: dict[str, str] = {
+    preset.region.upper(): name
+    for name, preset in PRESETS.items()
+    if preset.region and preset.region.lower() != "international"
+}
+
+
+def preset_for_country(country_code: str | None) -> str:
+    """Name of the preset a project in this country should be read with.
+
+    A price analysis is a document an estimator hands to somebody who expects
+    it in their own market's shape. A Hungarian bill quotes every line twice,
+    as anyag and dij, and reading it as a single unit rate is not a translation
+    of a Hungarian bill but a different document. The preset that does this has
+    shipped since the Hungarian pack landed, and nothing chose it: the endpoint
+    defaulted to the international preset by name, so a Hungarian estimator got
+    the international shape unless they knew the preset's own slug.
+
+    ``Preset.region`` has carried the answer the whole time and had no reader.
+
+    Args:
+        country_code: ISO 3166-1 alpha-2, case-insensitive, or ``None``.
+
+    Returns:
+        A key of :data:`PRESETS`. ``"international"`` for a market with no
+        preset of its own, and for no market at all, which are the same answer
+        here: the neutral preset is the one that assumes nothing.
+    """
+    code = (country_code or "").strip().upper()
+    if not code:
+        return _INTERNATIONAL.name
+    region = _PRESET_REGION_ALIASES.get(code, code)
+    return _PRESET_BY_REGION.get(region, _INTERNATIONAL.name)
+
+
 def _q(value: Decimal, quant: Decimal = _2P) -> str:
     """Format one money amount. Callers pass the currency's own quantum.
 

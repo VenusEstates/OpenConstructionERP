@@ -208,6 +208,7 @@ from app.modules.boq.service import (
 )
 from app.modules.boq.units import to_gaeb_unit_code
 from app.modules.costs.repository import CostItemRepository
+from app.modules.price_breakdown.presets import PRESETS as PRICE_BREAKDOWN_PRESETS
 
 router = APIRouter(tags=["boq"])
 _log = logging.getLogger(__name__)
@@ -8163,22 +8164,44 @@ async def get_position_price_analysis(
     payload: CurrentUserPayload,
     session: SessionDep,
     fmt: str = Query(default="json", alias="format"),
-    preset: str = Query(default="international"),
+    preset: str | None = Query(
+        default=None,
+        description=(
+            "Presentation preset, one of: "
+            f"{', '.join(sorted(PRICE_BREAKDOWN_PRESETS))}. "
+            "Omit it to resolve the preset from the project's own country."
+        ),
+    ),
     service: BOQService = Depends(_get_service),
 ) -> StreamingResponse | dict[str, Any]:
     """Return the detailed unit-price breakdown (price analysis) of a position.
 
     Splits the unit rate into labour, material, machinery, equipment,
     subcontract and other, then stacks the BoQ overhead and profit markups, so
-    an estimator can see and justify how the rate is built. This is the
-    international core; ``preset=efb`` also returns the German EFB 221/222/223
-    style grouping. ``format=markdown`` streams a readable table.
+    an estimator can see and justify how the rate is built.
+    ``format=markdown`` streams a readable table.
+
+    Omitting ``preset`` means "decide from the project" rather than "use the
+    international one". A price analysis is a document an estimator hands to
+    somebody who expects it in their own market's shape, and reading a
+    Hungarian bill as a single unit rate rather than as anyag and dij is not a
+    translation of that bill but a different document. The preset that does
+    this has shipped since the Hungarian pack landed and nothing chose it: the
+    default was the international preset by name, so a Hungarian estimator got
+    the international shape unless they knew the preset's own slug. A market
+    with no preset of its own still gets the international one, which is what
+    every caller used to get.
+
+    The list of preset names is read from the preset table rather than written
+    out here, because it was written out here: the docstring named exactly one
+    of the six, the German sheet, and had never mentioned the UK, US, Hungarian
+    or cost-plus presets at all.
 
     Reads the resource split already stored on the position
     (``metadata.resources``); positions without one show the whole rate as a
     single line so the sheet always renders.
     """
-    from app.modules.price_breakdown import efb_221_view, from_position, render_markdown
+    from app.modules.price_breakdown import efb_221_view, from_position, preset_for_country, render_markdown
 
     existing = await service.position_repo.get_by_id(position_id)
     if existing is None:
@@ -8200,6 +8223,10 @@ async def get_position_price_analysis(
         "metadata_": existing.metadata_ or {},
     }
     breakdown = from_position(position_dict, markups=markup_dicts)
+
+    if preset is None:
+        project = await service.project_for_boq(existing.boq_id)
+        preset = preset_for_country(getattr(project, "country_code", None))
 
     if fmt == "markdown":
         text = render_markdown(breakdown, preset=preset)
