@@ -48,10 +48,18 @@ this defect, repeating, with no test on the way.
 So the population is derived from the shipped file rather than written out, and
 ``tests/unit/test_tax_window_supersede_population.py`` pins what the derivation
 returns. The mechanism is general; the set of rate lines it will touch is not
-allowed to grow without somebody saying so. Today that set is exactly one line,
-``CA/HST_NS``, so the difference between this and a Nova-Scotia-specific repair
-is nil on any database in the field - the generality buys the next one, not
-this one.
+allowed to grow without somebody saying so.
+
+That set is two lines now, ``CA/HST_NS`` and ``IL/VAT``, and the second one is
+what the generality was bought for. Israel raised standard VAT from 17 % to
+18 % on 2025-01-01 and the seed file went on shipping 17 as the rate in force,
+which is the same defect as Nova Scotia's in a second country. It was found by
+reading, not by a red test, because no gate compared the seeded rate against
+the methodology catalogue's own figure for the same country - the catalogue had
+said 18 the whole time. ``tests/unit/test_tax_tables_do_not_drift.py`` compares
+them now. Closing the Israeli window here needed no new code at all: the pair
+went into the seed file and this repair picked it up, which is what "the
+generality buys the next one" was a promise about.
 
 Recognising our own row, and the limit of it
 --------------------------------------------
@@ -69,8 +77,9 @@ than it looks and one because it deliberately does not.
 
 ``is_default`` is the narrow one. Requiring the flag to match is the tightest
 contract the shape check accepts and keeps the repair from moving a flag it has
-no business moving. The cost is that it declines the shape a *national
-standard* rate change arrives in, which is the commonest kind there is.
+no business moving. The cost is that it declines any rate change whose two
+shipped windows disagree about the flag, and a *national standard* rate change
+is where that happens.
 
 Romania is the proof, and it is on disk rather than hypothetical: the closed
 19 % window ships ``is_default`` false and its 21 % successor ships it true,
@@ -86,8 +95,20 @@ to move.
 
 The consequence for whoever reads this next: when the seed file grows another
 national standard rate change, the pinned population test will fail and bring
-you here, and what you will need is a decision about moving the flag, not a
-repair that already works. Do not assume the next rate change is covered.
+you here, and the decision waiting for you is about the flag rather than about
+the repair. Do not assume the next rate change is covered.
+
+Israel is that next rate change, and it went the other way, which is worth
+recording because it narrows the warning above rather than repealing it. Its
+17 % and 18 % windows both ship ``is_default`` true, so nothing has to move and
+the predicate matches. That is not a second opinion about what the flag means,
+it is what the resolver already reads it as: ``_country_wide_standard`` picks
+the flagged row out of the rows *in force on the date being asked about*, and
+two windows of one line never overlap, so exactly one is flagged on every date
+in either. Romania needs its own repair because the file moves the flag there,
+not because a country's standard rate is beyond this mechanism. So the question
+to ask of the next pair is the narrow one - does the file move the flag - and
+not the broad one about what kind of rate changed.
 
 ``subdivision_code`` is the wide one. Requiring the shipped value outright
 would break on the cohort this repair serves: a database seeded before v15.7.0
@@ -165,7 +186,7 @@ REPAIR_ID: Final = "tax_window_supersede"
 #: derivation in ``tests/unit/test_tax_window_supersede_population.py``, so a
 #: seed file that supersedes something earlier cannot leave this saying the
 #: wrong month.
-EARLIEST_SUPERSEDED_FROM: Final = "2025-04-01"
+EARLIEST_SUPERSEDED_FROM: Final = "2025-01-01"
 
 
 def superseded_lines() -> dict[RateLine, list[dict]]:

@@ -31,6 +31,15 @@ Ontario is carried through every whole-registry test as a control: same
 country, same ``replaces_federal`` class, the same ``effective_from`` as Nova
 Scotia's old window, one window only. A predicate that closed windows on
 anything broader than the rate line moves it.
+
+Why the row counts are taken per line
+-------------------------------------
+This file counted ``DataRepairOutcome.rows_changed``, the run's own total, and
+that stopped being a statement about Nova Scotia when Israel entered the
+repair's derived population - see ``_LINE_UNDER_TEST``. The counts are taken on
+the rate line under test now. The rule is the same one the paragraph above
+states: assert the claim the test's name makes, not the nearest number the
+machinery happens to expose.
 """
 
 from __future__ import annotations
@@ -113,6 +122,28 @@ async def _windows(factory, tax_code: str) -> list[tuple[str, str | None, str | 
     return [tuple(row) for row in rows]
 
 
+async def _il_windows(factory) -> list[tuple[str, str | None, str | None]]:
+    """Israel's VAT windows, the second line in this repair's population.
+
+    Read here only where a test needs to show that the same pass acted on the
+    line it was stranded on while leaving Nova Scotia alone. Israel's own
+    behaviour is not otherwise this file's subject.
+    """
+    async with factory() as session:
+        rows = (
+            await session.execute(
+                select(
+                    TaxConfiguration.rate_pct,
+                    TaxConfiguration.effective_from,
+                    TaxConfiguration.effective_to,
+                )
+                .where(TaxConfiguration.country_code == "IL", TaxConfiguration.tax_code == "VAT")
+                .order_by(TaxConfiguration.effective_from)
+            )
+        ).all()
+    return [tuple(row) for row in rows]
+
+
 async def _count(factory) -> int:
     async with factory() as session:
         return (await session.execute(select(func.count()).select_from(TaxConfiguration))).scalar_one()
@@ -127,6 +158,73 @@ async def _edit_nova_scotia(factory, **values) -> None:
             .values(**values)
         )
         await session.commit()
+
+
+#: The rate line every claim in this file is about.
+#:
+#: Counting on the line rather than on the run is not tidiness, it is the
+#: instrument being wrong. The repair derives its population from the seed file
+#: instead of naming a country, and that population has grown: it carries
+#: ``IL/VAT`` as well now, because Israel raised standard VAT from 17 % to 18 %
+#: on 2025-01-01 and both cohorts below hold the 17 % window open exactly as
+#: they hold Nova Scotia's. So a pass over either cohort closes two windows and
+#: inserts two rates, and ``DataRepairOutcome.rows_changed`` counts all four.
+#:
+#: That number is correct and it is pinned where it belongs, in
+#: ``tests/unit/test_tax_window_supersede_population.py``. It is simply not a
+#: statement about Nova Scotia any more. Asserted as a total, a test named
+#: "left alone" would have had to claim ``rows_changed == 2``, and the two rows
+#: it was counting would have belonged to a country the test never mentions.
+#: Counted on the line, every number below says what its test name says, and
+#: the next country to enter the population changes none of them.
+_LINE_UNDER_TEST = "HST_NS"
+
+
+async def _snapshot(factory) -> dict[str, dict]:
+    async with factory() as session:
+        return await snapshot_table(session, _TAX_TABLE)
+
+
+def _written_on(before: dict, after: dict, tax_code: str = _LINE_UNDER_TEST) -> int:
+    """How many rows of one rate line a pass closed or inserted.
+
+    Counted as those two operations specifically rather than as "any row that
+    differs", and the difference matters on every whole-registry test here. The
+    labelling repairs run in the same boot and write ``combination`` and
+    ``subdivision_code`` onto this very row, so a plain before-and-after
+    comparison reports their work as this repair's and a test asserting that
+    Nova Scotia was left alone fails while Nova Scotia was left alone.
+
+    Closing and inserting are also exactly what a ``superseded`` repair is
+    permitted to do, so this counts the contract rather than a proxy for it: a
+    window whose ``effective_to`` went from empty to set, and a row of the line
+    that was not there before.
+    """
+    written = 0
+    for key, row in after.items():
+        if row.get("tax_code") != tax_code:
+            continue
+        was = before.get(key)
+        if was is None:
+            written += 1  # inserted
+        elif was.get("effective_to") is None and row.get("effective_to") is not None:
+            written += 1  # closed
+    return written
+
+
+async def _run(factory, repairs: tuple | None = None) -> tuple:
+    """Run the registry, or one repair, and report both what it says and what it did here.
+
+    Returns ``(outcome, rows written on the line under test)``. The snapshot is
+    taken inside, immediately around the run, so a test that arranges its
+    fixture first - an edited row, a hand-entered rate, an earlier pass of the
+    repairs that shipped before this one - never has that setup counted as the
+    repair's work.
+    """
+    before = await _snapshot(factory)
+    report = await run_data_repairs(factory, repairs=repairs)
+    after = await _snapshot(factory)
+    return _outcome(report, REPAIR_ID), _written_on(before, after)
 
 
 # ── The defect, and the fix ──────────────────────────────────────────────────
@@ -150,11 +248,10 @@ async def test_a_pre_v15_5_install_starts_charging_what_nova_scotia_actually_cha
     control_before = await _rate(repair_factory, "CA-ON")
     assert control_before == "13"
 
-    report = await run_data_repairs(repair_factory)
+    outcome, written = await _run(repair_factory)
 
-    outcome = _outcome(report, REPAIR_ID)
     assert outcome.status == "applied", f"the repair did nothing: {outcome}"
-    assert outcome.rows_changed == 2, f"expected one window closed and one rate added, got {outcome.rows_changed}"
+    assert written == 2, f"expected Nova Scotia's window closed and its replacement added, got {written} rows"
 
     assert await _rate(repair_factory, "CA-NS") == "14", "Nova Scotia is still billed its superseded rate"
 
@@ -193,13 +290,17 @@ async def test_a_second_boot_changes_nothing(repair_factory) -> None:
     """Idempotence, as the registry requires it."""
     await _install(repair_factory, pre_v15_5_0(), "2026-06-01")
 
-    first = _outcome(await run_data_repairs(repair_factory), REPAIR_ID)
-    assert first.rows_changed == 2
+    _, written = await _run(repair_factory)
+    assert written == 2
     settled_windows = await _windows(repair_factory, "HST_NS")
     settled_count = await _count(repair_factory)
 
     second = _outcome(await run_data_repairs(repair_factory), REPAIR_ID)
 
+    # Deliberately the whole run rather than one line. Idempotence is a claim
+    # about the repair, not about Nova Scotia: every line it touched on the
+    # first boot has to be settled, so a second boot that moved any of them -
+    # Israel's included - is a bug this test exists to catch.
     assert second.status == "clean"
     assert second.rows_changed == 0
     assert await _windows(repair_factory, "HST_NS") == settled_windows, "the second boot rewrote the windows"
@@ -225,7 +326,13 @@ async def test_the_repair_closes_and_adds_rather_than_rewriting(repair_factory) 
     async with repair_factory() as session:
         after = await snapshot_table(session, _TAX_TABLE)
 
-    assert len(after) == len(before) + 1, "the pass under test added no row, so the check below is vacuous"
+    assert _written_on(before, after) == 2, (
+        "the pass under test did not close Nova Scotia's window and insert its replacement, so the "
+        "contract check below would hold over a repair that did nothing"
+    )
+    # The contract itself is checked over the whole table, not one line: a
+    # superseded repair may not delete or rewrite anything anywhere, and
+    # narrowing this to Nova Scotia would stop it noticing damage elsewhere.
     assert verify_supersede_shape(repair, before, after) == ()
 
 
@@ -263,10 +370,10 @@ async def test_the_old_row_is_not_labelled_yet_and_is_carried_forward_anyway(rep
         "labelling repair proves nothing about the cohort that has not had it"
     )
 
-    outcome = _outcome(await run_data_repairs(repair_factory, repairs=(_repair(),)), REPAIR_ID)
+    outcome, written = await _run(repair_factory, repairs=(_repair(),))
 
     assert outcome.status == "applied", f"the unlabelled row was not carried forward: {outcome}"
-    assert outcome.rows_changed == 2
+    assert written == 2
     assert await _rate(repair_factory, "CA-NS") == "14"
     # Ontario is checked as a row rather than as a rate here, because on a
     # cohort the labelling repairs have not reached no Canadian province
@@ -276,18 +383,36 @@ async def test_the_old_row_is_not_labelled_yet_and_is_carried_forward_anyway(rep
     )
 
 
-async def test_a_modern_install_is_left_alone(repair_factory) -> None:
-    """A database seeded with both windows must come out of the pass untouched."""
+async def test_a_line_already_carrying_both_windows_is_left_alone(repair_factory) -> None:
+    """A rate line seeded with both windows must come out of the pass untouched.
+
+    The v15.9.1 cohort is the control for Nova Scotia and the cohort for
+    Israel at the same time, because that release shipped Nova Scotia's cut and
+    predates Israel's rise. That makes it a sharper test than it was when it
+    only said "a modern install is left alone": one pass, over one database,
+    which has to close the line that is stranded and leave alone the line that
+    is not. A predicate keyed on anything broader than the rate line - the
+    country, the tax type, "any open window" - passes the old version of this
+    test and fails this one.
+    """
     await _install(repair_factory, v15_9_1(), "2026-08-25")
     before = await _windows(repair_factory, "HST_NS")
     assert len(before) == 2, "this cohort does not already carry both windows, so it is the wrong control"
 
-    outcome = _outcome(await run_data_repairs(repair_factory), REPAIR_ID)
+    outcome, written = await _run(repair_factory)
 
-    assert outcome.status == "clean"
-    assert outcome.rows_changed == 0
+    assert written == 0, "a line that already held both windows was written to"
     assert await _windows(repair_factory, "HST_NS") == before
     assert await _rate(repair_factory, "CA-NS") == "14"
+
+    # And the same pass did do its job on the line this cohort really is
+    # stranded on, so the zero above is a predicate that discriminates rather
+    # than a repair that did nothing at all.
+    assert outcome.status == "applied", f"the pass did nothing anywhere, so the control proves nothing: {outcome}"
+    assert await _il_windows(repair_factory) == [
+        ("17.0", "2015-10-01", "2024-12-31"),
+        ("18.0", "2025-01-01", None),
+    ]
 
 
 # ── The rows this repair must not touch ──────────────────────────────────────
@@ -298,9 +423,9 @@ async def test_a_rate_somebody_edited_is_left_alone(repair_factory) -> None:
     await _install(repair_factory, pre_v15_5_0(), "2026-06-01")
     await _edit_nova_scotia(repair_factory, rate_pct="15.5")
 
-    outcome = _outcome(await run_data_repairs(repair_factory), REPAIR_ID)
+    _, written = await _run(repair_factory)
 
-    assert outcome.rows_changed == 0, "a rate the operator set was superseded by the shipped one"
+    assert written == 0, "a rate the operator set was superseded by the shipped one"
     assert await _windows(repair_factory, "HST_NS") == [("15.5", "2010-07-01", None)]
     assert await _rate(repair_factory, "CA-NS") == "15.5", "Nova Scotia stopped charging the rate its owner set"
 
@@ -315,9 +440,9 @@ async def test_a_window_somebody_re_dated_is_left_alone(repair_factory) -> None:
     await _install(repair_factory, pre_v15_5_0(), "2026-06-01")
     await _edit_nova_scotia(repair_factory, effective_from="2011-04-01")
 
-    outcome = _outcome(await run_data_repairs(repair_factory), REPAIR_ID)
+    _, written = await _run(repair_factory)
 
-    assert outcome.rows_changed == 0, "a window the operator re-dated was closed on the shipped date"
+    assert written == 0, "a window the operator re-dated was closed on the shipped date"
     assert await _windows(repair_factory, "HST_NS") == [("15.0", "2011-04-01", None)]
     assert await _rate(repair_factory, "CA-NS") == "15"
 
@@ -326,18 +451,26 @@ async def test_a_window_flagged_as_the_default_is_left_alone(repair_factory) -> 
     """``is_default`` is part of the predicate rather than something this may move.
 
     Romania's repair permits itself to take the flag off the row it closes, and
-    declares that allowance so the contract test can see it. This one does not:
-    both shipped Nova Scotia windows are unflagged, so there is nothing here to
-    exercise such an allowance and an unexercised hole in the close-and-add
-    contract is worth less than nothing. A row whose flag differs from the
-    shipped window is simply not the row we shipped.
+    declares that allowance so the contract test can see it. This one does not,
+    and no line in its population needs it to: Nova Scotia ships both windows
+    unflagged because a provincial row is never the country default, and Israel
+    ships both flagged because its two windows are consecutive periods of one
+    national standard rate. Either way the flag sits still, so an allowance to
+    move it would be an unexercised hole in the close-and-add contract, which is
+    worth less than nothing. A row whose flag differs from the shipped window is
+    simply not the row we shipped.
+
+    Note which direction this test perturbs in. Nova Scotia's shipped flag is
+    false, so setting it true is the edit that makes the row somebody else's.
+    The equivalent edit on the Israeli line would be the opposite one, which is
+    why the predicate compares the flag rather than requiring any fixed value.
     """
     await _install(repair_factory, pre_v15_5_0(), "2026-06-01")
     await _edit_nova_scotia(repair_factory, is_default=True)
 
-    outcome = _outcome(await run_data_repairs(repair_factory), REPAIR_ID)
+    _, written = await _run(repair_factory)
 
-    assert outcome.rows_changed == 0, "a row carrying a flag the seeder never wrote was rewritten"
+    assert written == 0, "a row carrying a flag the seeder never wrote was rewritten"
     assert await _windows(repair_factory, "HST_NS") == [("15.0", "2010-07-01", None)]
 
 
@@ -362,9 +495,9 @@ async def test_a_rate_moved_to_another_province_is_left_alone(repair_factory) ->
 
     assert await _rate(repair_factory, "CA-PE") == "15", "the fixture did not move the rate to another province"
 
-    outcome = _outcome(await run_data_repairs(repair_factory, repairs=(_repair(),)), REPAIR_ID)
+    _, written = await _run(repair_factory, repairs=(_repair(),))
 
-    assert outcome.rows_changed == 0, "a rate the operator moved to another province was closed"
+    assert written == 0, "a rate the operator moved to another province was closed"
     assert await _rate(repair_factory, "CA-PE") == "15", "Prince Edward Island lost the rate it had been given"
     assert await _windows(repair_factory, "HST_NS") == [("15.0", "2010-07-01", None)]
 
@@ -380,10 +513,16 @@ async def test_a_province_that_has_a_hand_entered_harmonised_rate_is_left_alone(
     buy nothing.
 
     Two things are asserted, and the second is the one that is easy to miss.
-    The repair leaves the rows alone, and it comes back ``clean`` rather than
-    ``failed`` - a guard that let the resolver's exception out would turn an
-    install this repair had already decided not to touch into a red health
-    check on every boot for the life of the install.
+    The repair leaves the rows alone, and it does not come back ``failed`` - a
+    guard that let the resolver's exception out would turn an install this
+    repair had already decided not to touch into a red health check on every
+    boot for the life of the install.
+
+    That second claim is asserted as "not failed" rather than as ``clean``
+    because the pass legitimately applies elsewhere: the same cohort is
+    stranded on the Israeli window, which this repair closes in the same run.
+    ``clean`` would be asserting that the repair did nothing anywhere, which is
+    a statement about the population rather than about the guard.
     """
     await _install(repair_factory, pre_v15_5_0(), "2026-06-01")
     # In the order it really happens: the install has been booting the shipped
@@ -403,10 +542,11 @@ async def test_a_province_that_has_a_hand_entered_harmonised_rate_is_left_alone(
     with pytest.raises(TaxRuleError):
         resolve(await _flat(repair_factory), "CA", "CA-NS", on_date=_TODAY_IN_THE_FIXTURES)
 
-    outcome = _outcome(await run_data_repairs(repair_factory, repairs=(_repair(),)), REPAIR_ID)
+    outcome, written = await _run(repair_factory, repairs=(_repair(),))
 
-    assert outcome.status == "clean", f"the repair failed the boot instead of declining the install: {outcome}"
-    assert outcome.rows_changed == 0
+    assert outcome.status != "failed", f"the repair failed the boot instead of declining the install: {outcome}"
+    assert outcome.error is None, outcome.error
+    assert written == 0
     assert await _windows(repair_factory, "HST_NS") == [("15.0", "2010-07-01", None)], (
         "the shipped window was closed beside a rate the customer had entered themselves"
     )
@@ -444,9 +584,9 @@ async def test_a_half_applied_install_is_finished_rather_than_left_broken(repair
     with pytest.raises(TaxRuleError):
         resolve(await _flat(repair_factory), "CA", "CA-NS", on_date=_TODAY_IN_THE_FIXTURES)
 
-    outcome = _outcome(await run_data_repairs(repair_factory, repairs=(_repair(),)), REPAIR_ID)
+    _, written = await _run(repair_factory, repairs=(_repair(),))
 
-    assert outcome.rows_changed == 1, f"expected the old window closed and nothing inserted, got {outcome}"
+    assert written == 1, f"expected the old window closed and nothing inserted, got {written} rows written"
     assert await _rate(repair_factory, "CA-NS") == "14", "Nova Scotia still cannot price"
     assert await _windows(repair_factory, "HST_NS") == [
         ("15.0", "2010-07-01", _LAST_DAY_AT_FIFTEEN),
@@ -472,9 +612,9 @@ async def test_a_database_with_no_nova_scotia_row_is_given_nothing(repair_factor
         )
         await session.commit()
 
-    outcome = _outcome(await run_data_repairs(repair_factory, repairs=(_repair(),)), REPAIR_ID)
+    _, written = await _run(repair_factory, repairs=(_repair(),))
 
-    assert outcome.rows_changed == 0
+    assert written == 0
     assert await _windows(repair_factory, "HST_NS") == [], "a rate line the operator removed was recreated"
 
 
@@ -513,9 +653,9 @@ async def test_two_rows_that_both_look_like_the_shipped_window_are_left_alone(re
         await session.commit()
     assert len(await _windows(repair_factory, "HST_NS")) == 2
 
-    outcome = _outcome(await run_data_repairs(repair_factory, repairs=(_repair(),)), REPAIR_ID)
+    _, written = await _run(repair_factory, repairs=(_repair(),))
 
-    assert outcome.rows_changed == 0
+    assert written == 0
     assert await _windows(repair_factory, "HST_NS") == [
         ("15.0", "2010-07-01", None),
         ("15.0", "2010-07-01", None),

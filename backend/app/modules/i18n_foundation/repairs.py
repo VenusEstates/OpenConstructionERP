@@ -246,8 +246,14 @@ TAX_SEED_RECONCILE = register_data_repair(
 #: the shipped window and declines the line otherwise, which is the tightest
 #: contract ``verify_supersede_shape`` will accept. An allowance nothing
 #: exercises is a hole in the contract that no test can be built against, and
-#: the two shipped Nova Scotia windows are both unflagged, so there is nothing
-#: to exercise it with.
+#: no line in the population needs one: Nova Scotia ships both windows
+#: unflagged because a provincial row is never the country default, and Israel
+#: ships both flagged because its two windows are periods of one standard rate.
+#: Either way the flag sits still and there is nothing to permit.
+#:
+#: ``effective_from`` moved from 2025-04-01 to 2025-01-01 when the Israeli
+#: windows were added: it is the earliest date the population supersedes on, so
+#: it names Israel's rise now rather than Nova Scotia's cut.
 #:
 #: Registered last on purpose. It writes to rows the two scope repairs above
 #: correct, and while its predicate does not require them to have run - an
@@ -261,7 +267,7 @@ TAX_WINDOW_SUPERSEDE = register_data_repair(
         run=_run_tax_window_supersede,
         nature="superseded",
         superseded=SupersededBy(
-            effective_from="2025-04-01",
+            effective_from="2025-01-01",
             table=TAX_CONFIG_TABLE,
             closes_column="effective_to",
         ),

@@ -42,7 +42,30 @@ from app.modules.i18n_foundation.tax_window_supersede import (
 #: lines another repair owns. Written out rather than counted: a count would
 #: pass if one line were swapped for another, and the new one is precisely the
 #: one nobody has looked at.
-EXPECTED_POPULATION = {("CA", "HST_NS")}
+#:
+#: ``IL/VAT`` was added on 2026-09-02, and this test failing is what it was
+#: supposed to do. What was looked at before updating it, since that is the
+#: whole purpose of the pin:
+#:
+#: * Israel raised standard VAT from 17 % to 18 % on 2025-01-01 (Israel Tax
+#:   Authority; legislated in the 2025 Economic Arrangements Law). The seed
+#:   file had gone on shipping 17 with no ``effective_to``, so the platform
+#:   stated 17 as the rate in force while its own methodology catalogue said
+#:   18. The 17 % window is closed at 2024-12-31 and the 18 % one added beside
+#:   it, so a bill priced before 2025 still prices at 17.
+#: * What the repair will therefore do to installs in the field: close the
+#:   open 17 % row and insert the 18 % one. That is the intended reading of
+#:   the change to the seed file, on the same argument as Nova Scotia's.
+#: * The flag stays still. Both Israeli windows ship ``is_default`` true,
+#:   which the module docstring covers at length: ``_country_wide_standard``
+#:   reads the flag only among rows in force on the date asked about, and two
+#:   windows of one line never overlap. So the repair's predicate matches
+#:   without ``also_updates`` gaining anything, and the assertion below that
+#:   it stays empty still holds.
+#:
+#: The population growing also moved ``EARLIEST_SUPERSEDED_FROM`` from
+#: 2025-04-01 to 2025-01-01, because Israel's rise predates Nova Scotia's cut.
+EXPECTED_POPULATION = {("CA", "HST_NS"), ("IL", "VAT")}
 
 
 def test_the_repair_will_touch_exactly_these_rate_lines() -> None:

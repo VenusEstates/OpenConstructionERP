@@ -82,18 +82,34 @@ _ADDED_AFTER_V15_4_0 = {
     ("RO", "TVA", "2025-08-01"),
     ("NG", "VAT", "2020-02-01"),
     ("RO", "TVA_RED", "2025-08-01"),
+    ("IL", "VAT", "2025-01-01"),
 }
 
 #: Rows the current file has since EDITED, restored to what the old file said.
-#: Both are windows that were still open back then and have since been closed,
-#: which is the half of an old cohort that an exclusion list alone cannot
-#: reproduce.
+#: All three are windows that were still open back then and have since been
+#: closed, which is the half of an old cohort that an exclusion list alone
+#: cannot reproduce.
 _RESTORED_TO_V15_4_0 = {
     ("RO", "TVA", "2017-01-01"): {"effective_to": None, "is_default": True},
     ("CA", "HST_NS", "2010-07-01"): {"effective_to": None},
+    ("IL", "VAT", "2015-10-01"): {"effective_to": None},
 }
 
-_ADDED_AFTER_V15_9_1 = {("RO", "TVA_RED", "2025-08-01")}
+_ADDED_AFTER_V15_9_1 = {
+    ("RO", "TVA_RED", "2025-08-01"),
+    ("IL", "VAT", "2025-01-01"),
+}
+
+#: The v15.9.1 cohort needed no restorations until Israel's 18 % rate was
+#: added: every window the current file had closed by then was already closed
+#: in the file that release shipped. Israel's 17 % window is the first one to
+#: be closed after v15.9.1, so this is where that cohort's copy of it is put
+#: back to open. An empty dict here would silently reconstruct a database in
+#: which Israel was already up to date, which is the one state the supersede
+#: repair cannot be measured in.
+_RESTORED_TO_V15_9_1 = {
+    ("IL", "VAT", "2015-10-01"): {"effective_to": None},
+}
 
 #: SHA-256 of the real shipped file at each tag, over the fields the fixture
 #: writes. See the module docstring for the commits.
@@ -159,7 +175,12 @@ def pre_v15_5_0() -> list[dict]:
 
 def v15_9_1() -> list[dict]:
     """The 80-row file: real combinations, and eleven rows with no subdivision."""
-    return _cohort(excluded=_ADDED_AFTER_V15_9_1, restored={}, keep_combination=True, digest=_DIGEST_V15_9_1)
+    return _cohort(
+        excluded=_ADDED_AFTER_V15_9_1,
+        restored=_RESTORED_TO_V15_9_1,
+        keep_combination=True,
+        digest=_DIGEST_V15_9_1,
+    )
 
 
 @pytest_asyncio.fixture

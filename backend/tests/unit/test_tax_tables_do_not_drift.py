@@ -1,6 +1,6 @@
-"""Three tax tables, hand-maintained, that can silently disagree.
+"""Four tax tables, hand-maintained, that can silently disagree.
 
-The platform carries VAT rates in three unrelated places:
+The platform carries VAT rates in four unrelated places:
 
 * ``app/core/tax.py`` - a Python dict, 22 countries, read by the country packs.
 * ``app/modules/property_dev/data/tax_rates.yaml`` - 12 jurisdictions, and the
@@ -9,6 +9,26 @@ The platform carries VAT rates in three unrelated places:
   read here, because a rate is a rate whatever the block it sits in is called.
 * ``app/modules/i18n_foundation/seed_data/tax_configurations.json`` - 40
   countries, effective-dated, and the only one with any history.
+* ``app/modules/methodology/templates.py`` - the methodology catalogue's
+  ``vat_rate``, 53 countries, and the figure a project's cascade actually
+  charges VAT at once a country template is installed.
+
+Why the fourth table was added, which is the whole argument for it
+------------------------------------------------------------------
+It was measured, on 2026-09-02. Israel raised standard VAT from 17 % to 18 % on
+2025-01-01. The methodology catalogue was updated and said 18. The seed file
+was not: it went on carrying 17 with no ``effective_to``, so it read as the
+rate in force, and the platform stated two different rates for one country on
+one date. Nothing was red, because the three tables above happen not to carry
+Israel at all - neither ``core/tax.py`` nor the yaml has an IL row - so the
+seed's stale figure had no counterpart to disagree with, and the one table that
+held the right answer was not in the comparison.
+
+That is the failure this file was written against, arriving through a table
+nobody had added rather than through a rate nobody had updated. The catalogue
+is the platform's most-maintained rate list, because it is the one somebody
+edits when they add a country, and leaving it out meant the check was blind
+wherever the other three were silent.
 
 ``core/tax.py`` says so in its own docstring: "Nothing currently checks that
 the two agree ... so the two can drift apart silently. Treat that as a known
@@ -24,10 +44,13 @@ block at all, and ``core/tax.py`` leaves out Brazil and the United States on
 purpose. A gate that fired on absence would be red from birth, and a gate that
 is always red teaches everyone to ignore it.
 
-It does not compare sub-national rates. The other two tables are keyed by
-country and cannot express a province, so only rows marked ``national`` are
-comparable at all. Canada's federal GST is not "Canada's VAT rate" in the
-sense the other tables mean, and comparing them would be a category error.
+It does not compare sub-national rates. The other tables are keyed by country
+and cannot express a province, so only rows marked ``national`` are comparable
+at all. Canada's federal GST is not "Canada's VAT rate" in the sense the other
+tables mean, and comparing them would be a category error.
+
+And it does not assert blanket equality across the catalogue, because that
+would be false. See :data:`_CATALOGUE_DIVERGES`.
 """
 
 from __future__ import annotations
@@ -40,11 +63,13 @@ import pytest
 import yaml
 
 from app.core.tax import VATNotApplicable, get_vat_rate, list_covered_countries
+from app.modules.methodology.templates import TEMPLATES
 
 _BACKEND = Path(__file__).resolve().parents[2]
 _SEED = _BACKEND / "app" / "modules" / "i18n_foundation" / "seed_data" / "tax_configurations.json"
 _YAML = _BACKEND / "app" / "modules" / "property_dev" / "data" / "tax_rates.yaml"
 _CORE = _BACKEND / "app" / "core" / "tax.py"
+_CATALOGUE = _BACKEND / "app" / "modules" / "methodology" / "templates.py"
 
 # Seed ``tax_code`` values that name one of the three rate classes the other
 # two tables also carry. This mapping is the soft spot in the whole check: get
@@ -146,6 +171,72 @@ def _seed_history() -> dict[tuple[str, str], list[tuple[Decimal, str]]]:
     return out
 
 
+#: Countries where the catalogue and the seed carry different figures on
+#: purpose, each with the reason it is not drift.
+#:
+#: This is an exception list rather than an allowlist, and the difference is
+#: enforced: ``test_every_named_catalogue_exception_still_diverges`` fails when
+#: an entry here stops disagreeing, so a country cannot be left excused after
+#: the reason for excusing it has gone. That is the failure mode of every
+#: "known exceptions" list - it silently grows into a list of things nobody
+#: checks - and it is the one thing that would make this file worse than not
+#: having the fourth table at all.
+#:
+#: The two sources are answering different questions, which is why a blanket
+#: equality assertion across the catalogue would be false rather than merely
+#: strict. The seed's ``is_default`` row is documented as a country's STANDARD
+#: rate: the headline figure, the one a general supply is charged at. The
+#: catalogue's ``vat_rate`` is the rate a bill of quantities is priced at,
+#: which is the standard rate in almost every country and is not in a country
+#: that puts construction on a tier of its own. Where the two coincide - which
+#: is everywhere but here - a disagreement is drift and this file says so.
+_CATALOGUE_DIVERGES: dict[str, str] = {
+    "CN": (
+        "China's headline VAT rate is 13 %, which is what the seed row flagged is_default carries "
+        "and what the seed's VAT_RED row at 9 % is reduced from. Construction and building "
+        "services are charged at that 9 % tier, so 9 is the rate a bill of quantities is priced "
+        "at and the rate the methodology template quotes. Both figures are right about different "
+        "questions, and the platform needs both."
+    ),
+}
+
+
+def _catalogue_rates_raw() -> dict[tuple[str, str], Decimal]:
+    """Every standard rate the methodology catalogue carries, exceptions included.
+
+    Only ``(country, "standard")`` keys exist here: a methodology carries one
+    VAT percentage and no reduced tier, so there is nothing else to compare.
+
+    ``vat_rate`` is tested against ``None`` rather than for truthiness. Qatar,
+    Bahrain's neighbours and the other zero-VAT templates carry the string
+    "0", which is a rate this platform quotes and not an absence; ``if not
+    rate`` would drop precisely those and the comparison would go quiet on the
+    countries where a wrong rate is most obvious.
+    """
+    out: dict[tuple[str, str], Decimal] = {}
+    for template in TEMPLATES:
+        country = template.get("country_code")
+        rate = template.get("vat_rate")
+        if not country or rate is None:
+            continue
+        key = (str(country).upper(), "standard")
+        value = Decimal(str(rate)) / Decimal("100")
+        if key in out and out[key] != value:
+            raise AssertionError(
+                f"{key[0]} has two methodology templates quoting different VAT rates "
+                f"({out[key] * 100} and {value * 100}). A country can hold two templates - Chile "
+                f"and Colombia each ship a flat one and an APU one - but not two opinions about "
+                f"its VAT rate, and which one this comparison saw would depend on catalogue order."
+            )
+        out[key] = value
+    return out
+
+
+def _catalogue_rates() -> dict[tuple[str, str], Decimal]:
+    """The catalogue's rates, less the countries excused in :data:`_CATALOGUE_DIVERGES`."""
+    return {key: value for key, value in _catalogue_rates_raw().items() if key[0] not in _CATALOGUE_DIVERGES}
+
+
 def _core_rates() -> dict[tuple[str, str], Decimal]:
     out: dict[tuple[str, str], Decimal] = {}
     for country in list_covered_countries():
@@ -220,6 +311,7 @@ def _tables() -> list[tuple[str, dict[tuple[str, str], Decimal]]]:
         (str(_CORE.relative_to(_BACKEND)), _core_rates()),
         (str(_YAML.relative_to(_BACKEND)), _yaml_rates()),
         (str(_SEED.relative_to(_BACKEND)), _seed_rates()),
+        (str(_CATALOGUE.relative_to(_BACKEND)), _catalogue_rates()),
     ]
 
 
@@ -359,7 +451,59 @@ def test_every_seed_country_still_has_an_open_period() -> None:
     )
 
 
-def test_the_three_tax_tables_agree_where_they_overlap() -> None:
+def test_the_methodology_catalogue_is_actually_being_read() -> None:
+    """A reader returning nothing would empty the fourth table without failing anything.
+
+    Absence never convicts in this file, so a catalogue that stopped parsing
+    would remove itself from every comparison and leave the whole gate greener
+    than it was before it existed. Named instances as well as a count, because
+    a count survives losing exactly the rows that matter.
+    """
+    rates = _catalogue_rates()
+
+    assert len(rates) >= 30, f"the catalogue returned only {len(rates)} rates; it has stopped being read"
+
+    assert rates[("IL", "standard")] == Decimal("0.18"), (
+        "Israel is the case this table was added for. The seed carried 17 % with no end date for "
+        "months after the rise to 18 % and the catalogue said 18 the whole time, with nothing "
+        "comparing the two. If Israel ever leaves this table, the same gap is open again."
+    )
+    assert rates[("QA", "standard")] == Decimal("0"), (
+        "Qatar's 0 % is a rate the platform quotes, not an absence. A reader testing vat_rate for "
+        "truthiness rather than against None drops it, and every other zero-rated template with it."
+    )
+
+
+def test_every_named_catalogue_exception_still_diverges() -> None:
+    """An exception that has stopped being needed must fail rather than sit there.
+
+    Without this, ``_CATALOGUE_DIVERGES`` is an allowlist: a country put on it
+    for a real reason stays excused forever, including after somebody aligns
+    the two figures, and the next genuine divergence in that country is
+    excused by an entry whose reason no longer applies. The list has to be
+    checkable, so it is checked.
+    """
+    catalogue = _catalogue_rates_raw()
+    seed = _seed_rates()
+
+    for country, reason in _CATALOGUE_DIVERGES.items():
+        key = (country, "standard")
+        assert key in catalogue, (
+            f"{country} is excused from the catalogue comparison, but the catalogue no longer "
+            f"carries a rate for it, so the entry is excusing nothing. Remove it."
+        )
+        assert key in seed, (
+            f"{country} is excused from the catalogue comparison, but the seed no longer carries "
+            f"an open standard rate for it, so the entry is excusing nothing. Remove it."
+        )
+        assert catalogue[key] != seed[key], (
+            f"{country} is on the exception list, which says: {reason} But both now say "
+            f"{seed[key]}, so the exception is excusing an agreement and would go on excusing a "
+            f"real disagreement later. Remove {country} and let it be compared like the rest."
+        )
+
+
+def test_the_tax_tables_agree_where_they_overlap() -> None:
     """Fail when two tables carry a rate for the same country and disagree."""
     population, disagreements = _disagreements(_tables(), _seed_history())
 
@@ -378,8 +522,13 @@ def test_a_planted_disagreement_is_caught() -> None:
     is the failure this whole file exists to make impossible.
     """
     tables = _tables()
-    seed_name, seed = tables[-1]
-    assert seed_name.endswith("tax_configurations.json")
+    # Found by name rather than by position. This used to take the last entry,
+    # which was the seed until a fourth table was appended after it - at which
+    # point the control was perturbing the methodology catalogue while claiming
+    # to perturb the seed. A control that quietly measures something else is
+    # worse than no control.
+    seed_index = next(i for i, (name, _) in enumerate(tables) if name.endswith("tax_configurations.json"))
+    seed_name, seed = tables[seed_index]
 
     others = [key for key in seed if sum(key in t for _, t in tables) >= 2]
     assert others, "no seed key is carried by a second table"
@@ -387,7 +536,7 @@ def test_a_planted_disagreement_is_caught() -> None:
     carriers = sum(key in t for _, t in tables)
 
     perturbed = [(name, dict(table)) for name, table in tables]
-    perturbed[-1][1][key] = seed[key] + Decimal("0.01")
+    perturbed[seed_index][1][key] = seed[key] + Decimal("0.01")
 
     population, disagreements = _disagreements(perturbed, _seed_history())
 
@@ -430,7 +579,61 @@ def test_a_stale_value_is_named_as_stale() -> None:
     assert seed_table[0] in line
 
 
-@pytest.mark.parametrize("path", [_SEED, _YAML, _CORE])
+def test_reintroducing_the_israeli_defect_is_caught() -> None:
+    """The control for the fourth table: put the real defect back and require a red.
+
+    Everything above is measured on a file that has been fixed, and a check
+    that has only ever seen the fixed state is not evidence it would have
+    caught the broken one. So this rebuilds it exactly: the seed carrying
+    Israel's superseded 17 % as the rate in force, the catalogue carrying 18,
+    and nothing else changed.
+
+    Two claims, and the second is the one that makes the failure useful rather
+    than merely present. The comparison has to notice, and it has to say the
+    seed is the stale side, which it can because the seed's own closed window
+    names the date the 17 % rate ended.
+    """
+    perturbed = []
+    for name, table in _tables():
+        table = dict(table)
+        if name.endswith("tax_configurations.json"):
+            table[("IL", "standard")] = Decimal("0.17")
+        perturbed.append((name, table))
+
+    _, disagreements = _disagreements(perturbed, _seed_history())
+
+    israeli = [line for line in disagreements if line.strip().startswith("IL standard")]
+    assert israeli, (
+        "the seed was put back to Israel's superseded 17 % and nothing was reported, so the "
+        f"methodology catalogue is not being compared against it. Disagreements found: {disagreements}"
+    )
+    assert any("looks stale" in line and "2024-12-31" in line for line in israeli), (
+        f"the disagreement was reported without naming the seed as the stale side: {israeli}"
+    )
+
+
+def test_the_catalogue_side_can_fail_too() -> None:
+    """And in the other direction: a catalogue rate that drifts off the seed's.
+
+    The test above moves the seed. If the comparison were somehow keyed to the
+    seed alone, it would pass while a wrong figure in the catalogue - the table
+    that decides what a project actually charges - went unreported.
+    """
+    perturbed = []
+    for name, table in _tables():
+        table = dict(table)
+        if name.endswith("templates.py"):
+            table[("IL", "standard")] = Decimal("0.17")
+        perturbed.append((name, table))
+
+    _, disagreements = _disagreements(perturbed, _seed_history())
+
+    assert any("templates.py" in line and "IL standard" in line.strip() for line in disagreements), (
+        f"a wrong rate in the methodology catalogue was not reported: {disagreements}"
+    )
+
+
+@pytest.mark.parametrize("path", [_SEED, _YAML, _CORE, _CATALOGUE])
 def test_every_table_this_check_reads_still_exists(path: Path) -> None:
     """A moved or renamed table must break the check rather than empty it."""
     assert path.is_file(), f"{path} is gone; the drift check is reading nothing"
