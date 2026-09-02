@@ -2603,8 +2603,11 @@ REGION_BY_COUNTRY: dict[str, str] = {
 # percentage for the rate the payer actually faces is a complete statement:
 # that is what the per-project ``default_vat_rate`` override does, and it is
 # how one DACH stack serves Germany at 19, Austria at 20 and Switzerland at
-# 8.1. These three cannot be served that way, so nothing overrides them and
-# their own rates stand.
+# 8.1. These cannot be served that way, so nothing overrides them and their
+# own rates stand. That is enforced in :func:`resolve_region_lines`, which
+# every caller that prices comes through, rather than being left to each
+# caller to remember: it was left to each caller once, and the bill-seeding
+# path did not remember.
 #
 # ``tests/unit/test_one_country_one_markup_stack.py`` walks every region and
 # fails on any region with a tax-line count other than one that is not listed
@@ -2649,12 +2652,22 @@ def resolve_region_lines(region_key: str, *, vat_rate: str | None = None) -> lis
     discovered by a customer comparing two totals.
 
     The VAT rule is the one the per-project override has always applied: when a
-    rate is supplied, every line in the ``tax`` category takes it. Whether to
-    supply one is the caller's decision and the two callers decide differently.
-    A project supplies the rate its own jurisdiction charges. The methodology
-    catalogue supplies the country's standard rate unless the region is in
-    :data:`NON_SINGLE_TAX_REGIONS`, where one number cannot describe the levies
-    (see :func:`region_lines_for_country`).
+    rate is supplied, every line in the ``tax`` category takes it, EXCEPT in a
+    region listed in :data:`NON_SINGLE_TAX_REGIONS`, where a single number
+    cannot describe the levies and the region's own rates stand.
+
+    That exception used to live in :func:`region_lines_for_country` alone, so
+    it held for the methodology catalogue and not for the bill. Only one region
+    carries more than one tax line, and it is the region where getting this
+    wrong is loudest: a Brazilian stack is PIS + COFINS at 3.65 and ISS at 3,
+    and an override applied to both took the bill's tax from 6.65 percent to
+    twice whatever number was typed. Our own shipped tax seed names 18 as
+    Brazil's default, so 18 was the number a user had every reason to type, and
+    the bill it produced charged 36.
+
+    The caller therefore no longer decides this, which is the point of the
+    guard sitting here: a rule that has to be remembered by every caller is a
+    rule that will be true in one of them.
 
     Args:
         region_key: A key of :data:`DEFAULT_MARKUP_TEMPLATES`, case-insensitive.
@@ -2668,9 +2681,19 @@ def resolve_region_lines(region_key: str, *, vat_rate: str | None = None) -> lis
     Returns:
         Fresh dicts in ``sort_order``, so a caller may mutate them freely. Each
         carries the template's own keys plus ``vat_override``, which is ``True``
-        exactly on the lines whose percentage this call replaced.
+        exactly on the lines whose percentage this call replaced. In a
+        multi-levy region that is every line's ``False`` even when a rate was
+        supplied, so a bill can be read back and shown to carry the market's
+        own rates rather than a substituted one.
     """
-    template = DEFAULT_MARKUP_TEMPLATES.get(region_key.upper(), DEFAULT_MARKUP_TEMPLATES["DEFAULT"])
+    key = region_key.upper()
+    template = DEFAULT_MARKUP_TEMPLATES.get(key, DEFAULT_MARKUP_TEMPLATES["DEFAULT"])
+    # An unknown key fell back to DEFAULT above, so ask the guard about the key
+    # that actually chose the template rather than the one that was passed in.
+    if key not in DEFAULT_MARKUP_TEMPLATES:
+        key = "DEFAULT"
+    if key in NON_SINGLE_TAX_REGIONS:
+        vat_rate = None
     lines: list[dict[str, object]] = []
     for entry in sorted(template, key=lambda e: int(e.get("sort_order", 0))):  # type: ignore[arg-type]
         line = dict(entry)
@@ -2696,7 +2719,7 @@ def region_lines_for_country(country_code: str, *, vat_rate: str | None = None) 
         country_code: ISO 3166-1 alpha-2, case-insensitive.
         vat_rate: The country's standard consumption-tax rate as a decimal
             string. Applied only where the region carries a single tax line;
-            see :data:`NON_SINGLE_TAX_REGIONS` for the three that do not.
+            see :data:`NON_SINGLE_TAX_REGIONS` for the ones that do not.
 
     Returns:
         The region's lines as :func:`resolve_region_lines` returns them, or
@@ -2705,8 +2728,9 @@ def region_lines_for_country(country_code: str, *, vat_rate: str | None = None) 
     region_key = REGION_BY_COUNTRY.get(country_code.upper())
     if region_key is None:
         return None
-    override = None if region_key in NON_SINGLE_TAX_REGIONS else vat_rate
-    return resolve_region_lines(region_key, vat_rate=override)
+    # The multi-levy guard used to be applied here. It now lives in
+    # ``resolve_region_lines``, where the bill-seeding caller reaches it too.
+    return resolve_region_lines(region_key, vat_rate=vat_rate)
 
 
 def region_key_for_country(country_code: str | None) -> str:
